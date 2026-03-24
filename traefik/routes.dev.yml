@@ -1,0 +1,100 @@
+http:
+  # ── Routers ───────────────────────────────────────────────────
+  # A router matches an incoming request and decides where it goes.
+  # Each router has: a rule (what to match), middlewares (what to apply), and a service (where to send it).
+  routers:
+    # Auth routes — NO forward-auth middleware here on purpose.
+    # /api/auth is the login endpoint itself, you can't protect it with JWT
+    # because the user doesn't have a token yet.
+    auth:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/auth`)"
+      middlewares: ["strip-api-auth"]
+      service: auth-service
+
+    # Attendance routes — protected, JWT required
+    attendance:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/attendance`)"
+      middlewares: ["forward-auth", "strip-api-attendance"]
+      service: attendance-service
+
+    # Face recognition routes — protected, JWT required
+    face:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/face`)"
+      middlewares: ["forward-auth", "strip-api-face"]
+      service: face-service
+
+    # Frontend — catches everything else, no auth needed
+    # Priority is lowest because PathPrefix(/) matches everything.
+    # Traefik automatically gives more specific rules higher priority,
+    # so /api/auth will always match before / does.
+    frontend:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/`)"
+      service: frontend-service
+
+  # ── Middlewares ───────────────────────────────────────────────
+  # Middlewares transform the request before it reaches the service.
+  middlewares:
+    # StripPrefix removes the path prefix before forwarding.
+    # Your Spring Boot service doesn't know it's behind a gateway,
+    # so it expects /login not /api/auth/login.
+    # We strip /api/auth so Spring Boot receives just /login.
+    strip-api-auth:
+      stripPrefix:
+        prefixes: ["/api/auth"]
+
+    strip-api-attendance:
+      stripPrefix:
+        prefixes: ["/api/attendance"]
+
+    strip-api-face:
+      stripPrefix:
+        prefixes: ["/api/face"]
+
+    # ForwardAuth — this is the JWT validation middleware.
+    # Before forwarding any request to a protected service, Traefik
+    # makes a request to your auth service's /validate endpoint.
+    # If it returns 200, the request goes through + headers are injected.
+    # If it returns 401, the request is blocked and the client gets 401.
+
+    # ======== WARNING : turn on when endpoint is ready ========
+    # forward-auth:
+    #   forwardAuth:
+    #     address: "http://host.docker.internal:8081/auth/validate"
+    #     # These are the headers the auth service returns on success.
+    #     # Traefik copies them and injects them into the forwarded request.
+    #     # Your other services read these instead of dealing with JWT at all.
+    #     authResponseHeaders:
+    #       - "X-User-Id"
+    #       - "X-User-Role"
+    #       - "X-User-Email"
+
+  # ── Services ─────────────────────────────────────────────────
+  # A service is the actual backend. Traefik forwards the request here
+  # after the router matched it and middlewares processed it.
+  # host.docker.internal is a special hostname that means
+  # "the machine running Docker" — this is how Traefik (inside Docker)
+  # reaches your services running directly on your machine.
+  services:
+    auth-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8081"
+
+    attendance-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8082"
+
+    face-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8000"
+
+    frontend-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:4200"

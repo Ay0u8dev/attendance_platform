@@ -1,0 +1,35 @@
+# ── Entry Points ────────────────────────────────────────────────
+# These are the ports Traefik listens on.
+# We define two: one for actual traffic, one for the dashboard.
+entryPoints:
+  web:
+    address: ":80" # all your API and frontend traffic comes through here
+  traefik:
+    address: ":8080" # dashboard only, never expose this in prod
+
+# ── API / Dashboard ─────────────────────────────────────────────
+# The dashboard is the web UI at localhost:8080
+# insecure: true means no password required — fine for dev only
+api:
+  dashboard: true
+  insecure: true
+
+# ── Provider ────────────────────────────────────────────────────
+# This tells Traefik WHERE to read its dynamic config from.
+# In dev we use a file. In prod you'll switch this to docker.
+providers:
+  file:
+    filename: /etc/traefik/routes.dev.yml
+    watch: true # Traefik reloads routes automatically when you edit this file
+
+# replace with this if running service in docker for dynamic config in prod:
+# providers:
+#   docker:
+#     exposedByDefault: false
+
+# ── Logging ─────────────────────────────────────────────────────
+# Useful during development to see what Traefik is doing
+log:
+  level: DEBUG # change to INFO or WARNING in prod
+
+accessLog: {} # logs every request that comes through
