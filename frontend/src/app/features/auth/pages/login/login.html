@@ -1,0 +1,61 @@
+<div class="font-body min-h-screen flex items-center justify-center bg-background px-4 py-6 sm:px-6 sm:py-8">
+  <div class="bg-white shadow-lg rounded-2xl p-5 sm:p-8 w-full max-w-md sm:max-w-lg text-center">
+
+    <div class="mb-5 sm:mb-6">
+      <img
+        src="assets/logo-ENIAD.png"
+        alt="logo-ENIAD"
+        class="mx-auto h-22 w-auto"
+      >
+    </div>
+
+    <div class="mb-4">
+      <div class="w-37 h-37 mx-auto rounded-full flex items-center justify-center">
+        <img
+          src="assets/logo-app.png"
+          alt="logo-app"
+          class="w-40 h-40 object-contain"
+        >
+      </div>
+    </div>
+
+    <h1 class="text-2xl font-semibold text-principalText leading-tight">
+      Plateforme de Présence
+    </h1>
+
+    <p class="text-secondaryText mt-2 mb-4 text-sm sm:text-[14px] px-2">
+      Connectez-vous pour accéder à votre compte
+    </p>
+
+    <app-button
+      label="Se connecter avec Google"
+      icon="fab fa-google"
+      variant="primary"
+      [loading]="isLoading()"
+      (clicked)="signInWithGoogle()"
+    ></app-button>
+
+    @if (errorMessage()) {
+      <p class="mt-4 text-red-500 text-sm">
+        {{ errorMessage() }}
+      </p>
+    }
+
+    @if (isLoading()) {
+      <p class="text-gray-400 text-sm mt-3 text-center animate-pulse">
+        Connexion en cours...
+      </p>
+    }
+
+    <p class="text-gray-500 mt-4 text-xs sm:text-[13px]">
+      Utilisez votre adresse e-mail <b>@ump.ac.ma</b>
+    </p>
+
+    <div class="flex flex-wrap justify-center sm:justify-between gap-2 text-xs text-gray-400 mt-6">
+      <span>Politique de Confidentialité</span>
+      <span>Centre d'aide</span>
+      <span>&#169; ENIAD 2026</span>
+    </div>
+
+</div>
+</div>
