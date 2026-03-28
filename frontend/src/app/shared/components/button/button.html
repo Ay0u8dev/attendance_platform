@@ -1,0 +1,16 @@
+<button
+  type="button"
+  (click)="handleClick()"
+  [disabled]="disabled()"
+  [class]="baseButtonClasses + ' ' + buttonClasses"
+>
+  @if (icon()) {
+    <i [class]="icon()" aria-hidden="true"></i>
+  }
+
+  @if (!loading()) {
+    <span>{{ label() }}</span>
+  } @else {
+    <span>Loading...</span>
+  }
+</button>
