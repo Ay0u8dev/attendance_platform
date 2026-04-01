@@ -70,7 +70,21 @@ export class ToastService {
       durationMs: input.durationMs ?? 4500,
     };
 
-    this.toastsSignal.update((toasts) => [toast, ...toasts].slice(0, 4));
+    this.toastsSignal.update((toasts) => {
+      const updated = [toast, ...toasts].slice(0, 4);
+      const evicted = [toast, ...toasts].slice(4);
+
+      // Clear timers for evicted toasts
+      for (const evictedToast of evicted) {
+        const timer = this.timers.get(evictedToast.id);
+        if (timer) {
+          clearTimeout(timer);
+          this.timers.delete(evictedToast.id);
+        }
+      }
+
+      return updated;
+    });
 
     const timer = setTimeout(() => this.dismiss(id), toast.durationMs);
     this.timers.set(id, timer);

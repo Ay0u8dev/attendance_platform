@@ -71,8 +71,6 @@ export class AuthService {
           const idToken = this.oauthService.getIdToken()?.trim();
           if (!idToken) {
             this.authInProgressSignal.set(false);
-            this.authErrorSignal.set('Missing Google token. Please try again.');
-            this.toastService.error('Google login failed', 'Missing token returned from Google.');
             return throwError(() => new Error('Missing id_token from Google.'));
           }
 
@@ -107,18 +105,6 @@ export class AuthService {
     this.authErrorSignal.set(null);
 
     this.oauthService.initLoginFlow();
-  }
-
-  // Helper to extract error type from popup login errors
-  private extractPopupErrorType(error: unknown): string | null {
-    if (typeof error === 'string') {
-      return error;
-    }
-    if (error && typeof error === 'object' && 'type' in error) {
-      const typedError = error as { type?: unknown };
-      return typeof typedError.type === 'string' ? typedError.type : null;
-    }
-    return null;
   }
 
   // check if the user is authenticated

@@ -17,7 +17,6 @@ import { AuthService } from '../../../core/auth/services/auth.service';
   `,
 })
 export class OAuthCallback {
-  private readonly authService = inject(AuthService);
   private readonly oauthService = inject(OAuthService);
   private readonly router = inject(Router);
   private readonly platformId = inject(PLATFORM_ID);
