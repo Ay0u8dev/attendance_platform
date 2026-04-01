@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../../core/auth/services/auth.service';
 import { Button } from '../../../../shared/components/button/button';
+import { ToastService } from '../../../../shared/components/toast/toast.service';
 
 @Component({
   selector: 'app-login',
@@ -10,28 +12,15 @@ import { Button } from '../../../../shared/components/button/button';
 })
 export class Login {
   private readonly authService = inject(AuthService);
+  private readonly toastService = inject(ToastService);
 
-  isLoading = signal(false);
-  errorMessage = signal<string | null>(null);
-  testCount = signal(0);
+  readonly isLoading = toSignal(this.authService.authInProgress$, { initialValue: false });
 
   signInWithGoogle() {
-    console.log('Initiating Google Sign-In...');
-    this.isLoading.set(true);
-    this.errorMessage.set(null);
+    this.authService.loginWithGoogle();
+  }
 
-    this.authService.loginWithGoogle().subscribe({
-      next: () => {
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        this.isLoading.set(false);
-        console.error('Login failed:', err);
-        this.errorMessage.set('Authentication failed. Please try again.');
-      },
-      complete: () => {
-        this.isLoading.set(false);
-      }
-    });
+  test() {
+    this.toastService.error('Google login failed', 'Missing token returned from Google.');
   }
 }

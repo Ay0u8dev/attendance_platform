@@ -1,10 +1,17 @@
-export interface AuthUser {
+export interface User {
+  id: string;
+  prenom: string;
+  nom: string;
   email: string;
-  name: string;
-  picture?: string;
+  role: Role;
+}
+
+export enum Role {
+  ADMIN = 'ADMIN',
+  STUDENT = 'STUDENT',
+  TEACHER = 'TEACHER',
 }
 
 export interface BackendAuthResponse {
   accessToken: string;
-  user: AuthUser;
 }
