@@ -1,132 +1,193 @@
-import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
+import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { OAuthService } from 'angular-oauth2-oidc';
-import { BehaviorSubject, EMPTY, Observable, from, throwError } from 'rxjs';
-import { tap, catchError, filter, switchMap, take } from 'rxjs/operators';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { OAuthService, OAuthStorage } from 'angular-oauth2-oidc';
+import { EMPTY, of, throwError } from 'rxjs';
+import { catchError, filter, switchMap } from 'rxjs/operators';
 
 import { getGoogleAuthConfig } from '../google-auth.config';
 import { environment } from '../../../../environments/environment';
-import { AuthUser, BackendAuthResponse } from '../models/auth.model';
+import { User, BackendAuthResponse } from '../models/auth.model';
+import { ToastService } from '../../../shared/components/toast/toast.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private readonly TOKEN_KEY = 'backend_access_token';
 
-  private readonly TOKEN_KEY = 'access_token';
-  private readonly USER_KEY  = 'auth_user';
-  private readonly isBrowser: boolean;
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(this.platformId);
 
-  private currentUserSubject = new BehaviorSubject<AuthUser | null>(this.loadStoredUser());
-  currentUser$ = this.currentUserSubject.asObservable();
+  private readonly oauthService = inject(OAuthService);
+  private readonly storage = inject(OAuthStorage);
+  private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+  private readonly toastService = inject(ToastService);
 
-  constructor(
-    @Inject(PLATFORM_ID) private platformId: object,
-    private oauthService: OAuthService,
-    private http: HttpClient,
-    private router: Router
-  ) {
-    this.isBrowser = isPlatformBrowser(this.platformId);
+  private readonly currentUserSignal = signal<User | null>(null);
+  private readonly authInProgressSignal = signal(false);
+  private readonly authErrorSignal = signal<string | null>(null);
+  readonly currentUser$ = toObservable(this.currentUserSignal);
+  readonly authInProgress$ = toObservable(this.authInProgressSignal);
+  readonly authError$ = toObservable(this.authErrorSignal);
+
+  constructor() {
+    this.currentUserSignal.set(this.loadStoredUser());
+
+    if (this.isBrowser && !this.currentUserSignal() && this.storage.getItem(this.TOKEN_KEY)) {
+      this.clearSession();
+    }
 
     if (this.isBrowser) {
+      this.setupGlobalTokenListener();
       this.configureOAuth();
     }
   }
 
+  // initialize OAuth configuration
   private configureOAuth(): void {
     this.oauthService.configure(getGoogleAuthConfig());
-    this.oauthService.loadDiscoveryDocumentAndTryLogin();
-  }
-
-  loginWithGoogle(): Observable<BackendAuthResponse> {
-    if (!this.isBrowser) return EMPTY;
-
-    // Listen for token BEFORE opening popup
-    const tokenReceived$ = this.oauthService.events.pipe(
-      filter(event => event.type === 'token_received'),
-      take(1),
-      switchMap(() => {
-        const idToken = this.oauthService.getIdToken()?.trim();
-
-        if (!idToken) {
-          return throwError(() => new Error('Missing id_token after popup login.'));
-        }
-
-        return this.http.post<BackendAuthResponse>(
-          `${environment.apiBaseUrl}/auth/google`,
-          { idToken }
-        );
-      }),
-      tap(response => this.handleAuthSuccess(response)),
-      catchError((error: unknown) => {
-        console.error('Auth error:', error);
-        return EMPTY;
-      })
-    );
-
-    // Open popup (don't chain off its promise)
-    this.oauthService.initLoginFlowInPopup().catch((error: unknown) => {
-      const errorType = this.extractPopupErrorType(error);
-      if (errorType === 'popup_blocked') {
-        this.oauthService.initCodeFlow(); // fallback to redirect
-      }
+    this.oauthService.loadDiscoveryDocumentAndTryLogin().catch((error: unknown) => {
+      this.authErrorSignal.set('OAuth initialization failed. Please try again.');
+      this.toastService.error('OAuth initialization failed', 'Please refresh and try again.');
+      console.error('OAuth discovery/login initialization failed:', error);
+      this.authInProgressSignal.set(false);
     });
-
-    return tokenReceived$;
   }
 
-  private extractPopupErrorType(error: unknown): string | null {
-    if (typeof error === 'string') {
-      return error;
-    }
+  // Listen globally for Google tokens and exchange id_token with backend
+  private setupGlobalTokenListener(): void {
+    this.oauthService.events
+      .pipe(
+        filter((event) => event.type === 'token_received'),
+        switchMap(() => {
+          // If we already have a valid backend session, no need to exchange again
+          if (this.isAuthenticated()) {
+            this.authInProgressSignal.set(false);
+            return EMPTY;
+          }
 
-    if (error && typeof error === 'object' && 'type' in error) {
-      const typedError = error as { type?: unknown };
-      return typeof typedError.type === 'string' ? typedError.type : null;
-    }
+          const idToken = this.oauthService.getIdToken()?.trim();
+          if (!idToken) {
+            this.authInProgressSignal.set(false);
+            return throwError(() => new Error('Missing id_token from Google.'));
+          }
 
-    return null;
+          this.authInProgressSignal.set(true);
+          this.authErrorSignal.set(null);
+          console.log('===== ' + idToken + ' =====');
+
+          return this.http.post<BackendAuthResponse>(`${environment.apiBaseUrl}/auth/login`, {
+            idToken,
+          });
+        }),
+        catchError((error) => {
+          this.authInProgressSignal.set(false);
+          this.authErrorSignal.set('Authentication failed. Please try again.');
+          this.toastService.error('Authentication failed', 'We could not complete sign-in.');
+          console.error('Backend auth exchange failed:', error);
+          return of(null); // Keep the listener alive for future attempts
+        }),
+      )
+      .subscribe((response) => {
+        if (response) {
+          this.handleAuthSuccess(response);
+        }
+      });
   }
 
-  logout(): void {
-    if (!this.isBrowser) {
-      return;
-    }
+  // Start Google login using redirect flow.
+  loginWithGoogle(): void {
+    if (!this.isBrowser) return;
 
-    this.oauthService.logOut();
-    this.clearSession();
-    this.router.navigate(['/']);
+    this.authInProgressSignal.set(true);
+    this.authErrorSignal.set(null);
+
+    this.oauthService.initLoginFlow();
   }
 
+  // check if the user is authenticated
   isAuthenticated(): boolean {
     if (!this.isBrowser) {
       return false;
     }
+    const token = this.storage.getItem(this.TOKEN_KEY);
+    if (!token) {
+      return false;
+    }
 
-    return !!localStorage.getItem(this.TOKEN_KEY);
+    if (!this.currentUserSignal()) {
+      const user = this.decodeToken(token);
+      if (!user) {
+        console.error('Invalid token found in storage when calling isAuthenticated()');
+        this.clearSession();
+        return false;
+      }
+      this.currentUserSignal.set(user);
+    }
+
+    return true;
   }
 
+  // get the user's access token
   getToken(): string | null {
     if (!this.isBrowser) {
       return null;
     }
-
-    return localStorage.getItem(this.TOKEN_KEY);
+    return this.storage.getItem(this.TOKEN_KEY);
   }
 
-  get currentUser(): AuthUser | null {
-    return this.currentUserSubject.value;
+  // get the current user's information
+  get currentUser(): User | null {
+    return this.currentUserSignal();
   }
 
+  // handle successful authentication response from the backend
   private handleAuthSuccess(response: BackendAuthResponse): void {
     if (!this.isBrowser) {
       return;
     }
 
-    localStorage.setItem(this.TOKEN_KEY, response.accessToken);
-    localStorage.setItem(this.USER_KEY, JSON.stringify(response.user));
-    this.currentUserSubject.next(response.user);
+    const user = this.decodeToken(response.accessToken);
+    if (!user) {
+      console.error('Invalid token received from backend');
+      this.authInProgressSignal.set(false);
+      this.authErrorSignal.set('Received an invalid token from the server.');
+      this.toastService.error('Invalid session token', 'The server returned an invalid token.');
+      return;
+    }
+
+    this.storage.setItem(this.TOKEN_KEY, response.accessToken);
+    this.currentUserSignal.set(user);
+    this.authInProgressSignal.set(false);
+    this.authErrorSignal.set(null);
+    this.toastService.success('Signed in successfully', 'You are now authenticated.');
     this.router.navigate(['/dashboard']);
+  }
+
+  // logout the user
+  logout(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+    this.oauthService.logOut();
+    this.clearSession();
+    this.router.navigate(['/']);
+  }
+
+  // load the stored user from localStorage (if available)
+  private loadStoredUser(): User | null {
+    if (!this.isBrowser) {
+      return null;
+    }
+
+    try {
+      const token = this.storage.getItem(this.TOKEN_KEY);
+      return token ? this.decodeToken(token) : null;
+    } catch {
+      return null;
+    }
   }
 
   private clearSession(): void {
@@ -134,19 +195,29 @@ export class AuthService {
       return;
     }
 
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.USER_KEY);
-    this.currentUserSubject.next(null);
+    this.storage.removeItem(this.TOKEN_KEY);
+    this.currentUserSignal.set(null);
+    this.authInProgressSignal.set(false);
   }
 
-  private loadStoredUser(): AuthUser | null {
-    if (!this.isBrowser) {
-      return null;
-    }
-
+  // helper to decode JWT and extract user payload
+  private decodeToken(token: string): User | null {
     try {
-      const raw = localStorage.getItem(this.USER_KEY);
-      return raw ? JSON.parse(raw) : null;
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join(''),
+      );
+
+      const payload = JSON.parse(jsonPayload) as User & { exp?: number };
+      if (typeof payload.exp === 'number' && Date.now() >= payload.exp * 1000) {
+        return null;
+      }
+
+      return payload as User;
     } catch {
       return null;
     }

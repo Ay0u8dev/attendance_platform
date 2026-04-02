@@ -1,3 +1,5 @@
 .env
 stuff
 stuff/*
+.vscode
+.vscode/*

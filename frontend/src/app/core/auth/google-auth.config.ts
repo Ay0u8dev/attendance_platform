@@ -7,9 +7,7 @@ export function getGoogleAuthConfig(): AuthConfig {
     strictDiscoveryDocumentValidation: false,
 
     clientId: environment.googleClientId,
-    redirectUri: typeof window !== 'undefined'
-      ? `${window.location.origin}/popup-callback`
-      : '',
+    redirectUri: typeof window !== 'undefined' ? `${window.location.origin}/popup-callback` : '',
     scope: 'openid profile email',
 
     customQueryParams: {

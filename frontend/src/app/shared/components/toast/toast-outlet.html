@@ -1,0 +1,48 @@
+<div
+  class="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-4 sm:justify-end sm:px-6 sm:pb-6"
+>
+  <div class="flex w-full max-w-md flex-col gap-3">
+    @for (toast of toasts(); track toast.id; let i = $index) {
+      <article
+        [class]="toastClasses(toast)"
+        [style.transform]="toastTransform(toast, i)"
+        [style.opacity]="toastOpacity(toast, i)"
+        [style.zIndex]="100 - i"
+        role="status"
+        aria-live="polite"
+        (pointerdown)="startSwipe(toast, $event)"
+        (pointermove)="moveSwipe(toast, $event)"
+        (pointerup)="endSwipe(toast, $event)"
+        (pointercancel)="cancelSwipe(toast, $event)"
+      >
+        <div class="relative z-10 flex items-start gap-3">
+          <div [class]="badgeClasses(toast)">
+            <span aria-hidden="true">{{ icon(toast) }}</span>
+          </div>
+
+          <div class="min-w-0 flex-1 pr-8 pt-0.5">
+            <h2 class="toast-title">{{ toast.title }}</h2>
+            @if (toast.message) {
+              <p class="toast-message">{{ toast.message }}</p>
+            }
+          </div>
+
+          <button
+            type="button"
+            [class]="closeButtonClasses(toast)"
+            (click)="dismiss(toast)"
+            (pointerdown)="$event.stopPropagation()"
+            aria-label="Dismiss notification"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+        <div
+          class="toast-progress"
+          aria-hidden="true"
+          [style.animationDuration.ms]="toast.durationMs"
+        ></div>
+      </article>
+    }
+  </div>
+</div>
