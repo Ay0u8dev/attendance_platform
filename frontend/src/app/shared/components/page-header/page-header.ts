@@ -6,7 +6,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
     <header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div class="space-y-1">
         <p
-          class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-muted"
+          class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-primary"
           [textContent]="eyebrow()"
         ></p>
         <h1 class="text-2xl font-semibold tracking-tight text-principalText sm:text-3xl">
@@ -20,7 +20,10 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       </div>
 
       @if (meta()) {
-        <div class="rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-secondaryText">
+        <div
+          class="inline-flex items-center gap-2 rounded-2xl border border-primary-soft bg-primary-soft px-4 py-3 text-sm font-medium text-primary"
+        >
+          <span class="h-2 w-2 rounded-full bg-secondary"></span>
           {{ meta() }}
         </div>
       }

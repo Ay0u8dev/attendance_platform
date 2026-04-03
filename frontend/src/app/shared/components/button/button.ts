@@ -6,7 +6,7 @@ import { Component, input, output } from '@angular/core';
 })
 export class Button {
   readonly baseButtonClasses =
-    'w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-lg transition-all duration-200 text-sm sm:text-base font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2';
+    'flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 sm:py-3 sm:text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2';
 
   readonly label = input('');
   readonly icon = input<string | undefined>(undefined);
@@ -21,10 +21,10 @@ export class Button {
   get buttonClasses(): string {
     const variantClasses =
       this.variant() === 'primary'
-        ? 'bg-primary hover:bg-PRIM-700 text-white hover:shadow-blue-500/30 hover:-translate-y-0.5 focus-visible:ring-primary'
+        ? 'bg-primary text-white shadow-card hover:-translate-y-0.5 hover:bg-primary-strong hover:shadow-card-strong focus-visible:ring-primary'
         : this.variant() === 'outline'
-          ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 focus-visible:ring-gray-400'
-          : 'bg-white border border-gray-300 text-gray-700 hover:shadow-md hover:-translate-y-0.5 focus-visible:ring-gray-400';
+          ? 'border border-line bg-surface text-principalText hover:border-primary-soft hover:bg-primary-soft focus-visible:ring-primary'
+          : 'border border-line bg-surface text-principalText shadow-card hover:-translate-y-0.5 hover:border-line-strong hover:bg-surface-subtle hover:shadow-card focus-visible:ring-primary';
 
     const disabledClasses = this.disabled() ? ' opacity-50 cursor-not-allowed' : '';
     return variantClasses + disabledClasses;

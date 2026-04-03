@@ -8,7 +8,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { AuthService } from '../../core/auth/services/auth.service';
 
@@ -31,7 +31,11 @@ type UtilityItem = {
     '(document:keydown.escape)': 'handleEscape()',
   },
   template: `
-    <div class="h-dvh overflow-hidden bg-background text-principalText">
+    <div class="relative h-dvh overflow-hidden bg-background text-principalText">
+      <div
+        class="pointer-events-none absolute inset-x-0 top-0 h-40 bg-linear-to-r from-primary-soft via-background to-secondary-soft opacity-80"
+      ></div>
+
       <div class="relative flex h-full">
         @if (isSidebarOpen()) {
           <button
@@ -43,7 +47,7 @@ type UtilityItem = {
         }
 
         <aside
-          class="fixed inset-y-0 left-0 z-40 flex flex-col border-r border-line bg-surface transition-[width,transform] duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0"
+          class="fixed inset-y-0 left-0 z-40 flex flex-col border-r border-line bg-surface/95 shadow-shell transition-[width,transform] duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0"
           [class]="sidebarShellClasses()"
           aria-label="Admin navigation"
         >
@@ -57,7 +61,7 @@ type UtilityItem = {
               [class.w-full]="isSidebarCollapsed()"
             >
               <div
-                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-line bg-background"
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary-soft bg-primary-soft"
               >
                 <img
                   ngSrc="assets/logo-app.png"
@@ -80,7 +84,7 @@ type UtilityItem = {
 
             <button
               type="button"
-              class="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-background text-secondaryText transition-colors duration-200 hover:text-principalText lg:hidden"
+              class="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:hidden"
               (click)="closeSidebar()"
               aria-label="Close menu"
             >
@@ -90,7 +94,7 @@ type UtilityItem = {
 
           <button
             type="button"
-            class="absolute top-20 right-0 hidden h-7 w-7 translate-x-1/2 items-center justify-center rounded-full border border-line bg-surface text-secondaryText shadow-card transition-all duration-200 hover:bg-surface-subtle hover:text-principalText lg:inline-flex"
+            class="absolute top-20 right-0 hidden h-7 w-7 translate-x-1/2 items-center justify-center rounded-full border border-line bg-surface text-secondaryText shadow-card transition-all duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:inline-flex"
             (click)="toggleSidebarCollapsed()"
             [attr.aria-label]="isSidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
           >
@@ -103,39 +107,40 @@ type UtilityItem = {
           </button>
 
           <nav
-            class="flex flex-1 flex-col overflow-y-auto py-3"
-            [class.px-2]="!isSidebarCollapsed()"
+            class="flex flex-1 flex-col overflow-y-auto py-4"
+            [class.px-3]="!isSidebarCollapsed()"
             [class.px-1]="isSidebarCollapsed()"
           >
             @for (item of navItems; track item.route) {
               <a
                 [routerLink]="item.route"
-                routerLinkActive="bg-surface-subtle text-principalText"
+                routerLinkActive="bg-nav-active text-primary"
                 [routerLinkActiveOptions]="{ exact: true }"
-                class="group mb-1.5 flex min-h-10 items-center rounded-xl px-2.5 py-2 text-sm font-medium text-secondaryText transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText"
-                [class.gap-3]="!isSidebarCollapsed()"
+                class="group mb-1 flex min-h-12 items-center rounded-[1.1rem] px-3.5 py-3 text-[1.02rem] font-medium text-nav-text transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText"
+                [class.gap-3.5]="!isSidebarCollapsed()"
                 [class.justify-center]="isSidebarCollapsed()"
+                [class.font-semibold]="isActiveRoute(item.route)"
                 (click)="closeSidebar()"
                 [attr.aria-label]="isSidebarCollapsed() ? item.label : null"
                 [attr.title]="isSidebarCollapsed() ? item.label : null"
               >
                 <span
-                  class="flex h-8 w-8 shrink-0 items-center justify-center text-base text-secondaryText transition-colors duration-200 group-hover:text-principalText"
+                  class="flex h-5 w-5 shrink-0 items-center justify-center text-[1.1rem] text-current transition-colors duration-200"
                 >
                   <i [class]="item.icon" aria-hidden="true"></i>
                 </span>
 
                 @if (!isSidebarCollapsed()) {
-                  <span class="truncate">{{ item.label }}</span>
+                  <span class="truncate leading-none">{{ item.label }}</span>
                 }
               </a>
             }
 
-            <div class="mt-auto  pt-3">
+            <div class="mt-auto pt-3">
               @for (item of utilityItems; track item.label) {
                 <button
                   type="button"
-                  class="mb-1.5 flex w-full min-h-10 items-center rounded-xl px-2.5 py-2 text-left text-sm font-medium text-secondaryText transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText"
+                  class="mb-1.5 flex w-full min-h-10 items-center rounded-xl border border-transparent px-2.5 py-2 text-left text-sm font-medium text-secondaryText transition-colors duration-200 hover:border-line hover:bg-surface-subtle hover:text-principalText"
                   [class.gap-3]="!isSidebarCollapsed()"
                   [class.justify-center]="isSidebarCollapsed()"
                   [attr.aria-label]="isSidebarCollapsed() ? item.label : null"
@@ -157,13 +162,13 @@ type UtilityItem = {
         <div class="flex min-w-0 min-h-0 flex-1 flex-col bg-background">
           <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <header
-              class="border-b border-line bg-surface/90 backdrop-blur-sm lg:sticky lg:top-0 lg:z-20"
+              class="border-b border-line bg-surface/85 backdrop-blur-xl lg:sticky lg:top-0 lg:z-20"
             >
               <div class="flex h-16 items-center justify-between gap-3 px-3 sm:px-5 lg:px-6">
                 <div class="flex min-w-0 items-center gap-3">
                   <button
                     type="button"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:text-principalText lg:hidden"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:hidden"
                     (click)="toggleSidebar()"
                     [attr.aria-expanded]="isSidebarOpen()"
                     aria-label="Open menu"
@@ -172,6 +177,11 @@ type UtilityItem = {
                   </button>
 
                   <div class="min-w-0">
+                    <p
+                      class="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-primary"
+                    >
+                      Admin workspace
+                    </p>
                     <h1 class="truncate text-lg font-semibold tracking-tight text-principalText">
                       Dashboard
                     </h1>
@@ -181,7 +191,7 @@ type UtilityItem = {
                 <div class="flex shrink-0 items-center gap-1 sm:gap-2">
                   <button
                     type="button"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:text-principalText"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
                     aria-label="Notifications"
                   >
                     <i class="fa-regular fa-bell" aria-hidden="true"></i>
@@ -190,14 +200,14 @@ type UtilityItem = {
                   <div #userMenuRoot class="relative">
                     <button
                       type="button"
-                      class="flex items-center gap-2 rounded-xl border border-line bg-surface px-2 py-1.5 text-left transition-colors duration-200 hover:bg-surface-subtle"
+                      class="flex items-center gap-2 rounded-xl border border-line bg-surface px-2 py-1.5 text-left transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
                       (click)="toggleUserMenu()"
                       [attr.aria-expanded]="isUserMenuOpen()"
                       aria-haspopup="menu"
                       aria-label="Open user menu"
                     >
                       <span
-                        class="flex h-7 w-7 items-center justify-center rounded-lg bg-info-soft text-primary"
+                        class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary"
                       >
                         <i class="fa-solid fa-user-shield text-xs" aria-hidden="true"></i>
                       </span>
@@ -214,9 +224,11 @@ type UtilityItem = {
 
                     @if (isUserMenuOpen()) {
                       <div
-                        class="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-line bg-surface p-2 shadow-card"
+                        class="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-line bg-surface p-2 shadow-shell"
                       >
-                        <div class="rounded-xl bg-surface-subtle px-3 py-2">
+                        <div
+                          class="rounded-xl border border-primary-soft bg-primary-soft px-3 py-2"
+                        >
                           <p class="truncate text-sm font-semibold text-principalText">
                             Prof. Anderson
                           </p>
@@ -261,17 +273,16 @@ type UtilityItem = {
 })
 export class AdminLayout {
   private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
   private readonly userMenuRoot = viewChild<ElementRef<HTMLElement>>('userMenuRoot');
 
   readonly navItems: NavItem[] = [
     { label: 'Dashboard', route: '/dashboard', icon: 'fa-solid fa-table-cells-large' },
+    { label: 'Attendance', route: '/attendance', icon: 'fa-regular fa-square-check' },
     { label: 'Students', route: '/students', icon: 'fa-solid fa-user-graduate' },
+    { label: 'Justifications', route: '/justifications', icon: 'fa-regular fa-file-lines' },
     { label: 'Teachers', route: '/teachers', icon: 'fa-solid fa-chalkboard-user' },
     { label: 'Structure', route: '/structure', icon: 'fa-solid fa-sitemap' },
-    { label: 'Attendance', route: '/attendance', icon: 'fa-solid fa-clipboard-check' },
-    { label: 'Justifications', route: '/justifications', icon: 'fa-solid fa-file-lines' },
-    { label: 'Alerts', route: '/alerts', icon: 'fa-solid fa-bell' },
-    { label: 'Statistics', route: '/statistics', icon: 'fa-solid fa-chart-line' },
   ];
 
   readonly utilityItems: UtilityItem[] = [{ label: 'Settings', icon: 'fa-solid fa-gear' }];
@@ -331,6 +342,10 @@ export class AdminLayout {
 
   closeSidebar(): void {
     this.isSidebarOpen.set(false);
+  }
+
+  isActiveRoute(route: string): boolean {
+    return this.router.url === route;
   }
 
   openSettings(): void {

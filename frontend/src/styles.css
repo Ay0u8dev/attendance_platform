@@ -5,14 +5,23 @@
 @theme {
     --font-body: 'Roboto', sans-serif;
     --color-background: #F9FAFB;
+    --color-background-elevated: #F3F6FB;
     --color-surface: #FFFFFF;
-    --color-surface-subtle: #F3F6FB;
-    --color-line: #D9E2EC;
+    --color-surface-subtle: #F4F7FB;
+    --color-surface-muted: #EEF3F9;
+    --color-nav-active: #E7ECF6;
+    --color-nav-text: #58657A;
+    --color-line: #E5E7EB;
+    --color-line-strong: #CFD8E3;
     --color-muted: #7C8AA5;
     --color-primary: #1E3A8A;
+    --color-primary-strong: #162D6D;
+    --color-primary-soft: #E8EEFF;
     --color-secondary: #0D9488;
+    --color-secondary-strong: #0B766D;
+    --color-secondary-soft: #E4F7F4;
     --color-principalText : #1F2937;
-    --color-secondaryText: #475569;
+    --color-secondaryText: #6B7280;
     --color-danger: #DC2626;
     --color-danger-soft: #FEECEE;
     --color-success: #10b981;
@@ -23,7 +32,9 @@
     --color-info: #3B82F6;
     --color-info-soft: #EAF1FF;
     --color-onHold: #EA580C;
-    --shadow-card: 0 18px 40px -28px rgba(15, 23, 42, 0.28);
+    --shadow-card: 0 18px 40px -28px rgba(15, 23, 42, 0.22);
+    --shadow-card-strong: 0 26px 60px -32px rgba(30, 58, 138, 0.18);
+    --shadow-shell: 0 28px 70px -42px rgba(15, 23, 42, 0.28);
 }
 
 :root {
@@ -37,8 +48,15 @@ html {
 }
 
 body {
+    margin: 0;
     min-height: 100vh;
     background:
-        radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 22%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(249, 250, 251, 1));
+        radial-gradient(circle at top right, rgba(30, 58, 138, 0.1), transparent 24%),
+        radial-gradient(circle at left center, rgba(13, 148, 136, 0.06), transparent 22%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(249, 250, 251, 1) 55%, rgba(243, 246, 251, 0.98));
+}
+
+::selection {
+    background: var(--color-primary-soft);
+    color: var(--color-primary-strong);
 }

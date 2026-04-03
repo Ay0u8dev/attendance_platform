@@ -92,24 +92,28 @@ export class Dashboard {
       description: 'Create or import a new student record.',
       icon: 'fa-solid fa-user-plus',
       route: '/students',
+      tone: 'primary' as const,
     },
     {
       label: 'New session',
       description: 'Register a new attendance session.',
       icon: 'fa-regular fa-calendar-plus',
       route: '/attendance',
+      tone: 'secondary' as const,
     },
     {
       label: 'Send alerts',
       description: 'Notify teachers or administration.',
       icon: 'fa-regular fa-envelope',
       route: '/alerts',
+      tone: 'warning' as const,
     },
     {
       label: 'Review reports',
       description: 'Open analytical exports and summaries.',
       icon: 'fa-regular fa-file-lines',
       route: '/statistics',
+      tone: 'primary' as const,
     },
   ];
 

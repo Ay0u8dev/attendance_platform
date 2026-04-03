@@ -1,26 +1,36 @@
 <div
-  class="rounded-[2rem] border border-line bg-surface p-6 text-center shadow-card sm:p-8 align-middle justify-center"
+  class="relative overflow-hidden rounded-[2rem] border border-line bg-surface p-6 text-center shadow-shell sm:p-8"
 >
+  <div class="absolute inset-x-0 top-0 h-1.5 bg-linear-to-r from-primary via-secondary to-primary"></div>
+
   <div class="mx-auto flex max-w-md flex-col items-center">
+    <span
+      class="inline-flex items-center rounded-full border border-primary-soft bg-primary-soft px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-primary"
+    >
+      Portail securise
+    </span>
+
     <img
       ngSrc="assets/logo-ENIAD.png"
       width="96"
       height="96"
       alt="ENIAD"
-      class="h-20 w-auto object-contain sm:h-24"
+      class="mt-6 h-20 w-auto object-contain sm:h-24"
     />
 
-    <!-- <div class="mb-5 rounded-[1.75rem] bg-surface-subtle p-4 sm:p-5"> -->
-    <img
-      ngSrc="assets/logo-app.png"
-      width="128"
-      height="128"
-      alt="Attendance Platform"
-      class="h-24 w-auto object-contain sm:h-40 sm:w-auto"
-    />
-    <!-- </div> -->
+    <div
+      class="mt-5 rounded-[1.75rem] border border-primary-soft bg-linear-to-br from-primary-soft via-surface to-secondary-soft p-4 sm:p-5"
+    >
+      <img
+        ngSrc="assets/logo-app.png"
+        width="128"
+        height="128"
+        alt="Attendance Platform"
+        class="h-24 w-auto object-contain sm:h-40 sm:w-auto"
+      />
+    </div>
 
-    <h2 class="text-2xl font-semibold tracking-tight text-principalText sm:text-3xl">
+    <h2 class="mt-6 text-2xl font-semibold tracking-tight text-principalText sm:text-3xl">
       Plateforme de Présence
     </h2>
 
@@ -46,14 +56,16 @@
       Utilisez votre adresse e-mail <span class="font-semibold text-principalText">@ump.ac.ma</span>
     </p>
 
-    <div class="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-muted sm:text-sm">
-      <span>Politique de confidentialité</span>
-      <span>Centre d'aide</span>
-      <span>&copy; ENIAD 2026</span>
+    <div class="mt-6 flex flex-wrap justify-center gap-2 text-xs sm:text-sm">
+      <span class="rounded-full border border-line bg-surface-subtle px-3 py-1 text-secondaryText">
+        Politique de confidentialite
+      </span>
+      <span class="rounded-full border border-line bg-surface-subtle px-3 py-1 text-secondaryText">
+        Centre d'aide
+      </span>
+      <span class="rounded-full border border-line bg-surface-subtle px-3 py-1 text-secondaryText">
+        &copy; ENIAD 2026
+      </span>
     </div>
-
-    <button type="button" class="mt-6 text-sm font-medium text-primary" (click)="test()">
-      Test toast
-    </button>
   </div>
 </div>
