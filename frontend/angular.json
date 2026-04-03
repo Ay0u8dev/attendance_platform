@@ -32,7 +32,11 @@
             "server": "src/main.server.ts",
             "outputMode": "server",
             "security": {
-              "allowedHosts": ["localhost", "host.docker.internal"]
+              "allowedHosts": [
+                "localhost",
+                "host.docker.internal",
+                "7qf39n5w-4200.uks1.devtunnels.ms"
+              ]
             },
             "ssr": {
               "entry": "src/server.ts"
@@ -66,11 +70,19 @@
           "builder": "@angular/build:dev-server",
           "options": {
             "host": "0.0.0.0",
-            "allowedHosts": ["host.docker.internal", "localhost"]
+            "allowedHosts": [
+              "host.docker.internal",
+              "localhost",
+              "7qf39n5w-4200.uks1.devtunnels.ms"
+            ]
           },
           "configurations": {
             "options": {
-              "allowedHosts": ["host.docker.internal", "localhost"]
+              "allowedHosts": [
+                "host.docker.internal",
+                "localhost",
+                "7qf39n5w-4200.uks1.devtunnels.ms"
+              ]
             },
             "production": {
               "buildTarget": "frontend:build:production"

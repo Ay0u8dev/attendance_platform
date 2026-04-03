@@ -1,3 +1,4 @@
+import { NgOptimizedImage } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../../core/auth/services/auth.service';
@@ -7,7 +8,7 @@ import { ToastService } from '../../../../shared/components/toast/toast.service'
 @Component({
   selector: 'app-login',
   templateUrl: './login.html',
-  imports: [Button],
+  imports: [Button, NgOptimizedImage],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Login {
@@ -16,11 +17,11 @@ export class Login {
 
   readonly isLoading = toSignal(this.authService.authInProgress$, { initialValue: false });
 
-  signInWithGoogle() {
+  signInWithGoogle(): void {
     this.authService.loginWithGoogle();
   }
 
-  test() {
+  test(): void {
     this.toastService.error('Google login failed', 'Missing token returned from Google.');
   }
 }

@@ -1,46 +1,59 @@
 <div
-  class="font-body min-h-screen flex items-center justify-center bg-background px-4 py-6 sm:px-6 sm:py-8"
+  class="rounded-[2rem] border border-line bg-surface p-6 text-center shadow-card sm:p-8 align-middle justify-center"
 >
-  <div class="bg-white shadow-lg rounded-2xl p-5 sm:p-8 w-full max-w-md sm:max-w-lg text-center">
-    <div class="mb-5 sm:mb-6">
-      <img src="assets/logo-ENIAD.png" alt="logo-ENIAD" class="mx-auto h-22 w-auto" />
-    </div>
+  <div class="mx-auto flex max-w-md flex-col items-center">
+    <img
+      ngSrc="assets/logo-ENIAD.png"
+      width="96"
+      height="96"
+      alt="ENIAD"
+      class="h-20 w-auto object-contain sm:h-24"
+    />
 
-    <div class="mb-4">
-      <div class="w-37 h-37 mx-auto rounded-full flex items-center justify-center">
-        <img src="assets/logo-app.png" alt="logo-app" class="w-40 h-40 object-contain" />
-      </div>
-    </div>
+    <!-- <div class="mb-5 rounded-[1.75rem] bg-surface-subtle p-4 sm:p-5"> -->
+    <img
+      ngSrc="assets/logo-app.png"
+      width="128"
+      height="128"
+      alt="Attendance Platform"
+      class="h-24 w-auto object-contain sm:h-40 sm:w-auto"
+    />
+    <!-- </div> -->
 
-    <h1 class="text-2xl font-semibold text-principalText leading-tight">Plateforme de Présence</h1>
+    <h2 class="text-2xl font-semibold tracking-tight text-principalText sm:text-3xl">
+      Plateforme de Présence
+    </h2>
 
-    <p class="text-secondaryText mt-2 mb-4 text-sm sm:text-[14px] px-2">
+    <p class="mt-3 text-sm leading-6 text-secondaryText sm:text-base">
       Connectez-vous pour accéder à votre compte
     </p>
 
-    <app-button
-      label="Se connecter avec Google"
-      icon="fab fa-google"
-      variant="primary"
-      [loading]="isLoading()"
-      (clicked)="signInWithGoogle()"
-    ></app-button>
+    <div class="mt-6 w-full">
+      <app-button
+        label="Se connecter avec Google"
+        icon="fab fa-google"
+        variant="primary"
+        [loading]="isLoading()"
+        (clicked)="signInWithGoogle()"
+      ></app-button>
+    </div>
 
     @if (isLoading()) {
-      <p class="text-gray-400 text-sm mt-3 text-center animate-pulse">Connexion en cours...</p>
+      <p class="mt-3 text-sm text-muted animate-pulse">Connexion en cours...</p>
     }
 
-    <p class="text-gray-500 mt-4 text-xs sm:text-[13px]">
-      Utilisez votre adresse e-mail <b>@ump.ac.ma</b>
+    <p class="mt-4 text-xs leading-6 text-secondaryText sm:text-sm">
+      Utilisez votre adresse e-mail <span class="font-semibold text-principalText">@ump.ac.ma</span>
     </p>
 
-    <div class="flex flex-wrap justify-center sm:justify-between gap-2 text-xs text-gray-400 mt-6">
-      <span>Politique de Confidentialité</span>
+    <div class="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-muted sm:text-sm">
+      <span>Politique de confidentialité</span>
       <span>Centre d'aide</span>
-      <span>&#169; ENIAD 2026</span>
+      <span>&copy; ENIAD 2026</span>
     </div>
-    <div>
-      <button (click)="test()">Test Toast</button>
-    </div>
+
+    <button type="button" class="mt-6 text-sm font-medium text-primary" (click)="test()">
+      Test toast
+    </button>
   </div>
 </div>
