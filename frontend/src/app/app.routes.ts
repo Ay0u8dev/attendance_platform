@@ -63,18 +63,6 @@ export const routes: Routes = [
             (module) => module.JustificationsPage,
           ),
       },
-      {
-        path: 'alerts',
-        loadComponent: () =>
-          import('./features/admin/alerts/alerts-page').then((module) => module.AlertsPage),
-      },
-      {
-        path: 'statistics',
-        loadComponent: () =>
-          import('./features/admin/statistics/statistics-page').then(
-            (module) => module.StatisticsPage,
-          ),
-      },
     ],
   },
   { path: '**', redirectTo: '' },

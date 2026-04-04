@@ -1,0 +1,8 @@
+.data-table-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.data-table-menu[open] summary {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}

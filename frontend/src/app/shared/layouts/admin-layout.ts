@@ -279,8 +279,8 @@ export class AdminLayout {
   readonly navItems: NavItem[] = [
     { label: 'Dashboard', route: '/dashboard', icon: 'fa-solid fa-table-cells-large' },
     { label: 'Attendance', route: '/attendance', icon: 'fa-regular fa-square-check' },
-    { label: 'Students', route: '/students', icon: 'fa-solid fa-user-graduate' },
     { label: 'Justifications', route: '/justifications', icon: 'fa-regular fa-file-lines' },
+    { label: 'Students', route: '/students', icon: 'fa-solid fa-user-graduate' },
     { label: 'Teachers', route: '/teachers', icon: 'fa-solid fa-chalkboard-user' },
     { label: 'Structure', route: '/structure', icon: 'fa-solid fa-sitemap' },
   ];
