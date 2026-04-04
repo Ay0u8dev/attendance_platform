@@ -279,7 +279,7 @@ export class StudentLayout {
   readonly navItems: NavItem[] = [
     { label: 'Dashboard', route: '/dashboard', icon: 'fa-solid fa-table-cells-large' },
     { label: 'My sessions', route: '/sessions', icon: 'fa-regular fa-calendar' },
-    { label: 'My absences', route: '/absence', icon: 'fa-solid fa-square-xmark' },
+    { label: 'My absences', route: '/absence', icon: 'fa-regular fa-circle-xmark' },
     { label: 'Justifications', route: '/justifications', icon: 'fa-regular fa-file-lines' },
   ];
 

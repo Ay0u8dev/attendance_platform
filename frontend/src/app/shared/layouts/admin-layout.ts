@@ -94,7 +94,7 @@ type UtilityItem = {
 
           <button
             type="button"
-            class="absolute top-20 right-0 hidden h-7 w-7 translate-x-1/2 items-center justify-center rounded-full border border-line bg-surface text-secondaryText shadow-card transition-all duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:inline-flex"
+            class="absolute top-5 right-0 hidden h-7 w-7 translate-x-1/2 items-center justify-center rounded-full border border-line bg-surface text-secondaryText shadow-card transition-all duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:inline-flex"
             (click)="toggleSidebarCollapsed()"
             [attr.aria-label]="isSidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
           >
@@ -226,14 +226,14 @@ type UtilityItem = {
                       <div
                         class="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-line bg-surface p-2 shadow-shell"
                       >
-                        <div
-                          class="rounded-xl border border-primary-soft bg-primary-soft px-3 py-2"
+                        <button
+                          type="button"
+                          class="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-secondaryText transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText"
+                          (click)="openSettings()"
                         >
-                          <p class="truncate text-sm font-semibold text-principalText">
-                            Prof. Anderson
-                          </p>
-                          <p class="truncate text-xs text-secondaryText">Administrator</p>
-                        </div>
+                          <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                          <span>Profile</span>
+                        </button>
 
                         <button
                           type="button"
@@ -349,6 +349,10 @@ export class AdminLayout {
   }
 
   openSettings(): void {
+    this.isUserMenuOpen.set(false);
+  }
+
+  openProfile(): void {
     this.isUserMenuOpen.set(false);
   }
 

@@ -278,7 +278,7 @@ export class TeacherLayout {
 
   readonly navItems: NavItem[] = [
     { label: 'Dashboard', route: '/dashboard', icon: 'fa-solid fa-table-cells-large' },
-    { label: 'Sessions', route: '/sessions', icon: 'fa-regular fa-calendar' },
+    { label: 'Attendance', route: '/sessions', icon: 'fa-regular fa-calendar-check' },
     { label: 'Modules', route: '/modules', icon: 'fa-solid fa-cube' },
     { label: 'Students', route: '/students', icon: 'fa-solid fa-user-graduate' },
     { label: 'Justifications', route: '/justifications', icon: 'fa-regular fa-file-lines' },

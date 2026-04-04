@@ -1,6 +1,5 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/guards/auth.guard';
-import path from 'path';
 
 export const routes: Routes = [
   {
@@ -67,14 +66,14 @@ export const routes: Routes = [
     ],
   },
   {
-    path: 'teacherroute',
+    path: 'teacher',
     // canActivate: [authGuard],
     loadComponent: () =>
       import('./shared/layouts/teacher-layout').then((module) => module.TeacherLayout),
     children: [],
   },
   {
-    path: 'studentroute',
+    path: 'student',
     // canActivate: [authGuard],
     loadComponent: () =>
       import('./shared/layouts/student-layout').then((module) => module.StudentLayout),
