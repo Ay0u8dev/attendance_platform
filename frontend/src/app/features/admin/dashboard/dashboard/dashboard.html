@@ -1,0 +1,302 @@
+<section class="space-y-6 lg:space-y-8">
+  <app-page-header
+    title="Dashboard"
+    description="Track attendance performance, recent sessions, and the review workload from a single responsive operations screen."
+    meta="Updated 5 minutes ago"
+  ></app-page-header>
+
+  <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div class="inline-flex w-fit items-center gap-1 rounded-2xl border border-line bg-surface p-1.5 shadow-card">
+      @for (item of ['Overview', 'Engagement', 'Sales']; track item) {
+        <button
+          type="button"
+          class="rounded-xl px-3 py-1.5 text-sm font-medium text-secondaryText transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText"
+          [class.bg-primary-soft]="item === 'Overview'"
+          [class.text-primary]="item === 'Overview'"
+          [attr.aria-pressed]="item === 'Overview'"
+        >
+          {{ item }}
+        </button>
+      }
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-medium text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
+      >
+        <i class="fa-solid fa-share-nodes text-xs" aria-hidden="true"></i>
+        Share
+      </button>
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-sm font-semibold text-white shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-strong hover:shadow-card-strong"
+      >
+        <i class="fa-solid fa-cloud-arrow-down text-xs" aria-hidden="true"></i>
+        Export
+      </button>
+    </div>
+  </div>
+
+  <div class="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.85fr)]">
+    <article
+      class="rounded-3xl border border-primary-soft bg-linear-to-br from-primary-soft via-surface to-secondary-soft p-5 shadow-card sm:p-6"
+    >
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 class="text-xl font-semibold text-principalText">Control center</h2>
+          <p class="text-sm text-secondaryText">
+            Keep attendance operations visible and act quickly without opening multiple pages.
+          </p>
+        </div>
+
+        <a
+          routerLink="/attendance"
+          class="inline-flex items-center gap-2 rounded-xl border border-primary-soft bg-surface px-4 py-2 text-sm font-semibold text-principalText transition-colors duration-200 hover:bg-primary-soft hover:text-primary"
+        >
+          Open attendance board
+          <i class="fa-solid fa-arrow-up-right-from-square text-xs" aria-hidden="true"></i>
+        </a>
+      </div>
+
+      <div class="mt-5 flex flex-wrap gap-2">
+        @for (highlight of highlights; track highlight) {
+          <span
+            class="inline-flex items-center rounded-full border border-primary-soft bg-surface px-3 py-1 text-xs font-semibold text-primary"
+          >
+            {{ highlight }}
+          </span>
+        }
+      </div>
+    </article>
+
+    <article class="rounded-3xl border border-line bg-surface p-5 shadow-card sm:p-6">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="text-xl font-semibold text-principalText">Priority queue</h2>
+        <app-status-badge label="2 urgent" variant="warning"></app-status-badge>
+      </div>
+
+      <div class="mt-5 space-y-3">
+        @for (item of focusQueue; track item.label) {
+          <div
+            class="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface-subtle px-4 py-3"
+          >
+            <p class="text-sm font-medium text-principalText">{{ item.label }}</p>
+            <div class="flex items-center gap-2">
+              <p class="text-sm font-semibold text-principalText">{{ item.value }}</p>
+              <app-status-badge [label]="item.variant" [variant]="item.variant"></app-status-badge>
+            </div>
+          </div>
+        }
+      </div>
+    </article>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    @for (stat of stats; track stat.label) {
+      <app-stat-card
+        [label]="stat.label"
+        [value]="stat.value"
+        [icon]="stat.icon"
+        [badge]="stat.badge"
+        [variant]="stat.variant"
+      ></app-stat-card>
+    }
+  </div>
+
+  <div class="grid gap-4 xl:grid-cols-[minmax(0,1.62fr)_minmax(18rem,0.88fr)]">
+    <article class="rounded-3xl border border-line bg-surface p-5 shadow-card sm:p-6">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 class="text-xl font-semibold text-principalText">Attendance trends</h2>
+          <p class="text-sm text-secondaryText">Daily presence rate over the last 30 days.</p>
+        </div>
+
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2 text-sm font-medium text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
+        >
+          Last 30 days
+          <i class="fa-solid fa-chevron-down text-xs" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="mt-6 overflow-x-auto">
+        <div
+          class="min-w-160 rounded-[1.75rem] border border-primary-soft bg-linear-to-b from-primary-soft via-surface to-surface p-4"
+        >
+          <svg
+            viewBox="0 0 720 220"
+            class="h-64 w-full"
+            role="img"
+            aria-label="Attendance trend chart"
+          >
+            <defs>
+              <linearGradient id="trendArea" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="rgba(30,58,138,0.22)"></stop>
+                <stop offset="100%" stop-color="rgba(30,58,138,0.02)"></stop>
+              </linearGradient>
+            </defs>
+
+            @for (line of [40, 85, 130, 175]; track line) {
+              <line
+                x1="0"
+                [attr.y1]="line"
+                x2="720"
+                [attr.y2]="line"
+                stroke="rgba(148, 163, 184, 0.25)"
+              ></line>
+            }
+
+            <polyline
+              fill="url(#trendArea)"
+              stroke="none"
+              [attr.points]="'0,220 ' + trendPoints + ' 712,220'"
+            ></polyline>
+            <polyline
+              fill="none"
+              stroke="#1E3A8A"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="3"
+              [attr.points]="trendPoints"
+            ></polyline>
+          </svg>
+
+          <div class="mt-3 grid grid-cols-6 gap-2 text-xs text-muted">
+            <span>01 Oct</span>
+            <span>07 Oct</span>
+            <span>14 Oct</span>
+            <span>21 Oct</span>
+            <span>28 Oct</span>
+            <span class="text-right">Today</span>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="rounded-3xl border border-line bg-surface p-5 shadow-card sm:p-6">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="text-xl font-semibold text-principalText">Operational status</h2>
+        <app-status-badge label="Healthy" variant="success"></app-status-badge>
+      </div>
+
+      <div class="mt-5 space-y-4">
+        <div class="rounded-2xl border border-warning-soft bg-warning-soft p-4">
+          <p class="text-sm font-medium text-principalText">Critical student follow-up</p>
+          <p class="mt-1 text-sm leading-6 text-secondaryText">
+            One student exceeded the absence threshold and needs administrative confirmation.
+          </p>
+        </div>
+        <div class="rounded-2xl border border-secondary-soft bg-secondary-soft p-4">
+          <p class="text-sm font-medium text-principalText">Review throughput</p>
+          <p class="mt-1 text-sm leading-6 text-secondaryText">
+            Justification processing remains within service targets this week.
+          </p>
+        </div>
+        <div class="rounded-2xl border border-primary-soft bg-primary-soft p-4">
+          <p class="text-sm font-medium text-principalText">Mobile behavior</p>
+          <p class="mt-1 text-sm leading-6 text-secondaryText">
+            Cards stack first, dense tables collapse into readable records, and the shell becomes a
+            drawer.
+          </p>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <div class="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.9fr)]">
+    <article class="rounded-3xl border border-line bg-surface p-5 shadow-card sm:p-6">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 class="text-xl font-semibold text-principalText">Recent sessions</h2>
+          <p class="text-sm text-secondaryText">
+            A responsive record list that replaces a rigid desktop-only table.
+          </p>
+        </div>
+        <a
+          routerLink="/attendance"
+          class="inline-flex items-center rounded-xl border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
+        >
+          View all
+        </a>
+      </div>
+
+      <div class="mt-5 hidden overflow-hidden rounded-2xl border border-line lg:block">
+        <div
+          class="grid grid-cols-[1.1fr_1.2fr_1.2fr_1.1fr_0.8fr] bg-background-elevated px-5 py-4 text-xs font-semibold uppercase tracking-[0.2em] text-muted"
+        >
+          <span>Date & time</span>
+          <span>Class / section</span>
+          <span>Module</span>
+          <span>Teacher</span>
+          <span>Method</span>
+        </div>
+
+        @for (session of sessions; track session.module) {
+          <div
+            class="grid grid-cols-[1.1fr_1.2fr_1.2fr_1.1fr_0.8fr] items-center gap-4 border-t border-line px-5 py-4"
+          >
+            <div>
+              <p class="font-medium text-principalText">{{ session.date }}</p>
+              <p class="text-sm text-secondaryText">{{ session.time }}</p>
+            </div>
+            <p class="text-sm text-principalText">{{ session.classroom }}</p>
+            <p class="text-sm text-principalText">{{ session.module }}</p>
+            <p class="text-sm text-principalText">{{ session.teacher }}</p>
+            <app-status-badge
+              [label]="session.method"
+              [variant]="session.variant"
+            ></app-status-badge>
+          </div>
+        }
+      </div>
+
+      <div class="mt-5 grid gap-3 lg:hidden">
+        @for (session of sessions; track session.module) {
+          <article class="rounded-2xl border border-line p-4 transition-colors duration-200 hover:border-primary-soft">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p class="font-medium text-principalText">{{ session.module }}</p>
+                <p class="text-sm text-secondaryText">{{ session.classroom }}</p>
+              </div>
+              <app-status-badge
+                [label]="session.method"
+                [variant]="session.variant"
+              ></app-status-badge>
+            </div>
+
+            <div class="mt-4 grid gap-2 text-sm text-secondaryText sm:grid-cols-2">
+              <p>
+                <span class="font-medium text-principalText">Teacher:</span> {{ session.teacher }}
+              </p>
+              <p>
+                <span class="font-medium text-principalText">Time:</span> {{ session.date }} •
+                {{ session.time }}
+              </p>
+            </div>
+          </article>
+        }
+      </div>
+    </article>
+
+    <article class="rounded-3xl border border-line bg-surface p-5 shadow-card sm:p-6">
+      <h2 class="text-xl font-semibold text-principalText">Quick actions</h2>
+      <p class="mt-1 text-sm text-secondaryText">
+        These tiles stay usable on narrow screens without shrinking tap targets.
+      </p>
+
+      <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+        @for (action of quickActions; track action.label) {
+          <app-quick-action-tile
+            [label]="action.label"
+            [description]="action.description"
+            [icon]="action.icon"
+            [route]="action.route"
+            [tone]="action.tone"
+          ></app-quick-action-tile>
+        }
+      </div>
+    </article>
+  </div>
+</section>

@@ -1,0 +1,155 @@
+<section class="overflow-hidden rounded-3xl border border-line bg-surface shadow-card">
+  @if (title() || description()) {
+    <header class="border-b border-line px-5 py-4 sm:px-6">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div class="space-y-1">
+          @if (title()) {
+            <h2 class="text-lg font-semibold text-principalText sm:text-xl">{{ title() }}</h2>
+          }
+
+          @if (description()) {
+            <p class="max-w-2xl text-sm leading-6 text-secondaryText">{{ description() }}</p>
+          }
+        </div>
+
+        @if (caption()) {
+          <p
+            class="inline-flex items-center gap-2 rounded-2xl border border-primary-soft bg-primary-soft px-4 py-2 text-sm font-medium text-primary"
+          >
+            <span class="h-2 w-2 rounded-full bg-secondary"></span>
+            {{ caption() }}
+          </p>
+        }
+      </div>
+    </header>
+  }
+
+  <app-data-table-toolbar
+    [searchValue]="searchQuery()"
+    [searchPlaceholder]="searchPlaceholder()"
+    [filterControls]="toolbarFilters()"
+    [columnVisibilityOptions]="columnVisibilityOptions()"
+    [filteredCount]="filteredRows().length"
+    [totalCount]="allRows().length"
+    [selectedCount]="selectedFilteredRowCount()"
+    (searchValueChange)="updateSearchQuery($event)"
+    (filterValueChange)="updateColumnFilter($event)"
+    (columnVisibilityChange)="updateColumnVisibility($event)"
+  ></app-data-table-toolbar>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full border-separate border-spacing-0">
+      <caption class="sr-only">
+        {{
+          caption() || title() || 'Data table'
+        }}
+      </caption>
+
+      <thead>
+        <tr class="bg-surface-subtle text-left">
+          @if (enableRowSelection()) {
+            <th scope="col" class="w-14 border-b border-line px-4 py-3 sm:px-5">
+              <input
+                type="checkbox"
+                class="h-4 w-4 rounded border-line accent-primary"
+                [checked]="allPageRowsSelected()"
+                [indeterminate]="somePageRowsSelected()"
+                [disabled]="paginatedRows().length === 0"
+                (change)="togglePageRowsSelection($event)"
+                aria-label="Select all rows on this page"
+              />
+            </th>
+          }
+
+          @for (column of visibleColumns(); track column.id) {
+            <th
+              scope="col"
+              class="border-b border-line px-4 py-3 text-sm font-semibold text-principalText sm:px-5"
+              [style.width]="column.width ?? null"
+              [class]="headerCellClasses(column)"
+            >
+              @if (column.sortable !== false) {
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-2 rounded-lg text-left transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft"
+                  (click)="toggleSort(column)"
+                >
+                  <span>{{ column.header }}</span>
+                  <i [class]="sortIconClasses(column.id)" aria-hidden="true"></i>
+                </button>
+              } @else {
+                <span>{{ column.header }}</span>
+              }
+            </th>
+          }
+        </tr>
+      </thead>
+
+      <tbody>
+        @if (paginatedRows().length > 0) {
+          @for (rowEntry of paginatedRows(); track rowEntry.id) {
+            <tr
+              class="transition-colors duration-200 hover:bg-surface-subtle/55"
+              [class.bg-primary-soft]="isRowSelected(rowEntry.id)"
+            >
+              @if (enableRowSelection()) {
+                <td class="border-b border-line px-4 py-4 align-top sm:px-5">
+                  <input
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-line accent-primary"
+                    [checked]="isRowSelected(rowEntry.id)"
+                    (change)="toggleRowSelection(rowEntry.id, $event)"
+                    [attr.aria-label]="'Select row ' + (rowEntry.index + 1)"
+                  />
+                </td>
+              }
+
+              @for (column of visibleColumns(); track column.id) {
+                <td
+                  class="border-b border-line px-4 py-4 text-sm text-secondaryText sm:px-5"
+                  [class]="bodyCellClasses(column)"
+                >
+                  <ng-container
+                    [ngTemplateOutlet]="cellTemplate(column.id) ?? defaultCell"
+                    [ngTemplateOutletContext]="cellContext(rowEntry, column)"
+                  ></ng-container>
+                </td>
+              }
+            </tr>
+          }
+        } @else {
+          <tr>
+            <td
+              class="px-5 py-14 text-center sm:px-6"
+              [attr.colspan]="visibleColumns().length + selectionColumnCount()"
+            >
+              <div class="mx-auto max-w-md space-y-2">
+                <p class="text-base font-semibold text-principalText">{{ emptyStateTitle() }}</p>
+                <p class="text-sm leading-6 text-secondaryText">{{ emptyStateDescription() }}</p>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-data-table-pagination
+    [currentPage]="currentPage()"
+    [pageCount]="pageCount()"
+    [pageSize]="pageSize()"
+    [totalItems]="filteredRows().length"
+    [startIndex]="pageStartIndex()"
+    [endIndex]="pageEndIndex()"
+    [selectedCount]="selectedFilteredRowCount()"
+    [canGoPrevious]="currentPage() > 1"
+    [canGoNext]="currentPage() < pageCount()"
+    [pageSizeOptions]="pageSizeOptions()"
+    (pageChange)="goToPage($event)"
+    (pageSizeChange)="updatePageSize($event)"
+  ></app-data-table-pagination>
+</section>
+
+<ng-template #defaultCell let-value="value">
+  <span class="text-sm text-principalText">{{ formatCellValue(value) }}</span>
+</ng-template>
