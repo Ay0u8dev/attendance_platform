@@ -277,12 +277,12 @@ export class StudentLayout {
   private readonly userMenuRoot = viewChild<ElementRef<HTMLElement>>('userMenuRoot');
 
   readonly navItems: NavItem[] = [
-    { label: 'Dashboard', route: '/students/dashboard', icon: 'fa-solid fa-table-cells-large' },
-    { label: 'My sessions', route: '/students/sessions', icon: 'fa-regular fa-calendar' },
-    { label: 'My absences', route: '/students/absence', icon: 'fa-regular fa-circle-xmark' },
+    { label: 'Dashboard', route: '/student/dashboard', icon: 'fa-solid fa-table-cells-large' },
+    { label: 'My sessions', route: '/student/sessions', icon: 'fa-regular fa-calendar' },
+    { label: 'My absences', route: '/student/absence', icon: 'fa-regular fa-circle-xmark' },
     {
       label: 'Justifications',
-      route: '/students/justifications',
+      route: '/student/justifications',
       icon: 'fa-regular fa-file-lines',
     },
   ];
