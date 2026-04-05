@@ -62,6 +62,7 @@ export class DataTable<T extends object> {
   readonly sortState = signal<DataTableSortState | null>(null);
   readonly columnVisibilityOverrides = signal<Record<string, boolean>>({});
   readonly selectedRowIds = signal<readonly string[]>([]);
+  readonly selectedRowIdsSet = computed(() => new Set(this.selectedRowIds()));
 
   readonly pageSize = computed(() => this.pageSizeOverride() ?? this.initialPageSize());
   readonly selectionColumnCount = computed(() => (this.enableRowSelection() ? 1 : 0));
@@ -369,7 +370,7 @@ export class DataTable<T extends object> {
   }
 
   isRowSelected(rowId: string): boolean {
-    return this.selectedRowIds().includes(rowId);
+    return this.selectedRowIdsSet().has(rowId);
   }
 
   cellTemplate(columnId: string): DataTableCellDef<T>['template'] | null {
