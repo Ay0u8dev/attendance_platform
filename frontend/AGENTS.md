@@ -58,7 +58,7 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 
 These rules apply to every Figma-driven frontend change for this repository. The current source design is the Figma file `Academic Attendance Platform` (`https://www.figma.com/design/Vym1gOw6bVrK5aiDxPFpxb/Academic-Attendance-Platform?node-id=0-1`).
 
-IMPORTANT: Read [`frontend/DESIGN_LANGUAGE.md`](/d:/Projects/attendance_platform/frontend/DESIGN_LANGUAGE.md) before designing or implementing new UI. That file is the reusable design-language source of truth for this project.
+IMPORTANT: Read [`frontend/DESIGN_LANGUAGE.md`](./DESIGN_LANGUAGE.md) before designing or implementing new UI. That file is the reusable design-language source of truth for this project.
 
 ### Source Of Truth
 

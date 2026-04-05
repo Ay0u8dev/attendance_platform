@@ -229,7 +229,7 @@ type UtilityItem = {
                         <button
                           type="button"
                           class="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-secondaryText transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText"
-                          (click)="openSettings()"
+                          (click)="openProfile()"
                         >
                           <i class="fa-solid fa-gear" aria-hidden="true"></i>
                           <span>Profile</span>
@@ -260,7 +260,7 @@ type UtilityItem = {
             </header>
 
             <main class="px-3 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
-              <div class="mx-auto w-full max-w-350">
+              <div class="mx-auto w-full max-w-7xl">
                 <router-outlet></router-outlet>
               </div>
             </main>

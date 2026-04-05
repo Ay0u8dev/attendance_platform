@@ -260,7 +260,7 @@ type UtilityItem = {
             </header>
 
             <main class="px-3 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
-              <div class="mx-auto w-full max-w-350">
+              <div class="mx-auto w-full max-w-7xl">
                 <router-outlet></router-outlet>
               </div>
             </main>
@@ -277,10 +277,14 @@ export class StudentLayout {
   private readonly userMenuRoot = viewChild<ElementRef<HTMLElement>>('userMenuRoot');
 
   readonly navItems: NavItem[] = [
-    { label: 'Dashboard', route: '/dashboard', icon: 'fa-solid fa-table-cells-large' },
-    { label: 'My sessions', route: '/sessions', icon: 'fa-regular fa-calendar' },
-    { label: 'My absences', route: '/absence', icon: 'fa-regular fa-circle-xmark' },
-    { label: 'Justifications', route: '/justifications', icon: 'fa-regular fa-file-lines' },
+    { label: 'Dashboard', route: '/students/dashboard', icon: 'fa-solid fa-table-cells-large' },
+    { label: 'My sessions', route: '/students/sessions', icon: 'fa-regular fa-calendar' },
+    { label: 'My absences', route: '/students/absence', icon: 'fa-regular fa-circle-xmark' },
+    {
+      label: 'Justifications',
+      route: '/students/justifications',
+      icon: 'fa-regular fa-file-lines',
+    },
   ];
 
   readonly utilityItems: UtilityItem[] = [{ label: 'Settings', icon: 'fa-solid fa-gear' }];

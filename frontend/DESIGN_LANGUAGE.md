@@ -43,7 +43,7 @@ The palette below comes from the provided brand reference and should drive all n
 
 ## 3. Token Mapping
 
-These roles should map to the theme tokens in [`frontend/src/styles.css`](/d:/Projects/attendance_platform/frontend/src/styles.css):
+These roles should map to the theme tokens in [`frontend/src/styles.css`](./src/styles.css):
 
 | Design role | Token |
 | --- | --- |
@@ -185,7 +185,7 @@ Shadows should separate surfaces, not perform branding work.
 
 ## 11. Implementation Rules For Agents
 
-- Start from existing tokens in [`frontend/src/styles.css`](/d:/Projects/attendance_platform/frontend/src/styles.css)
+- Start from existing tokens in [`frontend/src/styles.css`](./src/styles.css)
 - Reuse existing layout and shared UI patterns before inventing new ones
 - Prefer token-backed classes over hardcoded values
 - Extract repeatable patterns into shared components

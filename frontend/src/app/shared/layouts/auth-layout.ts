@@ -1,4 +1,3 @@
-import { NgOptimizedImage } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
@@ -7,7 +6,7 @@ import { RouterOutlet } from '@angular/router';
   imports: [RouterOutlet],
   template: `
     <div class="relative min-h-screen overflow-hidden bg-background text-principalText">
-      <div class="pointer-events-none absolute inset-0 bg- "></div>
+      <div class="pointer-events-none absolute inset-0"></div>
 
       <div
         class="relative mx-auto flex min-h-screen max-w-6xl flex-col justify-center gap-8 px-4 py-6 sm:px-6 lg:flex-row lg:items-center lg:px-8 lg:py-10"

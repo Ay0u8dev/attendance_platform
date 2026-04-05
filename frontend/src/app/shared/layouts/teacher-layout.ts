@@ -260,7 +260,7 @@ type UtilityItem = {
             </header>
 
             <main class="px-3 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
-              <div class="mx-auto w-full max-w-350">
+              <div class="mx-auto w-full max-w-7xl">
                 <router-outlet></router-outlet>
               </div>
             </main>
@@ -277,11 +277,11 @@ export class TeacherLayout {
   private readonly userMenuRoot = viewChild<ElementRef<HTMLElement>>('userMenuRoot');
 
   readonly navItems: NavItem[] = [
-    { label: 'Dashboard', route: '/dashboard', icon: 'fa-solid fa-table-cells-large' },
-    { label: 'Attendance', route: '/sessions', icon: 'fa-regular fa-calendar-check' },
-    { label: 'Modules', route: '/modules', icon: 'fa-solid fa-cube' },
-    { label: 'Students', route: '/students', icon: 'fa-solid fa-user-graduate' },
-    { label: 'Justifications', route: '/justifications', icon: 'fa-regular fa-file-lines' },
+    { label: 'Dashboard', route: '/teacher/dashboard', icon: 'fa-solid fa-table-cells-large' },
+    { label: 'Attendance', route: '/teacher/sessions', icon: 'fa-regular fa-calendar-check' },
+    { label: 'Modules', route: '/teacher/modules', icon: 'fa-solid fa-cube' },
+    { label: 'Students', route: '/teacher/students', icon: 'fa-solid fa-user-graduate' },
+    { label: 'Justifications', route: '/teacher/justifications', icon: 'fa-regular fa-file-lines' },
   ];
 
   readonly utilityItems: UtilityItem[] = [{ label: 'Settings', icon: 'fa-solid fa-gear' }];

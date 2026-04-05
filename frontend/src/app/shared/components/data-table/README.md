@@ -42,13 +42,13 @@ If you need those, say so directly and extend the component deliberately. Do not
 
 ## Files
 
-- [`data-table.ts`](/d:/Projects/attendance_platform/frontend/src/app/shared/components/data-table/data-table.ts): main component logic and public inputs
-- [`data-table.html`](/d:/Projects/attendance_platform/frontend/src/app/shared/components/data-table/data-table.html): table markup
-- [`data-table.types.ts`](/d:/Projects/attendance_platform/frontend/src/app/shared/components/data-table/data-table.types.ts): reusable types for columns, filters, and template context
-- [`data-table-cell-def.ts`](/d:/Projects/attendance_platform/frontend/src/app/shared/components/data-table/data-table-cell-def.ts): directive used to provide custom cell templates
-- [`data-table-toolbar.ts`](/d:/Projects/attendance_platform/frontend/src/app/shared/components/data-table/data-table-toolbar.ts): search, filters, and column toggles
-- [`data-table-pagination.ts`](/d:/Projects/attendance_platform/frontend/src/app/shared/components/data-table/data-table-pagination.ts): pagination controls
-- [`students-page.ts`](/d:/Projects/attendance_platform/frontend/src/app/features/admin/students/students-page.ts): live usage example
+- [`data-table.ts`](./data-table.ts): main component logic and public inputs
+- [`data-table.html`](./data-table.html): table markup
+- [`data-table.types.ts`](./data-table.types.ts): reusable types for columns, filters, and template context
+- [`data-table-cell-def.ts`](./data-table-cell-def.ts): directive used to provide custom cell templates
+- [`data-table-toolbar.ts`](./data-table-toolbar.ts): search, filters, and column toggles
+- [`data-table-pagination.ts`](./data-table-pagination.ts): pagination controls
+- [`students-page.ts`](../../../features/admin/students/students-page.ts): live usage example
 
 ## Quick Start
 
@@ -137,27 +137,27 @@ If you skip a stable row id, selection state can become fragile when row order c
 
 ## Public Inputs
 
-These are the inputs on [`DataTable`](/d:/Projects/attendance_platform/frontend/src/app/shared/components/data-table/data-table.ts#L38).
+These are the inputs on [`DataTable`](./data-table.ts#L38).
 
-| Input | Type | Default | Purpose |
-| --- | --- | --- | --- |
-| `title` | `string` | `''` | Card-style header title |
-| `description` | `string` | `''` | Supporting copy under the title |
-| `caption` | `string` | `''` | Badge-like metadata shown in the header |
-| `searchPlaceholder` | `string` | `'Search rows...'` | Placeholder for the global search input |
-| `emptyStateTitle` | `string` | `'No rows found'` | Empty-state title |
-| `emptyStateDescription` | `string` | `'Try adjusting filters, search terms, or visible columns.'` | Empty-state supporting text |
-| `rows` | `readonly T[]` | required | Data source |
-| `columns` | `readonly DataTableColumn<T>[]` | required | Column configuration |
-| `pageSizeOptions` | `readonly number[]` | `[5, 10, 20, 50]` | Page size dropdown options |
-| `initialPageSize` | `number` | `10` | Initial rows per page |
-| `enableRowSelection` | `boolean` | `false` | Enables checkbox selection |
-| `rowId` | `(row: T, index: number) => string` | optional | Stable row identifier resolver |
+| Input                   | Type                                | Default                                                      | Purpose                                 |
+| ----------------------- | ----------------------------------- | ------------------------------------------------------------ | --------------------------------------- |
+| `title`                 | `string`                            | `''`                                                         | Card-style header title                 |
+| `description`           | `string`                            | `''`                                                         | Supporting copy under the title         |
+| `caption`               | `string`                            | `''`                                                         | Badge-like metadata shown in the header |
+| `searchPlaceholder`     | `string`                            | `'Search rows...'`                                           | Placeholder for the global search input |
+| `emptyStateTitle`       | `string`                            | `'No rows found'`                                            | Empty-state title                       |
+| `emptyStateDescription` | `string`                            | `'Try adjusting filters, search terms, or visible columns.'` | Empty-state supporting text             |
+| `rows`                  | `readonly T[]`                      | required                                                     | Data source                             |
+| `columns`               | `readonly DataTableColumn<T>[]`     | required                                                     | Column configuration                    |
+| `pageSizeOptions`       | `readonly number[]`                 | `[5, 10, 20, 50]`                                            | Page size dropdown options              |
+| `initialPageSize`       | `number`                            | `10`                                                         | Initial rows per page                   |
+| `enableRowSelection`    | `boolean`                           | `false`                                                      | Enables checkbox selection              |
+| `rowId`                 | `(row: T, index: number) => string` | optional                                                     | Stable row identifier resolver          |
 
 ## Public Output
 
-| Output | Type | Meaning |
-| --- | --- | --- |
+| Output            | Type           | Meaning                       |
+| ----------------- | -------------- | ----------------------------- |
 | `selectionChange` | `readonly T[]` | Emits currently selected rows |
 
 Example:
@@ -173,7 +173,7 @@ Example:
 
 ## Column Definition
 
-Each column uses the `DataTableColumn<T>` interface from [`data-table.types.ts`](/d:/Projects/attendance_platform/frontend/src/app/shared/components/data-table/data-table.types.ts#L15).
+Each column uses the `DataTableColumn<T>` interface from [`data-table.types.ts`](./data-table.types.ts#L15).
 
 ```ts
 readonly columns: readonly DataTableColumn<StudentRow>[] = [
@@ -197,22 +197,22 @@ readonly columns: readonly DataTableColumn<StudentRow>[] = [
 
 ### Column Fields
 
-| Field | Required | Meaning |
-| --- | --- | --- |
-| `id` | yes | Unique identifier for the column |
-| `header` | yes | Header label shown in the table |
-| `accessor` | yes | Reads the default cell value from a row |
-| `sortValue` | no | Overrides what is used for sorting |
-| `filterValue` | no | Overrides what is used for global search and column filtering |
-| `searchable` | no | If `false`, excludes this column from global search |
-| `sortable` | no | If `false`, disables header sorting |
-| `hideable` | no | If `false`, removes this column from the visibility menu |
-| `initiallyHidden` | no | Hides the column on first render |
-| `filter` | no | Enables a toolbar filter for this column |
-| `align` | no | `'start'`, `'center'`, or `'end'` |
-| `width` | no | CSS width string applied to the column |
-| `cellClassName` | no | Extra classes for body cells |
-| `headerClassName` | no | Extra classes for header cells |
+| Field             | Required | Meaning                                                       |
+| ----------------- | -------- | ------------------------------------------------------------- |
+| `id`              | yes      | Unique identifier for the column                              |
+| `header`          | yes      | Header label shown in the table                               |
+| `accessor`        | yes      | Reads the default cell value from a row                       |
+| `sortValue`       | no       | Overrides what is used for sorting                            |
+| `filterValue`     | no       | Overrides what is used for global search and column filtering |
+| `searchable`      | no       | If `false`, excludes this column from global search           |
+| `sortable`        | no       | If `false`, disables header sorting                           |
+| `hideable`        | no       | If `false`, removes this column from the visibility menu      |
+| `initiallyHidden` | no       | Hides the column on first render                              |
+| `filter`          | no       | Enables a toolbar filter for this column                      |
+| `align`           | no       | `'start'`, `'center'`, or `'end'`                             |
+| `width`           | no       | CSS width string applied to the column                        |
+| `cellClassName`   | no       | Extra classes for body cells                                  |
+| `headerClassName` | no       | Extra classes for header cells                                |
 
 ## Filters
 
@@ -296,27 +296,21 @@ The template key must match the column `id`.
 
 The directive exposes `DataTableCellContext<T>`:
 
-| Variable | Meaning |
-| --- | --- |
-| `$implicit` | same as `value` |
-| `value` | resolved cell value |
-| `row` | current row object |
-| `column` | current column config |
-| `rowIndex` | original row index |
-| `rowId` | resolved row identifier |
-| `selected` | whether the row is currently selected |
+| Variable    | Meaning                               |
+| ----------- | ------------------------------------- |
+| `$implicit` | same as `value`                       |
+| `value`     | resolved cell value                   |
+| `row`       | current row object                    |
+| `column`    | current column config                 |
+| `rowIndex`  | original row index                    |
+| `rowId`     | resolved row identifier               |
+| `selected`  | whether the row is currently selected |
 
 Example:
 
 ```html
-<ng-template
-  [appDataTableCell]="'student'"
-  let-row="row"
-  let-selected="selected"
->
-  <div [class.font-semibold]="selected">
-    {{ row.name }}
-  </div>
+<ng-template [appDataTableCell]="'student'" let-row="row" let-selected="selected">
+  <div [class.font-semibold]="selected">{{ row.name }}</div>
 </ng-template>
 ```
 
@@ -397,7 +391,7 @@ If that output is not acceptable for a column, provide a custom cell template. D
 
 If you want a working reference instead of theory, read:
 
-- [`students-page.ts`](/d:/Projects/attendance_platform/frontend/src/app/features/admin/students/students-page.ts#L23)
+- [`students-page.ts`](../../../features/admin/students/students-page.ts#L23)
 
 That example shows:
 
