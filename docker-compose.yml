@@ -13,10 +13,17 @@ services:
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/routes.dev.yml:/etc/traefik/routes.dev.yml:ro
 
+  # ===================== Redis =======================
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+
   # ===================== Databases =======================
-  auth-db:
+  user-db:
     image: postgres:alpine
-    # container_name: auth-db
+    container_name: user-db
     ports:
       - 5432:5432
     environment:
