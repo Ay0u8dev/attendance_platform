@@ -79,8 +79,7 @@ export interface CycleItem {
           <i class="fa-solid fa-plus text-sm" aria-hidden="true"></i>
         </span>
         <div>
-          <p class="text-sm font-semibold text-principalText">Configurer un nouveau cycle</p>
-          <p class="text-xs text-secondaryText">Ajouter un parcours et ses regles</p>
+          <p class="text-sm font-semibold text-principalText">Ajouter un nouveau cycle</p>
         </div>
       </button>
     </div>

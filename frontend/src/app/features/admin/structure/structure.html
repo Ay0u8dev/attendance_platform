@@ -22,7 +22,11 @@
 
   @if (activeUnitId === 'cycles') {
     <app-cycles-page></app-cycles-page>
-  } @else if (activeUnit) {
+  }
+  @else if (activeUnitId === 'fields') {
+    <app-fields-page></app-fields-page>
+  }
+  @else if (activeUnit) {
     <section class="grid gap-4 lg:grid-cols-[2fr_1fr]">
       <article class="rounded-3xl border border-line bg-surface p-6 shadow-card">
         <div class="flex items-start justify-between gap-4">

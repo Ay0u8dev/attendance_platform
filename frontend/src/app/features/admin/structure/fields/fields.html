@@ -1,0 +1,27 @@
+<section class="space-y-5">
+  <app-fields-header
+    [totalFields]="fields.length"
+    (addClicked)="openCreate()"
+  ></app-fields-header>
+
+  <app-fields-list
+    [fields]="fields"
+    (createClicked)="openCreate()"
+    (editClicked)="openEdit($event)"
+    (deleteClicked)="openDelete($event)"
+  ></app-fields-list>
+
+  <app-create-field-modal [open]="activeModal === 'create'" (closeRequested)="closeModal()"></app-create-field-modal>
+
+  <app-edit-field-modal
+    [open]="activeModal === 'edit'"
+    [field]="selectedField"
+    (closeRequested)="closeModal()"
+  ></app-edit-field-modal>
+
+  <app-delete-field-modal
+    [open]="activeModal === 'delete'"
+    [field]="selectedField"
+    (closeRequested)="closeModal()"
+  ></app-delete-field-modal>
+</section>

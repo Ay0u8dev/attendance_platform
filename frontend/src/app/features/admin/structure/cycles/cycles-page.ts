@@ -26,8 +26,8 @@ export class CyclesPage {
     {
       id: 'cp',
       code: 'CP',
-      name: 'Cycle Preparatoire',
-      description: 'Parcours d entree pour les fondamentaux.',
+      name: 'Cycle Préparatoire',
+      description: 'Parcours d\'entrée pour les fondamentaux.',
       tracks: 8,
       students: 450,
       badgeClass: 'bg-secondary-soft text-secondary',
@@ -37,8 +37,8 @@ export class CyclesPage {
     {
       id: 'ing',
       code: 'ING',
-      name: 'Cycle Ingenieur',
-      description: 'Parcours long pour la specialisation.',
+      name: 'Cycle Ingénieur',
+      description: 'Parcours long pour la spécialisation.',
       tracks: 12,
       students: 820,
       badgeClass: 'bg-primary-soft text-primary',
