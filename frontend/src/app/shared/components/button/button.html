@@ -2,8 +2,7 @@
   type="button"
   (click)="handleClick()"
   [disabled]="disabled()"
-  [class]="baseButtonClasses + ' ' + buttonClasses"
->
+  [class]="baseButtonClasses + ' ' + widthClasses + ' ' + buttonClasses">
   @if (icon()) {
     <i [class]="icon()" aria-hidden="true"></i>
   }

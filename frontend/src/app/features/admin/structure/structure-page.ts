@@ -1,34 +1,82 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 import { PageHeader } from '../../../shared/components/page-header/page-header';
+import { CyclesPage } from './cycles/cycles-page';
 
 @Component({
   selector: 'app-structure-page',
-  imports: [PageHeader],
-  template: `
-    <section class="space-y-6">
-      <app-page-header
-        title="Structure"
-        description="Academic structure covers departments, sections, cohorts, and the relationships that drive attendance tracking."
-        meta="24 academic units"
-      ></app-page-header>
-
-      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        @for (item of units; track item.title) {
-          <article class="rounded-3xl border border-line bg-surface p-5 shadow-card">
-            <p class="text-sm font-semibold text-principalText">{{ item.title }}</p>
-            <p class="mt-2 text-sm leading-6 text-secondaryText">{{ item.description }}</p>
-          </article>
-        }
-      </div>
-    </section>
-  `,
+  imports: [PageHeader, CyclesPage],
+  templateUrl: './structure.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StructurePage {
   readonly units = [
-    { title: 'Departments', description: 'Top-level academic entities used to group teachers and modules.' },
-    { title: 'Sections', description: 'Program-specific sections for cohort scheduling and reporting.' },
-    { title: 'Groups', description: 'Operational groups used for attendance capture and justification review.' },
+    {
+      id: 'academic-year',
+      title: 'Annee Academique',
+      description: 'Definissez la periode officielle et ses parametres globaux.',
+      count: 3,
+      highlights: ['Calendriers', 'Semestres', 'Parametres generaux'],
+    },
+    {
+      id: 'cycles',
+      title: 'Cycles',
+      description: 'Organisez les cycles et leurs niveaux.',
+      count: 5,
+      highlights: ['Niveaux', 'Durees', 'Regles'],
+    },
+    {
+      id: 'fields',
+      title: 'Filieres',
+      description: 'Structurez les filieres et leurs parcours.',
+      count: 6,
+      highlights: ['Responsables', 'Axes', 'Statuts'],
+    },
+    {
+      id: 'formations',
+      title: 'Formations',
+      description: 'Gerez les formations et leurs volumes horaires.',
+      count: 4,
+      highlights: ['Credits', 'Volumes', 'Modalites'],
+    },
+    {
+      id: 'groups',
+      title: 'Groupes',
+      description: 'Definissez les groupes et effectifs.',
+      count: 3,
+      highlights: ['Effectifs', 'Regroupements', 'Encadrement'],
+    },
+    {
+      id: 'modules',
+      title: 'Modules',
+      description: 'Repartissez les modules et leurs unites.',
+      count: 3,
+      highlights: ['Unites', 'Evaluations', 'Validation'],
+    },
   ];
+
+  readonly checkpoints = [
+    {
+      title: 'Validation des references',
+      description: 'Verifiez les codes et libelles officiels.',
+    },
+    {
+      title: 'Alignement des volumes',
+      description: 'Controlez les volumes horaires et credits.',
+    },
+    {
+      title: 'Statuts a confirmer',
+      description: 'Elements en attente de validation.',
+    },
+  ];
+
+  activeUnitId = this.units[0]?.id ?? 'academic-year';
+
+  get activeUnit() {
+    return this.units.find((unit) => unit.id === this.activeUnitId) ?? this.units[0];
+  }
+
+  setActiveUnit(unitId: string) {
+    this.activeUnitId = unitId;
+  }
 }
