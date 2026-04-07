@@ -1,10 +1,10 @@
-package ma.eniad.authservice;
+package ma.eniad.sessionservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class AuthServiceApplicationTests {
+class SessionServiceApplicationTests {
 
     @Test
     void contextLoads() {
