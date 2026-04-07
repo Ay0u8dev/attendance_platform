@@ -84,9 +84,28 @@ export class AuthService {
         }),
         catchError((error) => {
           this.authInProgressSignal.set(false);
-          this.authErrorSignal.set('Authentication failed. Please try again.');
-          this.toastService.error('Authentication failed', 'We could not complete sign-in.');
-          console.error('Backend auth exchange failed:', error);
+
+          // Handle specific error responses from backend
+          if (error.status === 403) {
+            const message =
+              error.error?.message || 'Domaine non autorisé. Utilisez votre adresse @ump.ac.ma';
+            this.authErrorSignal.set(message);
+            this.toastService.error('Accès refusé', message);
+            console.warn('Domain validation failed:', error);
+          } else if (error.status === 400) {
+            const message = error.error?.message || 'Requête invalide. Vérifiez vos informations.';
+            this.authErrorSignal.set(message);
+            this.toastService.error('Erreur de requête', message);
+            console.error('Invalid request:', error);
+          } else {
+            this.authErrorSignal.set('Authentification échouée. Veuillez réessayer.');
+            this.toastService.error(
+              'Authentification échouée',
+              "Nous n'avons pas pu terminer la connexion.",
+            );
+            console.error('Backend auth exchange failed:', error);
+          }
+
           return of(null); // Keep the listener alive for future attempts
         }),
       )
