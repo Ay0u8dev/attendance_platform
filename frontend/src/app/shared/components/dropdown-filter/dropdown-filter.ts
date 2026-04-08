@@ -53,7 +53,7 @@ export interface DropdownOption {
               <input
                 type="text"
                 placeholder="Rechercher..."
-                [(ngModel)]="searchQuery"
+                [ngModel]="searchQuery()"
                 (ngModelChange)="onSearchChange($event)"
                 class="w-full pl-9 pr-3 py-2 rounded-lg border border-line bg-surface-subtle text-sm text-principalText placeholder:text-muted transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary-soft"
               />
