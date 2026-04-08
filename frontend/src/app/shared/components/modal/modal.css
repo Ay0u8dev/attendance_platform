@@ -19,9 +19,11 @@
   box-shadow: var(--shadow-shell);
   padding: 2rem;
   position: relative;
-  max-height: calc(100vh - 4rem);
+  max-height: calc(100vh - 3rem);
   overflow: hidden;
   animation: modal-in 240ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-shell::before {
@@ -77,11 +79,13 @@
 }
 
 .modal-body {
+  flex: 1;
+  overflow-y: auto;
   margin-top: 1.75rem;
-  max-height: calc(100vh - 18rem);
-  overflow: auto;
+  margin-bottom: 1.75rem;
   padding-right: 0.5rem;
   color: var(--color-principalText);
+  min-height: 0;
 }
 
 .modal-body::-webkit-scrollbar {
@@ -102,17 +106,18 @@
 }
 
 .modal-footer {
-  margin-top: 2rem;
+  flex-shrink: 0;
+  margin-top: auto;
   padding-top: 1.5rem;
   border-top: 1px solid var(--color-line);
   display: flex;
   flex-wrap: wrap-reverse;
-  justify-content: flex-start;
+  justify-content: flex-end;
   align-items: center;
   gap: 0.875rem;
 }
 
-`@media` (max-width: 640px) {
+@media (max-width: 640px) {
   .modal-shell {
     padding: 1.5rem;
     border-radius: 1rem;

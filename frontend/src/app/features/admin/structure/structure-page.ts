@@ -3,10 +3,11 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { CyclesPage } from './cycles/cycles-page';
 import { FieldsPage } from './fields/fields-page';
+import { FormationsPage } from './formations/formations-page';
 
 @Component({
   selector: 'app-structure-page',
-  imports: [PageHeader, CyclesPage, FieldsPage],
+  imports: [PageHeader, CyclesPage, FieldsPage, FormationsPage],
   templateUrl: './structure.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
