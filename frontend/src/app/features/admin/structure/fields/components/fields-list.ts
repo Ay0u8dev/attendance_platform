@@ -72,7 +72,7 @@ export interface FieldItem {
 
       <button
         type="button"
-        class="flex min-h-[280px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-line-strong bg-surface-subtle p-5 text-center text-secondaryText transition hover:border-primary"
+        class="flex min-h-[280px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-line-strong bg-surface-subtle p-5 text-center text-secondaryText transition hover:border-primary hover:text-primary"
         (click)="createClicked.emit()"
       >
         <span class="flex h-12 w-12 items-center justify-center rounded-2xl border border-line bg-surface hover:border-primary hover:text-primary">

@@ -1,0 +1,39 @@
+<section class="space-y-5">
+  <app-formations-header
+    [filteredCount]="filteredFormations.length"
+    [totalCount]="allFormations.length"
+    (addClicked)="openCreate()"
+  ></app-formations-header>
+
+  <app-formations-filters
+    [cycles]="cycles"
+    [fields]="fields"
+    [semesters]="semesters"
+    (searchChange)="onSearchChange($event)"
+    (cycleFilterChange)="onCycleFilterChange($event)"
+    (fieldFilterChange)="onFieldFilterChange($event)"
+    (semesterFilterChange)="onSemesterFilterChange($event)"
+  ></app-formations-filters>
+
+  <app-formations-list
+    [formations]="filteredFormations"
+    [totalFormations]="allFormations.length"
+    (createClicked)="openCreate()"
+    (manageClicked)="openEdit($event)"
+    (deleteClicked)="openDelete($event)"
+  ></app-formations-list>
+
+  <app-create-formation-modal [open]="activeModal === 'create'" (closeRequested)="closeModal()"></app-create-formation-modal>
+
+  <app-edit-formation-modal
+    [open]="activeModal === 'edit'"
+    [formation]="selectedFormation"
+    (closeRequested)="closeModal()"
+  ></app-edit-formation-modal>
+
+  <app-delete-formation-modal
+    [open]="activeModal === 'delete'"
+    [formation]="selectedFormation"
+    (closeRequested)="closeModal()"
+  ></app-delete-formation-modal>
+</section>
