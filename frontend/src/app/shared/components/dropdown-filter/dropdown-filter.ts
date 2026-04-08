@@ -161,7 +161,6 @@ export class DropdownFilter {
   readonly iconClass = input.required<string>();
   readonly iconBackgroundClass = input.required<string>();
   readonly iconColor = input<'primary' | 'secondary' | 'warning'>('primary');
-  readonly hoverBorderClass = input<string>('');
   readonly filterChange = output<string | null>();
 
   readonly isOpen = signal<boolean>(false);
