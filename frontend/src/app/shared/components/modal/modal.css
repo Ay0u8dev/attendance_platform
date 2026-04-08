@@ -16,7 +16,7 @@
   border-radius: 1.25rem;
   border: 1px solid var(--color-line);
   background: var(--color-surface);
-  box-shadow: var(--shell);
+  box-shadow: var(--shadow-shell);
   padding: 2rem;
   position: relative;
   max-height: calc(100vh - 3rem);
