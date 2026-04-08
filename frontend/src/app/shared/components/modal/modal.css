@@ -117,17 +117,12 @@
   gap: 0.875rem;
 }
 
-@media (max-width: 640px) {
-  .modal-shell {
-    padding: 1.5rem;
-    border-radius: 1rem;
-@media (max-width: 640px) {
+`@media` (max-width: 640px) {
   .modal-shell {
     padding: 1.5rem;
     border-radius: 1rem;
     max-height: calc(100vh - 3rem);
   }
-}  }
 
   .modal-title {
     font-size: 1.1875rem;
