@@ -23,14 +23,14 @@ export interface GroupeItem {
   template: `
     <div class="space-y-6">
       <!-- Empty State -->
-      <div *ngIf="groupes().length === 0" class="rounded-3xl border border-dashed border-line-strong bg-surface-subtle p-12 text-center">
+      <div *ngIf="groupes().length === 0" class="rounded-2xl border border-dashed border-line/40 bg-surface-subtle p-12 text-center">
         <div class="flex justify-center mb-4">
-          <div class="flex h-16 w-16 items-center justify-center rounded-2xl border border-line bg-surface">
+          <div class="flex h-16 w-16 items-center justify-center rounded-xl border border-line/30 bg-surface">
             <i class="fa-solid fa-people-group text-2xl text-secondaryText"></i>
           </div>
         </div>
-        <p class="text-lg font-semibold text-principalText">Aucun groupe trouvé</p>
-        <p class="mt-1 text-sm text-secondaryText">Essayez de modifier vos filtres ou créez un nouveau groupe.</p>
+        <p class="text-lg font-bold text-principalText">Aucun groupe trouvé</p>
+        <p class="mt-1 text-sm text-secondaryText/70">Essayez de modifier vos filtres ou créez un nouveau groupe.</p>
       </div>
 
       <!-- Groups by Formation -->
@@ -43,7 +43,7 @@ export interface GroupeItem {
           <div class="flex-1">
             <h3 class="text-lg font-bold text-principalText">{{ formation.name }}</h3>
           </div>
-          <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20">
+          <span class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-primary/20">
             <span class="flex h-2 w-2 rounded-full bg-primary"></span>
             <span class="text-sm font-bold text-primary">{{ formation.count }} actifs</span>
           </span>
@@ -53,20 +53,20 @@ export interface GroupeItem {
         <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 pl-4">
           <article
             *ngFor="let groupe of formation.groupes; trackBy: trackByGroupeId"
-            class="group overflow-hidden rounded-3xl border border-line bg-gradient-to-br from-surface via-surface to-surface-subtle shadow-lg transition duration-300 hover:-translate-y-2 hover:shadow-2xl hover:border-primary/50"
+            class="group overflow-hidden rounded-2xl border border-line/40 bg-surface shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(0,0,0,0.12)] hover:border-line/60"
           >
             <!-- Header with Code Badge and Actions -->
-            <div class="flex items-start justify-between gap-4 border-b border-line/50 bg-gradient-to-r from-primary/5 via-surface to-surface px-6 py-5">
+            <div class="flex items-start justify-between gap-4 bg-surface px-6 py-5 border-b border-line/30">
               <div class="flex items-center gap-3">
-                <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 text-primary text-xs font-bold shadow-sm">
+                <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary text-xs font-bold">
                   {{ groupe.code.split('-')[1] }}
                 </span>
                 <div>
-                  <span class="text-xs font-bold text-secondaryText uppercase tracking-wider">Code</span>
+                  <span class="text-xs font-bold text-secondaryText/70 uppercase tracking-wider">Code</span>
                   <p class="text-sm font-bold text-principalText">{{ groupe.code }}</p>
                 </div>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1.5">
                 <app-icon-button
                   icon="fa-regular fa-pen-to-square"
                   label="Modifier le groupe"
@@ -85,43 +85,34 @@ export interface GroupeItem {
             </div>
 
             <!-- Groupe Info -->
-            <div class="px-6 py-6 space-y-6">
+            <div class="px-6 py-5 space-y-4">
               <!-- Formation Name -->
               <div class="space-y-2">
-                <p class="text-xs uppercase tracking-widest text-secondaryText font-bold">Formation</p>
-                <h4 class="text-xl font-bold text-principalText group-hover:text-primary transition leading-tight">
+                <p class="text-xs uppercase tracking-wider text-secondaryText/70 font-bold">Formation</p>
+                <h4 class="text-lg font-bold text-principalText leading-tight">
                   {{ groupe.formationName }}
                 </h4>
               </div>
 
-              <!-- Details Row -->
-              <div class="space-y-4">
-                <div class="flex items-center gap-4 bg-gradient-to-r from-secondary/5 to-secondary/0 border border-secondary/10 rounded-2xl px-4 py-3">
-                  <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-secondary/20 to-secondary/10 text-secondary flex-shrink-0 shadow-sm">
-                    <i class="fa-solid fa-users text-base"></i>
-                  </div>
-                  <div class="flex-1">
-                    <p class="text-xs text-secondaryText uppercase tracking-wider font-semibold">Étudiants</p>
-                    <p class="text-lg font-bold text-principalText">{{ groupe.students }}</p>
-                  </div>
-                  <app-icon-button
-                    icon="fa-regular fa-eye"
-                    label="Voir les étudiants"
-                    tone="secondary"
-                    size="sm"
-                    (click)="manageClicked.emit(groupe)"
-                  ></app-icon-button>
+              <!-- Students Row -->
+              <div class="flex items-center gap-4 bg-surface-subtle/50 border border-line/30 rounded-xl px-4 py-3 transition-colors duration-300 group-hover:border-line/50">
+                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary/10 text-secondary flex-shrink-0">
+                  <i class="fa-solid fa-users text-base"></i>
+                </div>
+                <div class="flex-1">
+                  <p class="text-xs text-secondaryText/70 uppercase tracking-wider font-semibold">Étudiants</p>
+                  <p class="text-lg font-bold text-principalText mt-0.5">{{ groupe.students }}</p>
                 </div>
               </div>
 
               <!-- Meta Info -->
               <div class="grid grid-cols-2 gap-3 pt-2 border-t border-line/30">
-                <div class="bg-primary/5 border border-primary/10 rounded-xl px-3 py-3">
-                  <p class="text-xs text-secondaryText uppercase tracking-wider font-semibold">Filière</p>
+                <div class="bg-gradient-to-br from-surface-subtle to-surface border border-line/30 rounded-xl px-3 py-3 transition-colors duration-300 group-hover:border-line/50">
+                  <p class="text-xs text-secondaryText/70 uppercase tracking-wider font-semibold">Filière</p>
                   <p class="text-sm font-bold text-principalText mt-1">{{ groupe.field }}</p>
                 </div>
-                <div class="bg-warning/5 border border-warning/10 rounded-xl px-3 py-3">
-                  <p class="text-xs text-secondaryText uppercase tracking-wider font-semibold">Semestre</p>
+                <div class="bg-gradient-to-br from-surface-subtle to-surface border border-line/30 rounded-xl px-3 py-3 transition-colors duration-300 group-hover:border-line/50">
+                  <p class="text-xs text-secondaryText/70 uppercase tracking-wider font-semibold">Semestre</p>
                   <p class="text-sm font-bold text-principalText mt-1">{{ groupe.semester }}</p>
                 </div>
               </div>
@@ -131,15 +122,15 @@ export interface GroupeItem {
           <!-- Add New Group Card -->
           <button
             type="button"
-            class="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed border-line-strong bg-gradient-to-br from-surface to-surface-subtle p-6 text-center transition hover:border-primary hover:bg-primary/5 group"
+            class="group flex min-h-[280px] flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-line/40 bg-gradient-to-br from-surface/50 to-surface-subtle p-6 text-center transition-all duration-300 hover:border-primary/50 hover:from-primary/5 hover:to-primary/5"
             (click)="createClicked.emit()"
           >
-            <div class="flex h-16 w-16 items-center justify-center rounded-2xl border border-line bg-surface group-hover:border-primary group-hover:bg-primary/10 group-hover:text-primary transition shadow-sm">
-              <i class="fa-solid fa-plus text-xl text-secondaryText group-hover:text-primary transition"></i>
-            </div>
+            <span class="flex h-14 w-14 items-center justify-center rounded-xl border border-line/30 bg-surface text-secondaryText transition-all duration-300 group-hover:border-primary group-hover:text-primary group-hover:bg-primary/5">
+              <i class="fa-solid fa-plus text-base font-semibold" aria-hidden="true"></i>
+            </span>
             <div>
-              <p class="text-lg font-bold text-principalText group-hover:text-primary transition">Nouveau groupe</p>
-              <p class="text-xs text-secondaryText mt-1 group-hover:text-secondaryText transition">Cliquez pour ajouter</p>
+              <p class="text-base font-bold text-principalText transition-colors duration-300 group-hover:text-primary">Nouveau groupe</p>
+              <p class="mt-1 text-xs text-secondaryText/60">Cliquez pour ajouter</p>
             </div>
           </button>
         </div>

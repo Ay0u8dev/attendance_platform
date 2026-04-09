@@ -21,13 +21,13 @@ import { Button } from '../../../../../shared/components/button/button';
         <div class="flex flex-col sm:flex-row sm:items-center gap-3 lg:gap-4">
           <!-- Formation Stats Card -->
           <div class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-primary/5 to-secondary/5 border border-line/50 shadow-sm hover:shadow-md hover:border-line transition">
-            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-soft text-primary flex-shrink-0">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary-soft text-secondary flex-shrink-0">
               <i class="fa-solid fa-book-bookmark text-sm"></i>
             </div>
             <div class="flex-1">
               <div class="flex items-baseline gap-1.5">
-                <span class="text-lg font-bold text-primary">{{ filteredCount() }}</span>
-                <span class="text-lg text-secondaryText font-medium">/ {{ totalCount() }}</span>
+                <span class="text-lg font-bold text-secondary">{{ filteredCount() }}</span>
+                <span class="text-sm text-secondaryText font-medium">/ {{ totalCount() }}</span>
               </div>
               <p class="text-xs uppercase tracking-wider text-secondaryText font-semibold">Formations actives</p>
             </div>
