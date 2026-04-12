@@ -9,18 +9,18 @@ built on a microservices architecture with Spring Boot, FastAPI, Angular, and Fl
 
 - [Overview](#overview)
 - [Services](#services)
-  - [auth-service](#auth-service)
-  - [user-service](#user-service)
-  - [session-service](#session-service)
-  - [attendance-service](#attendance-service)
-  - [qr-service](#qr-service)
-  - [face-service](#face-service)
-  - [justification-service](#justification-service)
-  - [notification-service](#notification-service)
+    - [auth-service](#auth-service)
+    - [userCredential-service](#userCredential-service)
+    - [session-service](#session-service)
+    - [attendance-service](#attendance-service)
+    - [qr-service](#qr-service)
+    - [face-service](#face-service)
+    - [justification-service](#justification-service)
+    - [notification-service](#notification-service)
 - [Infrastructure](#infrastructure)
-  - [Traefik](#traefik)
-  - [Redis](#redis)
-  - [RabbitMQ](#rabbitmq)
+    - [Traefik](#traefik)
+    - [Redis](#redis)
+    - [RabbitMQ](#rabbitmq)
 - [Redis Key Ownership](#redis-key-ownership)
 - [Inter-Service Communication](#inter-service-communication)
 - [Tech Stack](#tech-stack)
@@ -37,7 +37,7 @@ Clients (Angular / Flutter)
         │
    ┌────┴───────────────┐──────────────────────────┐───────────────────────────┐───────────────────────────────┐
    │                    │                          │                           │                               │
-auth-service     user-service               session-service             attendance-service          notification-service
+auth-service     userCredential-service               session-service             attendance-service          notification-service
                                                    │                                                 (RabbitMQ consumer)
                                                    │
                                     ┌──────────────┼
@@ -59,7 +59,7 @@ bypassing the gateway.
 
 **Technology:** Spring Boot  
 **Port:** 8081  
-**Database:** `users_db` (shared read with user-service)
+**Database:** `users_db` (shared read with userCredential-service)
 
 #### Role
 
@@ -68,16 +68,16 @@ Also exposes the `/validate` endpoint that Traefik calls via ForwardAuth before 
 
 #### Responsibilities
 
-- Handle Google OAuth2 callback — exchange code for user info
+- Handle Google OAuth2 callback — exchange code for userCredential info
 - Reject emails that are not `@ump.ac.ma`
 - Generate signed JWTs containing `user_id`, `email`, and `role`
 - Expose `GET /auth/validate` for Traefik ForwardAuth
-  - Returns `200` + `X-User-Id`, `X-User-Role`, `X-User-Email` headers on valid token
-  - Returns `401` on invalid or expired token
+    - Returns `200` + `X-User-Id`, `X-User-Role`, `X-User-Email` headers on valid token
+    - Returns `401` on invalid or expired token
 
 #### What it does NOT do
 
-- User CRUD (that belongs to user-service)
+- User CRUD (that belongs to userCredential-service)
 - Store any session state
 - Send emails or notifications
 
@@ -90,7 +90,7 @@ GET  /auth/validate            → called by Traefik ForwardAuth only
 
 ---
 
-### `user-service`
+### `userCredential-service`
 
 **Technology:** Spring Boot  
 **Port:** 8082  
@@ -157,7 +157,7 @@ other services when a session begins and flushes the final attendance state to t
 
 #### Responsibilities
 
-- Validate that the teacher is assigned to the requested group/module (calls user-service)
+- Validate that the teacher is assigned to the requested group/module (calls userCredential-service)
 - Block duplicate sessions — one active session per group/module combination at a time (checked via Redis)
 - Create the session record and write session data to Redis (group, module, method, GPS reference, timestamp)
 - Initialize the student list in Redis with default status ABSENT for all students in the group
@@ -253,9 +253,9 @@ Publishes events to RabbitMQ to trigger notifications at each step.
 - Allow teachers and admins to approve or reject with a mandatory comment on rejection
 - On approval: notify attendance-service to update absence status to JUSTIFIED (absence still counts in the total)
 - Publish events to RabbitMQ:
-  - `justification.submitted` → notify teacher and admin
-  - `justification.approved` → notify student
-  - `justification.rejected` → notify student with rejection comment
+    - `justification.submitted` → notify teacher and admin
+    - `justification.approved` → notify student
+    - `justification.rejected` → notify student with rejection comment
 
 #### Key endpoints
 
@@ -287,11 +287,11 @@ After validation it calls attendance-service to mark the student present.
 - Generate a signed JWT token encoding `session_id`, `gps_ref`, `expires_at`
 - Store the token in Redis under `qr:{session_id}`
 - On student scan, validate in order:
-  1. Token signature and expiry
-  2. Session still ACTIVE (reads `session:{session_id}` from Redis)
-  3. Student GPS within allowed radius of the session GPS reference
-  4. Device (MAC address) not already used for a different student in this session
-  5. Student not already marked present
+    1. Token signature and expiry
+    2. Session still ACTIVE (reads `session:{session_id}` from Redis)
+    3. Student GPS within allowed radius of the session GPS reference
+    4. Device (MAC address) not already used for a different student in this session
+    5. Student not already marked present
 - Call attendance-service to mark the student present after all checks pass
 - Handle offline scan validation: verify the scan timestamp was within the session window even if the session is now
   closed
@@ -338,11 +338,11 @@ during sessions. Uses Redis to cache group embeddings so that simultaneous stude
 
 - Preload group embeddings into Redis when a face session starts (called by session-service)
 - On student scan, validate in order:
-  1. Session is ACTIVE (reads `session:{session_id}` from Redis)
-  2. Student GPS within allowed radius
-  3. Device not already used for a different student in this session
-  4. Run `face_recognition.compare_faces` against cached group embeddings
-  5. Verify the matched student ID equals the `X-User-Id` from the JWT (anti-spoofing)
+    1. Session is ACTIVE (reads `session:{session_id}` from Redis)
+    2. Student GPS within allowed radius
+    3. Device not already used for a different student in this session
+    4. Run `face_recognition.compare_faces` against cached group embeddings
+    5. Verify the matched student ID equals the `X-User-Id` from the JWT (anti-spoofing)
 - Call attendance-service to mark the student present after all checks pass
 
 #### Redis reads/writes
@@ -379,12 +379,12 @@ service calls this directly — it operates entirely off the message queue.
 
 - Consume RabbitMQ events and send the appropriate notification
 - Support three notification channels: email, push notification (mobile), in-app notification (web)
-- Query user-service for contact details (email, push token) when needed
+- Query userCredential-service for contact details (email, push token) when needed
 
 #### Events consumed and actions taken
 
 | Event                               | Recipient                 | Channel               |
-| ----------------------------------- | ------------------------- | --------------------- |
+|-------------------------------------|---------------------------|-----------------------|
 | `attendance.absent`                 | Student                   | Email + Push          |
 | `attendance.warning` (2 absences)   | Student                   | Email + Push (urgent) |
 | `attendance.critical` (3+ absences) | Student + Teacher + Admin | Email + Push + In-app |
@@ -414,14 +414,15 @@ ForwardAuth flow: before forwarding a request to any protected service, Traefik 
 If the response is 200, the request is forwarded with `X-User-Id`, `X-User-Role`, and `X-User-Email` headers injected.
 If 401, the request is blocked.
 
-The `/api/auth` routes are explicitly excluded from ForwardAuth — they are the login endpoints and the user has no token
+The `/api/auth` routes are explicitly excluded from ForwardAuth — they are the login endpoints and the userCredential
+has no token
 yet.
 
 **Route prefix mapping:**
 
 ```
 /api/auth/*            → auth-service:8081          (no ForwardAuth)
-/api/users/*           → user-service:8082
+/api/users/*           → userCredential-service:8082
 /api/sessions/*        → session-service:8083
 /api/attendance/*      → attendance-service:8084
 /api/justifications/*  → justification-service:8085
@@ -458,7 +459,7 @@ other interested consumer without changing the publisher.
 ## Redis Key Ownership
 
 | Key pattern                             | TTL    | Written by                          | Read by                                      |
-| --------------------------------------- | ------ | ----------------------------------- | -------------------------------------------- |
+|-----------------------------------------|--------|-------------------------------------|----------------------------------------------|
 | `session:active:{group_id}:{module_id}` | 30 min | session-service                     | session-service                              |
 | `session:{session_id}`                  | 30 min | session-service                     | qr-service, face-service, attendance-service |
 | `session:{session_id}:students`         | 30 min | session-service, attendance-service | attendance-service, session-service          |
@@ -479,8 +480,8 @@ Goes directly by Docker container name, bypassing Traefik entirely. No ForwardAu
 within the private Docker network.
 
 ```
-# Example: session-service calling user-service internally
-http://user-service:8082/users/groups/{group_id}/students
+# Example: session-service calling userCredential-service internally
+http://userCredential-service:8082/users/groups/{group_id}/students
 
 # NOT via Traefik
 # NOT http://localhost/api/users/groups/{group_id}/students
