@@ -20,16 +20,16 @@ export interface CycleItem {
   standalone: true,
   imports: [IconButton, DatePipe],
   template: `
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 mt-6">
+    <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 mt-6">
       @for (cycle of cycles(); track cycle.id) {
-        <article class="overflow-hidden rounded-3xl border border-line bg-surface shadow-card transition hover:-translate-y-0.5 hover:shadow-card-strong">
-          <span class="block h-1" [class]="cycle.barClass"></span>
-          <div class="space-y-4 p-5">
+        <article class="group overflow-hidden rounded-2xl border border-line/40 bg-surface shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(0,0,0,0.12)] hover:border-line/60">
+          <div class="h-1.5 w-full" [class]="cycle.barClass"></div>
+          <div class="space-y-4 p-6">
             <div class="flex items-start justify-between gap-3">
-              <span class="rounded-xl px-3 py-1 text-xs font-semibold" [class]="cycle.badgeClass">
+              <span class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide" [class]="cycle.badgeClass + ' bg-opacity-10'">
                 {{ cycle.code }}
               </span>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1.5">
                 <app-icon-button
                   icon="fa-regular fa-pen-to-square"
                   label="Editer le cycle"
@@ -47,24 +47,24 @@ export interface CycleItem {
               </div>
             </div>
 
-            <div>
-              <p class="text-base font-semibold text-principalText">{{ cycle.name }}</p>
-              <p class="text-sm text-secondaryText">{{ cycle.description }}</p>
+            <div class="space-y-2">
+              <p class="text-lg font-bold text-principalText line-clamp-2">{{ cycle.name }}</p>
+              <p class="text-sm text-secondaryText line-clamp-2">{{ cycle.description }}</p>
             </div>
 
-            <div class="grid gap-3 sm:grid-cols-2">
-              <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-3">
-                <p class="text-xs uppercase tracking-wide text-secondaryText">Filières</p>
-                <p class="text-lg font-semibold text-principalText">{{ cycle.tracks }}</p>
+            <div class="grid gap-3 sm:grid-cols-2 pt-2">
+              <div class="rounded-xl border border-line/30 bg-gradient-to-br from-surface-subtle to-surface px-4 py-3 transition-colors duration-300 group-hover:border-line/50">
+                <p class="text-xs font-semibold uppercase tracking-wider text-secondaryText/70">Filières</p>
+                <p class="mt-1.5 text-2xl font-bold text-principalText">{{ cycle.tracks }}</p>
               </div>
-              <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-3">
-                <p class="text-xs uppercase tracking-wide text-secondaryText">Étudiants</p>
-                <p class="text-lg font-semibold text-principalText">{{ cycle.students }}</p>
+              <div class="rounded-xl border border-line/30 bg-gradient-to-br from-surface-subtle to-surface px-4 py-3 transition-colors duration-300 group-hover:border-line/50">
+                <p class="text-xs font-semibold uppercase tracking-wider text-secondaryText/70">Étudiants</p>
+                <p class="mt-1.5 text-2xl font-bold text-principalText">{{ cycle.students }}</p>
               </div>
             </div>
-            <div class="flex items-center justify-between rounded-2xl border border-line bg-surface-subtle px-4 py-3 text-xs text-secondaryText">
-              <span>Dernière mise à jour</span>
-              <span class="font-semibold text-principalText">{{ cycle.lastUpdated | date: 'dd MMMM yyyy' }}</span>
+            <div class="flex items-center justify-between rounded-xl border border-line/30 bg-gradient-to-br from-surface-subtle/50 to-surface px-4 py-3 text-xs text-secondaryText/70 transition-colors duration-300 group-hover:border-line/50">
+              <span class="font-medium">Dernière mise à jour</span>
+              <span class="font-semibold text-principalText">{{ cycle.lastUpdated | date: 'dd MMM' }}</span>
             </div>
           </div>
         </article>
@@ -72,14 +72,15 @@ export interface CycleItem {
 
       <button
         type="button"
-        class="flex min-h-[280px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-line-strong bg-surface-subtle p-5 text-center text-secondaryText transition hover:border-primary hover:text-primary"
+        class="group flex min-h-[280px] flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-line/40 bg-gradient-to-br from-surface/50 to-surface-subtle p-6 text-center transition-all duration-300 hover:border-primary/50 hover:from-primary/5 hover:to-primary/5"
         (click)="createClicked.emit()"
       >
-        <span class="flex h-12 w-12 items-center justify-center rounded-2xl border border-line bg-surface hover:border-primary hover:text-primary">
-          <i class="fa-solid fa-plus text-sm" aria-hidden="true"></i>
+        <span class="flex h-14 w-14 items-center justify-center rounded-xl border border-line/30 bg-surface text-secondaryText transition-all duration-300 group-hover:border-primary group-hover:text-primary group-hover:bg-primary/5">
+          <i class="fa-solid fa-plus text-base font-semibold" aria-hidden="true"></i>
         </span>
         <div>
-          <p class="text-sm font-semibold">Ajouter un nouveau cycle</p>
+          <p class="text-base font-bold text-principalText transition-colors duration-300 group-hover:text-primary">Ajouter un nouveau cycle</p>
+          <p class="mt-1 text-xs text-secondaryText/60">Créer une nouvelle période académique</p>
         </div>
       </button>
     </div>

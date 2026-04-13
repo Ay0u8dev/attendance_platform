@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, signal, computed, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgFor, NgIf } from '@angular/common';
 
@@ -14,7 +14,7 @@ export interface DropdownOption {
   template: `
     <div class="w-full">
       <!-- Label Section -->
-      <label [for]="'filter-' + identifier" class="block text-sm font-bold text-principalText mb-3 flex items-center gap-2.5">
+      <label [for]="'filter-' + identifier" class="text-sm font-bold text-principalText mb-3 flex items-center gap-2.5">
         <div class="flex h-7 w-7 items-center justify-center rounded-lg shadow-md transform transition-transform" [class]="iconBackgroundClass()">
           <i class="text-sm" [class]="iconClass()"></i>
         </div>
@@ -36,7 +36,7 @@ export interface DropdownOption {
           </span>
 
           <!-- Chevron Icon with Animation -->
-          <div class="flex-shrink-0 ml-3 transition-all duration-300 transform" [class]="'text-' + iconColor()" [class.rotate-180]="isOpen()">
+          <div class="shrink-0 ml-3 transition-all duration-300 transform" [class]="'text-' + iconColor()" [class.rotate-180]="isOpen()">
             <i class="fa-solid fa-chevron-down text-base"></i>
           </div>
         </button>
@@ -158,6 +158,7 @@ export class DropdownFilter {
   readonly label = input.required<string>();
   readonly allLabel = input('Tous les éléments');
   readonly options = input.required<DropdownOption[]>();
+  readonly value = input<string | null>(null);
   readonly iconClass = input.required<string>();
   readonly iconBackgroundClass = input.required<string>();
   readonly iconColor = input<'primary' | 'secondary' | 'warning'>('primary');
@@ -180,6 +181,10 @@ export class DropdownFilter {
       opt.label.toLowerCase().includes(query) ||
       opt.value.toLowerCase().includes(query)
     );
+  });
+
+  private readonly valueSync = effect(() => {
+    this.selectedValue.set(this.value() ?? '');
   });
 
   toggleDropdown(): void {

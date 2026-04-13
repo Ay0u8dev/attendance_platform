@@ -23,28 +23,28 @@ export interface FormationItem {
   template: `
     <div class="space-y-4">
       <!-- Empty State -->
-      <div *ngIf="formations().length === 0" class="rounded-3xl border border-dashed border-line-strong bg-surface-subtle p-12 text-center">
+      <div *ngIf="formations().length === 0" class="rounded-2xl border border-dashed border-line/40 bg-surface-subtle p-12 text-center">
         <div class="flex justify-center mb-4">
-          <div class="flex h-16 w-16 items-center justify-center rounded-2xl border border-line bg-surface">
+          <div class="flex h-16 w-16 items-center justify-center rounded-xl border border-line/30 bg-surface">
             <i class="fa-solid fa-book-bookmark text-2xl text-secondaryText"></i>
           </div>
         </div>
-        <p class="text-lg font-semibold text-principalText">Aucune formation trouvée</p>
-        <p class="mt-1 text-sm text-secondaryText">Essayez de modifier vos filtres ou créez une nouvelle formation.</p>
+        <p class="text-lg font-bold text-principalText">Aucune formation trouvée</p>
+        <p class="mt-1 text-sm text-secondaryText/70">Essayez de modifier vos filtres ou créez une nouvelle formation.</p>
       </div>
 
       <!-- Formations Grid -->
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <article
           *ngFor="let formation of formations(); trackBy: trackByFormationId"
-          class="group overflow-hidden rounded-2xl border border-line bg-surface shadow-md transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-line-strong"
+          class="group overflow-hidden rounded-2xl border border-line/40 bg-surface shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(0,0,0,0.12)] hover:border-line/60"
         >
           <!-- Header with Year Badge -->
-          <div class="flex items-start justify-between gap-3 border-b border-line bg-gradient-to-r from-surface-subtle to-surface px-5 py-4">
-            <span class="rounded-xl px-3 py-1.5 text-xs font-semibold" [class]="formation.badgeColor">
+          <div class="flex items-start justify-between gap-4 bg-surface px-6 py-5 border-b border-line/30">
+            <span class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide bg-primary/10">
               {{ formation.year }}
             </span>
-            <div class="flex items-center gap-1.5 opacity-0 transition group-hover:opacity-100">
+            <div class="flex items-center gap-1.5">
               <app-icon-button
                 icon="fa-regular fa-pen-to-square"
                 label="Modifier la formation"
@@ -63,55 +63,56 @@ export interface FormationItem {
           </div>
 
           <!-- Formation Code -->
-          <div class="px-5 py-3 pb-2">
-            <h3 class="text-2xl font-bold text-principalText group-hover:text-primary transition">{{ formation.code }}</h3>
+          <div class="px-6 py-4 border-b border-line/30">
+            <p class="text-xs uppercase tracking-wider text-secondaryText/70 font-bold mb-2">Formation</p>
+            <h3 class="text-2xl font-bold text-principalText leading-tight">{{ formation.code }}</h3>
           </div>
 
           <!-- Formation Details -->
-          <div class="space-y-2.5 px-5 pb-3">
+          <div class="space-y-3 px-6 py-4 pt-3">
             <!-- Cycle -->
-            <div class="flex items-center gap-2.5 text-sm">
-              <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary flex-shrink-0">
-                <i class="fa-solid fa-circle-play text-xs"></i>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-surface-subtle/50 border border-line/30 transition-colors duration-300 group-hover:border-line/50">
+              <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary flex-shrink-0">
+                <i class="fa-solid fa-circle-play text-sm"></i>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-xs uppercase tracking-wide text-secondaryText font-medium">Cycle</p>
-                <p class="font-medium text-principalText text-sm">{{ formation.cycleName }}</p>
+                <p class="text-xs uppercase tracking-wide text-secondaryText/70 font-semibold">Cycle</p>
+                <p class="font-bold text-principalText text-sm mt-0.5">{{ formation.cycleName }}</p>
               </div>
             </div>
 
             <!-- Field -->
-            <div class="flex items-center gap-2.5 text-sm">
-              <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary-soft text-secondary flex-shrink-0">
-                <i class="fa-solid fa-bookmark text-xs"></i>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-surface-subtle/50 border border-line/30 transition-colors duration-300 group-hover:border-line/50">
+              <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary/10 text-secondary flex-shrink-0">
+                <i class="fa-solid fa-bookmark text-sm"></i>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-xs uppercase tracking-wide text-secondaryText font-medium">Filière</p>
-                <p class="font-medium text-principalText text-sm">{{ formation.fieldName }}</p>
+                <p class="text-xs uppercase tracking-wide text-secondaryText/70 font-semibold">Filière</p>
+                <p class="font-bold text-principalText text-sm mt-0.5">{{ formation.fieldName }}</p>
               </div>
             </div>
 
             <!-- Semester -->
-            <div class="flex items-center gap-2.5 text-sm">
-              <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-warning-soft text-warning flex-shrink-0">
-                <i class="fa-solid fa-calendar text-xs"></i>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-surface-subtle/50 border border-line/30 transition-colors duration-300 group-hover:border-line/50">
+              <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10 text-warning flex-shrink-0">
+                <i class="fa-solid fa-calendar text-sm"></i>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-xs uppercase tracking-wide text-secondaryText font-medium">Semestre</p>
-                <p class="font-medium text-principalText text-sm">{{ formation.semester }}</p>
+                <p class="text-xs uppercase tracking-wide text-secondaryText/70 font-semibold">Semestre</p>
+                <p class="font-bold text-principalText text-sm mt-0.5">{{ formation.semester }}</p>
               </div>
             </div>
           </div>
 
           <!-- Stats -->
-          <div class="grid grid-cols-2 gap-3 border-t border-line bg-surface-subtle/50 px-5 py-4">
-            <div class="rounded-lg border border-line bg-surface px-3 py-2.5 hover:border-primary/30 transition">
-              <p class="text-xs uppercase tracking-wide text-secondaryText font-medium">Groupes</p>
-              <p class="mt-1.5 text-xl font-bold text-primary">{{ formation.groups }}</p>
+          <div class="grid grid-cols-2 gap-3 border-t border-line/30 bg-gradient-to-br from-surface-subtle/30 to-surface px-6 py-4 mt-1">
+            <div class="rounded-xl border border-line/30 bg-gradient-to-br from-surface-subtle to-surface px-3 py-3 transition-colors duration-300 group-hover:border-line/50">
+              <p class="text-xs uppercase tracking-wider text-secondaryText/70 font-semibold">Groupes</p>
+              <p class="mt-1.5 text-2xl font-bold text-principalText">{{ formation.groups }}</p>
             </div>
-            <div class="rounded-lg border border-line bg-surface px-3 py-2.5 hover:border-secondary/30 transition">
-              <p class="text-xs uppercase tracking-wide text-secondaryText font-medium">Modules</p>
-              <p class="mt-1.5 text-xl font-bold text-secondary">{{ formation.modules }}</p>
+            <div class="rounded-xl border border-line/30 bg-gradient-to-br from-surface-subtle to-surface px-3 py-3 transition-colors duration-300 group-hover:border-line/50">
+              <p class="text-xs uppercase tracking-wider text-secondaryText/70 font-semibold">Modules</p>
+              <p class="mt-1.5 text-2xl font-bold text-principalText">{{ formation.modules }}</p>
             </div>
           </div>
         </article>
@@ -120,13 +121,14 @@ export interface FormationItem {
         <button
           type="button"
           (click)="createClicked.emit()"
-          class="flex min-h-[420px] flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-line-strong bg-surface-subtle p-5 text-center transition text-secondaryText hover:border-primary hover:bg-surface-subtle/80 hover:text-primary"
+          class="group flex min-h-[280px] flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-line/40 bg-gradient-to-br from-surface/50 to-surface-subtle p-6 text-center transition-all duration-300 hover:border-primary/50 hover:from-primary/5 hover:to-primary/5"
         >
-          <div class="flex h-14 w-14 items-center justify-center rounded-2xl border border-line bg-surface group-hover:border-primary group-hover:text-primary hover:text-primary hover:border-primary transition">
-            <i class="fa-solid fa-plus text-lg "></i>
-          </div>
+          <span class="flex h-14 w-14 items-center justify-center rounded-xl border border-line/30 bg-surface text-secondaryText transition-all duration-300 group-hover:border-primary group-hover:text-primary group-hover:bg-primary/5">
+            <i class="fa-solid fa-plus text-base font-semibold" aria-hidden="true"></i>
+          </span>
           <div>
-            <p class="text-base font-semibold">Ajouter une nouvelle formation</p>
+            <p class="text-base font-bold text-principalText transition-colors duration-300 group-hover:text-primary">Ajouter une formation</p>
+            <p class="mt-1 text-xs text-secondaryText/60">Créer une nouvelle période académique</p>
           </div>
         </button>
       </div>

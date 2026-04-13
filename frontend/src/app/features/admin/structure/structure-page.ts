@@ -4,10 +4,11 @@ import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { CyclesPage } from './cycles/cycles-page';
 import { FieldsPage } from './fields/fields-page';
 import { FormationsPage } from './formations/formations-page';
+import { GroupesPage } from './groupes/groupes-page'; 
 
 @Component({
   selector: 'app-structure-page',
-  imports: [PageHeader, CyclesPage, FieldsPage, FormationsPage],
+  imports: [PageHeader, CyclesPage, FieldsPage, FormationsPage, GroupesPage],
   templateUrl: './structure.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -42,7 +43,7 @@ export class StructurePage {
       highlights: ['Credits', 'Volumes', 'Modalites'],
     },
     {
-      id: 'groups',
+      id: 'groupes',
       title: 'Groupes',
       description: 'Definissez les groupes et effectifs.',
       count: 3,
