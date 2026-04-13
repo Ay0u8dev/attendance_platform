@@ -1,0 +1,27 @@
+<section class="space-y-5">
+  <app-cycles-header
+    [totalCycles]="cycles.length"
+    (addClicked)="openCreate()"
+  ></app-cycles-header>
+
+  <app-cycles-list
+    [cycles]="cycles"
+    (createClicked)="openCreate()"
+    (editClicked)="openEdit($event)"
+    (deleteClicked)="openDelete($event)"
+  ></app-cycles-list>
+
+  <app-create-cycle-modal [open]="activeModal === 'create'" (closeRequested)="closeModal()"></app-create-cycle-modal>
+
+  <app-edit-cycle-modal
+    [open]="activeModal === 'edit'"
+    [cycle]="selectedCycle"
+    (closeRequested)="closeModal()"
+  ></app-edit-cycle-modal>
+
+  <app-delete-cycle-modal
+    [open]="activeModal === 'delete'"
+    [cycle]="selectedCycle"
+    (closeRequested)="closeModal()"
+  ></app-delete-cycle-modal>
+</section>

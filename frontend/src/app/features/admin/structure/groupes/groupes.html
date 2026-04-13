@@ -1,0 +1,48 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <app-groupes-header
+    [filteredCount]="filteredGroupes().length"
+    [totalCount]="allGroupes.length"
+    (addClicked)="openCreate()"
+  ></app-groupes-header>
+
+  <!-- Filters -->
+  <app-groupes-filters
+    [formations]="formations"
+    [fields]="fields"
+    [semesters]="semesters"
+    (searchChange)="searchQuery.set($event)"
+    (formationFilterChange)="selectedFormation.set($event)"
+    (fieldFilterChange)="selectedField.set($event)"
+    (semesterFilterChange)="selectedSemester.set($event)"
+    (resetFilters)="resetFilters()"
+  ></app-groupes-filters>
+
+  <!-- List -->
+  <app-groupes-list
+    [groupes]="filteredGroupes()"
+    [totalGroupes]="allGroupes.length"
+    (createClicked)="openCreate()"
+    (manageClicked)="openEdit($event)"
+    (deleteClicked)="openDelete($event)"
+  ></app-groupes-list>
+</div>
+
+<!-- Modals -->
+<app-create-groupe-modal
+  [open]="isCreateOpen()"
+  (closeRequested)="closeModal()"
+></app-create-groupe-modal>
+
+<app-edit-groupe-modal
+  [open]="isEditOpen()"
+  [groupe]="editingGroupe()"
+  (closeRequested)="closeModal()"
+></app-edit-groupe-modal>
+
+<app-delete-groupe-modal
+  [open]="isDeleteOpen()"
+  [groupe]="deletingGroupe()"
+  (confirmDelete)="confirmDelete()"
+  (closeRequested)="closeModal()"
+></app-delete-groupe-modal>
