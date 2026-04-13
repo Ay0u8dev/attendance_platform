@@ -4,10 +4,12 @@ import jakarta.persistence.*;
 import lombok.*;
 import ma.eniad.userservice.entity.enums.Role;
 
+import java.util.List;
+
 @Entity
+@Inheritance(strategy = InheritanceType.JOINED)
 @Getter
 @Setter
-@ToString
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
@@ -21,15 +23,14 @@ public class User {
     private String email;
     private String username;
 
-    private String firstName;
-    private String lastName;
-
-    private String pictureUrl;
-
     @Enumerated(EnumType.STRING)
-    private Role role;
+    @ElementCollection(fetch = FetchType.EAGER, targetClass = Role.class)
+    private List<Role> roles;
 
     @Builder.Default
     private boolean enabled = true;
+
+    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private UserDetails userDetails;
 }
 

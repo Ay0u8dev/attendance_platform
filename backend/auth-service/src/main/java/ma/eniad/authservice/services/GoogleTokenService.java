@@ -32,10 +32,7 @@ public class GoogleTokenService {
         try {
             String url = "https://oauth2.googleapis.com/tokeninfo?id_token=" + googleToken;
             String response = restTemplate.getForObject(url, String.class);
-            System.out.println("THE RESPONSE " + response);
             JsonNode json = objectMapper.readTree(response);
-            System.out.println("THE JSON " + json.toString());
-
 
             // Vérifier que le token est bien destiné à notre app
             String aud = json.get("aud").asText();

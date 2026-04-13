@@ -16,12 +16,10 @@ public class UserDto {
 
     private String email;
     private String username;
-    private String password;
 
     private List<Role> roles;
 
-    @Builder.Default
-    private boolean enabled = true;
+    private boolean enabled;
 
 
 }

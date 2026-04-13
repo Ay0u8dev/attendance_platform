@@ -85,7 +85,10 @@ public class AuthController {
             // 3. user-service est le seul propriétaire du cycle de vie des utilisateurs
             UserDto user = userServiceClient.findOrCreateUser(Map.of(
                     "email", email,
-                    "username", googleClaims.getOrDefault("username", "")
+                    "username", googleClaims.getOrDefault("username", ""),
+                    "firstname", googleClaims.get("firstname"),
+                    "lastname", googleClaims.get("lastname"),
+                    "picture", googleClaims.get("picture")
             ));
 
             // 4. Générer notre propre JWT interne
