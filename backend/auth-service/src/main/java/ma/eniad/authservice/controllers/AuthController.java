@@ -41,11 +41,11 @@ public class AuthController {
             Claims claims = jwtService.parseAndValidateAccessToken(token);
             String userId = jwtService.extractUserId(claims);
             String email = claims.get("email", String.class);
-            String role = jwtService.extractRoles(claims).stream().findFirst().orElse("USER");
+            String roles = String.join(",", jwtService.extractRoles(claims));
 
             return ResponseEntity.ok()
                     .header("X-User-Id", userId)
-                    .header("X-User-Role", role)
+                    .header("X-User-Roles", roles)
                     .header("X-User-Email", email)
                     .build();
         } catch (RuntimeException ex) {

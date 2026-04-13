@@ -28,6 +28,7 @@ public class UserController {
         return userService.findOrCreateUser(request);
     }
 
+    //TODO : add test endpoints
 
 //    @GetMapping
 //    public List<User> findAll() {
