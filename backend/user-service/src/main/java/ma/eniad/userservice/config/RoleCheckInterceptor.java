@@ -5,9 +5,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import ma.eniad.userservice.annotation.RequireRole;
 import ma.eniad.userservice.service.UserContext;
 import org.jspecify.annotations.NonNull;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -20,7 +22,7 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request,
                              @NonNull HttpServletResponse response,
-                             @NonNull Object handler) throws Exception {
+                             @NonNull Object handler) {
 
         // 1. Extract headers and set user context
         String userId = request.getHeader("X-User-Id");
@@ -33,8 +35,7 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
         }
 
         if (userId == null || rolesHeader == null) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing auth headers");
-            return false;
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing auth headers");
         }
 
         Set<String> roles = Arrays.stream(rolesHeader.split(","))
@@ -52,9 +53,10 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
                 String[] requiredRoles = requireRole.value();
 
                 if (!user.hasAnyRole(requiredRoles)) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN,
-                            "Insufficient roles. Required: " + Arrays.toString(requiredRoles));
-                    return false; // ❌ Block the request
+                    throw new ResponseStatusException(
+                            HttpStatus.FORBIDDEN,
+                            "Insufficient roles. Required: " + Arrays.toString(requiredRoles)
+                    );
                 }
             }
         }

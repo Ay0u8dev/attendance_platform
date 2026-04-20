@@ -8,9 +8,11 @@ import ma.eniad.authservice.client.UserServiceClient;
 import ma.eniad.authservice.dto.UserDto;
 import ma.eniad.authservice.services.GoogleTokenService;
 import ma.eniad.authservice.services.JwtService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import org.springframework.http.HttpStatus;
 
 import java.util.Map;
 
@@ -32,7 +34,7 @@ public class AuthController {
             @RequestHeader(name = "Authorization", required = false) String authorizationHeader
     ) {
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token d'accès manquant ou mal formé");
+                        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token d'accès manquant ou mal formé");
         }
 
         String token = authorizationHeader.substring(7);
@@ -49,7 +51,7 @@ public class AuthController {
                     .header("X-User-Email", email)
                     .build();
         } catch (RuntimeException ex) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token d'accès invalide: " + ex.getMessage());
+                        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token d'accès invalide: " + ex.getMessage());
         }
     }
 
@@ -67,9 +69,7 @@ public class AuthController {
 
             if (googleToken == null || googleToken.isEmpty()) {
                 log.warn("[AUTH] Tentative de connexion sans token");
-                return ResponseEntity
-                        .badRequest()
-                        .body(Map.of("message", "Token Google requis"));
+                                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token Google requis");
             }
 
             log.info("[AUTH] Validation du token Google en cours...");
@@ -88,12 +88,7 @@ public class AuthController {
             ));
 
             if (!user.isEnabled()) {
-                return ResponseEntity
-                        .status(HttpStatus.FORBIDDEN)
-                        .body(Map.of(
-                                "status", 403,
-                                "message", "Compte désactivé. Contactez l'administrateur."
-                        ));
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Compte désactivé. Contactez l'administrateur.");
             }
 
             // 4. Générer notre propre JWT interne
@@ -110,19 +105,9 @@ public class AuthController {
             // Autre erreur de validation
             log.error("[AUTH] ✗ Erreur lors de la validation: {}", ex.getMessage());
             if (ex.getMessage() != null && ex.getMessage().contains("Email non vérifié")) {
-                return ResponseEntity
-                        .status(HttpStatus.FORBIDDEN)
-                        .body(Map.of(
-                                "status", 403,
-                                "message", "Email non vérifié par Google"
-                        ));
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Email non vérifié par Google");
             }
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of(
-                            "status", 401,
-                            "message", "Erreur d'authentification: " + ex.getMessage()
-                    ));
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Erreur d'authentification: " + ex.getMessage());
         }
     }
 
