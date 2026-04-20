@@ -14,7 +14,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(roleCheckInterceptor)
-                .addPathPatterns("/users/**")       // Apply to all API routes
-                .excludePathPatterns("/users/public/**"); // Exclude public endpoints
+                .addPathPatterns("/users/**");       // Apply to all API routes
+//                .excludePathPatterns("/users/public/**"); // Exclude public endpoints
     }
 }

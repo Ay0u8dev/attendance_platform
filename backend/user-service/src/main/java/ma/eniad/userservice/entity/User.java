@@ -2,6 +2,7 @@ package ma.eniad.userservice.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import ma.eniad.userservice.entity.enums.Role;
 
 import java.util.List;
@@ -12,7 +13,7 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
+@SuperBuilder
 @Table(name = "users")
 public class User {
     @Id
@@ -21,7 +22,10 @@ public class User {
 
     @Column(nullable = false, unique = true)
     private String email;
-    private String username;
+
+    private String firstName;
+    private String lastName;
+    private String pfpUrl;
 
     @Enumerated(EnumType.STRING)
     @ElementCollection(fetch = FetchType.EAGER, targetClass = Role.class)
@@ -30,7 +34,8 @@ public class User {
     @Builder.Default
     private boolean enabled = true;
 
-    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private UserDetails userDetails;
+    @Builder.Default
+    private boolean firstLogin = true;
+
 }
 

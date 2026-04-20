@@ -122,7 +122,6 @@ export class ForbiddenComponent {
   }
 
   goHome(): void {
-    localStorage.removeItem('backend_access_token');
     this.router.navigate(['/']);
   }
 }

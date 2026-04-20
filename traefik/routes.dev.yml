@@ -12,19 +12,25 @@ http:
       middlewares: ["strip-api-auth"]
       service: auth-service
 
-    # Attendance routes — protected, JWT required
-    attendance:
+    user:
       entryPoints: ["web"]
-      rule: "PathPrefix(`/api/attendance`)"
-      middlewares: ["forward-auth", "strip-api-attendance"]
-      service: attendance-service
+      rule: "PathPrefix(`/api/users`)"
+      middlewares: ["forward-auth", "strip-api-user"]
+      service: user-service
 
-    # Face recognition routes — protected, JWT required
-    face:
-      entryPoints: ["web"]
-      rule: "PathPrefix(`/api/face`)"
-      middlewares: ["forward-auth", "strip-api-face"]
-      service: face-service
+    # Attendance routes — protected, JWT required
+    # attendance:
+    #   entryPoints: ["web"]
+    #   rule: "PathPrefix(`/api/attendance`)"
+    #   middlewares: ["forward-auth", "strip-api-attendance"]
+    #   service: attendance-service
+
+    # # Face recognition routes — protected, JWT required
+    # face:
+    #   entryPoints: ["web"]
+    #   rule: "PathPrefix(`/api/face`)"
+    #   middlewares: ["forward-auth", "strip-api-face"]
+    #   service: face-service
 
     # Frontend — catches everything else, no auth needed
     # Priority is lowest because PathPrefix(/) matches everything.
@@ -40,19 +46,23 @@ http:
   middlewares:
     # StripPrefix removes the path prefix before forwarding.
     # Your Spring Boot service doesn't know it's behind a gateway,
-    # so it expects /login not /api/auth/login.
-    # We strip /api/auth so Spring Boot receives just /login.
+    # so it expects /auth/login not /api/auth/login.
+    # We strip /api so Spring Boot receives just /auth/login.
     strip-api-auth:
       stripPrefix:
-        prefixes: ["/api/auth"]
+        prefixes: ["/api"]
 
-    strip-api-attendance:
-      stripPrefix:
-        prefixes: ["/api/attendance"]
+    # strip-api-attendance:
+    #   stripPrefix:
+    #     prefixes: ["/api/attendance"]
 
-    strip-api-face:
+    # strip-api-face:
+    #   stripPrefix:
+    #     prefixes: ["/api/face"]
+
+    strip-api-user:
       stripPrefix:
-        prefixes: ["/api/face"]
+        prefixes: ["/api"]
 
     # ForwardAuth — this is the JWT validation middleware.
     # Before forwarding any request to a protected service, Traefik
@@ -61,16 +71,16 @@ http:
     # If it returns 401, the request is blocked and the client gets 401.
 
     # ======== WARNING : turn on when endpoint is ready ========
-    # forward-auth:
-    #   forwardAuth:
-    #     address: "http://host.docker.internal:8081/auth/validate"
-    #     # These are the headers the auth service returns on success.
-    #     # Traefik copies them and injects them into the forwarded request.
-    #     # Your other services read these instead of dealing with JWT at all.
-    #     authResponseHeaders:
-    #       - "X-User-Id"
-    #       - "X-User-Role"
-    #       - "X-User-Email"
+    forward-auth:
+      forwardAuth:
+        address: "http://host.docker.internal:8081/auth/validate"
+        # These are the headers the auth service returns on success.
+        # Traefik copies them and injects them into the forwarded request.
+        # Your other services read these instead of dealing with JWT at all.
+        authResponseHeaders:
+          - "X-User-Id"
+          - "X-User-Roles"
+          - "X-User-Email"
 
   # ── Services ─────────────────────────────────────────────────
   # A service is the actual backend. Traefik forwards the request here
@@ -84,15 +94,20 @@ http:
         servers:
           - url: "http://host.docker.internal:8081"
 
-    attendance-service:
+    user-service:
       loadBalancer:
         servers:
           - url: "http://host.docker.internal:8082"
 
-    face-service:
-      loadBalancer:
-        servers:
-          - url: "http://host.docker.internal:8000"
+    # attendance-service:
+    #   loadBalancer:
+    #     servers:
+    #       - url: "http://host.docker.internal:8082"
+
+    # face-service:
+    #   loadBalancer:
+    #     servers:
+    #       - url: "http://host.docker.internal:8000"
 
     frontend-service:
       loadBalancer:

@@ -1,4 +1,4 @@
-import { NgOptimizedImage, NgIf } from '@angular/common';
+import { NgOptimizedImage } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../../core/auth/services/auth.service';
@@ -8,7 +8,7 @@ import { ToastService } from '../../../../shared/components/toast/toast.service'
 @Component({
   selector: 'app-login',
   templateUrl: './login.html',
-  imports: [Button, NgOptimizedImage, NgIf],
+  imports: [Button, NgOptimizedImage],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Login {

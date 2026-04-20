@@ -29,14 +29,13 @@ public class JwtService {
     @Value("${app.jwt.expiration}")
     private long jwtExpiration;
 
-    @Value("auth-service")
+    @Value("${app.jwt.issuer:auth-service}")
     private String jwtIssuer;
 
     public String generateToken(UserDto user) {
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put(CLAIM_ID, user.getId());
         extraClaims.put(CLAIM_EMAIL, user.getEmail());
-        extraClaims.put("username", user.getUsername());
 
         List<String> roles = new ArrayList<>();
         if (user.getRoles() != null && !user.getRoles().isEmpty()) {
@@ -72,7 +71,6 @@ public class JwtService {
             return list.stream()
                     .filter(Objects::nonNull)
                     .map(String::valueOf)
-                    .map(this::normalizeRole)
                     .collect(Collectors.toList());
         }
         return List.of();
@@ -108,13 +106,6 @@ public class JwtService {
     private Key getSignInKey() {
         byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
-    }
-
-    private String normalizeRole(String role) {
-        if (role == null) {
-            return null;
-        }
-        return role.startsWith("ROLE_") ? role.substring(5) : role;
     }
 
     private void validateClaims(Claims claims) {

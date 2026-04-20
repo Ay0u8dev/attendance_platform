@@ -9,18 +9,18 @@ built on a microservices architecture with Spring Boot, FastAPI, Angular, and Fl
 
 - [Overview](#overview)
 - [Services](#services)
-    - [auth-service](#auth-service)
-    - [userCredential-service](#userCredential-service)
-    - [session-service](#session-service)
-    - [attendance-service](#attendance-service)
-    - [qr-service](#qr-service)
-    - [face-service](#face-service)
-    - [justification-service](#justification-service)
-    - [notification-service](#notification-service)
+  - [auth-service](#auth-service)
+  - [userCredential-service](#userCredential-service)
+  - [session-service](#session-service)
+  - [attendance-service](#attendance-service)
+  - [qr-service](#qr-service)
+  - [face-service](#face-service)
+  - [justification-service](#justification-service)
+  - [notification-service](#notification-service)
 - [Infrastructure](#infrastructure)
-    - [Traefik](#traefik)
-    - [Redis](#redis)
-    - [RabbitMQ](#rabbitmq)
+  - [Traefik](#traefik)
+  - [Redis](#redis)
+  - [RabbitMQ](#rabbitmq)
 - [Redis Key Ownership](#redis-key-ownership)
 - [Inter-Service Communication](#inter-service-communication)
 - [Tech Stack](#tech-stack)
@@ -72,8 +72,8 @@ Also exposes the `/validate` endpoint that Traefik calls via ForwardAuth before 
 - Reject emails that are not `@ump.ac.ma`
 - Generate signed JWTs containing `user_id`, `email`, and `role`
 - Expose `GET /auth/validate` for Traefik ForwardAuth
-    - Returns `200` + `X-User-Id`, `X-User-Role`, `X-User-Email` headers on valid token
-    - Returns `401` on invalid or expired token
+  - Returns `200` + `X-User-Id`, `X-User-Role`, `X-User-Email` headers on valid token
+  - Returns `401` on invalid or expired token
 
 #### What it does NOT do
 
@@ -253,9 +253,9 @@ Publishes events to RabbitMQ to trigger notifications at each step.
 - Allow teachers and admins to approve or reject with a mandatory comment on rejection
 - On approval: notify attendance-service to update absence status to JUSTIFIED (absence still counts in the total)
 - Publish events to RabbitMQ:
-    - `justification.submitted` → notify teacher and admin
-    - `justification.approved` → notify student
-    - `justification.rejected` → notify student with rejection comment
+  - `justification.submitted` → notify teacher and admin
+  - `justification.approved` → notify student
+  - `justification.rejected` → notify student with rejection comment
 
 #### Key endpoints
 
@@ -287,11 +287,11 @@ After validation it calls attendance-service to mark the student present.
 - Generate a signed JWT token encoding `session_id`, `gps_ref`, `expires_at`
 - Store the token in Redis under `qr:{session_id}`
 - On student scan, validate in order:
-    1. Token signature and expiry
-    2. Session still ACTIVE (reads `session:{session_id}` from Redis)
-    3. Student GPS within allowed radius of the session GPS reference
-    4. Device (MAC address) not already used for a different student in this session
-    5. Student not already marked present
+  1. Token signature and expiry
+  2. Session still ACTIVE (reads `session:{session_id}` from Redis)
+  3. Student GPS within allowed radius of the session GPS reference
+  4. Device (MAC address) not already used for a different student in this session
+  5. Student not already marked present
 - Call attendance-service to mark the student present after all checks pass
 - Handle offline scan validation: verify the scan timestamp was within the session window even if the session is now
   closed
@@ -338,11 +338,11 @@ during sessions. Uses Redis to cache group embeddings so that simultaneous stude
 
 - Preload group embeddings into Redis when a face session starts (called by session-service)
 - On student scan, validate in order:
-    1. Session is ACTIVE (reads `session:{session_id}` from Redis)
-    2. Student GPS within allowed radius
-    3. Device not already used for a different student in this session
-    4. Run `face_recognition.compare_faces` against cached group embeddings
-    5. Verify the matched student ID equals the `X-User-Id` from the JWT (anti-spoofing)
+  1. Session is ACTIVE (reads `session:{session_id}` from Redis)
+  2. Student GPS within allowed radius
+  3. Device not already used for a different student in this session
+  4. Run `face_recognition.compare_faces` against cached group embeddings
+  5. Verify the matched student ID equals the `X-User-Id` from the JWT (anti-spoofing)
 - Call attendance-service to mark the student present after all checks pass
 
 #### Redis reads/writes
@@ -384,7 +384,7 @@ service calls this directly — it operates entirely off the message queue.
 #### Events consumed and actions taken
 
 | Event                               | Recipient                 | Channel               |
-|-------------------------------------|---------------------------|-----------------------|
+| ----------------------------------- | ------------------------- | --------------------- |
 | `attendance.absent`                 | Student                   | Email + Push          |
 | `attendance.warning` (2 absences)   | Student                   | Email + Push (urgent) |
 | `attendance.critical` (3+ absences) | Student + Teacher + Admin | Email + Push + In-app |
@@ -414,9 +414,8 @@ ForwardAuth flow: before forwarding a request to any protected service, Traefik 
 If the response is 200, the request is forwarded with `X-User-Id`, `X-User-Role`, and `X-User-Email` headers injected.
 If 401, the request is blocked.
 
-The `/api/auth` routes are explicitly excluded from ForwardAuth — they are the login endpoints and the userCredential
-has no token
-yet.
+The `/api/auth` routes are explicitly excluded from ForwardAuth — they are the login endpoints and the user
+has no tokenyet.
 
 **Route prefix mapping:**
 
@@ -459,7 +458,7 @@ other interested consumer without changing the publisher.
 ## Redis Key Ownership
 
 | Key pattern                             | TTL    | Written by                          | Read by                                      |
-|-----------------------------------------|--------|-------------------------------------|----------------------------------------------|
+| --------------------------------------- | ------ | ----------------------------------- | -------------------------------------------- |
 | `session:active:{group_id}:{module_id}` | 30 min | session-service                     | session-service                              |
 | `session:{session_id}`                  | 30 min | session-service                     | qr-service, face-service, attendance-service |
 | `session:{session_id}:students`         | 30 min | session-service, attendance-service | attendance-service, session-service          |

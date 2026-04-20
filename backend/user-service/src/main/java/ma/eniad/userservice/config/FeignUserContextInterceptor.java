@@ -12,7 +12,7 @@ public class FeignUserContextInterceptor implements RequestInterceptor {
     public void apply(RequestTemplate template) {
         UserContext.UserInfo user = UserContext.getCurrentUser();
 
-        if (user.userId() != null) {
+        if (user != null && user.userId() != null) {
             template.header("X-User-Id", user.userId());
 
             if (user.userEmail() != null) {

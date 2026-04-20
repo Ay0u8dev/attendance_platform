@@ -1,34 +1,46 @@
 package ma.eniad.userservice.controller;
 
-import ma.eniad.userservice.dto.FindOrCreateUserRequest;
-import ma.eniad.userservice.dto.UserResponseDto;
+import ma.eniad.userservice.annotation.RequireRole;
+import ma.eniad.userservice.dto.AuthUserRequest;
+import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/users")
 public class UserController {
 
     @Autowired
     private UserService userService;
 
-    @PostMapping("/find-or-create")
-    public UserResponseDto findOrCreate(@RequestBody FindOrCreateUserRequest request) {
+    @PostMapping("auth-user")
+    public ResponseEntity<User> authUser(@RequestBody AuthUserRequest request) {
+
         String email = request.getEmail();
         if (email == null || email.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
         }
 
-        return userService.findOrCreateUser(request);
+        try {
+            return ResponseEntity.ok(userService.findUser(request));
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
     }
 
-    //TODO : add test endpoints
+    @RequireRole({"ADMIN"})
+    @GetMapping("{id}")
+    public ResponseEntity<?> findById(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(userService.findById(id));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
 
 //    @GetMapping
 //    public List<User> findAll() {

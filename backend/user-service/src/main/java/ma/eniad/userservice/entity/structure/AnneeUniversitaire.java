@@ -16,5 +16,5 @@ public class AnneeUniversitaire {
     @Column(nullable = false, unique = true)
     private String name;
 
-    boolean isActive = false;
-}
+    @Column(nullable = false)
+    private boolean isActive = false;}

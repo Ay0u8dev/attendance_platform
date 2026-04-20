@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 @Slf4j
 public class AuthController {
@@ -42,7 +42,7 @@ public class AuthController {
             String userId = jwtService.extractUserId(claims);
             String email = claims.get("email", String.class);
             String roles = String.join(",", jwtService.extractRoles(claims));
-
+            log.debug("User roles: {}", roles);
             return ResponseEntity.ok()
                     .header("X-User-Id", userId)
                     .header("X-User-Roles", roles)
@@ -80,25 +80,31 @@ public class AuthController {
             String email = googleClaims.get("email");
 
             log.info("[AUTH] Token validé avec succès pour: {}", email);
-            log.info("[AUTH] ✓ Domaine @ump.ac.ma vérifié pour {}", email);
-
-            // 3. user-service est le seul propriétaire du cycle de vie des utilisateurs
-            UserDto user = userServiceClient.findOrCreateUser(Map.of(
+            log.debug("[AUTH] Token validé avec succès pour: {}", email);
+            log.debug("[AUTH] ✓ Domaine @ump.ac.ma vérifié pour {}", email);            // 3. user-service est le seul propriétaire du cycle de vie des utilisateurs
+            UserDto user = userServiceClient.authUser(Map.of(
                     "email", email,
-                    "username", googleClaims.getOrDefault("username", ""),
-                    "firstname", googleClaims.get("firstname"),
-                    "lastname", googleClaims.get("lastname"),
-                    "picture", googleClaims.get("picture")
+                    "pfpUrl", googleClaims.get("picture")
             ));
+
+            if (!user.isEnabled()) {
+                return ResponseEntity
+                        .status(HttpStatus.FORBIDDEN)
+                        .body(Map.of(
+                                "status", 403,
+                                "message", "Compte désactivé. Contactez l'administrateur."
+                        ));
+            }
 
             // 4. Générer notre propre JWT interne
             String jwtToken = jwtService.generateToken(user);
 
             log.info("[AUTH] ✓ Connexion réussie pour {}", email);
+            System.out.println("JWT : " + jwtToken);
 
-            return ResponseEntity.ok(Map.of(
-                    "accessToken", jwtToken
-            ));
+            log.info("[AUTH] ✓ Connexion réussie pour {}", email);
+
+            return ResponseEntity.ok(Map.of("accessToken", jwtToken));
 
         } catch (RuntimeException ex) {
             // Autre erreur de validation

@@ -7,11 +7,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.Map;
 
-@FeignClient(name = "user-service", url = "${services.user-service.url:http://localhost:8082}", path = "/api/users")
+@FeignClient(name = "user-service", url = "${services.user-service.url:http://localhost:8082}", path = "/users")
 public interface UserServiceClient {
 
-    @PostMapping("/find-or-create")
-    UserDto findOrCreateUser(
+    @PostMapping("auth-user")
+    UserDto authUser(
             @RequestBody Map<String, String> userData
     );
 }

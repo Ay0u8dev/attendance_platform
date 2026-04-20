@@ -4,11 +4,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import ma.eniad.userservice.annotation.RequireRole;
 import ma.eniad.userservice.service.UserContext;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -17,13 +19,18 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request,
-                             HttpServletResponse response,
-                             Object handler) throws Exception {
+                             @NonNull HttpServletResponse response,
+                             @NonNull Object handler) throws Exception {
 
         // 1. Extract headers and set user context
         String userId = request.getHeader("X-User-Id");
         String rolesHeader = request.getHeader("X-User-Roles");
         String userEmail = request.getHeader("X-User-Email");
+        String source = request.getHeader("X-Request-Source");
+
+        if (Objects.equals(source, "auth-service")) {
+            return true; // Skip checks for auth-service calls
+        }
 
         if (userId == null || rolesHeader == null) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing auth headers");
@@ -31,12 +38,13 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
         }
 
         Set<String> roles = Arrays.stream(rolesHeader.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
                 .collect(Collectors.toSet());
         UserContext.setCurrentUser(userId, userEmail, roles);
 
         // 2. Check for @RequireRole annotation
-        if (handler instanceof HandlerMethod) {
-            HandlerMethod handlerMethod = (HandlerMethod) handler;
+        if (handler instanceof HandlerMethod handlerMethod) {
             RequireRole requireRole = handlerMethod.getMethodAnnotation(RequireRole.class);
 
             if (requireRole != null) {
@@ -55,9 +63,9 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
     }
 
     @Override
-    public void afterCompletion(HttpServletRequest request,
-                                HttpServletResponse response,
-                                Object handler, Exception ex) {
+    public void afterCompletion(@NonNull HttpServletRequest request,
+                                @NonNull HttpServletResponse response,
+                                @NonNull Object handler, Exception ex) {
         UserContext.clear(); // Clean up ThreadLocal
     }
 }
