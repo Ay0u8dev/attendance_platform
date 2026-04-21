@@ -17,11 +17,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/auth/pages/popup-callback').then((module) => module.OAuthCallback),
       },
+      {
+        path: 'forbidden',
+        loadComponent: () =>
+          import('./features/auth/pages/forbidden').then((module) => module.ForbiddenComponent),
+      },
     ],
   },
   {
     path: '',
-    // canActivate: [authGuard],
+    canActivate: [authGuard],
     loadComponent: () =>
       import('./shared/layouts/admin-layout').then((module) => module.AdminLayout),
     children: [
@@ -67,14 +72,14 @@ export const routes: Routes = [
   },
   {
     path: 'teacher',
-    // canActivate: [authGuard],
+    canActivate: [authGuard],
     loadComponent: () =>
       import('./shared/layouts/teacher-layout').then((module) => module.TeacherLayout),
     children: [],
   },
   {
     path: 'student',
-    // canActivate: [authGuard],
+    canActivate: [authGuard],
     loadComponent: () =>
       import('./shared/layouts/student-layout').then((module) => module.StudentLayout),
     children: [],

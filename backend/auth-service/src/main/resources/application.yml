@@ -12,16 +12,40 @@ spring:
       poll-interval: 2s
       quiet-period: 1s
 
-  datasource:
-    url: jdbc:postgresql://localhost:5432/users_db
-#    url: jdbc:postgresql://auth-db:5432/users_db
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
-    driver-class-name: org.postgresql.Driver
+#  security:
+#    oauth2:
+#      client:
+#        registration:
+#          google:
+#            client-id: 47889445597-8n1g2g9ajemt6f7u1gfg484o8f81f941.apps.googleusercontent.com
+#            client-secret: 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
+#            scope:
+#              - email
+#              - profile
+#            redirect-uri: "{baseUrl}/login/oauth2/code/google"
+#        provider:
+#          google:
+#            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+#            token-uri: https://oauth2.googleapis.com/token
+#            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+#            user-name-attribute: email
+#
+#      resourceserver:
+#        jwt:
+#          issuer-uri: https://accounts.google.com
+#          jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
 
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
+app:
+  allowed-domain: "ump.ac.ma"
+  jwt:
+    issuer: "auth-service"
+    secret: 3d6f45a5fc12445dbac2f59c3b6c7cb1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a
+    expiration: 86400000
 
+google:
+  client-id: 47889445597-8n1g2g9ajemt6f7u1gfg484o8f81f941.apps.googleusercontent.com
+
+services:
+  user-service:
+    url: http://localhost:8082
 
