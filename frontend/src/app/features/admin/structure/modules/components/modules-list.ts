@@ -86,8 +86,8 @@ export interface ModuleItem {
 
               <div class="flex items-center justify-between rounded-xl border border-line/30 bg-linear-to-br from-surface-subtle/50 to-surface px-4 py-3 text-xs text-secondaryText/70 transition-colors duration-300 group-hover:border-line/50">
                 <span class="font-medium">Statut</span>
-                <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.7rem] font-semibold" [class]="statusClass(module.status)">
-                  <span class="h-2 w-2 rounded-full" [class]="statusDotClass(module.status)"></span>
+                <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.7rem] font-semibold" [ngClass]="statusClass(module.status)">
+                  <span class="h-2 w-2 rounded-full" [ngClass]="statusDotClass(module.status)"></span>
                   {{ module.status }}
                 </span>
               </div>
