@@ -24,10 +24,10 @@ export interface AcademicYearItem {
     <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 mt-6">
       @for (year of years(); track year.id) {
         <article class="group overflow-hidden rounded-2xl border border-line/40 bg-surface shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(0,0,0,0.12)] hover:border-line/60">
-          <div class="h-1.5 w-full" [class]="year.barClass"></div>
+          <div class="h-1.5 w-full" [class]="'h-1.5 w-full' +year.barClass"></div>
           <div class="space-y-4 p-6">
             <div class="flex items-start justify-between gap-3">
-              <span class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide" [class]="year.badgeClass + ' bg-opacity-10'">
+              <span class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide" [class]="'inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide' + year.badgeClass + ' bg-opacity-10'">
                 {{ year.label }}
               </span>
               <div class="flex items-center gap-1.5">
@@ -66,8 +66,8 @@ export interface AcademicYearItem {
 
             <div class="flex items-center justify-between rounded-xl border border-line/30 bg-linear-to-br from-surface-subtle/50 to-surface px-4 py-3 text-xs text-secondaryText/70 transition-colors duration-300 group-hover:border-line/50">
               <span class="font-medium">Statut</span>
-              <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.7rem] font-semibold" [class]="statusClass(year.status)">
-                <span class="h-2 w-2 rounded-full" [class]="statusDotClass(year.status)"></span>
+              <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.7rem] font-semibold" [class]="'inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.7rem] font-semibold' + statusClass(year.status)">
+                <span class="h-2 w-2 rounded-full" [class]="'h-2 w-2 rounded-full' + statusDotClass(year.status)"></span>
                 {{ year.status }}
               </span>
             </div>
