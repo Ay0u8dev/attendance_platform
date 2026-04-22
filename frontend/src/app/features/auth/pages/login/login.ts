@@ -16,6 +16,7 @@ export class Login {
   private readonly toastService = inject(ToastService);
 
   readonly isLoading = toSignal(this.authService.authInProgress$, { initialValue: false });
+  readonly authError = toSignal(this.authService.authError$, { initialValue: null });
 
   signInWithGoogle(): void {
     this.authService.loginWithGoogle();
