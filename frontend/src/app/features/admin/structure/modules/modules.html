@@ -1,0 +1,40 @@
+<section class="space-y-5">
+  <app-modules-header
+    [filteredCount]="filteredModules().length"
+    [totalCount]="allModules.length"
+    (addClicked)="openCreate()"
+  ></app-modules-header>
+
+  <app-modules-filters
+    [formations]="formations"
+    [semesters]="semesters"
+    [statuses]="statuses"
+    (searchChange)="onSearchChange($event)"
+    (formationFilterChange)="onFormationFilterChange($event)"
+    (semesterFilterChange)="onSemesterFilterChange($event)"
+    (statusFilterChange)="onStatusFilterChange($event)"
+    (resetFilters)="resetFilters()"
+  ></app-modules-filters>
+
+  <app-modules-list
+    [modules]="filteredModules()"
+    [totalModules]="allModules.length"
+    (createClicked)="openCreate()"
+    (editClicked)="openEdit($event)"
+    (deleteClicked)="openDelete($event)"
+  ></app-modules-list>
+
+  <app-create-module-modal [open]="activeModal === 'create'" (closeRequested)="closeModal()"></app-create-module-modal>
+
+  <app-edit-module-modal
+    [open]="activeModal === 'edit'"
+    [module]="selectedModule"
+    (closeRequested)="closeModal()"
+  ></app-edit-module-modal>
+
+  <app-delete-module-modal
+    [open]="activeModal === 'delete'"
+    [module]="selectedModule"
+    (closeRequested)="closeModal()"
+  ></app-delete-module-modal>
+</section>

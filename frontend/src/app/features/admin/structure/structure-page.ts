@@ -1,14 +1,16 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 import { PageHeader } from '../../../shared/components/page-header/page-header';
+import { AcademicYearPage } from './academic Year/academic-year-page';
 import { CyclesPage } from './cycles/cycles-page';
 import { FieldsPage } from './fields/fields-page';
 import { FormationsPage } from './formations/formations-page';
-import { GroupesPage } from './groupes/groupes-page'; 
+import { GroupesPage } from './groupes/groupes-page';
+import { ModulesPage } from './modules/modules-page';
 
 @Component({
   selector: 'app-structure-page',
-  imports: [PageHeader, CyclesPage, FieldsPage, FormationsPage, GroupesPage],
+  imports: [PageHeader, AcademicYearPage, CyclesPage, FieldsPage, FormationsPage, GroupesPage, ModulesPage],
   templateUrl: './structure.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

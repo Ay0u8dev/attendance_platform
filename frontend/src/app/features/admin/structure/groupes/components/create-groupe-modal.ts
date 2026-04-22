@@ -3,13 +3,12 @@ import { FormsModule } from '@angular/forms';
 
 import { Button } from '../../../../../shared/components/button/button';
 import { Modal } from '../../../../../shared/components/modal/modal';
-import { ModalFieldGroup } from '../../../../../shared/components/modal-field-group/modal-field-group';
 import { DropdownFilter, type DropdownOption } from '../../../../../shared/components/dropdown-filter/dropdown-filter';
 
 @Component({
   selector: 'app-create-groupe-modal',
   standalone: true,
-  imports: [Modal, Button, FormsModule, DropdownFilter, ModalFieldGroup],
+  imports: [Modal, Button, FormsModule, DropdownFilter],
   template: `
     <app-modal
       title="Ajouter un groupe"
