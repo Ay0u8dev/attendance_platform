@@ -1,0 +1,27 @@
+<section class="space-y-5">
+  <app-academic-year-header
+    [totalYears]="academicYears.length"
+    (addClicked)="openCreate()"
+  ></app-academic-year-header>
+
+  <app-academic-year-list
+    [years]="academicYears"
+    (createClicked)="openCreate()"
+    (editClicked)="openEdit($event)"
+    (deleteClicked)="openDelete($event)"
+  ></app-academic-year-list>
+
+  <app-create-academic-year-modal [open]="activeModal === 'create'" (closeRequested)="closeModal()"></app-create-academic-year-modal>
+
+  <app-edit-academic-year-modal
+    [open]="activeModal === 'edit'"
+    [year]="selectedYear"
+    (closeRequested)="closeModal()"
+  ></app-edit-academic-year-modal>
+
+  <app-delete-academic-year-modal
+    [open]="activeModal === 'delete'"
+    [year]="selectedYear"
+    (closeRequested)="closeModal()"
+  ></app-delete-academic-year-modal>
+</section>

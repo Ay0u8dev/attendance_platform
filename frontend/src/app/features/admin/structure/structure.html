@@ -20,7 +20,10 @@
     }
   </nav>
 
-  @if (activeUnitId === 'cycles') {
+  @if (activeUnitId === 'academic-year') {
+    <app-academic-year-page></app-academic-year-page>
+  }
+  @else if (activeUnitId === 'cycles') {
     <app-cycles-page></app-cycles-page>
   }
   @else if (activeUnitId === 'fields') {
@@ -31,6 +34,9 @@
   }
   @else if (activeUnitId === 'groupes') {
     <app-groupes-page></app-groupes-page>
+  }
+  @else if (activeUnitId === 'modules') {
+    <app-modules-page></app-modules-page>
   }
   @else if (activeUnit) {
     <section class="grid gap-4 lg:grid-cols-[2fr_1fr]">
