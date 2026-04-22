@@ -17,14 +17,37 @@ public class DatabaseSeeder {
             // Check if the database is already seeded to prevent duplicates
             if (userRepository.count() == 0) {
                 // creating admin user
-                User user = User.builder()
-                        .email("ayoubelebbar@ump.ac.ma")
-                        .firstName("Ayoub")
-                        .lastName("Elebbar")
-                        .roles(List.of(Role.ADMIN))
-                        .build();
+                List<User> users = List.of(
+                        User.builder()
+                                .email("ayoubelebbar@ump.ac.ma")
+                                .firstName("Ayoub")
+                                .lastName("Elebbar")
+                                .roles(List.of(Role.ADMIN))
+                                .build(),
 
-                userRepository.save(user);
+                        User.builder()
+                                .email("mariamfahim@ump.ac.ma")
+                                .firstName("Mariam")
+                                .lastName("Fahim")
+                                .roles(List.of(Role.ADMIN))
+                                .build(),
+
+                        User.builder()
+                                .email("abdelaliferhan@ump.ac.ma")
+                                .firstName("Abdelali")
+                                .lastName("Ferhan")
+                                .roles(List.of(Role.ADMIN))
+                                .build(),
+
+                        User.builder()
+                                .email("abdelkodouselfadili@ump.ac.ma")
+                                .firstName("Abdelkodous")
+                                .lastName("Elfadili")
+                                .roles(List.of(Role.ADMIN))
+                                .build()
+                );
+
+                userRepository.saveAll(users);
 
                 System.out.println("Database seeded successfully!");
             } else {

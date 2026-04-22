@@ -5,7 +5,7 @@ services:
     container_name: traefik
     ports:
       - "80:80" # traffic
-      - "8080:8080" # dashboard
+      - "9000:8080" # dashboard
     volumes:
       # Docker socket — only needed in prod when using Docker provider
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -22,7 +22,7 @@ services:
 
   # ===================== Databases =======================
   user-db:
-    image: postgres:alpine
+    image: postgres:15-alpine
     container_name: user-db
     ports:
       - 5432:5432
@@ -39,7 +39,7 @@ services:
       retries: 20
 
   attendance-db:
-    image: postgres:alpine
+    image: postgres:15-alpine
     container_name: attendance-db
     ports:
       - 5433:5432
@@ -56,7 +56,7 @@ services:
       retries: 20
 
   # notification-db:
-  #   image: postgres:alpine
+  #   image: postgres:15-alpine
   #   container_name: notification-db
   #   ports:
   #     - 5433:5432
