@@ -39,10 +39,10 @@ export interface ModuleItem {
       <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
         @for (module of modules(); track module.id) {
           <article class="group overflow-hidden rounded-2xl border border-line/40 bg-surface shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(0,0,0,0.12)] hover:border-line/60">
-            <div class="h-1.5 w-full" [class]="module.barClass"></div>
+            <div [class]="'h-1.5 w-full ' + module.barClass"></div>
             <div class="space-y-4 p-6">
               <div class="flex items-start justify-between gap-3">
-                <span class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide" [class]="module.badgeClass + ' bg-opacity-10'">
+                <span [class]="'inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide bg-opacity-10 ' + module.badgeClass">
                   {{ module.code }}
                 </span>
                 <div class="flex items-center gap-1.5">
