@@ -5,7 +5,11 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import ma.eniad.userservice.entity.enums.Role;
 
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.Set;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
@@ -29,13 +33,21 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @ElementCollection(fetch = FetchType.EAGER, targetClass = Role.class)
-    private List<Role> roles;
+    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    private Set<Role> roles;
 
     @Builder.Default
     private boolean enabled = true;
 
     @Builder.Default
     private boolean firstLogin = true;
+
+    @CreationTimestamp
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 
 }
 

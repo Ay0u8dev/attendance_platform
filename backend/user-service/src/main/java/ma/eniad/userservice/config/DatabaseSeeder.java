@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
+import java.util.Set;
 
 @Configuration
 public class DatabaseSeeder {
@@ -22,28 +23,28 @@ public class DatabaseSeeder {
                                 .email("ayoubelebbar@ump.ac.ma")
                                 .firstName("Ayoub")
                                 .lastName("Elebbar")
-                                .roles(List.of(Role.ADMIN))
+                                .roles(Set.of(Role.ADMIN))
                                 .build(),
 
                         User.builder()
                                 .email("mariamfahim@ump.ac.ma")
                                 .firstName("Mariam")
                                 .lastName("Fahim")
-                                .roles(List.of(Role.ADMIN))
+                                .roles(Set.of(Role.ADMIN))
                                 .build(),
 
                         User.builder()
                                 .email("abdelaliferhan@ump.ac.ma")
                                 .firstName("Abdelali")
                                 .lastName("Ferhan")
-                                .roles(List.of(Role.ADMIN))
+                                .roles(Set.of(Role.ADMIN))
                                 .build(),
 
                         User.builder()
                                 .email("abdelkodouselfadili@ump.ac.ma")
                                 .firstName("Abdelkodous")
                                 .lastName("Elfadili")
-                                .roles(List.of(Role.ADMIN))
+                                .roles(Set.of(Role.ADMIN))
                                 .build()
                 );
 

@@ -46,7 +46,7 @@ public class JwtService {
         }
 
         if (roles.isEmpty()) {
-            roles.add(Role.USER.name());
+            roles.add(Role.STUDENT.name());
         }
 
         extraClaims.put(CLAIM_ROLES, roles);

@@ -13,7 +13,7 @@ spring:
       quiet-period: 1s
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/users_db
+    url: jdbc:postgresql://localhost:5433/users_db
     #    url: jdbc:postgresql://user-db:5432/users_db
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}

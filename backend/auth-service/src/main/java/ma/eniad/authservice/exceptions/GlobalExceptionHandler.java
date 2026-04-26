@@ -61,12 +61,39 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(MissingGoogleTokenException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingGoogleTokenException(
+            MissingGoogleTokenException ex,
+            WebRequest request) {
+
+        log.warn("[AUTH] ✗ Token Google manquant");
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(AccountNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleAccountNotFoundException(
+            AccountNotFoundException ex,
+            WebRequest request) {
+
+        log.warn("[AUTH] ✗ Compte introuvable");
+        return buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(AccountDisabledException.class)
+    public ResponseEntity<Map<String, Object>> handleAccountDisabledException(
+            AccountDisabledException ex,
+            WebRequest request) {
+
+        log.warn("[AUTH] ✗ Compte désactivé");
+        return buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<Map<String, Object>> handleAuthenticationException(
             AuthenticationException ex,
             WebRequest request) {
 
-        return buildErrorResponse(HttpStatus.UNAUTHORIZED, "Erreur d'authentification : " + ex.getMessage(), request);
+        return buildErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
     }
 
     @ExceptionHandler(RuntimeException.class)
@@ -92,7 +119,6 @@ public class GlobalExceptionHandler {
             String message,
             WebRequest request) {
         Map<String, Object> body = new HashMap<>();
-        body.put("status", status.value());
         body.put("message", message);
         body.put("timestamp", LocalDateTime.now());
         body.put("path", request.getDescription(false).replace("uri=", ""));

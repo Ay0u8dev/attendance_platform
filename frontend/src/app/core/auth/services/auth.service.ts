@@ -9,7 +9,7 @@ import { catchError, filter, switchMap } from 'rxjs/operators';
 
 import { getGoogleAuthConfig } from '../google-auth.config';
 import { environment } from '../../../../environments/environment';
-import { User, BackendAuthResponse } from '../models/auth.model';
+import { User, BackendAuthResponse, Role } from '../models/auth.model';
 import { ToastService } from '../../../shared/components/toast/toast.service';
 
 @Injectable({ providedIn: 'root' })
@@ -25,6 +25,8 @@ export class AuthService {
   private readonly router = inject(Router);
   private readonly toastService = inject(ToastService);
 
+  private authInitialized = false;
+
   private readonly currentUserSignal = signal<User | null>(null);
   private readonly authInProgressSignal = signal(false);
   private readonly authErrorSignal = signal<string | null>(null);
@@ -33,16 +35,25 @@ export class AuthService {
   readonly authError$ = toObservable(this.authErrorSignal);
 
   constructor() {
+    if (this.isBrowser) {
+      this.initializeAuth();
+    }
+  }
+
+  private initializeAuth(): void {
+    if (this.authInitialized) {
+      return;
+    }
+
+    this.authInitialized = true;
     this.currentUserSignal.set(this.loadStoredUser());
 
-    if (this.isBrowser && !this.currentUserSignal() && this.storage.getItem(this.TOKEN_KEY)) {
+    if (!this.currentUserSignal() && this.storage.getItem(this.TOKEN_KEY)) {
       this.clearSession();
     }
 
-    if (this.isBrowser) {
-      this.setupGlobalTokenListener();
-      this.configureOAuth();
-    }
+    this.configureOAuth();
+    this.setupGlobalTokenListener();
   }
 
   // initialize OAuth configuration
@@ -76,7 +87,6 @@ export class AuthService {
 
           this.authInProgressSignal.set(true);
           this.authErrorSignal.set(null);
-          console.log('===== ' + idToken + ' =====');
 
           return this.http.post<BackendAuthResponse>(`${environment.apiBaseUrl}/auth/login`, {
             idToken,
@@ -86,9 +96,10 @@ export class AuthService {
           this.authInProgressSignal.set(false);
 
           // Handle specific error responses from backend
-          if (error.status === 403) {
+          if (error.status === 401) {
             const message =
-              error.error?.message || 'Domaine non autorisé. Utilisez votre adresse @ump.ac.ma';
+              this.normalizeAuthMessage(error.error?.message) ||
+              'Domaine non autorisé. Utilisez votre adresse @ump.ac.ma';
             this.authErrorSignal.set(message);
             this.toastService.error('Accès refusé', message);
             console.warn('Domain validation failed:', error);
@@ -98,11 +109,10 @@ export class AuthService {
             this.toastService.error('Erreur de requête', message);
             console.error('Invalid request:', error);
           } else {
-            this.authErrorSignal.set('Authentification échouée. Veuillez réessayer.');
-            this.toastService.error(
-              'Authentification échouée',
-              "Nous n'avons pas pu terminer la connexion.",
-            );
+            const message =
+              this.normalizeAuthMessage(error.error?.message) ||
+              "Nous n'avons pas pu terminer la connexion.";
+            this.authErrorSignal.set(message);
             console.error('Backend auth exchange failed:', error);
           }
 
@@ -124,6 +134,30 @@ export class AuthService {
     this.authErrorSignal.set(null);
 
     this.oauthService.initLoginFlow();
+  }
+
+  // Finalize OAuth callback handling for the redirect page.
+  completeOAuthCallback(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    this.authInProgressSignal.set(true);
+    this.authErrorSignal.set(null);
+
+    this.oauthService
+      .loadDiscoveryDocumentAndTryLogin()
+      .then(() => {
+        if (!this.oauthService.hasValidIdToken()) {
+          this.authInProgressSignal.set(false);
+        }
+      })
+      .catch((error: unknown) => {
+        this.authInProgressSignal.set(false);
+        this.authErrorSignal.set('OAuth callback failed. Please try again.');
+        this.toastService.error('OAuth callback failed', 'Please retry the login.');
+        console.error('OAuth callback processing failed:', error);
+      });
   }
 
   // check if the user is authenticated
@@ -181,8 +215,7 @@ export class AuthService {
     this.currentUserSignal.set(user);
     this.authInProgressSignal.set(false);
     this.authErrorSignal.set(null);
-    this.toastService.success('Signed in successfully', 'You are now authenticated.');
-    this.router.navigate(['/dashboard']);
+    this.toastService.success('Authentification réussie', 'Bienvenue sur la plateforme !');    this.redirectToRoleHome(user, true);
   }
 
   // logout the user
@@ -193,6 +226,15 @@ export class AuthService {
     this.oauthService.logOut();
     this.clearSession();
     this.router.navigate(['/']);
+  }
+
+  clearSessionAndRedirect(targetUrl: string): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    this.clearSession();
+    this.router.navigateByUrl(targetUrl, { replaceUrl: true });
   }
 
   // load the stored user from localStorage (if available)
@@ -217,6 +259,7 @@ export class AuthService {
     this.storage.removeItem(this.TOKEN_KEY);
     this.currentUserSignal.set(null);
     this.authInProgressSignal.set(false);
+    this.authErrorSignal.set(null);
   }
 
   // helper to decode JWT and extract user payload
@@ -231,14 +274,108 @@ export class AuthService {
           .join(''),
       );
 
-      const payload = JSON.parse(jsonPayload) as User & { exp?: number };
+      const payload = JSON.parse(jsonPayload) as Record<string, unknown> & { exp?: number };
       if (typeof payload.exp === 'number' && Date.now() >= payload.exp * 1000) {
         return null;
       }
 
-      return payload as User;
+      const role = this.normalizeRole(payload['role'] ?? payload['roles']);
+      if (!role) {
+        return null;
+      }
+
+      return { ...(payload as Partial<User>), role } as User;
     } catch {
       return null;
     }
+  }
+
+  private normalizeRole(roleValue: unknown): Role | null {
+    if (Array.isArray(roleValue)) {
+      return this.normalizeRole(roleValue[0]);
+    }
+
+    if (typeof roleValue !== 'string') {
+      return null;
+    }
+
+    const normalized = roleValue.toUpperCase().trim();
+    if (normalized in Role) {
+      return Role[normalized as keyof typeof Role];
+    }
+
+    return null;
+  }
+
+  private normalizeAuthMessage(message: unknown): string | null {
+    if (typeof message !== 'string') {
+      return null;
+    }
+
+    let cleaned = message.trim();
+    const prefixes = [
+      "Erreur d'authentification:",
+      'Token Google invalide :',
+      'Token Google invalide:',
+    ];
+
+    for (const prefix of prefixes) {
+      if (cleaned.toLowerCase().startsWith(prefix.toLowerCase())) {
+        cleaned = cleaned.slice(prefix.length).trim();
+      }
+    }
+
+    return cleaned || null;
+  }
+
+  getRoleHomeUrl(role: Role | null | undefined = this.currentUserSignal()?.role): string {
+    switch (role) {
+      case Role.ADMIN:
+        return '/dashboard';
+      case Role.TEACHER:
+        return '/teacher';
+      case Role.STUDENT:
+        return '/student';
+      default:
+        return '/';
+    }
+  }
+
+  redirectToRoleHome(user?: User | null, replaceUrl = false): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    const target = this.getRoleHomeUrl(user?.role ?? this.currentUserSignal()?.role ?? null);
+    this.router.navigateByUrl(target, { replaceUrl });
+  }
+
+  canAccessUrl(url: string): boolean {
+    const role = this.currentUserSignal()?.role;
+    if (!role) {
+      return false;
+    }
+
+    if (url.startsWith('/teacher')) {
+      return role === Role.TEACHER;
+    }
+
+    if (url.startsWith('/student')) {
+      return role === Role.STUDENT;
+    }
+
+    const adminPrefixes = [
+      '/dashboard',
+      '/students',
+      '/teachers',
+      '/structure',
+      '/attendance',
+      '/justifications',
+    ];
+    if (adminPrefixes.some((prefix) => url.startsWith(prefix))) {
+      return role === Role.ADMIN;
+    }
+
+    return true;
   }
 }
