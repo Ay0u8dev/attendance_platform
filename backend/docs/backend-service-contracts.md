@@ -204,47 +204,6 @@ curl http://localhost/api/users/1 \
   -H "Authorization: Bearer <internal-jwt>"
 ```
 
-## 3.3 Attendance Service
-
-Base path: `/attendance`
-
-### `GET /attendance/bootstrap/status`
-
-Purpose:
-
-- Validate that the merged `attendance-service` bootstrap is reachable
-- Expose the current bootstrap wiring for Redis/WebSocket/user-service integration
-- Provide a non-business endpoint for infra verification before session workflows are implemented
-
-Required forwarded headers:
-
-- `X-User-Id`
-- `X-User-Roles`
-- `X-User-Email` (optional for bootstrap response, still forwarded by gateway)
-
-Success response (`200 OK`):
-
-```json
-{
-  "service": "attendance-service",
-  "status": "bootstrap-ready",
-  "websocketEndpoint": "/attendance/ws",
-  "userServiceUrl": "http://localhost:8082",
-  "autoEndDuration": "PT30M"
-}
-```
-
-Failure responses:
-
-- `401`: missing auth headers
-
-Gateway example:
-
-```bash
-curl http://localhost/api/attendance/bootstrap/status \
-  -H "Authorization: Bearer <internal-jwt>"
-```
-
 ## 4) Inter-Service Call Contract (Auth -> User)
 
 Current implemented call:
@@ -264,6 +223,52 @@ Expected behavior:
   - `roles`
   - `enabled`
   - `firstLogin`
+
+## 4.1 Inter-Service Call Contract (Attendance -> User)
+
+Current implemented call:
+
+- Caller: `attendance-service`
+- Client type: OpenFeign
+- Target: `${services.user-service.url}/users/internal/students/roster`
+- Header required: `X-Request-Source: attendance-service`
+- Query params: repeated `groupIds`
+
+### `GET /users/internal/students/roster`
+
+Purpose:
+
+- Internal endpoint used by `attendance-service`
+- Returns a flat active-year roster for the provided group IDs
+
+Request headers:
+
+- `X-Request-Source: attendance-service`
+
+Request query:
+
+- `groupIds`: one or more group identifiers
+
+Success response (`200 OK`):
+
+```json
+[
+  {
+    "studentId": 12,
+    "groupId": 4,
+    "firstName": "Aya",
+    "lastName": "Bennani",
+    "email": "aya.bennani@ump.ac.ma",
+    "numApogee": "22012345"
+  }
+]
+```
+
+Failure responses:
+
+- `400`: missing or empty `groupIds`
+- `401`: untrusted or missing request source
+- `409`: zero or multiple active academic years
 
 ## 5) Notes on Response Shapes
 

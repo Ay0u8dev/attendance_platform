@@ -2,16 +2,27 @@ package ma.eniad.userservice.service;
 
 import lombok.RequiredArgsConstructor;
 import ma.eniad.userservice.dto.AuthUserRequest;
+import ma.eniad.userservice.dto.StudentRosterDto;
 import ma.eniad.userservice.dto.UserResponseDto;
+import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.User;
+import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
+import ma.eniad.userservice.repository.AnneeUniversitaireRepository;
+import ma.eniad.userservice.repository.InscriptionRepository;
 import ma.eniad.userservice.repository.UserRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
+    private final InscriptionRepository inscriptionRepository;
+    private final AnneeUniversitaireRepository anneeUniversitaireRepository;
 
     public User findUser(AuthUserRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
@@ -40,5 +51,32 @@ public class UserService {
                 .enabled(user.isEnabled())
                 .firstLogin(user.isFirstLogin())
                 .build();
+    }
+
+    public List<StudentRosterDto> getStudentRosterByGroupIds(List<Long> groupIds) {
+        List<AnneeUniversitaire> activeYears = anneeUniversitaireRepository.findByIsActiveTrue();
+
+        if (activeYears.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No active academic year found");
+        }
+
+        if (activeYears.size() > 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Multiple active academic years found");
+        }
+
+        Long activeYearId = activeYears.getFirst().getId();
+        List<Inscription> inscriptions =
+                inscriptionRepository.findRosterByGroupIdsAndAnneeUniversitaireId(groupIds, activeYearId);
+
+        return inscriptions.stream()
+                .map(inscription -> new StudentRosterDto(
+                        inscription.getStudent().getId(),
+                        inscription.getGroupe().getId(),
+                        inscription.getStudent().getFirstName(),
+                        inscription.getStudent().getLastName(),
+                        inscription.getStudent().getEmail(),
+                        inscription.getStudent().getNumApogee()
+                ))
+                .toList();
     }
 }
