@@ -19,11 +19,11 @@ http:
       service: user-service
 
     # Attendance routes — protected, JWT required
-    # attendance:
-    #   entryPoints: ["web"]
-    #   rule: "PathPrefix(`/api/attendance`)"
-    #   middlewares: ["forward-auth", "strip-api-attendance"]
-    #   service: attendance-service
+    attendance:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/attendance`)"
+      middlewares: ["forward-auth", "strip-api-attendance"]
+      service: attendance-service
 
     # # Face recognition routes — protected, JWT required
     # face:
@@ -52,9 +52,9 @@ http:
       stripPrefix:
         prefixes: ["/api"]
 
-    # strip-api-attendance:
-    #   stripPrefix:
-    #     prefixes: ["/api/attendance"]
+    strip-api-attendance:
+      stripPrefix:
+        prefixes: ["/api"]
 
     # strip-api-face:
     #   stripPrefix:
@@ -99,10 +99,10 @@ http:
         servers:
           - url: "http://host.docker.internal:8082"
 
-    # attendance-service:
-    #   loadBalancer:
-    #     servers:
-    #       - url: "http://host.docker.internal:8082"
+    attendance-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8084"
 
     # face-service:
     #   loadBalancer:

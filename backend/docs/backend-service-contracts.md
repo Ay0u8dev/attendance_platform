@@ -2,6 +2,11 @@
 
 This document defines the currently implemented HTTP contracts and header contracts between services.
 
+Bootstrap ownership note:
+
+- `attendance-service` is the intended owner of session lifecycle and attendance persistence for the merged attendance flow.
+- At this stage, that ownership is infrastructure-level only: gateway routing and service responsibility are established, but no attendance REST contract is implemented yet in code.
+
 ## 1) Shared Header Contract
 
 ### 1.1 Headers produced by auth validation
@@ -196,6 +201,47 @@ Gateway example (recommended):
 
 ```bash
 curl http://localhost/api/users/1 \
+  -H "Authorization: Bearer <internal-jwt>"
+```
+
+## 3.3 Attendance Service
+
+Base path: `/attendance`
+
+### `GET /attendance/bootstrap/status`
+
+Purpose:
+
+- Validate that the merged `attendance-service` bootstrap is reachable
+- Expose the current bootstrap wiring for Redis/WebSocket/user-service integration
+- Provide a non-business endpoint for infra verification before session workflows are implemented
+
+Required forwarded headers:
+
+- `X-User-Id`
+- `X-User-Roles`
+- `X-User-Email` (optional for bootstrap response, still forwarded by gateway)
+
+Success response (`200 OK`):
+
+```json
+{
+  "service": "attendance-service",
+  "status": "bootstrap-ready",
+  "websocketEndpoint": "/attendance/ws",
+  "userServiceUrl": "http://localhost:8082",
+  "autoEndDuration": "PT30M"
+}
+```
+
+Failure responses:
+
+- `401`: missing auth headers
+
+Gateway example:
+
+```bash
+curl http://localhost/api/attendance/bootstrap/status \
   -H "Authorization: Bearer <internal-jwt>"
 ```
 

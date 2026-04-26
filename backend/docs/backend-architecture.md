@@ -8,8 +8,8 @@ This document describes the backend architecture based on currently implemented 
 | --------------------- | ----------------- | -------------------------------- | --------------------- | ------------------------------------------------------------------------------------ |
 | auth-service          | Spring Boot       | 8081                             | Implemented           | Login with Google token validation, internal JWT issuance, token validation endpoint |
 | user-service          | Spring Boot + JPA | 8082                             | Implemented           | User lookup, auth-user flow, role-guarded read endpoint                              |
-| attendance-service    | Spring Boot       | 8084                             | Skeleton              | Application bootstrap and config only, no REST controllers                           |
-| session-service       | Spring Boot       | 8083                             | Skeleton              | Application bootstrap and config only, no REST controllers                           |
+| attendance-service    | Spring Boot       | 8084                             | Bootstrap infra       | Bootstrap owner for session lifecycle and attendance persistence; route, config, websocket, Redis, and bootstrap status endpoint are wired |
+| session-service       | Spring Boot       | 8083                             | Skeleton              | Application bootstrap and config only; session domain ownership is consolidating into attendance-service |
 | justification-service | Spring Boot       | 8085                             | Skeleton              | Application bootstrap and config only, no REST controllers                           |
 | notification-service  | Spring Boot       | 9000                             | Skeleton              | Application bootstrap and config only, no REST controllers                           |
 | face-service          | FastAPI           | n/a (compose comment shows 8000) | Placeholder           | Minimal sample endpoints (`/`, `/items/{item_id}`)                                   |
@@ -27,6 +27,7 @@ In local development, Traefik runs in Docker and forwards traffic to services ru
 
 - `/api/auth/**` -> `auth-service` (no forward-auth middleware)
 - `/api/users/**` -> `user-service` (protected by forward-auth middleware)
+- `/api/attendance/**` -> `attendance-service` (protected by forward-auth middleware)
 - `/**` -> frontend service
 
 ## 3) Communication Paths
@@ -65,13 +66,15 @@ This model keeps JWT logic centralized and authorization decisions distributed t
 
 - `auth-service` does not own user persistence.
 - `user-service` owns user identity records and academic structure entities.
+- `attendance-service` is the bootstrap owner for session lifecycle and attendance persistence.
+- `session-service` is not the target owner for the merged flow at the gateway/contracts level.
 - `attendance_db` is configured for attendance/session/justification services, but those services do not expose implemented APIs yet.
 
 ## 6) Current Gaps
 
 - Only two backend services expose actual business endpoints (`auth-service`, `user-service`).
 - Error response formats are not fully standardized across services.
-- Routing in Traefik is currently defined for auth and user routes only.
+- `attendance-service` is reachable through the gateway, but only bootstrap/infra endpoints are implemented so far.
 
 ## 7) Practical Guidance
 
