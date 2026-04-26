@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgClass } from '@angular/common';
 
 import { IconButton } from '../../../../../shared/components/button/icon-button';
 
@@ -21,7 +21,7 @@ export interface ModuleItem {
 
 @Component({
   selector: 'app-modules-list',
-  imports: [IconButton, DatePipe],
+  imports: [IconButton, DatePipe, NgClass],
   template: `
     <div class="space-y-4">
       @if (modules().length === 0) {

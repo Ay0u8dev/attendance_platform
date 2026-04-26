@@ -1,6 +1,7 @@
 package ma.eniad.authservice.exceptions;
 
 public class InvalidDomainException extends RuntimeException {
-    public InvalidDomainException(String email) {
-        super("Accès refusé : le domaine de l'email n'est pas autorisé. Utilisez votre adresse @ump.ac.ma");
-    }}
+    public InvalidDomainException(String allowedDomain) {
+        super("Email n'est pas autorisé, utilisez une adresse @" + allowedDomain);
+    }
+}

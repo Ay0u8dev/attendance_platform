@@ -65,7 +65,7 @@ public class GoogleTokenService {
             String email = emailNode.asText();
 
             if (!email.endsWith("@" + allowedDomain)) {
-                throw new InvalidDomainException(email);
+                throw new InvalidDomainException(allowedDomain);
             }
 
             Map<String, String> claims = new HashMap<>();
