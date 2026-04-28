@@ -6,8 +6,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ma.eniad.authservice.client.UserServiceClient;
 import ma.eniad.authservice.dto.UserDto;
+import ma.eniad.authservice.exceptions.AccountDisabledException;
+import ma.eniad.authservice.exceptions.AccountNotFoundException;
+import ma.eniad.authservice.exceptions.MissingGoogleTokenException;
 import ma.eniad.authservice.services.GoogleTokenService;
 import ma.eniad.authservice.services.JwtService;
+import feign.FeignException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -69,7 +73,7 @@ public class AuthController {
 
             if (googleToken == null || googleToken.isEmpty()) {
                 log.warn("[AUTH] Tentative de connexion sans token");
-                                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token Google requis");
+                throw new MissingGoogleTokenException();
             }
 
             log.info("[AUTH] Validation du token Google en cours...");
@@ -82,32 +86,31 @@ public class AuthController {
             log.info("[AUTH] Token validé avec succès pour: {}", email);
             log.debug("[AUTH] Token validé avec succès pour: {}", email);
             log.debug("[AUTH] ✓ Domaine @ump.ac.ma vérifié pour {}", email);            // 3. user-service est le seul propriétaire du cycle de vie des utilisateurs
-            UserDto user = userServiceClient.authUser(Map.of(
+                UserDto user;
+                try {
+                user = userServiceClient.authUser(Map.of(
                     "email", email,
                     "pfpUrl", googleClaims.get("picture")
-            ));
+                ));
+                } catch (FeignException.NotFound ex) {
+                throw new AccountNotFoundException();
+                }
 
             if (!user.isEnabled()) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Compte désactivé. Contactez l'administrateur.");
+                throw new AccountDisabledException();
             }
 
             // 4. Générer notre propre JWT interne
             String jwtToken = jwtService.generateToken(user);
 
             log.info("[AUTH] ✓ Connexion réussie pour {}", email);
-            System.out.println("JWT : " + jwtToken);
-
-            log.info("[AUTH] ✓ Connexion réussie pour {}", email);
 
             return ResponseEntity.ok(Map.of("accessToken", jwtToken));
 
         } catch (RuntimeException ex) {
-            // Autre erreur de validation
+            // Let custom exceptions and others propagate to GlobalExceptionHandler
             log.error("[AUTH] ✗ Erreur lors de la validation: {}", ex.getMessage());
-            if (ex.getMessage() != null && ex.getMessage().contains("Email non vérifié")) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Email non vérifié par Google");
-            }
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Erreur d'authentification: " + ex.getMessage());
+            throw ex;
         }
     }
 
