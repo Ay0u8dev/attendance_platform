@@ -5,6 +5,7 @@ import jakarta.persistence.PrimaryKeyJoinColumn;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+// import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
@@ -12,7 +13,7 @@ import lombok.experimental.SuperBuilder;
 @Setter
 @Entity
 @AllArgsConstructor
-//@NoArgsConstructor
+// @NoArgsConstructor
 @SuperBuilder
 @Table(name = "teachers")
 @PrimaryKeyJoinColumn(name = "user_id")
