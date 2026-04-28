@@ -19,6 +19,8 @@ import java.util.stream.Collectors;
 @Component
 public class RoleCheckInterceptor implements HandlerInterceptor {
 
+    private static final Set<String> TRUSTED_INTERNAL_SOURCES = Set.of("auth-service", "qr-service", "face-service");
+
     @Override
     public boolean preHandle(HttpServletRequest request,
                              @NonNull HttpServletResponse response,
@@ -28,8 +30,13 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
         String rolesHeader = request.getHeader("X-User-Roles");
         String userEmail = request.getHeader("X-User-Email");
         String source = request.getHeader("X-Request-Source");
+        String requestUri = request.getRequestURI();
 
         if (Objects.equals(source, "auth-service")) {
+            return true;
+        }
+
+        if (requestUri.startsWith("/attendance/internal/") && TRUSTED_INTERNAL_SOURCES.contains(source)) {
             return true;
         }
 

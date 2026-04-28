@@ -6,6 +6,7 @@ import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 import ma.eniad.attendanceservice.dto.StudentRosterDto;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 import ma.eniad.attendanceservice.service.LiveAttendanceSessionStore;
 import org.junit.jupiter.api.BeforeEach;
@@ -104,9 +105,15 @@ class AttendanceSessionControllerIntegrationTest {
         assertThat(metaCaptor.getValue().groupIds()).containsExactly(1L, 2L);
         assertThat(metaCaptor.getValue().gpsLat()).isEqualTo("34.6814");
         assertThat(metaCaptor.getValue().gpsLon()).isEqualTo("-1.9086");
+        assertThat(metaCaptor.getValue().method().name()).isEqualTo("QR_CODE");
         assertThat(studentsCaptor.getValue()).hasSize(2);
+        assertThat(studentsCaptor.getValue().get(0).email()).isEqualTo("aya@ump.ac.ma");
+        assertThat(studentsCaptor.getValue().get(0).numApogee()).isEqualTo("A001");
         assertThat(studentsCaptor.getValue())
-                .allMatch(student -> "UNKNOWN".equals(student.status()) && student.markedAt() == null && student.markMethod() == null);
+                .allMatch(student -> student.status() == AttendanceStudentStatus.UNKNOWN
+                        && student.markedAt() == null
+                        && student.markMethod() == null
+                        && student.deviceId() == null);
     }
 
     @Test

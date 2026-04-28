@@ -1,5 +1,8 @@
 package ma.eniad.attendanceservice.dto;
 
+import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
+import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+
 import java.time.LocalDateTime;
 
 public record LiveAttendanceStudentState(
@@ -8,15 +11,16 @@ public record LiveAttendanceStudentState(
 
         String firstName,
         String lastName,
+        String email,
 
         String numApogee,
 
-        String status,
+        AttendanceStudentStatus status,
 
         LocalDateTime markedAt,
 
-        String markMethod,
+        AttendanceSessionMethod markMethod,
 
-        String DeviceID
+        String deviceId
 ) {
 }

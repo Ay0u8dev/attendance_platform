@@ -6,6 +6,7 @@ import ma.eniad.attendanceservice.config.AttendanceSessionProperties;
 import ma.eniad.attendanceservice.dto.*;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -63,6 +64,7 @@ public class AttendanceSessionService {
                             savedSession.getGpsLon(),
                             savedSession.getStartedAt(),
                             savedSession.getEndsAt(),
+                            savedSession.getMethod(),
                             savedSession.getStatus()
                     ),
                     roster.stream()
@@ -71,8 +73,9 @@ public class AttendanceSessionService {
                                     student.groupId(),
                                     student.firstName(),
                                     student.lastName(),
+                                    student.email(),
                                     student.numApogee(),
-                                    "UNKNOWN",
+                                    AttendanceStudentStatus.UNKNOWN,
                                     null,
                                     null,
                                     null

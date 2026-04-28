@@ -1,5 +1,6 @@
 package ma.eniad.attendanceservice.dto;
 
+import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
 
 import java.time.LocalDateTime;
@@ -20,6 +21,7 @@ public record LiveAttendanceSessionMeta(
         LocalDateTime startedAt,
         LocalDateTime endsAt,
 
+        AttendanceSessionMethod method,
         AttendanceSessionStatus status
 ) {
 }

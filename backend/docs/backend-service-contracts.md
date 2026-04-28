@@ -339,6 +339,118 @@ Failure responses:
 - `409`: roster lookup fails due to invalid academic year state
 - `500`: live Redis initialization fails
 
+### `POST /attendance/sessions/{sessionId}/attendance`
+
+Purpose:
+
+- Teacher manually updates a student's attendance during an active session
+- Manual updates are allowed even when the session mode is `QR_CODE` or `FACE_ID`
+
+Required forwarded headers:
+
+- `X-User-Id`
+- `X-User-Roles`
+- `X-User-Email`
+
+Role requirement:
+
+- `TEACHER`
+
+Request body:
+
+```json
+{
+  "studentId": 12,
+  "status": "PRESENT"
+}
+```
+
+Allowed `status` values for manual updates:
+
+- `PRESENT`
+- `ABSENT`
+
+Success response (`200 OK`):
+
+```json
+{
+  "sessionId": 5,
+  "studentId": 12,
+  "status": "PRESENT",
+  "markMethod": "MANUAL",
+  "deviceId": null,
+  "markedAt": "2026-04-28T12:00:00",
+  "presentCount": 10,
+  "absentCount": 1,
+  "unknownCount": 31
+}
+```
+
+Failure responses:
+
+- `400`: invalid request body
+- `403`: caller lacks `TEACHER` or does not own the session
+- `404`: session or student not found in live state
+- `409`: session is not active
+
+### `POST /attendance/internal/sessions/{sessionId}/attendance`
+
+Purpose:
+
+- Internal update endpoint for QR and face services
+- Updates live attendance state in Redis and broadcasts the teacher event
+
+Request headers:
+
+- `X-Request-Source: qr-service` or `X-Request-Source: face-service`
+
+Request body:
+
+```json
+{
+  "studentId": 12,
+  "method": "QR_CODE",
+  "deviceId": "scanner-entrance-01"
+}
+```
+
+Rules:
+
+- request source must be trusted
+- `method` must match the request source
+- `method` must match the session mode
+- one device may mark only one student within the same session
+- one student may use only one device within the same session
+- self-service updates always set `status = PRESENT`
+- latest valid update wins across manual and self-service changes
+
+Success response (`200 OK`):
+
+```json
+{
+  "sessionId": 5,
+  "studentId": 12,
+  "status": "PRESENT",
+  "markMethod": "QR_CODE",
+  "deviceId": "scanner-entrance-01",
+  "markedAt": "2026-04-28T12:01:00",
+  "presentCount": 11,
+  "absentCount": 0,
+  "unknownCount": 31
+}
+```
+
+Failure responses:
+
+- `400`: invalid request body
+- `401`: missing or untrusted internal source
+- `404`: session or student not found in live state
+- `409`: session is not active
+- `409`: request source does not match attendance method
+- `409`: attendance method does not match session mode
+- `409`: device is already used by another student in this session
+- `409`: student is already bound to another device in this session
+
 ## 5) Notes on Response Shapes
 
 Current behavior is partially consistent but not fully standardized:
