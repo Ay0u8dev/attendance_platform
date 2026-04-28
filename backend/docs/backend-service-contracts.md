@@ -5,7 +5,7 @@ This document defines the currently implemented HTTP contracts and header contra
 Bootstrap ownership note:
 
 - `attendance-service` is the intended owner of session lifecycle and attendance persistence for the merged attendance flow.
-- At this stage, that ownership is infrastructure-level only: gateway routing and service responsibility are established, but no attendance REST contract is implemented yet in code.
+- `attendance-service` now exposes the first session creation contract and owns live session initialization.
 
 ## 1) Shared Header Contract
 
@@ -269,6 +269,75 @@ Failure responses:
 - `400`: missing or empty `groupIds`
 - `401`: untrusted or missing request source
 - `409`: zero or multiple active academic years
+
+## 4.2 Attendance Service
+
+Base path: `/attendance`
+
+### `POST /attendance/sessions`
+
+Purpose:
+
+- Create one active attendance session for the authenticated teacher
+- Load the active-year roster from `user-service`
+- Persist the session header in `attendance_db`
+- Initialize live session state in Redis with all students marked `UNKNOWN`
+
+Required forwarded headers:
+
+- `X-User-Id`
+- `X-User-Roles`
+- `X-User-Email`
+
+Role requirement:
+
+- `TEACHER`
+
+Request body:
+
+```json
+{
+  "groupIds": [1, 2],
+  "courseLabel": "Distributed Systems",
+  "roomLabel": "Room B12",
+  "gpsLat": "34.6814",
+  "gpsLon": "-1.9086",
+  "method": "QR_CODE"
+}
+```
+
+`method` enum values currently supported:
+
+- `QR_CODE`
+- `FACE_ID`
+- `MANUAL`
+
+Success response (`200 OK`):
+
+```json
+{
+  "sessionId": 5,
+  "teacherId": 77,
+  "groupIds": [1, 2],
+  "courseLabel": "Distributed Systems",
+  "roomLabel": "Room B12",
+  "gpsLat": "34.6814",
+  "gpsLon": "-1.9086",
+  "startedAt": "2026-04-27T10:00:00",
+  "endsAt": "2026-04-27T10:30:00",
+  "method": "QR_CODE",
+  "status": "ACTIVE",
+  "studentCount": 42
+}
+```
+
+Failure responses:
+
+- `400`: invalid request body
+- `403`: caller lacks `TEACHER`
+- `409`: teacher already has an active session
+- `409`: roster lookup fails due to invalid academic year state
+- `500`: live Redis initialization fails
 
 ## 5) Notes on Response Shapes
 
