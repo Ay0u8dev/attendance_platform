@@ -36,7 +36,7 @@ public class Student extends User {
 
     @Lob
     @Basic(fetch = FetchType.LAZY)
-    private String embeddings;
+    private byte[] embeddings;
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonIgnoreProperties("student")

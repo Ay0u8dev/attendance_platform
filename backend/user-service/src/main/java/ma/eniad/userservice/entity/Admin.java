@@ -12,8 +12,8 @@ import lombok.experimental.SuperBuilder;
 @Entity
 @Getter
 @Setter
-@AllArgsConstructor
-// @NoArgsConstructor
+// @AllArgsConstructor
+@NoArgsConstructor
 @SuperBuilder
 @Table(name = "admins")
 @PrimaryKeyJoinColumn(name = "user_id")

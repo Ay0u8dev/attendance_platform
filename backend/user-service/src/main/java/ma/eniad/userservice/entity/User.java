@@ -63,7 +63,7 @@ public class User extends BaseEntity {
     private String pfpUrl;
 
     @Enumerated(EnumType.STRING)
-    @ElementCollection(fetch = FetchType.LAZY, targetClass = Role.class)
+    @ElementCollection(fetch = FetchType.EAGER, targetClass = Role.class)
     @CollectionTable(
         name = "user_roles",
         joinColumns = @JoinColumn(name = "user_id"),
