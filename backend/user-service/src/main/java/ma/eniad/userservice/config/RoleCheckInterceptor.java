@@ -67,7 +67,7 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
             }
         }
 
-        return true; // ✅ Allow the request to proceed
+        return true; // Allow the request to proceed
     }
 
     @Override

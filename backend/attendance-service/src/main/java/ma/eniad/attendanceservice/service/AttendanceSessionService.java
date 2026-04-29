@@ -78,6 +78,8 @@ public class AttendanceSessionService {
                                     AttendanceStudentStatus.UNKNOWN,
                                     null,
                                     null,
+                                    null,
+                                    null,
                                     null
                             ))
                             .toList()

@@ -16,6 +16,8 @@ spring:
 attendance:
   session:
     auto-end-duration: PT30M
+    finalized-state-retention: PT1H
+    auto-finalize-poll-interval: PT1M
 
 services:
   user-service:

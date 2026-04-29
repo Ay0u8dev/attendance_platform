@@ -16,7 +16,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +67,8 @@ class AttendanceUpdateServiceTest {
                 AttendanceStudentStatus.PRESENT,
                 AttendanceSessionMethod.MANUAL,
                 null,
+                null,
+                null,
                 response.markedAt(),
                 1,
                 0,
@@ -107,12 +111,14 @@ class AttendanceUpdateServiceTest {
         AttendanceUpdateResponse response = attendanceUpdateService.updateInternalAttendance(
                 "qr-service",
                 100L,
-                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "phone-10")
+                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "phone-10", "34.6820", "-1.9091")
         );
 
         assertThat(response.status()).isEqualTo(AttendanceStudentStatus.PRESENT);
         assertThat(response.markMethod()).isEqualTo(AttendanceSessionMethod.QR_CODE);
         assertThat(response.deviceId()).isEqualTo("phone-10");
+        assertThat(response.markedGpsLat()).isEqualTo("34.6820");
+        assertThat(response.markedGpsLon()).isEqualTo("-1.9091");
         assertThat(response.presentCount()).isEqualTo(1);
         assertThat(liveAttendanceSessionStore.findStudentIdByDevice(100L, "phone-10")).contains(10L);
     }
@@ -124,7 +130,7 @@ class AttendanceUpdateServiceTest {
         AttendanceUpdateResponse response = attendanceUpdateService.updateInternalAttendance(
                 "face-service",
                 100L,
-                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.FACE_ID, "device-face")
+                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.FACE_ID, "device-face", "34.6800", "-1.9000")
         );
 
         assertThat(response.markMethod()).isEqualTo(AttendanceSessionMethod.FACE_ID);
@@ -138,7 +144,7 @@ class AttendanceUpdateServiceTest {
         assertThatThrownBy(() -> attendanceUpdateService.updateInternalAttendance(
                 "face-service",
                 100L,
-                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.FACE_ID, "device-face")
+                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.FACE_ID, "device-face", "34.6800", "-1.9000")
         ))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
@@ -150,7 +156,7 @@ class AttendanceUpdateServiceTest {
         assertThatThrownBy(() -> attendanceUpdateService.updateInternalAttendance(
                 "qr-service",
                 999L,
-                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "phone-10")
+                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "phone-10", "34.6820", "-1.9091")
         ))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
@@ -164,7 +170,7 @@ class AttendanceUpdateServiceTest {
         assertThatThrownBy(() -> attendanceUpdateService.updateInternalAttendance(
                 "qr-service",
                 100L,
-                new InternalAttendanceUpdateRequest(99L, AttendanceSessionMethod.QR_CODE, "phone-99")
+                new InternalAttendanceUpdateRequest(99L, AttendanceSessionMethod.QR_CODE, "phone-99", "34.6820", "-1.9091")
         ))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
@@ -177,13 +183,13 @@ class AttendanceUpdateServiceTest {
         attendanceUpdateService.updateInternalAttendance(
                 "qr-service",
                 100L,
-                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "shared-device")
+                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "shared-device", "34.6820", "-1.9091")
         );
 
         assertThatThrownBy(() -> attendanceUpdateService.updateInternalAttendance(
                 "qr-service",
                 100L,
-                new InternalAttendanceUpdateRequest(11L, AttendanceSessionMethod.QR_CODE, "shared-device")
+                new InternalAttendanceUpdateRequest(11L, AttendanceSessionMethod.QR_CODE, "shared-device", "34.6821", "-1.9092")
         ))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
@@ -196,13 +202,13 @@ class AttendanceUpdateServiceTest {
         attendanceUpdateService.updateInternalAttendance(
                 "qr-service",
                 100L,
-                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "device-1")
+                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "device-1", "34.6820", "-1.9091")
         );
 
         assertThatThrownBy(() -> attendanceUpdateService.updateInternalAttendance(
                 "qr-service",
                 100L,
-                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "device-2")
+                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "device-2", "34.6821", "-1.9092")
         ))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
@@ -216,7 +222,7 @@ class AttendanceUpdateServiceTest {
         assertThatThrownBy(() -> attendanceUpdateService.updateInternalAttendance(
                 "qr-service",
                 100L,
-                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "phone-10")
+                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "phone-10", "34.6820", "-1.9091")
         ))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
@@ -235,7 +241,7 @@ class AttendanceUpdateServiceTest {
         AttendanceUpdateResponse response = attendanceUpdateService.updateInternalAttendance(
                 "qr-service",
                 100L,
-                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "phone-10")
+                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "phone-10", "34.6820", "-1.9091")
         );
 
         assertThat(response.status()).isEqualTo(AttendanceStudentStatus.PRESENT);
@@ -248,7 +254,7 @@ class AttendanceUpdateServiceTest {
         attendanceUpdateService.updateInternalAttendance(
                 "qr-service",
                 100L,
-                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "phone-10")
+                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "phone-10", "34.6820", "-1.9091")
         );
 
         AttendanceUpdateResponse response = attendanceUpdateService.updateManualAttendance(
@@ -288,6 +294,8 @@ class AttendanceUpdateServiceTest {
                                 AttendanceStudentStatus.UNKNOWN,
                                 null,
                                 null,
+                                null,
+                                null,
                                 null
                         ),
                         new LiveAttendanceStudentState(
@@ -298,6 +306,8 @@ class AttendanceUpdateServiceTest {
                                 "yassine@ump.ac.ma",
                                 "A002",
                                 AttendanceStudentStatus.UNKNOWN,
+                                null,
+                                null,
                                 null,
                                 null,
                                 null
@@ -330,6 +340,11 @@ class AttendanceUpdateServiceTest {
         @Override
         public Optional<LiveAttendanceStudentState> findStudentState(Long sessionId, Long studentId) {
             return Optional.ofNullable(studentsBySession.getOrDefault(sessionId, Map.of()).get(studentId));
+        }
+
+        @Override
+        public List<LiveAttendanceStudentState> findAllStudentStates(Long sessionId) {
+            return new ArrayList<>(studentsBySession.getOrDefault(sessionId, Map.of()).values());
         }
 
         @Override
@@ -372,6 +387,17 @@ class AttendanceUpdateServiceTest {
                 }
             }
             return new AttendanceCounts(present, absent, unknown);
+        }
+
+        @Override
+        public void finalizeSession(LiveAttendanceSessionMeta meta, List<LiveAttendanceStudentState> students, Duration retention) {
+            sessionMeta.put(meta.sessionId(), meta);
+            Map<Long, LiveAttendanceStudentState> sessionStudents = new HashMap<>();
+            for (LiveAttendanceStudentState student : students) {
+                sessionStudents.put(student.studentId(), student);
+            }
+            studentsBySession.put(meta.sessionId(), sessionStudents);
+            devicesBySession.computeIfAbsent(meta.sessionId(), ignored -> new HashMap<>());
         }
     }
 }

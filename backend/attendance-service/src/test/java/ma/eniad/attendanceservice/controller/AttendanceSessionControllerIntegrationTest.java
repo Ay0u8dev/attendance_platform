@@ -4,10 +4,15 @@ import ma.eniad.attendanceservice.client.UserServiceClient;
 import ma.eniad.attendanceservice.dto.LiveAttendanceSessionMeta;
 import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 import ma.eniad.attendanceservice.dto.StudentRosterDto;
+import ma.eniad.attendanceservice.dto.AttendanceSessionDetailsResponse;
+import ma.eniad.attendanceservice.dto.AttendanceStudentView;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
+import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
 import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
+import ma.eniad.attendanceservice.service.AttendanceFinalizationService;
+import ma.eniad.attendanceservice.service.AttendanceSessionReadService;
 import ma.eniad.attendanceservice.service.LiveAttendanceSessionStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,6 +54,12 @@ class AttendanceSessionControllerIntegrationTest {
 
     @MockitoBean
     private LiveAttendanceSessionStore liveAttendanceSessionStore;
+
+    @MockitoBean
+    private AttendanceSessionReadService attendanceSessionReadService;
+
+    @MockitoBean
+    private AttendanceFinalizationService attendanceFinalizationService;
 
     @BeforeEach
     void setUp() {
@@ -113,7 +125,9 @@ class AttendanceSessionControllerIntegrationTest {
                 .allMatch(student -> student.status() == AttendanceStudentStatus.UNKNOWN
                         && student.markedAt() == null
                         && student.markMethod() == null
-                        && student.deviceId() == null);
+                        && student.deviceId() == null
+                        && student.markedGpsLat() == null
+                        && student.markedGpsLon() == null);
     }
 
     @Test
@@ -278,5 +292,77 @@ class AttendanceSessionControllerIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Failed to initialize live session state"));
 
         assertThat(attendanceSessionRepository.count()).isZero();
+    }
+
+    @Test
+    void getSessionReturnsTeacherView() throws Exception {
+        when(attendanceSessionReadService.getSession(100L, 77L)).thenReturn(new AttendanceSessionDetailsResponse(
+                100L,
+                77L,
+                List.of(1L),
+                "Distributed Systems",
+                "Room B12",
+                "34.6814",
+                "-1.9086",
+                LocalDateTime.of(2026, 4, 28, 12, 0),
+                LocalDateTime.of(2026, 4, 28, 12, 30),
+                AttendanceSessionMethod.QR_CODE,
+                AttendanceSessionStatus.ACTIVE,
+                1,
+                0,
+                1,
+                List.of(new AttendanceStudentView(
+                        10L,
+                        1L,
+                        "Aya",
+                        "Bennani",
+                        "aya@ump.ac.ma",
+                        "A001",
+                        AttendanceStudentStatus.PRESENT,
+                        AttendanceSessionMethod.QR_CODE,
+                        "phone-10",
+                        "34.6820",
+                        "-1.9091",
+                        LocalDateTime.of(2026, 4, 28, 12, 5)
+                ))
+        ));
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/attendance/sessions/100")
+                        .header("X-User-Id", "77")
+                        .header("X-User-Roles", "TEACHER")
+                        .header("X-User-Email", "teacher@ump.ac.ma"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionId").value(100))
+                .andExpect(jsonPath("$.presentCount").value(1))
+                .andExpect(jsonPath("$.students[0].markedGpsLat").value("34.6820"));
+    }
+
+    @Test
+    void endSessionReturnsFinalizedTeacherView() throws Exception {
+        when(attendanceFinalizationService.finalizeSession(100L, 77L)).thenReturn(new AttendanceSessionDetailsResponse(
+                100L,
+                77L,
+                List.of(1L),
+                "Distributed Systems",
+                "Room B12",
+                "34.6814",
+                "-1.9086",
+                LocalDateTime.of(2026, 4, 28, 12, 0),
+                LocalDateTime.of(2026, 4, 28, 12, 30),
+                AttendanceSessionMethod.QR_CODE,
+                AttendanceSessionStatus.FINALIZED,
+                1,
+                1,
+                0,
+                List.of()
+        ));
+
+        mockMvc.perform(post("/attendance/sessions/100/end")
+                        .header("X-User-Id", "77")
+                        .header("X-User-Roles", "TEACHER")
+                        .header("X-User-Email", "teacher@ump.ac.ma"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("FINALIZED"))
+                .andExpect(jsonPath("$.unknownCount").value(0));
     }
 }

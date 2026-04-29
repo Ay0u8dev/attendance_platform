@@ -35,3 +35,5 @@ services:
 attendance:
   session:
     auto-end-duration: ${ATTENDANCE_SESSION_AUTO_END_DURATION:PT30M}
+    finalized-state-retention: ${ATTENDANCE_SESSION_FINALIZED_STATE_RETENTION:PT1H}
+    auto-finalize-poll-interval: ${ATTENDANCE_SESSION_AUTO_FINALIZE_POLL_INTERVAL:PT1M}

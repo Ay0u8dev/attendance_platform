@@ -12,6 +12,12 @@ public record InternalAttendanceUpdateRequest(
         AttendanceSessionMethod method,
 
         @NotBlank(message = "deviceId is required")
-        String deviceId
+        String deviceId,
+
+        @NotBlank(message = "gpsLat is required")
+        String gpsLat,
+
+        @NotBlank(message = "gpsLon is required")
+        String gpsLon
 ) {
 }

@@ -8,5 +8,9 @@ import java.time.Duration;
 
 @Validated
 @ConfigurationProperties(prefix = "attendance.session")
-public record AttendanceSessionProperties(@NotNull Duration autoEndDuration) {
+public record AttendanceSessionProperties(
+        @NotNull Duration autoEndDuration,
+        @NotNull Duration finalizedStateRetention,
+        @NotNull Duration autoFinalizePollInterval
+) {
 }

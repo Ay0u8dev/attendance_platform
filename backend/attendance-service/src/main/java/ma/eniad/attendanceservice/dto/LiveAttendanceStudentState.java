@@ -21,6 +21,8 @@ public record LiveAttendanceStudentState(
 
         AttendanceSessionMethod markMethod,
 
-        String deviceId
+        String deviceId,
+        String markedGpsLat,
+        String markedGpsLon
 ) {
 }

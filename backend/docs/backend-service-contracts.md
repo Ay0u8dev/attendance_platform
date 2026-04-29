@@ -379,6 +379,8 @@ Success response (`200 OK`):
   "status": "PRESENT",
   "markMethod": "MANUAL",
   "deviceId": null,
+  "markedGpsLat": null,
+  "markedGpsLon": null,
   "markedAt": "2026-04-28T12:00:00",
   "presentCount": 10,
   "absentCount": 1,
@@ -410,7 +412,9 @@ Request body:
 {
   "studentId": 12,
   "method": "QR_CODE",
-  "deviceId": "scanner-entrance-01"
+  "deviceId": "scanner-entrance-01",
+  "gpsLat": "34.6820",
+  "gpsLon": "-1.9091"
 }
 ```
 
@@ -419,6 +423,7 @@ Rules:
 - request source must be trusted
 - `method` must match the request source
 - `method` must match the session mode
+- QR and FACE marks must include GPS coordinates
 - one device may mark only one student within the same session
 - one student may use only one device within the same session
 - self-service updates always set `status = PRESENT`
@@ -433,6 +438,8 @@ Success response (`200 OK`):
   "status": "PRESENT",
   "markMethod": "QR_CODE",
   "deviceId": "scanner-entrance-01",
+  "markedGpsLat": "34.6820",
+  "markedGpsLon": "-1.9091",
   "markedAt": "2026-04-28T12:01:00",
   "presentCount": 11,
   "absentCount": 0,
@@ -450,6 +457,105 @@ Failure responses:
 - `409`: attendance method does not match session mode
 - `409`: device is already used by another student in this session
 - `409`: student is already bound to another device in this session
+
+### `GET /attendance/sessions/{sessionId}`
+
+Purpose:
+
+- Hydrate the teacher session screen after refresh or reconnect
+- Return live Redis state while the session is active
+- Return persisted DB state after the session is finalized
+
+Required forwarded headers:
+
+- `X-User-Id`
+- `X-User-Roles`
+- `X-User-Email`
+
+Role requirement:
+
+- `TEACHER`
+
+Success response (`200 OK`):
+
+```json
+{
+  "sessionId": 5,
+  "teacherId": 77,
+  "groupIds": [1, 2],
+  "courseLabel": "Distributed Systems",
+  "roomLabel": "Room B12",
+  "gpsLat": "34.6814",
+  "gpsLon": "-1.9086",
+  "startedAt": "2026-04-28T12:00:00",
+  "endsAt": "2026-04-28T12:30:00",
+  "method": "QR_CODE",
+  "status": "ACTIVE",
+  "presentCount": 11,
+  "absentCount": 0,
+  "unknownCount": 31,
+  "students": [
+    {
+      "studentId": 12,
+      "groupId": 1,
+      "firstName": "Aya",
+      "lastName": "Bennani",
+      "email": "aya.bennani@ump.ac.ma",
+      "numApogee": "22012345",
+      "status": "PRESENT",
+      "markMethod": "QR_CODE",
+      "deviceId": "scanner-entrance-01",
+      "markedGpsLat": "34.6820",
+      "markedGpsLon": "-1.9091",
+      "markedAt": "2026-04-28T12:01:00"
+    }
+  ]
+}
+```
+
+Failure responses:
+
+- `403`: caller lacks `TEACHER`
+- `404`: session not found
+
+### `POST /attendance/sessions/{sessionId}/end`
+
+Purpose:
+
+- Finalize an active session
+- Convert remaining `UNKNOWN` students to `ABSENT`
+- Persist one final attendance record per student
+- Keep finalized Redis state briefly for post-end readback
+
+Required forwarded headers:
+
+- `X-User-Id`
+- `X-User-Roles`
+- `X-User-Email`
+
+Role requirement:
+
+- `TEACHER`
+
+Success response (`200 OK`):
+
+- Same shape as `GET /attendance/sessions/{sessionId}`
+- `status = FINALIZED`
+- `unknownCount = 0`
+
+Finalization rules:
+
+- unresolved `UNKNOWN` live students become `ABSENT`
+- QR/FACE marks persist `deviceId`, `markedGpsLat`, and `markedGpsLon`
+- manual marks persist `markMethod = MANUAL` with GPS fields left `null`
+- finalized Redis state is retained temporarily with TTL for UI readback
+- repeated finalization attempts are rejected after the session is already finalized
+
+Failure responses:
+
+- `403`: caller lacks `TEACHER` or does not own the session
+- `404`: session not found
+- `409`: session is already finalized
 
 ## 5) Notes on Response Shapes
 

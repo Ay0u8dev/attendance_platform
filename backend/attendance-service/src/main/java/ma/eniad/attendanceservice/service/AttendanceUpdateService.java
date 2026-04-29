@@ -60,6 +60,8 @@ public class AttendanceUpdateService {
                     request.status(),
                     now,
                     AttendanceSessionMethod.MANUAL,
+                    null,
+                    null,
                     null
             );
 
@@ -88,6 +90,8 @@ public class AttendanceUpdateService {
 
             LiveAttendanceStudentState currentStudent = requireStudent(sessionId, request.studentId());
             String requestedDeviceId = request.deviceId().trim();
+            String requestedGpsLat = request.gpsLat().trim();
+            String requestedGpsLon = request.gpsLon().trim();
 
             liveAttendanceSessionStore.findDeviceIdByStudent(sessionId, request.studentId())
                     .filter(existingDeviceId -> !existingDeviceId.equals(requestedDeviceId))
@@ -118,7 +122,9 @@ public class AttendanceUpdateService {
                     AttendanceStudentStatus.PRESENT,
                     now,
                     request.method(),
-                    requestedDeviceId
+                    requestedDeviceId,
+                    requestedGpsLat,
+                    requestedGpsLon
             );
 
             liveAttendanceSessionStore.saveStudentState(sessionId, updatedStudent);
@@ -149,6 +155,8 @@ public class AttendanceUpdateService {
                 updatedStudent.status(),
                 updatedStudent.markMethod(),
                 updatedStudent.deviceId(),
+                updatedStudent.markedGpsLat(),
+                updatedStudent.markedGpsLon(),
                 updatedStudent.markedAt(),
                 counts.presentCount(),
                 counts.absentCount(),
@@ -164,6 +172,8 @@ public class AttendanceUpdateService {
                         updatedStudent.status(),
                         updatedStudent.markMethod(),
                         updatedStudent.deviceId(),
+                        updatedStudent.markedGpsLat(),
+                        updatedStudent.markedGpsLon(),
                         updatedStudent.markedAt(),
                         counts.presentCount(),
                         counts.absentCount(),

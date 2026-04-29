@@ -11,6 +11,8 @@ public record AttendanceUpdateResponse(
         AttendanceStudentStatus status,
         AttendanceSessionMethod markMethod,
         String deviceId,
+        String markedGpsLat,
+        String markedGpsLon,
         LocalDateTime markedAt,
         int presentCount,
         int absentCount,

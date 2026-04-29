@@ -7,10 +7,12 @@ import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class RedisLiveAttendanceSessionStore implements LiveAttendanceSessionStore {
@@ -54,6 +56,14 @@ public class RedisLiveAttendanceSessionStore implements LiveAttendanceSessionSto
     public Optional<LiveAttendanceStudentState> findStudentState(Long sessionId, Long studentId) {
         Object value = redisTemplate.opsForHash().get(sessionStudentsKey(sessionId), studentId.toString());
         return Optional.ofNullable((LiveAttendanceStudentState) value);
+    }
+
+    @Override
+    public List<LiveAttendanceStudentState> findAllStudentStates(Long sessionId) {
+        return redisTemplate.opsForHash().values(sessionStudentsKey(sessionId))
+                .stream()
+                .map(LiveAttendanceStudentState.class::cast)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -125,6 +135,30 @@ public class RedisLiveAttendanceSessionStore implements LiveAttendanceSessionSto
         }
 
         return new AttendanceCounts(present, absent, unknown);
+    }
+
+    @Override
+    public void finalizeSession(LiveAttendanceSessionMeta meta, List<LiveAttendanceStudentState> students, Duration retention) {
+        String metaKey = sessionMetaKey(meta.sessionId());
+        String studentsKey = sessionStudentsKey(meta.sessionId());
+        String devicesKey = sessionDevicesKey(meta.sessionId());
+        String teacherKey = teacherActiveSessionKey(meta.teacherId());
+
+        redisTemplate.opsForValue().set(metaKey, meta);
+        redisTemplate.delete(teacherKey);
+
+        redisTemplate.delete(studentsKey);
+        if (!students.isEmpty()) {
+            Map<String, Object> states = new LinkedHashMap<>();
+            for (LiveAttendanceStudentState student : students) {
+                states.put(student.studentId().toString(), student);
+            }
+            redisTemplate.opsForHash().putAll(studentsKey, states);
+        }
+
+        redisTemplate.expire(metaKey, retention);
+        redisTemplate.expire(studentsKey, retention);
+        redisTemplate.expire(devicesKey, retention);
     }
 
     static String sessionMetaKey(Long sessionId) {

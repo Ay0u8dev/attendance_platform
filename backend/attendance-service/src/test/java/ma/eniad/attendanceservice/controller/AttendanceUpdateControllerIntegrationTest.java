@@ -42,6 +42,8 @@ class AttendanceUpdateControllerIntegrationTest {
                         AttendanceStudentStatus.PRESENT,
                         AttendanceSessionMethod.MANUAL,
                         null,
+                        null,
+                        null,
                         LocalDateTime.of(2026, 4, 28, 12, 0),
                         1,
                         0,
@@ -89,6 +91,8 @@ class AttendanceUpdateControllerIntegrationTest {
                         AttendanceStudentStatus.PRESENT,
                         AttendanceSessionMethod.QR_CODE,
                         "phone-10",
+                        "34.6820",
+                        "-1.9091",
                         LocalDateTime.of(2026, 4, 28, 12, 0),
                         1,
                         0,
@@ -102,12 +106,16 @@ class AttendanceUpdateControllerIntegrationTest {
                                 {
                                   "studentId": 10,
                                   "method": "QR_CODE",
-                                  "deviceId": "phone-10"
+                                  "deviceId": "phone-10",
+                                  "gpsLat": "34.6820",
+                                  "gpsLon": "-1.9091"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.markMethod").value("QR_CODE"))
-                .andExpect(jsonPath("$.deviceId").value("phone-10"));
+                .andExpect(jsonPath("$.deviceId").value("phone-10"))
+                .andExpect(jsonPath("$.markedGpsLat").value("34.6820"))
+                .andExpect(jsonPath("$.markedGpsLon").value("-1.9091"));
     }
 
     @Test
@@ -119,7 +127,9 @@ class AttendanceUpdateControllerIntegrationTest {
                                 {
                                   "studentId": 10,
                                   "method": "QR_CODE",
-                                  "deviceId": "phone-10"
+                                  "deviceId": "phone-10",
+                                  "gpsLat": "34.6820",
+                                  "gpsLon": "-1.9091"
                                 }
                                 """))
                 .andExpect(status().isUnauthorized());

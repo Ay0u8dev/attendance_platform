@@ -4,6 +4,7 @@ import ma.eniad.attendanceservice.dto.AttendanceCounts;
 import ma.eniad.attendanceservice.dto.LiveAttendanceSessionMeta;
 import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,6 +15,8 @@ public interface LiveAttendanceSessionStore {
 
     Optional<LiveAttendanceStudentState> findStudentState(Long sessionId, Long studentId);
 
+    List<LiveAttendanceStudentState> findAllStudentStates(Long sessionId);
+
     Optional<Long> findStudentIdByDevice(Long sessionId, String deviceId);
 
     Optional<String> findDeviceIdByStudent(Long sessionId, Long studentId);
@@ -23,4 +26,6 @@ public interface LiveAttendanceSessionStore {
     void bindDeviceToStudent(Long sessionId, String deviceId, Long studentId);
 
     AttendanceCounts getAttendanceCounts(Long sessionId);
+
+    void finalizeSession(LiveAttendanceSessionMeta meta, List<LiveAttendanceStudentState> students, Duration retention);
 }

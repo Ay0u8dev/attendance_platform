@@ -3,11 +3,16 @@ package ma.eniad.attendanceservice.controller;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import ma.eniad.attendanceservice.annotation.RequireRole;
+import ma.eniad.attendanceservice.dto.AttendanceSessionDetailsResponse;
 import ma.eniad.attendanceservice.dto.AttendanceSessionResponse;
 import ma.eniad.attendanceservice.dto.CreateAttendanceSessionRequest;
+import ma.eniad.attendanceservice.service.AttendanceFinalizationService;
+import ma.eniad.attendanceservice.service.AttendanceSessionReadService;
 import ma.eniad.attendanceservice.service.AttendanceSessionService;
 import ma.eniad.attendanceservice.service.UserContext;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,6 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class AttendanceSessionController {
 
     private final AttendanceSessionService attendanceSessionService;
+    private final AttendanceSessionReadService attendanceSessionReadService;
+    private final AttendanceFinalizationService attendanceFinalizationService;
 
     @RequireRole({"TEACHER"})
     @PostMapping
@@ -27,5 +34,19 @@ public class AttendanceSessionController {
     ) {
         Long teacherId = Long.valueOf(UserContext.getCurrentUser().userId());
         return ResponseEntity.ok(attendanceSessionService.createSession(teacherId, request));
+    }
+
+    @RequireRole({"TEACHER"})
+    @GetMapping("/{sessionId}")
+    public ResponseEntity<AttendanceSessionDetailsResponse> getSession(@PathVariable Long sessionId) {
+        Long teacherId = Long.valueOf(UserContext.getCurrentUser().userId());
+        return ResponseEntity.ok(attendanceSessionReadService.getSession(sessionId, teacherId));
+    }
+
+    @RequireRole({"TEACHER"})
+    @PostMapping("/{sessionId}/end")
+    public ResponseEntity<AttendanceSessionDetailsResponse> endSession(@PathVariable Long sessionId) {
+        Long teacherId = Long.valueOf(UserContext.getCurrentUser().userId());
+        return ResponseEntity.ok(attendanceFinalizationService.finalizeSession(sessionId, teacherId));
     }
 }
