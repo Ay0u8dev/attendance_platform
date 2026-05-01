@@ -47,6 +47,9 @@ public class AttendanceSessionService {
                 .startedAt(startedAt)
                 .endsAt(endsAt)
                 .status(AttendanceSessionStatus.ACTIVE)
+                .presentCount(0)
+                .absentCount(0)
+                .unknownCount(roster.size())
                 .groupIds(normalizedGroupIds)
                 .build();
 

@@ -76,7 +76,7 @@ class AttendanceFinalizationServiceTest {
         when(attendanceRecordRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
         AttendanceSessionDetailsResponse finalizedResponse = new AttendanceSessionDetailsResponse(
                 100L, 77L, List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
-                session.getStartedAt(), session.getEndsAt(), AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.FINALIZED,
+                session.getStartedAt(), session.getEndsAt(), session.getEndsAt(), AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.FINALIZED,
                 1, 1, 0, List.of()
         );
         when(attendanceSessionReadService.getSession(100L, 77L)).thenReturn(finalizedResponse);

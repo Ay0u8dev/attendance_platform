@@ -16,6 +16,7 @@ public record AttendanceSessionDetailsResponse(
         String gpsLon,
         LocalDateTime startedAt,
         LocalDateTime endsAt,
+        LocalDateTime endedAt,
         AttendanceSessionMethod method,
         AttendanceSessionStatus status,
         int presentCount,

@@ -38,6 +38,17 @@ public class AttendanceSessionReadService {
         return buildFinalizedResponse(session);
     }
 
+    public AttendanceSessionDetailsResponse getSessionForAdmin(Long sessionId) {
+        AttendanceSession session = attendanceSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+
+        if (session.getStatus() == AttendanceSessionStatus.ACTIVE) {
+            return buildActiveResponseForAdmin(sessionId);
+        }
+
+        return buildFinalizedResponse(session);
+    }
+
     private AttendanceSessionDetailsResponse buildActiveResponse(Long sessionId, Long teacherId) {
         LiveAttendanceSessionMeta meta = liveAttendanceSessionStore.findSessionMeta(sessionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Live session state not found"));
@@ -61,6 +72,37 @@ public class AttendanceSessionReadService {
                 meta.gpsLon(),
                 meta.startedAt(),
                 meta.endsAt(),
+                null,
+                meta.method(),
+                meta.status(),
+                counts.presentCount(),
+                counts.absentCount(),
+                counts.unknownCount(),
+                students
+        );
+    }
+
+    private AttendanceSessionDetailsResponse buildActiveResponseForAdmin(Long sessionId) {
+        LiveAttendanceSessionMeta meta = liveAttendanceSessionStore.findSessionMeta(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Live session state not found"));
+
+        List<AttendanceStudentView> students = liveAttendanceSessionStore.findAllStudentStates(sessionId).stream()
+                .sorted(Comparator.comparing(LiveAttendanceStudentState::studentId))
+                .map(this::toStudentView)
+                .toList();
+
+        AttendanceCounts counts = liveAttendanceSessionStore.getAttendanceCounts(sessionId);
+        return new AttendanceSessionDetailsResponse(
+                meta.sessionId(),
+                meta.teacherId(),
+                meta.groupIds(),
+                meta.courseLabel(),
+                meta.roomLabel(),
+                meta.gpsLat(),
+                meta.gpsLon(),
+                meta.startedAt(),
+                meta.endsAt(),
+                null,
                 meta.method(),
                 meta.status(),
                 counts.presentCount(),
@@ -72,15 +114,6 @@ public class AttendanceSessionReadService {
 
     private AttendanceSessionDetailsResponse buildFinalizedResponse(AttendanceSession session) {
         List<AttendanceRecord> records = attendanceRecordRepository.findBySessionIdOrderByStudentIdAsc(session.getId());
-        int presentCount = 0;
-        int absentCount = 0;
-        for (AttendanceRecord record : records) {
-            if (record.getStatus() == AttendanceStudentStatus.PRESENT) {
-                presentCount++;
-            } else if (record.getStatus() == AttendanceStudentStatus.ABSENT) {
-                absentCount++;
-            }
-        }
 
         List<AttendanceStudentView> students = records.stream()
                 .map(record -> new AttendanceStudentView(
@@ -109,11 +142,12 @@ public class AttendanceSessionReadService {
                 session.getGpsLon(),
                 session.getStartedAt(),
                 session.getEndsAt(),
+                session.getEndedAt(),
                 session.getMethod(),
                 session.getStatus(),
-                presentCount,
-                absentCount,
-                0,
+                session.getPresentCount(),
+                session.getAbsentCount(),
+                session.getUnknownCount(),
                 students
         );
     }

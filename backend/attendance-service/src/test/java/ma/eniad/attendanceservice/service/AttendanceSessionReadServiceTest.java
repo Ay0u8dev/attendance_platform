@@ -127,8 +127,12 @@ class AttendanceSessionReadServiceTest {
                 .gpsLon("-1.9086")
                 .startedAt(LocalDateTime.of(2026, 4, 28, 12, 0))
                 .endsAt(LocalDateTime.of(2026, 4, 28, 12, 30))
+                .endedAt(status == AttendanceSessionStatus.FINALIZED ? LocalDateTime.of(2026, 4, 28, 12, 30) : null)
                 .method(AttendanceSessionMethod.QR_CODE)
                 .status(status)
+                .presentCount(status == AttendanceSessionStatus.FINALIZED ? 1 : 0)
+                .absentCount(status == AttendanceSessionStatus.FINALIZED ? 1 : 0)
+                .unknownCount(status == AttendanceSessionStatus.FINALIZED ? 0 : 0)
                 .build();
     }
 }

@@ -114,7 +114,12 @@ public class AttendanceFinalizationService {
                         .build())
                 .toList());
 
+        AttendanceCounts counts = computeCounts(finalizedStudents);
         session.setStatus(AttendanceSessionStatus.FINALIZED);
+        session.setEndedAt(LocalDateTime.now());
+        session.setPresentCount(counts.presentCount());
+        session.setAbsentCount(counts.absentCount());
+        session.setUnknownCount(counts.unknownCount());
         attendanceSessionRepository.save(session);
 
         LiveAttendanceSessionMeta finalizedMeta = new LiveAttendanceSessionMeta(
@@ -136,7 +141,6 @@ public class AttendanceFinalizationService {
                 attendanceSessionProperties.finalizedStateRetention()
         );
 
-        AttendanceCounts counts = computeCounts(finalizedStudents);
         messagingTemplate.convertAndSend(
                 "/topic/attendance.sessions." + session.getId(),
                 new SessionFinalizedEvent(

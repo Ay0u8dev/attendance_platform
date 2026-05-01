@@ -34,6 +34,8 @@ public class AttendanceSession {
     private LocalDateTime startedAt;
     @Column(nullable = false)
     private LocalDateTime endsAt;
+    @Column
+    private LocalDateTime endedAt;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -46,6 +48,18 @@ public class AttendanceSession {
 
     @Column(nullable = false)
     private Long teacherId;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int presentCount = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int absentCount = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int unknownCount = 0;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "attendance_session_group_ids", joinColumns = @JoinColumn(name = "session_id"))

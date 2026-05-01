@@ -29,6 +29,8 @@ spring:
       enabled: true
 
 services:
+  auth-service:
+    url: ${AUTH_SERVICE_URL:http://localhost:8081}
   user-service:
     url: ${USER_SERVICE_URL:http://localhost:8082}
 
@@ -37,3 +39,5 @@ attendance:
     auto-end-duration: ${ATTENDANCE_SESSION_AUTO_END_DURATION:PT30M}
     finalized-state-retention: ${ATTENDANCE_SESSION_FINALIZED_STATE_RETENTION:PT1H}
     auto-finalize-poll-interval: ${ATTENDANCE_SESSION_AUTO_FINALIZE_POLL_INTERVAL:PT1M}
+  websocket:
+    allowed-origin-patterns: ${ATTENDANCE_WS_ALLOWED_ORIGIN_PATTERNS:http://localhost:4200}

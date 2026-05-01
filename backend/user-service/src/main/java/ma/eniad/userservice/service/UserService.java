@@ -7,9 +7,9 @@ import ma.eniad.userservice.dto.UserResponseDto;
 import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
-import ma.eniad.userservice.repository.AnneeUniversitaireRepository;
 import ma.eniad.userservice.repository.InscriptionRepository;
 import ma.eniad.userservice.repository.UserRepository;
+import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -33,7 +33,7 @@ public class UserService {
             user.setPfpUrl(request.getPfpUrl());
             user = userRepository.save(user);
         }
-        
+
         return user;
     }
 
@@ -54,7 +54,7 @@ public class UserService {
     }
 
     public List<StudentRosterDto> getStudentRosterByGroupIds(List<Long> groupIds) {
-        List<AnneeUniversitaire> activeYears = anneeUniversitaireRepository.findByIsActiveTrue();
+        List<AnneeUniversitaire> activeYears = anneeUniversitaireRepository.findByActiveTrue();
 
         if (activeYears.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No active academic year found");

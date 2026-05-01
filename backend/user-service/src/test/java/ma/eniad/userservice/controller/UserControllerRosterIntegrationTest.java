@@ -5,10 +5,10 @@ import ma.eniad.userservice.entity.Student;
 import ma.eniad.userservice.entity.enums.Role;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
 import ma.eniad.userservice.entity.structure.Groupe;
-import ma.eniad.userservice.repository.AnneeUniversitaireRepository;
-import ma.eniad.userservice.repository.GroupeRepository;
 import ma.eniad.userservice.repository.InscriptionRepository;
 import ma.eniad.userservice.repository.UserRepository;
+import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
+import ma.eniad.userservice.repository.structure.GroupeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,23 +54,31 @@ class UserControllerRosterIntegrationTest {
         userRepository.deleteAll();
         anneeUniversitaireRepository.deleteAll();
 
-        AnneeUniversitaire activeYear = new AnneeUniversitaire();
-        activeYear.setName("2025-2026");
-        activeYear.setActive(true);
+        AnneeUniversitaire activeYear = AnneeUniversitaire
+                .builder()
+                .name("2025-2026")
+                .active(true)
+                .build();
         activeYear = anneeUniversitaireRepository.save(activeYear);
 
-        AnneeUniversitaire inactiveYear = new AnneeUniversitaire();
-        inactiveYear.setName("2024-2025");
-        inactiveYear.setActive(false);
+        AnneeUniversitaire inactiveYear = AnneeUniversitaire
+                .builder()
+                .name("2024-2025")
+                .active(false)
+                .build();
         inactiveYear = anneeUniversitaireRepository.save(inactiveYear);
 
-        Groupe activeGroup = new Groupe();
-        activeGroup.setName("GI-1");
+        Groupe activeGroup = Groupe
+                .builder()
+                .name("GI-1")
+                .build();
         activeGroup = groupeRepository.save(activeGroup);
         activeGroupId = activeGroup.getId();
 
-        Groupe secondGroup = new Groupe();
-        secondGroup.setName("GI-2");
+        Groupe secondGroup = Groupe
+                .builder()
+                .name("GI-2")
+                .build();
         secondGroup = groupeRepository.save(secondGroup);
         emptyGroupId = secondGroup.getId();
 
@@ -81,7 +89,7 @@ class UserControllerRosterIntegrationTest {
                 .roles(Set.of(Role.STUDENT))
                 .numApogee("A001")
                 .build();
-        activeStudent = (Student) userRepository.save(activeStudent);
+        activeStudent = userRepository.save(activeStudent);
 
         Student inactiveStudent = Student.builder()
                 .email("inactive.student@ump.ac.ma")
@@ -90,7 +98,7 @@ class UserControllerRosterIntegrationTest {
                 .roles(Set.of(Role.STUDENT))
                 .numApogee("A002")
                 .build();
-        inactiveStudent = (Student) userRepository.save(inactiveStudent);
+        inactiveStudent = userRepository.save(inactiveStudent);
 
         Inscription activeInscription = new Inscription();
         activeInscription.setStudent(activeStudent);
@@ -160,9 +168,11 @@ class UserControllerRosterIntegrationTest {
 
     @Test
     void rosterReturnsConflictWhenMultipleActiveAcademicYearsExist() throws Exception {
-        AnneeUniversitaire extraActiveYear = new AnneeUniversitaire();
-        extraActiveYear.setName("2026-2027");
-        extraActiveYear.setActive(true);
+        AnneeUniversitaire extraActiveYear = AnneeUniversitaire
+                .builder()
+                .name("2026-2027")
+                .active(true)
+                .build();
         anneeUniversitaireRepository.save(extraActiveYear);
 
         mockMvc.perform(get("/users/internal/students/roster")
