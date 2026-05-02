@@ -130,11 +130,13 @@ class AttendanceUpdateServiceTest {
         AttendanceUpdateResponse response = attendanceUpdateService.updateInternalAttendance(
                 "face-service",
                 100L,
-                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.FACE_ID, "device-face", "34.6800", "-1.9000")
+                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.FACE_ID, null, null, null)
         );
 
         assertThat(response.markMethod()).isEqualTo(AttendanceSessionMethod.FACE_ID);
-        assertThat(response.deviceId()).isEqualTo("device-face");
+        assertThat(response.deviceId()).isNull();
+        assertThat(response.markedGpsLat()).isNull();
+        assertThat(response.markedGpsLon()).isNull();
     }
 
     @Test
@@ -178,6 +180,28 @@ class AttendanceUpdateServiceTest {
     }
 
     @Test
+    void internalFaceUpdateAllowsMultipleStudentsWithoutDeviceBinding() {
+        seedSession(AttendanceSessionMethod.FACE_ID);
+
+        AttendanceUpdateResponse first = attendanceUpdateService.updateInternalAttendance(
+                "face-service",
+                100L,
+                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.FACE_ID, null, null, null)
+        );
+        AttendanceUpdateResponse second = attendanceUpdateService.updateInternalAttendance(
+                "face-service",
+                100L,
+                new InternalAttendanceUpdateRequest(11L, AttendanceSessionMethod.FACE_ID, null, null, null)
+        );
+
+        assertThat(first.deviceId()).isNull();
+        assertThat(second.deviceId()).isNull();
+        assertThat(second.presentCount()).isEqualTo(2);
+        assertThat(liveAttendanceSessionStore.findDeviceIdByStudent(100L, 10L)).isEmpty();
+        assertThat(liveAttendanceSessionStore.findDeviceIdByStudent(100L, 11L)).isEmpty();
+    }
+
+    @Test
     void internalUpdateRejectsDeviceAlreadyUsedByAnotherStudent() {
         seedSession(AttendanceSessionMethod.QR_CODE);
         attendanceUpdateService.updateInternalAttendance(
@@ -213,6 +237,34 @@ class AttendanceUpdateServiceTest {
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
                 .isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void internalQrUpdateRejectsMissingDeviceId() {
+        seedSession(AttendanceSessionMethod.QR_CODE);
+
+        assertThatThrownBy(() -> attendanceUpdateService.updateInternalAttendance(
+                "qr-service",
+                100L,
+                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, null, "34.6820", "-1.9091")
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void internalQrUpdateRejectsMissingGps() {
+        seedSession(AttendanceSessionMethod.QR_CODE);
+
+        assertThatThrownBy(() -> attendanceUpdateService.updateInternalAttendance(
+                "qr-service",
+                100L,
+                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.QR_CODE, "phone-10", null, null)
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
@@ -268,6 +320,25 @@ class AttendanceUpdateServiceTest {
         assertThat(liveAttendanceSessionStore.findStudentIdByDevice(100L, "phone-10")).contains(10L);
     }
 
+    @Test
+    void latestUpdateWinsFromFacePresentToManualAbsent() {
+        seedSession(AttendanceSessionMethod.FACE_ID);
+        attendanceUpdateService.updateInternalAttendance(
+                "face-service",
+                100L,
+                new InternalAttendanceUpdateRequest(10L, AttendanceSessionMethod.FACE_ID, null, null, null)
+        );
+
+        AttendanceUpdateResponse response = attendanceUpdateService.updateManualAttendance(
+                77L,
+                100L,
+                new ManualAttendanceUpdateRequest(10L, AttendanceStudentStatus.ABSENT)
+        );
+
+        assertThat(response.status()).isEqualTo(AttendanceStudentStatus.ABSENT);
+        assertThat(response.markMethod()).isEqualTo(AttendanceSessionMethod.MANUAL);
+    }
+
     private void seedSession(AttendanceSessionMethod sessionMethod) {
         liveAttendanceSessionStore.initializeSession(
                 new LiveAttendanceSessionMeta(
@@ -290,6 +361,7 @@ class AttendanceUpdateServiceTest {
                                 "Aya",
                                 "Bennani",
                                 "aya@ump.ac.ma",
+                                "https://cdn.example.com/aya.jpg",
                                 "A001",
                                 AttendanceStudentStatus.UNKNOWN,
                                 null,
@@ -304,6 +376,7 @@ class AttendanceUpdateServiceTest {
                                 "Yassine",
                                 "Fassi",
                                 "yassine@ump.ac.ma",
+                                "https://cdn.example.com/yassine.jpg",
                                 "A002",
                                 AttendanceStudentStatus.UNKNOWN,
                                 null,

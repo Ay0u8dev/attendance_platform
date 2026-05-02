@@ -11,6 +11,7 @@ public record AttendanceStudentView(
         String firstName,
         String lastName,
         String email,
+        String pfpUrl,
         String numApogee,
         AttendanceStudentStatus status,
         AttendanceSessionMethod markMethod,

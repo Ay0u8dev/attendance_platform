@@ -156,6 +156,7 @@ public class AttendanceQueryService {
                 record.getFirstName(),
                 record.getLastName(),
                 record.getEmail(),
+                record.getPfpUrl(),
                 record.getNumApogee(),
                 record.getStatus(),
                 record.getMarkMethod(),

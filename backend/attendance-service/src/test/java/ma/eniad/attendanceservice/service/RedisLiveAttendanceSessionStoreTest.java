@@ -63,6 +63,7 @@ class RedisLiveAttendanceSessionStoreTest {
                 "Aya",
                 "Bennani",
                 "aya@ump.ac.ma",
+                "https://cdn.example.com/aya.jpg",
                 "A001",
                 AttendanceStudentStatus.PRESENT,
                 LocalDateTime.of(2026, 5, 2, 15, 10),

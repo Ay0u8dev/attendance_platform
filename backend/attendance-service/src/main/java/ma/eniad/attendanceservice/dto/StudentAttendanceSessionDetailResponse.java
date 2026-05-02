@@ -22,6 +22,7 @@ public record StudentAttendanceSessionDetailResponse(
         String firstName,
         String lastName,
         String email,
+        String pfpUrl,
         String numApogee,
         AttendanceStudentStatus attendanceStatus,
         AttendanceSessionMethod markMethod,

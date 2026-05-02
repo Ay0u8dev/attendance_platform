@@ -84,6 +84,7 @@ public class AttendanceFinalizationService {
                         student.firstName(),
                         student.lastName(),
                         student.email(),
+                        student.pfpUrl(),
                         student.numApogee(),
                         AttendanceStudentStatus.ABSENT,
                         null,
@@ -104,6 +105,7 @@ public class AttendanceFinalizationService {
                         .firstName(student.firstName())
                         .lastName(student.lastName())
                         .email(student.email())
+                        .pfpUrl(student.pfpUrl())
                         .numApogee(student.numApogee())
                         .status(student.status())
                         .markMethod(student.markMethod())

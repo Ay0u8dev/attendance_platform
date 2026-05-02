@@ -69,8 +69,8 @@ class AttendanceSessionControllerIntegrationTest {
     @Test
     void createSessionSucceedsForTeacher() throws Exception {
         when(userServiceClient.getStudentRosterByGroupIds(List.of(1L, 2L))).thenReturn(List.of(
-                new StudentRosterDto(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "A001"),
-                new StudentRosterDto(11L, 2L, "Yassine", "Fassi", "yassine@ump.ac.ma", "A002")
+                new StudentRosterDto(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001"),
+                new StudentRosterDto(11L, 2L, "Yassine", "Fassi", "yassine@ump.ac.ma", "https://cdn.example.com/yassine.jpg", "A002")
         ));
 
         mockMvc.perform(post("/attendance/sessions")
@@ -120,6 +120,7 @@ class AttendanceSessionControllerIntegrationTest {
         assertThat(metaCaptor.getValue().method().name()).isEqualTo("QR_CODE");
         assertThat(studentsCaptor.getValue()).hasSize(2);
         assertThat(studentsCaptor.getValue().get(0).email()).isEqualTo("aya@ump.ac.ma");
+        assertThat(studentsCaptor.getValue().get(0).pfpUrl()).isEqualTo("https://cdn.example.com/aya.jpg");
         assertThat(studentsCaptor.getValue().get(0).numApogee()).isEqualTo("A001");
         assertThat(studentsCaptor.getValue())
                 .allMatch(student -> student.status() == AttendanceStudentStatus.UNKNOWN
@@ -269,7 +270,7 @@ class AttendanceSessionControllerIntegrationTest {
     @Test
     void createSessionDeletesPersistedSessionWhenRedisInitializationFails() throws Exception {
         when(userServiceClient.getStudentRosterByGroupIds(List.of(1L)))
-                .thenReturn(List.of(new StudentRosterDto(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "A001")));
+                .thenReturn(List.of(new StudentRosterDto(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001")));
         doThrow(new RuntimeException("Redis unavailable"))
                 .when(liveAttendanceSessionStore)
                 .initializeSession(any(LiveAttendanceSessionMeta.class), any());
@@ -318,6 +319,7 @@ class AttendanceSessionControllerIntegrationTest {
                         "Aya",
                         "Bennani",
                         "aya@ump.ac.ma",
+                        "https://cdn.example.com/aya.jpg",
                         "A001",
                         AttendanceStudentStatus.PRESENT,
                         AttendanceSessionMethod.QR_CODE,

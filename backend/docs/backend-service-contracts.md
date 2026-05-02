@@ -151,6 +151,7 @@ Success response:
     "firstName": "Aya",
     "lastName": "Bennani",
     "email": "aya.bennani@ump.ac.ma",
+    "pfpUrl": "https://cdn.example.com/profiles/12.jpg",
     "numApogee": "22012345"
   }
 ]
@@ -269,6 +270,7 @@ Success response:
       "firstName": "Aya",
       "lastName": "Bennani",
       "email": "aya.bennani@ump.ac.ma",
+      "pfpUrl": "https://cdn.example.com/profiles/12.jpg",
       "numApogee": "22012345",
       "status": "PRESENT",
       "markMethod": "QR_CODE",
@@ -448,6 +450,8 @@ Purpose:
 
 - Internal update endpoint for QR and face services
 - Updates live attendance state in Redis and broadcasts the teacher event
+- `QR_CODE` remains student-device based
+- `FACE_ID` is teacher-operated scanning via the teacher web client and `face-service`
 
 Required internal header:
 
@@ -458,10 +462,10 @@ Request body:
 ```json
 {
   "studentId": 12,
-  "method": "QR_CODE",
-  "deviceId": "scanner-entrance-01",
-  "gpsLat": "34.6820",
-  "gpsLon": "-1.9091"
+  "method": "FACE_ID",
+  "deviceId": null,
+  "gpsLat": null,
+  "gpsLon": null
 }
 ```
 
@@ -470,11 +474,20 @@ Rules:
 - request source must be trusted
 - `method` must match the request source
 - `method` must match the session mode
-- QR/FACE marks must include GPS coordinates
-- one device may mark only one student within the same session
-- one student may use only one device within the same session
-- self-service updates always set `status = PRESENT`
-- latest valid update wins across manual and self-service changes
+- internal service updates always set `status = PRESENT`
+- latest valid update wins across manual and internal service updates
+- `QR_CODE`:
+  - `deviceId` is required
+  - `gpsLat` is required
+  - `gpsLon` is required
+  - one device may mark only one student within the same session
+  - one student may use only one device within the same session
+- `FACE_ID`:
+  - `deviceId` may be `null`
+  - `gpsLat` may be `null`
+  - `gpsLon` may be `null`
+  - device-binding rules do not apply
+  - `face-service` validates the face match before calling `attendance-service`
 
 Success response:
 
@@ -483,10 +496,10 @@ Success response:
   "sessionId": 5,
   "studentId": 12,
   "status": "PRESENT",
-  "markMethod": "QR_CODE",
-  "deviceId": "scanner-entrance-01",
-  "markedGpsLat": "34.6820",
-  "markedGpsLon": "-1.9091",
+  "markMethod": "FACE_ID",
+  "deviceId": null,
+  "markedGpsLat": null,
+  "markedGpsLon": null,
   "markedAt": "2026-04-28T12:01:00",
   "presentCount": 11,
   "absentCount": 0,
@@ -497,13 +510,15 @@ Success response:
 Failure responses:
 
 - `400`: invalid request body
+- `400`: `QR_CODE` request is missing `deviceId`
+- `400`: `QR_CODE` request is missing GPS coordinates
 - `401`: missing or untrusted internal source
 - `404`: session or student not found in live state
 - `409`: session is not active
 - `409`: request source does not match attendance method
 - `409`: attendance method does not match session mode
-- `409`: device is already used by another student in this session
-- `409`: student is already bound to another device in this session
+- `409`: `QR_CODE` device is already used by another student in this session
+- `409`: `QR_CODE` student is already bound to another device in this session
 
 ### 5.3 Admin read APIs
 
@@ -656,6 +671,11 @@ Success response:
   "courseLabel": "Distributed Systems",
   "roomLabel": "Room B12",
   "groupId": 1,
+  "firstName": "Aya",
+  "lastName": "Bennani",
+  "email": "aya.bennani@ump.ac.ma",
+  "pfpUrl": "https://cdn.example.com/profiles/12.jpg",
+  "numApogee": "22012345",
   "method": "QR_CODE",
   "status": "PRESENT",
   "startedAt": "2026-04-28T12:00:00",

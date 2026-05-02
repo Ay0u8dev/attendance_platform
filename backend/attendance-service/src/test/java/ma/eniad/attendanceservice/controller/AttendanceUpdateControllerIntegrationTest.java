@@ -134,4 +134,38 @@ class AttendanceUpdateControllerIntegrationTest {
                                 """))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void internalFaceUpdateRouteAcceptsNullDeviceAndGps() throws Exception {
+        when(attendanceUpdateService.updateInternalAttendance(anyString(), anyLong(), any()))
+                .thenReturn(new AttendanceUpdateResponse(
+                        100L,
+                        10L,
+                        AttendanceStudentStatus.PRESENT,
+                        AttendanceSessionMethod.FACE_ID,
+                        null,
+                        null,
+                        null,
+                        LocalDateTime.of(2026, 4, 28, 12, 0),
+                        1,
+                        0,
+                        1
+                ));
+
+        mockMvc.perform(post("/attendance/internal/sessions/100/attendance")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Request-Source", "face-service")
+                        .content("""
+                                {
+                                  "studentId": 10,
+                                  "method": "FACE_ID",
+                                  "deviceId": null,
+                                  "gpsLat": null,
+                                  "gpsLon": null
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.markMethod").value("FACE_ID"))
+                .andExpect(jsonPath("$.deviceId").doesNotExist());
+    }
 }

@@ -75,6 +75,7 @@ public class UserService {
                         inscription.getStudent().getFirstName(),
                         inscription.getStudent().getLastName(),
                         inscription.getStudent().getEmail(),
+                        inscription.getStudent().getPfpUrl(),
                         inscription.getStudent().getNumApogee()
                 ))
                 .toList();

@@ -64,9 +64,11 @@ In local development, Traefik runs in Docker and forwards traffic to services ru
 2. `attendance-service` validates:
    - trusted `X-Request-Source`
    - session mode
-   - device uniqueness
    - student membership
+   - device uniqueness for `QR_CODE` only
 3. `attendance-service` updates Redis live state and broadcasts a WebSocket event.
+
+`FACE_ID` no longer uses student-phone self-service scanning. The teacher web client captures faces from the teacher device, `face-service` validates matches, and then `face-service` reports successful marks to `attendance-service`.
 
 ### 3.5 WebSocket path
 
@@ -117,6 +119,7 @@ In local development, Traefik runs in Docker and forwards traffic to services ru
 - GPS is stored as evidence only. No proximity or radius enforcement exists yet.
 - Error response formatting across services is still inconsistent.
 - `qr-service`, `face-service`, and `justification-service` are still unfinished.
+- `FACE_ID` marks may legitimately persist with `deviceId = null` and GPS fields `null`.
 
 ## 8) Practical Guidance
 

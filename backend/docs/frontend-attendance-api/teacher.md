@@ -10,6 +10,7 @@ Purpose:
 
 - Start one active attendance session for the current teacher.
 - Initialize the live roster in Redis.
+- For `FACE_ID`, the teacher device is the scanner and the web client talks to `face-service`.
 
 Request body:
 
@@ -83,6 +84,7 @@ Success response:
       "firstName": "Aya",
       "lastName": "Bennani",
       "email": "aya.bennani@ump.ac.ma",
+      "pfpUrl": "https://cdn.example.com/profiles/12.jpg",
       "numApogee": "22012345",
       "status": "PRESENT",
       "markMethod": "QR_CODE",
@@ -207,6 +209,7 @@ Rules:
 
 - manual updates are allowed even if the session method is `QR_CODE` or `FACE_ID`
 - latest valid update wins during the active session
+- in `FACE_ID`, teacher-triggered face matches arrive from `face-service`; attendance rows may show `markMethod = FACE_ID` with `deviceId = null` and GPS fields `null`
 
 Common errors:
 
@@ -234,3 +237,11 @@ Common errors:
 - `403` caller is not the session owner teacher
 - `404` session not found
 - `409` session already finalized
+
+## `FACE_ID` flow notes
+
+- `FACE_ID` is no longer student-phone scanning.
+- The teacher starts a `FACE_ID` session from the web app and scans students using the teacher tablet or camera device.
+- The teacher web client communicates with `face-service`.
+- After `face-service` validates a student, it calls `attendance-service` internally to mark that student `PRESENT`.
+- Manual teacher overrides still work during the same active session.

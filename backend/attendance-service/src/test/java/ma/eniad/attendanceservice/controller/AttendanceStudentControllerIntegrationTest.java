@@ -64,7 +64,7 @@ class AttendanceStudentControllerIntegrationTest {
                         100L, "Distributed Systems", "Room B12", List.of(1L),
                         AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.FINALIZED,
                         LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30), LocalDateTime.of(2026, 4, 28, 12, 30),
-                        12L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "A001",
+                        12L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001",
                         AttendanceStudentStatus.PRESENT, AttendanceSessionMethod.QR_CODE, "phone-10", "34.6820", "-1.9091",
                         LocalDateTime.of(2026, 4, 28, 12, 5)
                 ));

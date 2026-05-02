@@ -41,10 +41,10 @@ class AttendanceSessionReadServiceTest {
                 session.getStartedAt(), session.getEndsAt(), AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.ACTIVE
         )));
         when(liveAttendanceSessionStore.findAllStudentStates(100L)).thenReturn(List.of(
-                new LiveAttendanceStudentState(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "A001",
+                new LiveAttendanceStudentState(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001",
                         AttendanceStudentStatus.PRESENT, LocalDateTime.of(2026, 4, 28, 12, 5),
                         AttendanceSessionMethod.QR_CODE, "phone-10", "34.6820", "-1.9091"),
-                new LiveAttendanceStudentState(11L, 1L, "Yassine", "Fassi", "yassine@ump.ac.ma", "A002",
+                new LiveAttendanceStudentState(11L, 1L, "Yassine", "Fassi", "yassine@ump.ac.ma", "https://cdn.example.com/yassine.jpg", "A002",
                         AttendanceStudentStatus.UNKNOWN, null, null, null, null, null)
         ));
         when(liveAttendanceSessionStore.getAttendanceCounts(100L)).thenReturn(new AttendanceCounts(1, 0, 1));
@@ -70,6 +70,7 @@ class AttendanceSessionReadServiceTest {
                         .firstName("Aya")
                         .lastName("Bennani")
                         .email("aya@ump.ac.ma")
+                        .pfpUrl("https://cdn.example.com/aya.jpg")
                         .numApogee("A001")
                         .status(AttendanceStudentStatus.PRESENT)
                         .markMethod(AttendanceSessionMethod.QR_CODE)
@@ -85,6 +86,7 @@ class AttendanceSessionReadServiceTest {
                         .firstName("Yassine")
                         .lastName("Fassi")
                         .email("yassine@ump.ac.ma")
+                        .pfpUrl("https://cdn.example.com/yassine.jpg")
                         .numApogee("A002")
                         .status(AttendanceStudentStatus.ABSENT)
                         .build()

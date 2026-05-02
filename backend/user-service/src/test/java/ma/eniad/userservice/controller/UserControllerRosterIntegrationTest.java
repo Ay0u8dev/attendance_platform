@@ -86,6 +86,7 @@ class UserControllerRosterIntegrationTest {
                 .email("active.student@ump.ac.ma")
                 .firstName("Active")
                 .lastName("Student")
+                .pfpUrl("https://cdn.example.com/active.jpg")
                 .roles(Set.of(Role.STUDENT))
                 .numApogee("A001")
                 .build();
@@ -95,6 +96,7 @@ class UserControllerRosterIntegrationTest {
                 .email("inactive.student@ump.ac.ma")
                 .firstName("Inactive")
                 .lastName("Student")
+                .pfpUrl("https://cdn.example.com/inactive.jpg")
                 .roles(Set.of(Role.STUDENT))
                 .numApogee("A002")
                 .build();
@@ -123,6 +125,7 @@ class UserControllerRosterIntegrationTest {
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].groupId").value(activeGroupId))
                 .andExpect(jsonPath("$[0].firstName").value("Active"))
+                .andExpect(jsonPath("$[0].pfpUrl").value("https://cdn.example.com/active.jpg"))
                 .andExpect(jsonPath("$[0].numApogee").value("A001"));
     }
 

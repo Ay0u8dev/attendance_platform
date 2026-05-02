@@ -55,6 +55,8 @@ Content-Type: application/json
 ```
 *Response will contain `id` (e.g., `1`).*
 
+For `FACE_ID`, use `"method": "FACE_ID"` and keep the same session creation payload. The teacher device becomes the scanner, and later marks come from `face-service`.
+
 ---
 
 ## 3. WebSocket Connection (Teacher Dashboard)
@@ -88,6 +90,31 @@ Content-Type: application/json
 ```
 *Note: Student1 ID is likely `6` based on the seeder order. Verify in `user-db`.*
 *After this request, the Teacher's WebSocket should receive an `ATTENDANCE_UPDATED` event.*
+
+### 4.b Face Session Internal Mark Simulation
+
+`FACE_ID` is teacher-operated now. The teacher web client talks to `face-service`, then `face-service` calls `attendance-service` after a successful face match.
+
+```http
+POST http://localhost/api/attendance/internal/sessions/1/attendance
+X-Request-Source: face-service
+Content-Type: application/json
+
+{
+    "studentId": 6,
+    "method": "FACE_ID",
+    "deviceId": null,
+    "gpsLat": null,
+    "gpsLon": null
+}
+```
+
+Expected result:
+
+- student becomes `PRESENT`
+- `markMethod = FACE_ID`
+- `deviceId`, `markedGpsLat`, and `markedGpsLon` stay `null`
+- QR device-binding rules do not apply
 
 ---
 

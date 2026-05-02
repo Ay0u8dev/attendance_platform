@@ -6,6 +6,7 @@ public record StudentRosterDto(
         String firstName,
         String lastName,
         String email,
+        String pfpUrl,
         String numApogee
 ) {
 }

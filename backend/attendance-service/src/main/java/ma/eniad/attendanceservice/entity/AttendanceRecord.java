@@ -54,6 +54,9 @@ public class AttendanceRecord {
     @Column(nullable = false)
     private String email;
 
+    @Column(length = 512)
+    private String pfpUrl;
+
     @Column(nullable = false)
     private String numApogee;
 
