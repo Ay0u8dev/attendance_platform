@@ -1,5 +1,7 @@
 package ma.eniad.userservice.service;
 
+import lombok.Getter;
+
 import java.util.Arrays;
 import java.util.Set;
 
@@ -18,7 +20,18 @@ public class UserContext {
         currentUser.remove();
     }
 
-    public record UserInfo(String userId, String userEmail, Set<String> roles) {
+    @Getter
+    public static class UserInfo {
+        private final String userId;
+        private final String userEmail;
+        private final Set<String> roles;
+
+        public UserInfo(String userId, String userEmail, Set<String> roles) {
+            this.userId = userId;
+            this.userEmail = userEmail;
+            this.roles = roles;
+        }
+
         public boolean hasAnyRole(String... requiredRoles) {
             return roles != null && requiredRoles != null && requiredRoles.length > 0
                     && Arrays.stream(requiredRoles).anyMatch(roles::contains);

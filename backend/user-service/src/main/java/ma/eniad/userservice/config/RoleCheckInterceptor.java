@@ -45,7 +45,8 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
         UserContext.setCurrentUser(userId, userEmail, roles);
 
         // 2. Check for @RequireRole annotation
-        if (handler instanceof HandlerMethod handlerMethod) {
+        if (handler instanceof HandlerMethod) {
+            HandlerMethod handlerMethod = (HandlerMethod) handler;
             RequireRole requireRole = handlerMethod.getMethodAnnotation(RequireRole.class);
 
             if (requireRole != null) {
