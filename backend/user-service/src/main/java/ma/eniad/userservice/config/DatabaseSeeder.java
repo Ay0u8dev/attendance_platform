@@ -1,14 +1,19 @@
 package ma.eniad.userservice.config;
 
-import ma.eniad.userservice.entity.User;
-import ma.eniad.userservice.entity.enums.Role;
-import ma.eniad.userservice.repository.UserRepository;
+import java.util.List;
+
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+<<<<<<< Updated upstream
 import java.util.List;
 import java.util.Set;
+=======
+import ma.eniad.userservice.entity.User;
+import ma.eniad.userservice.entity.enums.Role;
+import ma.eniad.userservice.repository.UserRepository;
+>>>>>>> Stashed changes
 
 @Configuration
 public class DatabaseSeeder {
@@ -26,6 +31,7 @@ public class DatabaseSeeder {
                                 .roles(Set.of(Role.ADMIN))
                                 .build(),
 
+<<<<<<< Updated upstream
                         User.builder()
                                 .email("mariamfahim@ump.ac.ma")
                                 .firstName("Mariam")
@@ -49,6 +55,17 @@ public class DatabaseSeeder {
                 );
 
                 userRepository.saveAll(users);
+=======
+                        User user2 = User.builder()
+                        .email("abdelkoddousselfadili@ump.ac.ma")
+                        .firstName("Abdelkoddouss")
+                        .lastName("elfadili")
+                        .roles(List.of(Role.ADMIN))
+                        .build();
+
+                userRepository.save(user);
+                userRepository.save(user2);
+>>>>>>> Stashed changes
 
                 System.out.println("Database seeded successfully!");
             } else {

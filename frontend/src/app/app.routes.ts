@@ -79,10 +79,46 @@ export const routes: Routes = [
   },
   {
     path: 'teacher',
-    canActivate: [authGuard],
+    // canActivate: [authGuard],
     loadComponent: () =>
       import('./shared/layouts/teacher-layout').then((module) => module.TeacherLayout),
-    children: [],
+    children: [
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./features/teacher/dashboard/dashboard/dashboard').then(
+            (module) => module.TeacherDashboard,
+          ),
+      },
+      {
+        path: 'mark-attendance/manual',
+        loadComponent: () =>
+          import('./features/teacher/markattendance/manual-marking/manual-marking').then(
+            (module) => module.ManualMarking,
+          ),
+      },
+      {
+        path: 'mark-attendance/start-session',
+        loadComponent: () =>
+          import('./features/teacher/markattendance/start-session/start-session').then(
+            (module) => module.StartSession,
+          ),
+      },
+      {
+        path: 'mark-attendance/start-session/qr-code-marking',
+        loadComponent: () =>
+          import('./features/teacher/markattendance/qr-code-marking/qr-code-marking').then(
+            (module) => module.QrCodeMarking,
+          ),
+      },
+      {
+        path: 'mark-attendance/start-session/facial-recognition',
+        loadComponent: () =>
+          import('./features/teacher/markattendance/facial-recognition/facial-recognition').then(
+            (module) => module.FacialRecognition,
+          ),
+      },
+    ],
   },
   {
     path: 'student',
