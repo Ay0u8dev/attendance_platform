@@ -16,6 +16,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -26,7 +28,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class AttendanceQueryServiceTest {
@@ -149,6 +153,55 @@ class AttendanceQueryServiceTest {
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
                 .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void studentHistoryMapsStartedAtSortToSessionPath() {
+        AttendanceRecord record = AttendanceRecord.builder()
+                .sessionId(100L)
+                .studentId(12L)
+                .groupId(1L)
+                .firstName("Aya")
+                .lastName("Bennani")
+                .email("aya@ump.ac.ma")
+                .numApogee("A001")
+                .status(AttendanceStudentStatus.PRESENT)
+                .markMethod(AttendanceSessionMethod.QR_CODE)
+                .markedAt(LocalDateTime.of(2026, 4, 28, 12, 5))
+                .build();
+        AttendanceSession session = baseSession(100L, AttendanceSessionStatus.FINALIZED);
+        session.setEndedAt(LocalDateTime.of(2026, 4, 28, 12, 30));
+
+        when(attendanceRecordRepository.findStudentHistory(
+                eq(12L),
+                eq(false),
+                eq(null),
+                eq(false),
+                eq(null),
+                eq(false),
+                eq(null),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(record), PageRequest.of(0, 20), 1));
+        when(attendanceSessionRepository.findAllById(List.of(100L))).thenReturn(List.of(session));
+
+        attendanceQueryService.getStudentSessions(
+                12L,
+                null,
+                null,
+                null,
+                PageRequest.of(0, 20, Sort.by(Sort.Order.desc("startedAt")))
+        );
+
+        verify(attendanceRecordRepository).findStudentHistory(
+                eq(12L),
+                eq(false),
+                eq(null),
+                eq(false),
+                eq(null),
+                eq(false),
+                eq(null),
+                eq(PageRequest.of(0, 20, Sort.by(Sort.Order.desc("session.startedAt"))))
+        );
     }
 
     private AttendanceSession baseSession(Long id, AttendanceSessionStatus status) {

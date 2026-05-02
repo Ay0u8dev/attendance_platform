@@ -6,6 +6,7 @@ import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
@@ -18,9 +19,11 @@ import java.util.stream.Collectors;
 public class RedisLiveAttendanceSessionStore implements LiveAttendanceSessionStore {
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final ObjectMapper objectMapper;
 
-    public RedisLiveAttendanceSessionStore(RedisTemplate<String, Object> redisTemplate) {
+    public RedisLiveAttendanceSessionStore(RedisTemplate<String, Object> redisTemplate, ObjectMapper objectMapper) {
         this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -49,20 +52,20 @@ public class RedisLiveAttendanceSessionStore implements LiveAttendanceSessionSto
     @Override
     public Optional<LiveAttendanceSessionMeta> findSessionMeta(Long sessionId) {
         Object value = redisTemplate.opsForValue().get(sessionMetaKey(sessionId));
-        return Optional.ofNullable((LiveAttendanceSessionMeta) value);
+        return Optional.ofNullable(convertValue(value, LiveAttendanceSessionMeta.class));
     }
 
     @Override
     public Optional<LiveAttendanceStudentState> findStudentState(Long sessionId, Long studentId) {
         Object value = redisTemplate.opsForHash().get(sessionStudentsKey(sessionId), studentId.toString());
-        return Optional.ofNullable((LiveAttendanceStudentState) value);
+        return Optional.ofNullable(convertValue(value, LiveAttendanceStudentState.class));
     }
 
     @Override
     public List<LiveAttendanceStudentState> findAllStudentStates(Long sessionId) {
         return redisTemplate.opsForHash().values(sessionStudentsKey(sessionId))
                 .stream()
-                .map(LiveAttendanceStudentState.class::cast)
+                .map(value -> convertValue(value, LiveAttendanceStudentState.class))
                 .collect(Collectors.toList());
     }
 
@@ -124,7 +127,7 @@ public class RedisLiveAttendanceSessionStore implements LiveAttendanceSessionSto
         int unknown = 0;
 
         for (Object value : values) {
-            LiveAttendanceStudentState studentState = (LiveAttendanceStudentState) value;
+            LiveAttendanceStudentState studentState = convertValue(value, LiveAttendanceStudentState.class);
             if (studentState.status() == AttendanceStudentStatus.PRESENT) {
                 present++;
             } else if (studentState.status() == AttendanceStudentStatus.ABSENT) {
@@ -175,5 +178,15 @@ public class RedisLiveAttendanceSessionStore implements LiveAttendanceSessionSto
 
     static String teacherActiveSessionKey(Long teacherId) {
         return "attendance:teacher:" + teacherId + ":active-session";
+    }
+
+    private <T> T convertValue(Object value, Class<T> targetType) {
+        if (value == null) {
+            return null;
+        }
+        if (targetType.isInstance(value)) {
+            return targetType.cast(value);
+        }
+        return objectMapper.convertValue(value, targetType);
     }
 }

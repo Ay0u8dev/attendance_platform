@@ -7,7 +7,10 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.FetchType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -31,6 +34,10 @@ public class AttendanceRecord {
 
     @Column(nullable = false)
     private Long sessionId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sessionId", referencedColumnName = "id", insertable = false, updatable = false)
+    private AttendanceSession session;
 
     @Column(nullable = false)
     private Long studentId;

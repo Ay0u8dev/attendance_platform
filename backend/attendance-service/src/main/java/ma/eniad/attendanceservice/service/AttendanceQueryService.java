@@ -1,22 +1,19 @@
 package ma.eniad.attendanceservice.service;
 
-import lombok.RequiredArgsConstructor;
+import jakarta.persistence.criteria.JoinType;
+import lombok.AllArgsConstructor;
 import ma.eniad.attendanceservice.dto.*;
-import ma.eniad.attendanceservice.entity.AttendanceRecord;
-import ma.eniad.attendanceservice.entity.AttendanceSession;
-import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
-import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.*;
 import ma.eniad.attendanceservice.repository.AttendanceRecordRepository;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import jakarta.persistence.criteria.JoinType;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,7 +22,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class AttendanceQueryService {
 
     private final AttendanceSessionRepository attendanceSessionRepository;
@@ -56,13 +53,20 @@ public class AttendanceQueryService {
                                                                             LocalDate dateFrom,
                                                                             LocalDate dateTo,
                                                                             Pageable pageable) {
-        Specification<AttendanceSession> spec = baseSessionSpec(status, dateFrom, dateTo)
-                .and(teacherId == null ? null : (root, query, cb) -> cb.equal(root.get("teacherId"), teacherId))
-                .and(groupId == null ? null : (root, query, cb) -> {
-                    query.distinct(true);
-                    return cb.equal(root.join("groupIds", JoinType.LEFT), groupId);
-                })
-                .and(method == null ? null : (root, query, cb) -> cb.equal(root.get("method"), method));
+        Specification<AttendanceSession> spec = baseSessionSpec(status, dateFrom, dateTo);
+
+        if (teacherId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("teacherId"), teacherId));
+        }
+        if (groupId != null) {
+            spec = spec.and((root, query, cb) -> {
+                query.distinct(true);
+                return cb.equal(root.join("groupIds", JoinType.LEFT), groupId);
+            });
+        }
+        if (method != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("method"), method));
+        }
         return mapSessionPage(attendanceSessionRepository.findAll(spec, pageable));
     }
 
@@ -109,12 +113,13 @@ public class AttendanceQueryService {
                                                                                      LocalDate dateFrom,
                                                                                      LocalDate dateTo,
                                                                                      Pageable pageable) {
+        Pageable normalizedPageable = normalizeStudentSessionPageable(pageable);
         Page<AttendanceRecord> records = attendanceRecordRepository.findStudentHistory(
                 studentId,
-                status,
-                atStartOfDay(dateFrom),
-                startOfNextDay(dateTo),
-                pageable
+                status != null, status,
+                dateFrom != null, atStartOfDay(dateFrom),
+                dateTo != null, startOfNextDay(dateTo),
+                normalizedPageable
         );
         Map<Long, AttendanceSession> sessionsById = loadSessions(records.getContent().stream()
                 .map(AttendanceRecord::getSessionId)
@@ -162,8 +167,13 @@ public class AttendanceQueryService {
     }
 
     public StudentAttendanceOverviewResponse getStudentOverview(Long studentId) {
-        List<AttendanceRecord> records = attendanceRecordRepository.findStudentHistory(studentId, null, null, null, Pageable.unpaged())
-                .getContent();
+        List<AttendanceRecord> records = attendanceRecordRepository.findStudentHistory(
+                studentId,
+                false, null,
+                false, null,
+                false, null,
+                Pageable.unpaged()
+        ).getContent();
         long presents = records.stream().filter(record -> record.getStatus() == AttendanceStudentStatus.PRESENT).count();
         long absences = records.stream().filter(record -> record.getStatus() == AttendanceStudentStatus.ABSENT).count();
         long totalSessions = records.size();
@@ -244,5 +254,38 @@ public class AttendanceQueryService {
 
     private LocalDateTime startOfNextDay(LocalDate date) {
         return date == null ? null : date.plusDays(1).atStartOfDay();
+    }
+
+    private Pageable normalizeStudentSessionPageable(Pageable pageable) {
+        if (pageable == null || pageable.isUnpaged()) {
+            return pageable;
+        }
+
+        Sort normalizedSort = pageable.getSort().isSorted()
+                ? Sort.by(pageable.getSort().stream()
+                .map(this::mapStudentSessionSortOrder)
+                .toList())
+                : Sort.by(Sort.Order.desc("session.startedAt"));
+
+        return org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), normalizedSort);
+    }
+
+    private Sort.Order mapStudentSessionSortOrder(Sort.Order order) {
+        return new Sort.Order(order.getDirection(), mapStudentSessionSortProperty(order.getProperty()));
+    }
+
+    private String mapStudentSessionSortProperty(String property) {
+        return switch (property) {
+            case "startedAt" -> "session.startedAt";
+            case "endedAt" -> "session.endedAt";
+            case "courseLabel" -> "session.courseLabel";
+            case "roomLabel" -> "session.roomLabel";
+            case "sessionMethod" -> "session.method";
+            case "sessionStatus" -> "session.status";
+            case "attendanceStatus" -> "status";
+            case "markMethod" -> "markMethod";
+            case "markedAt" -> "markedAt";
+            default -> "session.startedAt";
+        };
     }
 }

@@ -18,6 +18,14 @@ http:
       middlewares: ["forward-auth", "strip-api-user"]
       service: user-service
 
+    # Attendance WebSocket handshake route — no forward-auth here.
+    # WebSocket/STOMP auth is handled inside attendance-service on CONNECT.
+    attendance-ws:
+      entryPoints: ["web"]
+      rule: "Path(`/api/attendance/ws`)"
+      middlewares: ["strip-api-attendance"]
+      service: attendance-service
+
     # Attendance routes — protected, JWT required
     attendance:
       entryPoints: ["web"]

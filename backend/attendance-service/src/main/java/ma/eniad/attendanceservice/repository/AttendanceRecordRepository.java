@@ -21,15 +21,18 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
 
     @Query("""
             select r from AttendanceRecord r
-            join AttendanceSession s on s.id = r.sessionId
+            join r.session s
             where r.studentId = :studentId
-              and (:status is null or r.status = :status)
-              and (:startedFrom is null or s.startedAt >= :startedFrom)
-              and (:startedToExclusive is null or s.startedAt < :startedToExclusive)
+              and (:filterStatus = false or r.status = :status)
+              and (:filterStartedFrom = false or s.startedAt >= :startedFrom)
+              and (:filterStartedToExclusive = false or s.startedAt < :startedToExclusive)
             """)
     Page<AttendanceRecord> findStudentHistory(@Param("studentId") Long studentId,
+                                              @Param("filterStatus") boolean filterStatus,
                                               @Param("status") AttendanceStudentStatus status,
+                                              @Param("filterStartedFrom") boolean filterStartedFrom,
                                               @Param("startedFrom") LocalDateTime startedFrom,
+                                              @Param("filterStartedToExclusive") boolean filterStartedToExclusive,
                                               @Param("startedToExclusive") LocalDateTime startedToExclusive,
                                               Pageable pageable);
 }

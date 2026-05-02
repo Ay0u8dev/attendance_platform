@@ -1,10 +1,15 @@
 package ma.eniad.userservice.config;
 
+import ma.eniad.userservice.entity.Admin;
+import ma.eniad.userservice.entity.Inscription;
+import ma.eniad.userservice.entity.Student;
+import ma.eniad.userservice.entity.Teacher;
 import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.entity.enums.CycleType;
 import ma.eniad.userservice.entity.enums.Role;
 import ma.eniad.userservice.entity.structure.*;
 import ma.eniad.userservice.entity.structure.Module;
+import ma.eniad.userservice.repository.InscriptionRepository;
 import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.structure.*;
 import org.springframework.boot.CommandLineRunner;
@@ -25,60 +30,70 @@ public class DatabaseSeeder {
             FiliereRepository filiereRepository,
             FormationRepository formationRepository,
             GroupeRepository groupeRepository,
-            ModuleRepository moduleRepository) {
+            ModuleRepository moduleRepository,
+            InscriptionRepository inscriptionRepository) {
         return args -> {
             // Check if the database is already seeded to prevent duplicates
             if (userRepository.count() == 0) {
-                // creating admin user
-                List<User> users = List.of(
-                        User.builder()
-                                .email("ayoubelebbar@ump.ac.ma")
-                                .firstName("Ayoub")
-                                .lastName("Elebbar")
-                                .roles(Set.of(Role.ADMIN))
-                                .build(),
+                // creating admin users
+                Admin admin1 = Admin.builder()
+                        .email("ayoubelebbar@ump.ac.ma")
+                        .firstName("Ayoub")
+                        .lastName("Elebbar")
+                        .roles(Set.of(Role.ADMIN))
+                        .build();
 
-                        User.builder()
-                                .email("mariamfahim@ump.ac.ma")
-                                .firstName("Mariam")
-                                .lastName("Fahim")
-                                .roles(Set.of(Role.ADMIN))
-                                .build(),
+                Admin admin2 = Admin.builder()
+                        .email("mariamfahim@ump.ac.ma")
+                        .firstName("Mariam")
+                        .lastName("Fahim")
+                        .roles(Set.of(Role.ADMIN))
+                        .build();
 
-                        User.builder()
-                                .email("abdelaliferhan@ump.ac.ma")
-                                .firstName("Abdelali")
-                                .lastName("Ferhan")
-                                .roles(Set.of(Role.ADMIN))
-                                .build(),
+                Admin admin3 = Admin.builder()
+                        .email("abdelaliferhan@ump.ac.ma")
+                        .firstName("Abdelali")
+                        .lastName("Ferhan")
+                        .roles(Set.of(Role.ADMIN))
+                        .build();
 
-                        User.builder()
-                                .email("abdelkodouselfadili@ump.ac.ma")
-                                .firstName("Abdelkodous")
-                                .lastName("Elfadili")
-                                .roles(Set.of(Role.ADMIN))
-                                .build(),
+                Admin admin4 = Admin.builder()
+                        .email("abdelkodouselfadili@ump.ac.ma")
+                        .firstName("Abdelkodous")
+                        .lastName("Elfadili")
+                        .roles(Set.of(Role.ADMIN))
+                        .build();
 
-                        User.builder()
-                                .email("ayoubelebbar03@gmail.com")
-                                .firstName("Ayoub")
-                                .lastName("Elebbar")
-                                .roles(Set.of(Role.TEACHER))
-                                .build(),
+                Teacher teacher1 = Teacher.builder()
+                        .email("ayoubelebbar03@gmail.com")
+                        .firstName("Ayoub")
+                        .lastName("Elebbar")
+                        .roles(Set.of(Role.TEACHER))
+                        .build();
 
-                        User.builder()
-                                .email("ayoubelebbar15@gmail.com")
-                                .firstName("Ayoub")
-                                .lastName("Elebbar")
-                                .roles(Set.of(Role.STUDENT))
-                                .build()
-                );
+                Student student1 = Student.builder()
+                        .email("ayoubelebbar15@gmail.com")
+                        .firstName("Ayoub")
+                        .lastName("Elebbar")
+                        .numApogee("12345678")
+                        .roles(Set.of(Role.STUDENT))
+                        .build();
+
+                Student student2 = Student.builder()
+                        .email("student2@gmail.com")
+                        .firstName("John")
+                        .lastName("Doe")
+                        .numApogee("87654321")
+                        .roles(Set.of(Role.STUDENT))
+                        .build();
+
+                List<User> users = List.of(admin1, admin2, admin3, admin4, teacher1, student1, student2);
 
                 userRepository.saveAll(users);
 
-                System.out.println("Database seeded successfully!");
+                System.out.println("Database users seeded successfully!");
             } else {
-                System.out.println("Database already seeded. Skipping...");
+                System.out.println("Database users already seeded. Skipping...");
             }
 
             if (anneeRepository.count() == 0
@@ -119,7 +134,7 @@ public class DatabaseSeeder {
                         .name("G1")
                         .formation(formation)
                         .build();
-                groupeRepository.save(groupe);
+                groupe = groupeRepository.save(groupe);
 
                 Module module = Module.builder()
                         .name("Programmation Java")
@@ -131,10 +146,30 @@ public class DatabaseSeeder {
                 moduleRepository.save(module);
 
                 System.out.println("Structure entities seeded successfully!");
+
+                // Seed Inscriptions if we just created students and structure
+                if (inscriptionRepository.count() == 0) {
+                    User student1User = userRepository.findByEmail("ayoubelebbar15@gmail.com").orElse(null);
+                    User student2User = userRepository.findByEmail("student2@gmail.com").orElse(null);
+
+                    if (student1User instanceof Student s1 && student2User instanceof Student s2) {
+                        Inscription inscription1 = new Inscription();
+                        inscription1.setStudent(s1);
+                        inscription1.setGroupe(groupe);
+                        inscription1.setAnneeUniversitaire(annee);
+
+                        Inscription inscription2 = new Inscription();
+                        inscription2.setStudent(s2);
+                        inscription2.setGroupe(groupe);
+                        inscription2.setAnneeUniversitaire(annee);
+
+                        inscriptionRepository.saveAll(List.of(inscription1, inscription2));
+                        System.out.println("Inscriptions seeded successfully!");
+                    }
+                }
             } else {
                 System.out.println("Structure entities already seeded. Skipping...");
             }
         };
     }
-
 }
