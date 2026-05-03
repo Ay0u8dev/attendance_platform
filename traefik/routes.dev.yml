@@ -22,8 +22,8 @@ http:
     # WebSocket/STOMP auth is handled inside attendance-service on CONNECT.
     attendance-ws:
       entryPoints: ["web"]
-      rule: "Path(`/api/attendance/ws`)"
-      middlewares: ["strip-api-attendance"]
+      rule: "Path(`/api/ws/attendance/ws`)"
+      middlewares: ["strip-api-ws-attendance"]
       service: attendance-service
 
     # Attendance routes — protected, JWT required
@@ -63,6 +63,10 @@ http:
     strip-api-attendance:
       stripPrefix:
         prefixes: ["/api"]
+
+    strip-api-ws-attendance:
+      stripPrefix:
+        prefixes: ["/api/ws"]
 
     # strip-api-face:
     #   stripPrefix:

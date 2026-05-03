@@ -1,5 +1,7 @@
 package ma.eniad.attendanceservice.controller;
 
+import ma.eniad.attendanceservice.config.RoleCheckInterceptor;
+import ma.eniad.attendanceservice.config.WebConfig;
 import ma.eniad.attendanceservice.dto.PagedResponse;
 import ma.eniad.attendanceservice.dto.StudentAttendanceOverviewResponse;
 import ma.eniad.attendanceservice.dto.StudentAttendanceSessionDetailResponse;
@@ -7,17 +9,20 @@ import ma.eniad.attendanceservice.dto.StudentAttendanceSessionSummaryResponse;
 import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
 import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.exception.GlobalExceptionHandler;
 import ma.eniad.attendanceservice.service.AttendanceQueryService;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static ma.eniad.attendanceservice.controller.TestRequestHeaders.studentUser;
+import static ma.eniad.attendanceservice.controller.TestRequestHeaders.teacherUser;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
@@ -25,12 +30,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-class AttendanceStudentControllerIntegrationTest {
+@WebMvcTest(AttendanceStudentController.class)
+@Import({WebConfig.class, RoleCheckInterceptor.class, GlobalExceptionHandler.class})
+class AttendanceStudentControllerWebMvcTest {
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
@@ -49,10 +53,7 @@ class AttendanceStudentControllerIntegrationTest {
                         0, 20, 1, 1
                 ));
 
-        mockMvc.perform(get("/attendance/student/sessions")
-                        .header("X-User-Id", "12")
-                        .header("X-User-Roles", "STUDENT")
-                        .header("X-User-Email", "student@ump.ac.ma"))
+        mockMvc.perform(get("/attendance/student/sessions").with(studentUser()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].attendanceStatus").value("PRESENT"));
     }
@@ -71,28 +72,19 @@ class AttendanceStudentControllerIntegrationTest {
         when(attendanceQueryService.getStudentOverview(12L))
                 .thenReturn(new StudentAttendanceOverviewResponse(10, 9, 1, 0.9));
 
-        mockMvc.perform(get("/attendance/student/sessions/100")
-                        .header("X-User-Id", "12")
-                        .header("X-User-Roles", "STUDENT")
-                        .header("X-User-Email", "student@ump.ac.ma"))
+        mockMvc.perform(get("/attendance/student/sessions/100").with(studentUser()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.studentId").value(12))
                 .andExpect(jsonPath("$.markedGpsLat").value("34.6820"));
 
-        mockMvc.perform(get("/attendance/student/overview")
-                        .header("X-User-Id", "12")
-                        .header("X-User-Roles", "STUDENT")
-                        .header("X-User-Email", "student@ump.ac.ma"))
+        mockMvc.perform(get("/attendance/student/overview").with(studentUser()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.attendanceRate").value(0.9));
     }
 
     @Test
     void studentEndpointsRejectNonStudent() throws Exception {
-        mockMvc.perform(get("/attendance/student/overview")
-                        .header("X-User-Id", "77")
-                        .header("X-User-Roles", "TEACHER")
-                        .header("X-User-Email", "teacher@ump.ac.ma"))
+        mockMvc.perform(get("/attendance/student/overview").with(teacherUser()))
                 .andExpect(status().isForbidden());
     }
 }

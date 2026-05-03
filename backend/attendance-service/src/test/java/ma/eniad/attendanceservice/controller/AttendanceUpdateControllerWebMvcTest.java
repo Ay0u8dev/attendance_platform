@@ -1,33 +1,38 @@
 package ma.eniad.attendanceservice.controller;
 
+import ma.eniad.attendanceservice.config.RoleCheckInterceptor;
+import ma.eniad.attendanceservice.config.WebConfig;
 import ma.eniad.attendanceservice.dto.AttendanceUpdateResponse;
 import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
 import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.exception.GlobalExceptionHandler;
 import ma.eniad.attendanceservice.service.AttendanceUpdateService;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 
+import static ma.eniad.attendanceservice.controller.TestRequestHeaders.internalSource;
+import static ma.eniad.attendanceservice.controller.TestRequestHeaders.teacherUser;
+import static ma.eniad.attendanceservice.controller.TestRequestHeaders.user;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-class AttendanceUpdateControllerIntegrationTest {
+@WebMvcTest(AttendanceUpdateController.class)
+@Import({WebConfig.class, RoleCheckInterceptor.class, GlobalExceptionHandler.class})
+class AttendanceUpdateControllerWebMvcTest {
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
@@ -37,24 +42,13 @@ class AttendanceUpdateControllerIntegrationTest {
     void teacherManualUpdateRouteSucceeds() throws Exception {
         when(attendanceUpdateService.updateManualAttendance(anyLong(), anyLong(), any()))
                 .thenReturn(new AttendanceUpdateResponse(
-                        100L,
-                        10L,
-                        AttendanceStudentStatus.PRESENT,
-                        AttendanceSessionMethod.MANUAL,
-                        null,
-                        null,
-                        null,
-                        LocalDateTime.of(2026, 4, 28, 12, 0),
-                        1,
-                        0,
-                        1
+                        100L, 10L, AttendanceStudentStatus.PRESENT, AttendanceSessionMethod.MANUAL,
+                        null, null, null, LocalDateTime.of(2026, 4, 28, 12, 0), 1, 0, 1
                 ));
 
         mockMvc.perform(post("/attendance/sessions/100/attendance")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-User-Id", "77")
-                        .header("X-User-Roles", "TEACHER")
-                        .header("X-User-Email", "teacher@ump.ac.ma")
+                        .with(teacherUser())
+                        .contentType(APPLICATION_JSON)
                         .content("""
                                 {
                                   "studentId": 10,
@@ -70,9 +64,8 @@ class AttendanceUpdateControllerIntegrationTest {
     @Test
     void teacherManualUpdateRejectsCallerWithoutTeacherRole() throws Exception {
         mockMvc.perform(post("/attendance/sessions/100/attendance")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-User-Id", "77")
-                        .header("X-User-Roles", "ADMIN")
+                        .with(user("1", "ADMIN", "admin@ump.ac.ma"))
+                        .contentType(APPLICATION_JSON)
                         .content("""
                                 {
                                   "studentId": 10,
@@ -86,22 +79,13 @@ class AttendanceUpdateControllerIntegrationTest {
     void internalUpdateRouteSucceedsForTrustedCaller() throws Exception {
         when(attendanceUpdateService.updateInternalAttendance(anyString(), anyLong(), any()))
                 .thenReturn(new AttendanceUpdateResponse(
-                        100L,
-                        10L,
-                        AttendanceStudentStatus.PRESENT,
-                        AttendanceSessionMethod.QR_CODE,
-                        "phone-10",
-                        "34.6820",
-                        "-1.9091",
-                        LocalDateTime.of(2026, 4, 28, 12, 0),
-                        1,
-                        0,
-                        1
+                        100L, 10L, AttendanceStudentStatus.PRESENT, AttendanceSessionMethod.QR_CODE,
+                        "phone-10", "34.6820", "-1.9091", LocalDateTime.of(2026, 4, 28, 12, 0), 1, 0, 1
                 ));
 
         mockMvc.perform(post("/attendance/internal/sessions/100/attendance")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Request-Source", "qr-service")
+                        .with(internalSource("qr-service"))
+                        .contentType(APPLICATION_JSON)
                         .content("""
                                 {
                                   "studentId": 10,
@@ -121,8 +105,8 @@ class AttendanceUpdateControllerIntegrationTest {
     @Test
     void internalUpdateRejectsUntrustedSource() throws Exception {
         mockMvc.perform(post("/attendance/internal/sessions/100/attendance")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Request-Source", "unknown-service")
+                        .with(internalSource("unknown-service"))
+                        .contentType(APPLICATION_JSON)
                         .content("""
                                 {
                                   "studentId": 10,
@@ -139,22 +123,13 @@ class AttendanceUpdateControllerIntegrationTest {
     void internalFaceUpdateRouteAcceptsNullDeviceAndGps() throws Exception {
         when(attendanceUpdateService.updateInternalAttendance(anyString(), anyLong(), any()))
                 .thenReturn(new AttendanceUpdateResponse(
-                        100L,
-                        10L,
-                        AttendanceStudentStatus.PRESENT,
-                        AttendanceSessionMethod.FACE_ID,
-                        null,
-                        null,
-                        null,
-                        LocalDateTime.of(2026, 4, 28, 12, 0),
-                        1,
-                        0,
-                        1
+                        100L, 10L, AttendanceStudentStatus.PRESENT, AttendanceSessionMethod.FACE_ID,
+                        null, null, null, LocalDateTime.of(2026, 4, 28, 12, 0), 1, 0, 1
                 ));
 
         mockMvc.perform(post("/attendance/internal/sessions/100/attendance")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Request-Source", "face-service")
+                        .with(internalSource("face-service"))
+                        .contentType(APPLICATION_JSON)
                         .content("""
                                 {
                                   "studentId": 10,

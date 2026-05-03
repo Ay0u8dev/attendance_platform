@@ -1,36 +1,38 @@
 package ma.eniad.attendanceservice.controller;
 
+import ma.eniad.attendanceservice.config.RoleCheckInterceptor;
+import ma.eniad.attendanceservice.config.WebConfig;
 import ma.eniad.attendanceservice.dto.AdminOverviewResponse;
-import ma.eniad.attendanceservice.dto.AttendanceSessionDetailsResponse;
 import ma.eniad.attendanceservice.dto.AttendanceSessionSummaryResponse;
 import ma.eniad.attendanceservice.dto.MethodBreakdownResponse;
 import ma.eniad.attendanceservice.dto.PagedResponse;
 import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.exception.GlobalExceptionHandler;
 import ma.eniad.attendanceservice.service.AttendanceQueryService;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static ma.eniad.attendanceservice.controller.TestRequestHeaders.adminUser;
+import static ma.eniad.attendanceservice.controller.TestRequestHeaders.teacherUser;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-class AttendanceAdminControllerIntegrationTest {
+@WebMvcTest(AttendanceAdminController.class)
+@Import({WebConfig.class, RoleCheckInterceptor.class, GlobalExceptionHandler.class})
+class AttendanceAdminControllerWebMvcTest {
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
@@ -41,10 +43,7 @@ class AttendanceAdminControllerIntegrationTest {
         when(attendanceQueryService.getAdminOverview(any(), any()))
                 .thenReturn(new AdminOverviewResponse(10, 1, 9, 90, 10, 0.9, new MethodBreakdownResponse(4, 3, 3)));
 
-        mockMvc.perform(get("/attendance/admin/overview")
-                        .header("X-User-Id", "1")
-                        .header("X-User-Roles", "ADMIN")
-                        .header("X-User-Email", "admin@ump.ac.ma"))
+        mockMvc.perform(get("/attendance/admin/overview").with(adminUser()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalSessions").value(10))
                 .andExpect(jsonPath("$.methodBreakdown.qrCodeSessions").value(4));
@@ -52,10 +51,7 @@ class AttendanceAdminControllerIntegrationTest {
 
     @Test
     void adminOverviewRejectsNonAdmin() throws Exception {
-        mockMvc.perform(get("/attendance/admin/overview")
-                        .header("X-User-Id", "77")
-                        .header("X-User-Roles", "TEACHER")
-                        .header("X-User-Email", "teacher@ump.ac.ma"))
+        mockMvc.perform(get("/attendance/admin/overview").with(teacherUser()))
                 .andExpect(status().isForbidden());
     }
 
@@ -72,10 +68,7 @@ class AttendanceAdminControllerIntegrationTest {
                         0, 20, 1, 1
                 ));
 
-        mockMvc.perform(get("/attendance/admin/sessions")
-                        .header("X-User-Id", "1")
-                        .header("X-User-Roles", "ADMIN")
-                        .header("X-User-Email", "admin@ump.ac.ma"))
+        mockMvc.perform(get("/attendance/admin/sessions").with(adminUser()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].sessionId").value(100))
                 .andExpect(jsonPath("$.items[0].presentCount").value(10));
