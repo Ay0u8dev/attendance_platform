@@ -13,4 +13,4 @@ Important:
 
 - frontend calls go through Traefik
 - HTTP base path is `/api/attendance`
-- WebSocket handshake path is `/api/attendance/ws`
+- WebSocket handshake path is `/api/ws/attendance/ws`
