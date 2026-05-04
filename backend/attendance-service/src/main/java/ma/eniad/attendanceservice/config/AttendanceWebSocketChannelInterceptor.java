@@ -62,10 +62,10 @@ public class AttendanceWebSocketChannelInterceptor implements ChannelInterceptor
 
             AttendanceSession session = attendanceSessionRepository.findById(sessionId)
                     .orElseThrow(() -> new MessagingException("Session not found"));
-            if (!String.valueOf(session.getTeacherId()).equals(user.userId())) {
+            Long teacherId = session.getTeacherId();
+            if (teacherId == null || !teacherId.toString().equals(user.userId())) {
                 throw new MessagingException("Unauthorized websocket subscription");
-            }
-        }
+            }        }
 
         return message;
     }

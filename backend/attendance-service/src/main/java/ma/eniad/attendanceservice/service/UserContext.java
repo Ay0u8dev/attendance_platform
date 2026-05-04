@@ -23,7 +23,7 @@ public final class UserContext {
 
     public record UserInfo(String userId, String userEmail, Set<String> roles) {
         public boolean hasAnyRole(String... requiredRoles) {
-            if (roles == null || roles.isEmpty()) {
+            if (roles == null || roles.isEmpty() || requiredRoles == null || requiredRoles.length == 0) {
                 return false;
             }
 
@@ -34,6 +34,5 @@ public final class UserContext {
             }
 
             return false;
-        }
-    }
+        }    }
 }

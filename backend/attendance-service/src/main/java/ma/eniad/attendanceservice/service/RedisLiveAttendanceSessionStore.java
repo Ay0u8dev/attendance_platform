@@ -81,7 +81,11 @@ public class RedisLiveAttendanceSessionStore implements LiveAttendanceSessionSto
         if (value instanceof Integer intValue) {
             return Optional.of(intValue.longValue());
         }
-        return Optional.of(Long.valueOf(value.toString()));
+        try {
+            return Optional.of(Long.valueOf(value.toString()));
+        } catch (NumberFormatException e) {
+            return Optional.empty();
+        }
     }
 
     @Override
@@ -151,6 +155,7 @@ public class RedisLiveAttendanceSessionStore implements LiveAttendanceSessionSto
         redisTemplate.delete(teacherKey);
 
         redisTemplate.delete(studentsKey);
+        redisTemplate.delete(devicesKey);
         if (!students.isEmpty()) {
             Map<String, Object> states = new LinkedHashMap<>();
             for (LiveAttendanceStudentState student : students) {

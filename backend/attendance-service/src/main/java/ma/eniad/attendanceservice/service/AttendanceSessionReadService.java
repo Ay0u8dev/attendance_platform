@@ -136,7 +136,7 @@ public class AttendanceSessionReadService {
         return new AttendanceSessionDetailsResponse(
                 session.getId(),
                 session.getTeacherId(),
-                List.copyOf(session.getGroupIds()),
+                session.getGroupIds() != null ? List.copyOf(session.getGroupIds()) : List.of(),
                 session.getCourseLabel(),
                 session.getRoomLabel(),
                 session.getGpsLat(),

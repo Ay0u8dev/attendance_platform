@@ -21,7 +21,7 @@ public class AttendanceSession {
     private Long id;
 
     @Column(nullable = false)
-    private String courseLabel; // replace with module entity when it's implemented
+    private String courseLabel;
     @Column(nullable = false)
     private String roomLabel;
 

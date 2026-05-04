@@ -8,8 +8,8 @@ import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
-import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -50,21 +50,27 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
                 .collect(Collectors.toSet());
         UserContext.setCurrentUser(userId, userEmail, roles);
 
-        if (handler instanceof HandlerMethod handlerMethod) {
-            RequireRole requireRole = handlerMethod.getMethodAnnotation(RequireRole.class);
+        try {
+            if (handler instanceof HandlerMethod handlerMethod) {
+                RequireRole requireRole = handlerMethod.getMethodAnnotation(RequireRole.class);
 
-            if (requireRole != null) {
-                UserContext.UserInfo user = UserContext.getCurrentUser();
-                String[] requiredRoles = requireRole.value();
+                if (requireRole != null) {
+                    UserContext.UserInfo user = UserContext.getCurrentUser();
+                    String[] requiredRoles = requireRole.value();
 
-                if (!user.hasAnyRole(requiredRoles)) {
-                    throw new ResponseStatusException(
-                            HttpStatus.FORBIDDEN,
-                            "Insufficient roles. Required: " + Arrays.toString(requiredRoles)
-                    );
+                    if (!user.hasAnyRole(requiredRoles)) {
+                        throw new ResponseStatusException(
+                                HttpStatus.FORBIDDEN,
+                                "Insufficient roles. Required: " + Arrays.toString(requiredRoles)
+                        );
+                    }
                 }
             }
+        } catch (ResponseStatusException ex) {
+            UserContext.clear();
+            throw ex;
         }
+
 
         return true;
     }

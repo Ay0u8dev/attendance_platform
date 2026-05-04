@@ -69,6 +69,7 @@ public class UserService {
                 inscriptionRepository.findRosterByGroupIdsAndAnneeUniversitaireId(groupIds, activeYearId);
 
         return inscriptions.stream()
+                .filter(inscription -> inscription.getStudent() != null)
                 .map(inscription -> new StudentRosterDto(
                         inscription.getStudent().getId(),
                         inscription.getGroupe().getId(),

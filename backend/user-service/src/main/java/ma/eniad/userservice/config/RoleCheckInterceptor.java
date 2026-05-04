@@ -37,9 +37,8 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
         if (Objects.equals(source, "attendance-service")
                 && request.getRequestURI() != null
                 && request.getRequestURI().startsWith("/users/internal/")) {
-            return true; // Skip checks for auth-service calls
+            return true; // Skip checks for attendance-service internal calls
         }
-
         if (userId == null || rolesHeader == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing auth headers");
         }

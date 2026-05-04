@@ -7,13 +7,10 @@ import ma.eniad.attendanceservice.dto.InternalAttendanceUpdateRequest;
 import ma.eniad.attendanceservice.dto.ManualAttendanceUpdateRequest;
 import ma.eniad.attendanceservice.service.AttendanceUpdateService;
 import ma.eniad.attendanceservice.service.UserContext;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/attendance")
@@ -29,7 +26,11 @@ public class AttendanceUpdateController {
     @PostMapping("/sessions/{sessionId}/attendance")
     public ResponseEntity<AttendanceUpdateResponse> updateAttendanceManually(@PathVariable Long sessionId,
                                                                              @Valid @RequestBody ManualAttendanceUpdateRequest request) {
-        Long teacherId = Long.valueOf(UserContext.getCurrentUser().userId());
+        var currentUser = UserContext.getCurrentUser();
+        if (currentUser == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User context not available");
+        }
+        Long teacherId = Long.valueOf(currentUser.userId());
         return ResponseEntity.ok(attendanceUpdateService.updateManualAttendance(teacherId, sessionId, request));
     }
 

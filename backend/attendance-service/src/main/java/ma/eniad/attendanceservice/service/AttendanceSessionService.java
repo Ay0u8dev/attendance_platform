@@ -39,11 +39,10 @@ public class AttendanceSessionService {
 
         AttendanceSession session = AttendanceSession.builder()
                 .teacherId(teacherId)
-                .courseLabel(request.courseLabel().trim())
-                .roomLabel(request.roomLabel().trim())
-                .gpsLat(request.gpsLat().trim())
-                .gpsLon(request.gpsLon().trim())
-                .method(request.method())
+                .courseLabel(request.courseLabel() != null ? request.courseLabel().trim() : null)
+                .roomLabel(request.roomLabel() != null ? request.roomLabel().trim() : null)
+                .gpsLat(request.gpsLat() != null ? request.gpsLat().trim() : null)
+                .gpsLon(request.gpsLon() != null ? request.gpsLon().trim() : null)                .method(request.method())
                 .startedAt(startedAt)
                 .endsAt(endsAt)
                 .status(AttendanceSessionStatus.ACTIVE)
@@ -89,12 +88,9 @@ public class AttendanceSessionService {
                             .toList()
             );
         } catch (RuntimeException ex) {
-            attendanceSessionRepository.delete(savedSession);
-            attendanceSessionRepository.flush();
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to initialize live session state");
-        }
-
-        return new AttendanceSessionResponse(
+        } catch (RuntimeException ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to initialize live session state", ex);
+        }        return new AttendanceSessionResponse(
                 savedSession.getId(),
                 savedSession.getTeacherId(),
                 List.copyOf(savedSession.getGroupIds()),

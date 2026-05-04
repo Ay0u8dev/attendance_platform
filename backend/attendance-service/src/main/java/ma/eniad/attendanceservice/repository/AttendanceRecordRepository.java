@@ -2,9 +2,9 @@ package ma.eniad.attendanceservice.repository;
 
 import ma.eniad.attendanceservice.entity.AttendanceRecord;
 import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -26,6 +26,7 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
               and (:filterStatus = false or r.status = :status)
               and (:filterStartedFrom = false or s.startedAt >= :startedFrom)
               and (:filterStartedToExclusive = false or s.startedAt < :startedToExclusive)
+            order by s.startedAt desc, r.id asc
             """)
     Page<AttendanceRecord> findStudentHistory(@Param("studentId") Long studentId,
                                               @Param("filterStatus") boolean filterStatus,

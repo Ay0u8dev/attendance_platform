@@ -2,11 +2,7 @@ package ma.eniad.attendanceservice.service;
 
 import lombok.RequiredArgsConstructor;
 import ma.eniad.attendanceservice.config.AttendanceSessionProperties;
-import ma.eniad.attendanceservice.dto.AttendanceCounts;
-import ma.eniad.attendanceservice.dto.AttendanceSessionDetailsResponse;
-import ma.eniad.attendanceservice.dto.LiveAttendanceSessionMeta;
-import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
-import ma.eniad.attendanceservice.dto.SessionFinalizedEvent;
+import ma.eniad.attendanceservice.dto.*;
 import ma.eniad.attendanceservice.entity.AttendanceRecord;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
@@ -175,7 +171,11 @@ public class AttendanceFinalizationService {
     private <T> T withSessionLock(Long sessionId, LockedOperation<T> operation) {
         Object lock = sessionLocks.computeIfAbsent(sessionId, ignored -> new Object());
         synchronized (lock) {
-            return operation.execute();
+            try {
+                return operation.execute();
+            } finally {
+                sessionLocks.remove(sessionId, lock);
+            }
         }
     }
 
