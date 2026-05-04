@@ -34,6 +34,11 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
             return true; // Skip checks for auth-service calls
         }
 
+        if (Objects.equals(source, "attendance-service")
+                && request.getRequestURI() != null
+                && request.getRequestURI().startsWith("/users/internal/")) {
+            return true; // Skip checks for attendance-service internal calls
+        }
         if (userId == null || rolesHeader == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing auth headers");
         }
@@ -45,7 +50,8 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
         UserContext.setCurrentUser(userId, userEmail, roles);
 
         // 2. Check for @RequireRole annotation
-        if (handler instanceof HandlerMethod handlerMethod) {
+        if (handler instanceof HandlerMethod) {
+            HandlerMethod handlerMethod = (HandlerMethod) handler;
             RequireRole requireRole = handlerMethod.getMethodAnnotation(RequireRole.class);
 
             if (requireRole != null) {
@@ -61,7 +67,7 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
             }
         }
 
-        return true; // ✅ Allow the request to proceed
+        return true; // Allow the request to proceed
     }
 
     @Override

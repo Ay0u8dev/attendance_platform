@@ -120,11 +120,11 @@ services:
   #     dockerfile: Dockerfile
   #   container_name: attendance-service
   #   ports:
-  #     - "8082:8080"
+  #     - "8084:8080"
   #   labels:
   #     - "traefik.enable=true"
   #     - "traefik.http.routers.attendance.rule=PathPrefix(`/api/attendance`)"
-  #     - "traefik.http.services.attendance.loadbalancer.server.port=8082"
+  #     - "traefik.http.services.attendance.loadbalancer.server.port=8084"
   #   environment:
   #     DATASOURCE_URL: jdbc:postgresql://attendance-db:5432/attendance_db
   #   env_file:
