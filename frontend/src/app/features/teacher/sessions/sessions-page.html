@@ -1,0 +1,25 @@
+<section class="space-y-6">
+  <app-page-header title="Attendance Sessions"
+    description="Track and manage your teaching sessions and student attendance records."
+    meta="12 sessions this week"></app-page-header>
+
+  <div class="rounded-3xl border border-line bg-surface p-12 text-center">
+    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+      <i class="fa-regular fa-calendar-check text-2xl"></i>
+    </div>
+    <h3 class="mt-6 text-xl font-bold text-principalText">Attendance History</h3>
+    <p class="mt-2 text-secondaryText">View your past sessions and manage student attendance logs.</p>
+    <div class="mt-8 flex justify-center gap-3">
+      <a
+        routerLink="/teacher/mark-attendance/start-session"
+        class="inline-flex items-center justify-center rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-primary/90"
+      >
+        Start New Session
+      </a>
+      <button
+        class="rounded-xl border border-line bg-surface px-6 py-2.5 text-sm font-semibold text-principalText transition-all hover:bg-surface-subtle">
+        Export Logs
+      </button>
+    </div>
+  </div>
+</section>

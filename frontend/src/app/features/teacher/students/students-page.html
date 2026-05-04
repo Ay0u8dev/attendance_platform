@@ -1,0 +1,74 @@
+<section class="space-y-6">
+  <app-page-header
+    title="Student Management"
+    description="Monitor your students' attendance, performance, and engagement across your modules."
+    meta="142 students in your courses"
+  ></app-page-header>
+
+  <app-data-table
+    title="My Students"
+    description="Overview of students enrolled in your modules. Track attendance trends and identify students at risk."
+    caption="Attendance data synchronized with the latest session reports"
+    [rows]="students"
+    [columns]="columns"
+    [rowId]="studentRowId"
+    [pageSizeOptions]="[10, 25, 50]"
+    [initialPageSize]="10"
+    searchPlaceholder="Search by name, email or group..."
+    emptyStateTitle="No students found"
+    emptyStateDescription="Try adjusting your search or filters."
+    [enableRowSelection]="true"
+  >
+    <ng-template [appDataTableCell]="'student'" let-row="row">
+      <div class="flex items-center gap-3">
+        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary">
+          {{ getInitials(row.name) }}
+        </div>
+        <div class="min-w-0">
+          <p class="truncate font-medium text-principalText">{{ row.name }}</p>
+          <p class="truncate text-xs text-secondaryText">{{ row.email }}</p>
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-template [appDataTableCell]="'attendanceRate'" let-value="value">
+      <div class="flex flex-col items-end gap-1">
+        <p class="font-medium text-principalText">{{ value }}%</p>
+        <div class="h-1 w-16 overflow-hidden rounded-full bg-line">
+          <div 
+            class="h-full bg-primary transition-all duration-500" 
+            [style.width.%]="value"
+            [class.bg-danger]="value < 75"
+            [class.bg-warning]="value >= 75 && value < 90"
+            [class.bg-success]="value >= 90"
+          ></div>
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-template [appDataTableCell]="'status'" let-row="row">
+      <div class="flex justify-end">
+        <app-status-badge [label]="row.status" [variant]="row.variant"></app-status-badge>
+      </div>
+    </ng-template>
+
+    <ng-template [appDataTableCell]="'actions'" let-row="row">
+      <div class="flex justify-end gap-2">
+        <button
+          type="button"
+          class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
+          title="View History"
+        >
+          <i class="fa-solid fa-clock-rotate-left text-xs"></i>
+        </button>
+        <button
+          type="button"
+          class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
+          title="Message Student"
+        >
+          <i class="fa-regular fa-envelope text-xs"></i>
+        </button>
+      </div>
+    </ng-template>
+  </app-data-table>
+</section>

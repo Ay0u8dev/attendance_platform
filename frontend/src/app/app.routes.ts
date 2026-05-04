@@ -118,6 +118,33 @@ export const routes: Routes = [
             (module) => module.FacialRecognition,
           ),
       },
+      {
+        path: 'sessions',
+        loadComponent: () =>
+          import('./features/teacher/sessions/sessions-page').then((module) => module.TeacherSessionsPage),
+      },
+      {
+        path: 'modules',
+        loadComponent: () =>
+          import('./features/teacher/modules/modules-page').then((module) => module.TeacherModulesPage),
+      },
+      {
+        path: 'groups',
+        loadComponent: () =>
+          import('./features/teacher/groups/groups-page').then((module) => module.TeacherGroupsPage),
+      },
+      {
+        path: 'students',
+        loadComponent: () =>
+          import('./features/teacher/students/students-page').then((module) => module.TeacherStudentsPage),
+      },
+      {
+        path: 'justifications',
+        loadComponent: () =>
+          import('./features/teacher/justifications/justifications-page').then(
+            (module) => module.TeacherJustificationsPage,
+          ),
+      },
     ],
   },
   {

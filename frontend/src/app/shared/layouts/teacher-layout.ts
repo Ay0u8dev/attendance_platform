@@ -280,6 +280,7 @@ export class TeacherLayout {
     { label: 'Dashboard', route: '/teacher/dashboard', icon: 'fa-solid fa-table-cells-large' },
     { label: 'Attendance', route: '/teacher/sessions', icon: 'fa-regular fa-calendar-check' },
     { label: 'Modules', route: '/teacher/modules', icon: 'fa-solid fa-cube' },
+    { label: 'Groups', route: '/teacher/groups', icon: 'fa-solid fa-users-rectangle' },
     { label: 'Students', route: '/teacher/students', icon: 'fa-solid fa-user-graduate' },
     { label: 'Justifications', route: '/teacher/justifications', icon: 'fa-regular fa-file-lines' },
   ];
