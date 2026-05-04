@@ -61,7 +61,7 @@ jobs:
         with:
           filters: |
             attendance:
-              - 'attendance-service/**'
+              - 'backend/attendance-service/**'
 
       - name: Skip if no changes
         if: steps.changes.outputs.attendance != 'true'
@@ -102,7 +102,7 @@ jobs:
         with:
           filters: |
             user:
-              - 'user-service/**'
+              - 'backend/user-service/**'
 
       - name: Skip if no changes
         if: steps.changes.outputs.user != 'true'
