@@ -2,7 +2,7 @@
 
 Handshake endpoint:
 
-- `/api/attendance/ws`
+- `/api/ws/attendance/ws`
 
 Protocol:
 
