@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: Backend CI Pipeline
 
 on:
   pull_request:
@@ -33,12 +33,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ matrix.service }}-${{ hashFiles(format('{0}/pom.xml', matrix.service)) }}
+          key: ${{ runner.os }}-m2-${{ matrix.service }}-${{ hashFiles(format('backend/{0}/pom.xml', matrix.service)) }}
           restore-keys: |
             ${{ runner.os }}-m2
 
       - name: Build (skip tests)
-        working-directory: ${{ matrix.service }}
+        working-directory: backend/${{ matrix.service }}
         run: |
           chmod +x mvnw
           ./mvnw clean package -DskipTests
@@ -77,12 +77,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-m2-attendance-${{ hashFiles('attendance-service/pom.xml') }}
+          key: ${{ runner.os }}-m2-attendance-${{ hashFiles('backend/attendance-service/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-m2
 
       - name: Run tests
-        working-directory: attendance-service
+        working-directory: backend/attendance-service
         run: |
           chmod +x mvnw
           ./mvnw test
@@ -118,12 +118,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-m2-user-${{ hashFiles('user-service/pom.xml') }}
+          key: ${{ runner.os }}-m2-user-${{ hashFiles('backend/user-service/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-m2
 
       - name: Run tests
-        working-directory: user-service
+        working-directory: backend/user-service
         run: |
           chmod +x mvnw
           ./mvnw test
