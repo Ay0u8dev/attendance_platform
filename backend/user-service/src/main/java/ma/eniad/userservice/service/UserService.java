@@ -64,7 +64,7 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Multiple active academic years found");
         }
 
-        Long activeYearId = activeYears.getFirst().getId();
+        Long activeYearId = activeYears.get(0).getId();
         List<Inscription> inscriptions =
                 inscriptionRepository.findRosterByGroupIdsAndAnneeUniversitaireId(groupIds, activeYearId);
 
