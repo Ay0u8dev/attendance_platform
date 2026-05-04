@@ -3,34 +3,25 @@ package ma.eniad.userservice.controller.structure;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ma.eniad.userservice.dto.structure.GroupeRequestDTO;
+import ma.eniad.userservice.entity.enums.CycleType;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
 import ma.eniad.userservice.entity.structure.Cycle;
 import ma.eniad.userservice.entity.structure.Filiere;
 import ma.eniad.userservice.entity.structure.Formation;
-import ma.eniad.userservice.entity.enums.CycleType;
-import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
-import ma.eniad.userservice.repository.structure.CycleRepository;
-import ma.eniad.userservice.repository.structure.FiliereRepository;
-import ma.eniad.userservice.repository.structure.FormationRepository;
-import ma.eniad.userservice.repository.structure.GroupeRepository;
-import ma.eniad.userservice.repository.structure.ModuleRepository;
+import ma.eniad.userservice.repository.InscriptionRepository;
+import ma.eniad.userservice.repository.structure.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.resttestclient.TestRestTemplate;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.springframework.http.*;
 
 import java.time.LocalDate;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
@@ -60,8 +51,13 @@ class GroupeControllerTest {
     @Autowired
     private ModuleRepository moduleRepository;
 
+    @Autowired
+    private InscriptionRepository inscriptionRepository;
+
+
     @BeforeEach
     void setUp() {
+        inscriptionRepository.deleteAllInBatch();
         moduleRepository.deleteAllInBatch();
         groupeRepository.deleteAllInBatch();
         formationRepository.deleteAllInBatch();
@@ -74,8 +70,8 @@ class GroupeControllerTest {
     void createAndGetGroupe() throws Exception {
         AnneeUniversitaire annee = AnneeUniversitaire.builder()
                 .name("2025-2026")
-                .startDate(LocalDate.of(2025,9,1))
-                .endDate(LocalDate.of(2026,7,31))
+                .startDate(LocalDate.of(2025, 9, 1))
+                .endDate(LocalDate.of(2026, 7, 31))
                 .active(true)
                 .build();
         annee = anneeRepository.save(annee);
@@ -110,10 +106,10 @@ class GroupeControllerTest {
         long id = createBody.get("id").asLong();
 
         ResponseEntity<String> get = restTemplate.exchange(
-            "/users/structure/groupes/" + id,
-            HttpMethod.GET,
-            new HttpEntity<>(headers),
-            String.class
+                "/users/structure/groupes/" + id,
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class
         );
 
         assertThat(get.getStatusCode()).isEqualTo(HttpStatus.OK);

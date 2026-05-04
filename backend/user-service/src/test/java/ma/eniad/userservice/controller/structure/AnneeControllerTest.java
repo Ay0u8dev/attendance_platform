@@ -1,28 +1,20 @@
 package ma.eniad.userservice.controller.structure;
 
-import java.time.LocalDate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ma.eniad.userservice.dto.structure.AnneeRequestDTO;
-import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
-import ma.eniad.userservice.repository.structure.CycleRepository;
-import ma.eniad.userservice.repository.structure.FiliereRepository;
-import ma.eniad.userservice.repository.structure.FormationRepository;
-import ma.eniad.userservice.repository.structure.GroupeRepository;
-import ma.eniad.userservice.repository.structure.ModuleRepository;
+import ma.eniad.userservice.repository.InscriptionRepository;
+import ma.eniad.userservice.repository.structure.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.resttestclient.TestRestTemplate;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.*;
+
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -54,8 +46,12 @@ class AnneeControllerTest {
     @Autowired
     private ModuleRepository moduleRepository;
 
+    @Autowired
+    private InscriptionRepository inscriptionRepository;
+
     @BeforeEach
     void setUp() {
+        inscriptionRepository.deleteAllInBatch();
         moduleRepository.deleteAllInBatch();
         groupeRepository.deleteAllInBatch();
         formationRepository.deleteAllInBatch();
