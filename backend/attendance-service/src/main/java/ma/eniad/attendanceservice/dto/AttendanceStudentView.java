@@ -1,14 +1,9 @@
 package ma.eniad.attendanceservice.dto;
 
-import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
-
-import java.time.LocalDateTime;
-
-import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
+import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
+import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 
 import java.time.LocalDateTime;
 
