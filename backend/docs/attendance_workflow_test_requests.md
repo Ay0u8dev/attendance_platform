@@ -62,7 +62,7 @@ For `FACE_ID`, use `"method": "FACE_ID"` and keep the same session creation payl
 ## 3. WebSocket Connection (Teacher Dashboard)
 Connect to WebSocket to receive real-time updates.
 
-**URL:** `ws://localhost/attendance/ws` (or `http://localhost/attendance/ws` if using SockJS)
+**URL:** `ws://localhost/api/ws/attendance/ws`
 
 **Headers:**
 - `Authorization: Bearer {{TEACHER_TOKEN}}`
