@@ -28,6 +28,7 @@ In local development, Traefik runs in Docker and forwards traffic to services ru
 - `/api/auth/**` -> `auth-service`
 - `/api/users/**` -> `user-service` with forward-auth
 - `/api/attendance/**` -> `attendance-service` with forward-auth
+- `/api/ws/attendance/ws` -> `attendance-service websocket`
 - `/**` -> frontend
 
 ## 3) Communication Paths
@@ -72,7 +73,7 @@ In local development, Traefik runs in Docker and forwards traffic to services ru
 
 ### 3.5 WebSocket path
 
-1. Frontend connects to `/attendance/ws` using STOMP.
+1. Frontend connects to `/api/ws/attendance/ws` using STOMP.
 2. Client sends `Authorization: Bearer <jwt>` in the STOMP `CONNECT` frame.
 3. `attendance-service` validates the token by calling `auth-service /auth/validate`.
 4. `attendance-service` attaches authenticated identity to the WebSocket session.
