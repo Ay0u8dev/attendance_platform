@@ -11,11 +11,10 @@ import { SearchInput } from '../../../../../shared/components/search-input/searc
   standalone: true,
   imports: [SearchInput, DropdownFilter, Button],
   template: `
-    <section class="rounded-xl border border-line bg-surface p-3 shadow-sm sm:px-5 sm:py-4 mb-4">
-      <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <section class="mb-4 rounded-xl border border-line bg-surface p-3 shadow-sm sm:px-5 sm:py-4">
+      <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
 
-        <!-- Zone de Recherche Principale -->
-        <div class="flex-1 max-w-md">
+        <div class="w-full lg:max-w-md">
           <app-search-input
             identifier="formation"
             label="Rechercher une formation"
@@ -25,9 +24,9 @@ import { SearchInput } from '../../../../../shared/components/search-input/searc
           ></app-search-input>
         </div>
 
-        <!-- Zone de Filtres et Actions -->
-        <div class="flex flex-wrap items-end gap-3 lg:gap-4">
-          <div class="min-w-[200px]">
+        <div class="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:flex xl:w-auto xl:items-end xl:gap-4">
+
+          <div class="w-full xl:min-w-[220px]">
             <app-dropdown-filter
               identifier="cycle"
               label="Cycle"
@@ -41,7 +40,7 @@ import { SearchInput } from '../../../../../shared/components/search-input/searc
             ></app-dropdown-filter>
           </div>
 
-          <div class="min-w-[200px]">
+          <div class="w-full xl:min-w-[220px]">
             <app-dropdown-filter
               identifier="field"
               label="Filière"
@@ -55,13 +54,13 @@ import { SearchInput } from '../../../../../shared/components/search-input/searc
             ></app-dropdown-filter>
           </div>
 
-          <div class="flex items-center">
+          <div class="flex items-center justify-end sm:col-span-2 xl:col-span-1 xl:pb-1">
             <app-button
               label="Réinitialiser"
               icon="fa-solid fa-rotate-left"
               variant="primary"
               size="sm"
-              class="text-sm font-medium text-secondaryText hover:text-primary transition-colors"
+              class="w-full text-sm font-medium text-secondaryText transition-colors hover:text-primary sm:w-auto"
               (clicked)="resetFilters.emit()"
             ></app-button>
           </div>
@@ -73,16 +72,12 @@ import { SearchInput } from '../../../../../shared/components/search-input/searc
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FormationsFilters {
-  // Entrées obligatoires
   readonly cycles = input.required<DropdownOption[]>();
   readonly fields = input.required<DropdownOption[]>();
-
-  // Valeurs des filtres
   readonly searchValue = input('');
   readonly cycleValue = input<string | null>(null);
   readonly fieldValue = input<string | null>(null);
 
-  // Sorties d'événements
   readonly searchChange = output<string>();
   readonly cycleFilterChange = output<string | null>();
   readonly fieldFilterChange = output<string | null>();

@@ -1,0 +1,43 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: attendance-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5434/attendance_db
+    # url: jdbc:postgresql://attendance-db:5432/attendance_db
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+
+services:
+  auth-service:
+    url: ${AUTH_SERVICE_URL:http://localhost:8081}
+  user-service:
+    url: ${USER_SERVICE_URL:http://localhost:8082}
+
+attendance:
+  session:
+    auto-end-duration: ${ATTENDANCE_SESSION_AUTO_END_DURATION:PT30M}
+    finalized-state-retention: ${ATTENDANCE_SESSION_FINALIZED_STATE_RETENTION:PT1H}
+    auto-finalize-poll-interval: ${ATTENDANCE_SESSION_AUTO_FINALIZE_POLL_INTERVAL:PT1M}
+  websocket:
+    allowed-origin-patterns: ${ATTENDANCE_WS_ALLOWED_ORIGIN_PATTERNS:http://localhost:4200}

@@ -12,8 +12,6 @@ import lombok.Getter;
 import lombok.Setter;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
 import ma.eniad.userservice.entity.structure.Groupe;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
 
 @Getter
 @Setter
@@ -30,8 +28,6 @@ import org.hibernate.annotations.SQLRestriction;
                 @Index(name = "idx_inscriptions_annee_univ_id", columnList = "annee_univ_id")
         }
 )
-@SQLDelete(sql = "UPDATE inscriptions SET deleted = true WHERE id = ?")
-@SQLRestriction("deleted = false")
 public class Inscription extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

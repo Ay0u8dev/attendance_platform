@@ -11,10 +11,9 @@ import { SearchInput } from '../../../../../shared/components/search-input/searc
   standalone: true,
   imports: [SearchInput, DropdownFilter, Button],
   template: `
-    <section class="rounded-xl border border-line bg-surface p-3 shadow-sm sm:px-5 sm:py-4 mb-4">
-      <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <!-- Recherche (Centre - Flex grow) -->
-        <div class="flex-1 max-w-md">
+    <section class="mb-4 rounded-xl border border-line bg-surface p-3 shadow-sm sm:px-5 sm:py-4">
+      <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div class="w-full lg:max-w-md">
           <app-search-input
             identifier="module"
             label="Rechercher un module"
@@ -24,9 +23,8 @@ import { SearchInput } from '../../../../../shared/components/search-input/searc
           ></app-search-input>
         </div>
 
-        <!-- Filtres contextuels (Gauche) -->
-        <div class="flex flex-wrap items-end gap-3 lg:gap-4">
-          <div class="min-w-[200px]">
+        <div class="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:flex xl:w-auto xl:items-end xl:gap-4">
+          <div class="w-full">
             <app-dropdown-filter
               identifier="formation"
               label="Formation"
@@ -40,7 +38,7 @@ import { SearchInput } from '../../../../../shared/components/search-input/searc
             ></app-dropdown-filter>
           </div>
 
-          <div class="min-w-[200px]">
+          <div class="w-full">
             <app-dropdown-filter
               identifier="semester"
               label="Semestre"
@@ -53,14 +51,14 @@ import { SearchInput } from '../../../../../shared/components/search-input/searc
               (filterChange)="semesterFilterChange.emit($event)"
             ></app-dropdown-filter>
           </div>
-          
-          <div class="flex items-center">
+
+          <div class="flex items-center justify-end sm:col-span-2 xl:col-span-1">
             <app-button
               label="Réinitialiser"
               icon="fa-solid fa-rotate-left"
               variant="primary"
               size="sm"
-              class="text-sm font-medium text-secondaryText hover:text-primary transition-colors"
+              class="w-full text-sm font-medium text-secondaryText transition-colors hover:text-primary sm:w-auto"
               (clicked)="resetFilters.emit()"
             ></app-button>
           </div>

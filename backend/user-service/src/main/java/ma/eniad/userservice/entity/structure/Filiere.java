@@ -15,8 +15,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import ma.eniad.userservice.entity.BaseEntity;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Getter
@@ -24,8 +22,6 @@ import org.hibernate.annotations.SQLRestriction;
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "filieres")
-@SQLDelete(sql = "UPDATE filieres SET deleted = true WHERE id = ?")
-@SQLRestriction("deleted = false")
 public class Filiere extends BaseEntity {
     @NotBlank
     @Size(max = 20)

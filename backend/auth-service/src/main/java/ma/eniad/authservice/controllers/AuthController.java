@@ -1,5 +1,6 @@
 package ma.eniad.authservice.controllers;
 
+import feign.FeignException;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,12 +13,10 @@ import ma.eniad.authservice.exceptions.AccountNotFoundException;
 import ma.eniad.authservice.exceptions.MissingGoogleTokenException;
 import ma.eniad.authservice.services.GoogleTokenService;
 import ma.eniad.authservice.services.JwtService;
-import feign.FeignException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-
-import org.springframework.http.HttpStatus;
 
 import java.util.Map;
 
@@ -45,7 +44,7 @@ public class AuthController {
         }
 
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-                        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token d'accès manquant ou mal formé");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token d'accès manquant ou mal formé");
         }
 
         String token = authorizationHeader.substring(7);
@@ -62,7 +61,7 @@ public class AuthController {
                     .header("X-User-Email", email)
                     .build();
         } catch (RuntimeException ex) {
-                        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token d'accès invalide: " + ex.getMessage());
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token d'accès invalide: " + ex.getMessage());
         }
     }
 
@@ -93,15 +92,15 @@ public class AuthController {
             log.info("[AUTH] Token validé avec succès pour: {}", email);
             log.debug("[AUTH] Token validé avec succès pour: {}", email);
             log.debug("[AUTH] ✓ Domaine @ump.ac.ma vérifié pour {}", email);            // 3. user-service est le seul propriétaire du cycle de vie des utilisateurs
-                UserDto user;
-                try {
+            UserDto user;
+            try {
                 user = userServiceClient.authUser(Map.of(
-                    "email", email,
-                    "pfpUrl", googleClaims.get("picture")
+                        "email", email,
+                        "pfpUrl", googleClaims.get("picture")
                 ));
-                } catch (FeignException.NotFound ex) {
+            } catch (FeignException.NotFound ex) {
                 throw new AccountNotFoundException();
-                }
+            }
 
             if (!user.isEnabled()) {
                 throw new AccountDisabledException();
@@ -111,6 +110,7 @@ public class AuthController {
             String jwtToken = jwtService.generateToken(user);
 
             log.info("[AUTH] ✓ Connexion réussie pour {}", email);
+            log.warn(jwtToken);
 
             return ResponseEntity.ok(Map.of("accessToken", jwtToken));
 

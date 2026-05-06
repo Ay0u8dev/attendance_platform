@@ -18,8 +18,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import ma.eniad.userservice.entity.BaseEntity;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
 
 @Getter
 @Setter
@@ -38,8 +36,6 @@ import org.hibernate.annotations.SQLRestriction;
         @Index(name = "idx_formations_cycle", columnList = "cycle_id")
     }
 )
-@SQLDelete(sql = "UPDATE formations SET deleted = true WHERE id = ?")
-@SQLRestriction("deleted = false")
 public class Formation extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

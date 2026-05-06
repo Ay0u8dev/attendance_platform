@@ -4,13 +4,6 @@ server:
 spring:
   application:
     name: user-service
-  devtools:
-    livereload:
-      enabled: true
-    restart:
-      enabled: true
-      poll-interval: 2s
-      quiet-period: 1s
 
   datasource:
     url: jdbc:postgresql://localhost:5433/users_db
@@ -19,6 +12,13 @@ spring:
     password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
+  devtools:
+    livereload:
+      enabled: true
+    restart:
+      enabled: true
+      poll-interval: 2s
+      quiet-period: 1s
   jpa:
     hibernate:
       ddl-auto: create-drop

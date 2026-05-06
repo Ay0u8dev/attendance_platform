@@ -7,15 +7,15 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface AnneeUniversitaireRepository extends JpaRepository<AnneeUniversitaire, Long> {
     boolean existsByName(String name);
+    List<AnneeUniversitaire> findByActiveTrue();
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("update AnneeUniversitaire annee "
-            + "set annee.active = false "
-            + "where annee.active = true "
-            + "and annee.deleted = false "
-            + "and (:currentId is null or annee.id <> :currentId)")
-    int deactivateOtherActiveYears(@Param("currentId") Long currentId);
+    @Modifying
+    @Query("update AnneeUniversitaire a set a.active = false " +
+            "where a.active = true and (:currentId is null or a.id <> :currentId)")
+    void deactivateOtherActiveYears(@Param("currentId") Long currentId);
 }

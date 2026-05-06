@@ -20,8 +20,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import ma.eniad.userservice.entity.enums.Role;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -42,8 +40,6 @@ import java.util.Set;
         @Index(name = "idx_users_email", columnList = "email")
     }
 )
-@SQLDelete(sql = "UPDATE users SET deleted = true WHERE id = ?")
-@SQLRestriction("deleted = false")
 public class User extends BaseEntity {
     @NotBlank
     @Size(max = 254)

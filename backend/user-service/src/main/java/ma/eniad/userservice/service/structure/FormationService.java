@@ -25,7 +25,15 @@ public class FormationService {
     private final FormationMapper mapper;
 
     public FormationResponseDTO create(FormationRequestDTO request) {
+        if (repository.existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(
+                request.getAnneeUniversitaireId(),
+                request.getFiliereId(),
+                request.getCycleId()
+        )) {
+            throw new DuplicateResourceException("Formation already exists for the given year, filiere, and cycle");
+        }
 
+        AnneeUniversitaire annee = getAnnee(request.getAnneeUniversitaireId());
         Cycle cycle = getCycle(request.getCycleId());
 
         if (cycle.getType().name().equals("PREPA") && request.getFiliereId() != null) {
@@ -36,17 +44,9 @@ public class FormationService {
             throw new IllegalArgumentException("Filiere is required for non-PREPA cycle");
         }
 
-        if (repository.existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(
-                request.getAnneeUniversitaireId(),
-                request.getFiliereId(),
-                request.getCycleId()
-        )) {
-            throw new DuplicateResourceException("Formation already exists");
-        }
-
         Formation entity = mapper.toEntity(request);
 
-        entity.setAnneeUniversitaire(getAnnee(request.getAnneeUniversitaireId()));
+        entity.setAnneeUniversitaire(annee);
         entity.setCycle(cycle);
         
         if (request.getFiliereId() != null) {
@@ -61,6 +61,17 @@ public class FormationService {
     public FormationResponseDTO update(Long id, FormationRequestDTO request) {
 
         Formation entity = getEntity(id);
+
+        boolean sameCombination = sameCombination(entity, request);
+        if (!sameCombination && repository.existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(
+                request.getAnneeUniversitaireId(),
+                request.getFiliereId(),
+                request.getCycleId()
+        )) {
+            throw new DuplicateResourceException("Formation already exists for the given year, filiere, and cycle");
+        }
+
+        AnneeUniversitaire annee = getAnnee(request.getAnneeUniversitaireId());
         Cycle cycle = getCycle(request.getCycleId());
 
         if (cycle.getType().name().equals("PREPA") && request.getFiliereId() != null) {
@@ -73,7 +84,7 @@ public class FormationService {
 
         mapper.updateEntity(request, entity);
 
-        entity.setAnneeUniversitaire(getAnnee(request.getAnneeUniversitaireId()));
+        entity.setAnneeUniversitaire(annee);
         entity.setCycle(cycle);
 
         if (request.getFiliereId() != null) {
@@ -101,21 +112,37 @@ public class FormationService {
 
     private Formation getEntity(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Formation not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Formation not found with id: " + id));
     }
 
     private AnneeUniversitaire getAnnee(Long id) {
         return anneeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Annee not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Academic year not found with id: " + id));
     }
 
     private Filiere getFiliere(Long id) {
         return filiereRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Filiere not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Filiere not found with id: " + id));
     }
 
     private Cycle getCycle(Long id) {
         return cycleRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Cycle not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Cycle not found with id: " + id));
+    }
+
+    private boolean sameCombination(Formation entity, FormationRequestDTO request) {
+        return entity.getAnneeUniversitaire() != null
+                && entity.getCycle() != null
+                && safeEquals(entity.getAnneeUniversitaire().getId(), request.getAnneeUniversitaireId())
+                && safeEquals(entity.getCycle().getId(), request.getCycleId())
+                && safeEquals(getFiliereId(entity), request.getFiliereId());
+    }
+
+    private Long getFiliereId(Formation entity) {
+        return entity.getFiliere() == null ? null : entity.getFiliere().getId();
+    }
+
+    private boolean safeEquals(Long left, Long right) {
+        return left == null ? right == null : left.equals(right);
     }
 }
