@@ -1,6 +1,7 @@
 package ma.eniad.userservice.config;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -66,8 +67,7 @@ public class DatabaseSeeder {
                                 .firstName("Abdelkodous")
                                 .lastName("Elfadili")
                                 .roles(Set.of(Role.ADMIN))
-                                .build()
-                );
+                                .build());
 
                 userRepository.saveAll(users);
 
@@ -75,60 +75,6 @@ public class DatabaseSeeder {
             } else {
                 System.out.println("Database already seeded. Skipping...");
             }
-
-                if (anneeRepository.count() == 0
-                    && cycleRepository.count() == 0
-                    && filiereRepository.count() == 0
-                    && formationRepository.count() == 0
-                    && groupeRepository.count() == 0
-                    && moduleRepository.count() == 0) {
-                AnneeUniversitaire annee = AnneeUniversitaire.builder()
-                    .name("2024-2025")
-                    .startDate(LocalDate.of(2024, 9, 1))
-                    .endDate(LocalDate.of(2025, 6, 30))
-                    .active(true)
-                    .build();
-                annee = anneeRepository.save(annee);
-
-                Cycle cycle = Cycle.builder()
-                    .code("ING")
-                    .name("Ingenieur")
-                    .type(CycleType.INGENIEUR)
-                    .build();
-                cycle = cycleRepository.save(cycle);
-
-                Filiere filiere = Filiere.builder()
-                    .code("GI")
-                    .name("Genie Informatique")
-                    .build();
-                filiere = filiereRepository.save(filiere);
-
-                Formation formation = Formation.builder()
-                    .anneeUniversitaire(annee)
-                    .cycle(cycle)
-                    .filiere(filiere)
-                    .build();
-                formation = formationRepository.save(formation);
-
-                Groupe groupe = Groupe.builder()
-                    .name("G1")
-                    .formation(formation)
-                    .build();
-                groupeRepository.save(groupe);
-
-                Module module = Module.builder()
-                    .name("Programmation Java")
-                    .code("JAVA101")
-                    .semester(1)
-                    .hours(48)
-                    .formation(formation)
-                    .build();
-                moduleRepository.save(module);
-
-                System.out.println("Structure entities seeded successfully!");
-                } else {
-                System.out.println("Structure entities already seeded. Skipping...");
-                }
         };
     }
 

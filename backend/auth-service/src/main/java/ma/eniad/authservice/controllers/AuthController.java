@@ -1,6 +1,7 @@
 package ma.eniad.authservice.controllers;
 
 import io.jsonwebtoken.Claims;
+import jakarta.servlet.http.HttpServletRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,8 +36,14 @@ public class AuthController {
             description = "Endpoint ForwardAuth: valide un access token et renvoie les headers X-User-*."
     )
     public ResponseEntity<?> validateToken(
-            @RequestHeader(name = "Authorization", required = false) String authorizationHeader
+            @RequestHeader(name = "Authorization", required = false) String authorizationHeader,
+            HttpServletRequest request
     ) {
+        if ("OPTIONS".equalsIgnoreCase(request.getHeader("X-Forwarded-Method"))
+                || request.getHeader("Access-Control-Request-Method") != null) {
+            return ResponseEntity.ok().build();
+        }
+
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
                         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token d'accès manquant ou mal formé");
         }

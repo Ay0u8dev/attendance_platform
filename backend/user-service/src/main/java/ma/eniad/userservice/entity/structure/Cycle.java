@@ -1,9 +1,13 @@
 package ma.eniad.userservice.entity.structure;
 
+import java.util.List;
+
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -39,4 +43,7 @@ public class Cycle extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CycleType type;
+
+    @OneToMany(mappedBy = "cycle", cascade = CascadeType.REMOVE)
+    private List<Formation> formations;
 }

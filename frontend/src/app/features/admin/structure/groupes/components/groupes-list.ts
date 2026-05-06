@@ -1,178 +1,284 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { NgFor, NgIf } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
+import { Button } from '../../../../../shared/components/button/button';
 import { IconButton } from '../../../../../shared/components/button/icon-button';
+import { GroupesFilters } from './groupes-filters'; 
+import { DropdownOption } from '../../../../../shared/components/dropdown-filter/dropdown-filter';
 
 export interface GroupeItem {
-  id: string;
-  code: string;
-  formationName: string;
-  subtitle: string;
-  students: number;
-  semester: string;
-  field: string;
-  formation: string;
-  badgeColor: string;
-  status: 'active' | 'inactive' | 'archived';
+  id: number;
+  name: string;
+  formationId: number;
+  formationLabel: string;
 }
 
 @Component({
   selector: 'app-groupes-list',
   standalone: true,
-  imports: [NgFor, NgIf, IconButton],
+  imports: [CommonModule, Button, IconButton, GroupesFilters],
   template: `
-    <div class="space-y-6">
-      <!-- Empty State -->
-      <div *ngIf="groupes().length === 0" class="rounded-2xl border border-dashed border-line/40 bg-surface-subtle p-12 text-center">
-        <div class="flex justify-center mb-4">
-          <div class="flex h-16 w-16 items-center justify-center rounded-xl border border-line/30 bg-surface">
-            <i class="fa-solid fa-people-group text-2xl text-secondaryText"></i>
-          </div>
-        </div>
-        <p class="text-lg font-bold text-principalText">Aucun groupe trouvé</p>
-        <p class="mt-1 text-sm text-secondaryText/70">Essayez de modifier vos filtres ou créez un nouveau groupe.</p>
+    <!-- Header -->
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div>
+        <h2 class="text-xl font-bold text-principalText tracking-tight">Groupes pédagogiques</h2>
       </div>
-
-      <!-- Groups by Formation -->
-      <div *ngFor="let formation of groupedByFormation(); trackBy: trackByFormation" class="space-y-4">
-        <!-- Formation Header -->
-        <div class="flex items-center gap-4 px-2 py-3 border-l-4 border-primary">
-          <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <i class="fa-solid fa-book-open text-primary text-lg"></i>
-          </div>
-          <div class="flex-1">
-            <h3 class="text-lg font-bold text-principalText">{{ formation.name }}</h3>
-          </div>
-          <span class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-primary/20">
-            <span class="flex h-2 w-2 rounded-full bg-primary"></span>
-            <span class="text-sm font-bold text-primary">{{ formation.count }} actifs</span>
-          </span>
-        </div>
-
-        <!-- Groups Grid -->
-        <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 pl-4">
-          <article
-            *ngFor="let groupe of formation.groupes; trackBy: trackByGroupeId"
-            class="group overflow-hidden rounded-2xl border border-line/40 bg-surface shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(0,0,0,0.12)] hover:border-line/60"
-          >
-            <!-- Header with Code Badge and Actions -->
-            <div class="flex items-start justify-between gap-4 bg-surface px-6 py-5 border-b border-line/30">
-              <div class="flex items-center gap-3">
-                <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary text-xs font-bold">
-                  {{ groupe.code.split('-')[1] }}
-                </span>
-                <div>
-                  <span class="text-xs font-bold text-secondaryText/70 uppercase tracking-wider">Code</span>
-                  <p class="text-sm font-bold text-principalText">{{ groupe.code }}</p>
-                </div>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <app-icon-button
-                  icon="fa-regular fa-pen-to-square"
-                  label="Modifier le groupe"
-                  tone="primary"
-                  size="sm"
-                  (click)="manageClicked.emit(groupe)"
-                ></app-icon-button>
-                <app-icon-button
-                  icon="fa-regular fa-trash-can"
-                  label="Supprimer le groupe"
-                  tone="danger"
-                  size="sm"
-                  (click)="deleteClicked.emit(groupe)"
-                ></app-icon-button>
-              </div>
-            </div>
-
-            <!-- Groupe Info -->
-            <div class="px-6 py-5 space-y-4">
-              <!-- Formation Name -->
-              <div class="space-y-2">
-                <p class="text-xs uppercase tracking-wider text-secondaryText/70 font-bold">Formation</p>
-                <h4 class="text-lg font-bold text-principalText leading-tight">
-                  {{ groupe.formationName }}
-                </h4>
-              </div>
-
-              <!-- Students Row -->
-              <div class="flex items-center gap-4 bg-surface-subtle/50 border border-line/30 rounded-xl px-4 py-3 transition-colors duration-300 group-hover:border-line/50">
-                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary/10 text-secondary flex-shrink-0">
-                  <i class="fa-solid fa-users text-base"></i>
-                </div>
-                <div class="flex-1">
-                  <p class="text-xs text-secondaryText/70 uppercase tracking-wider font-semibold">Étudiants</p>
-                  <p class="text-lg font-bold text-principalText mt-0.5">{{ groupe.students }}</p>
-                </div>
-              </div>
-
-              <!-- Meta Info -->
-              <div class="grid grid-cols-2 gap-3 pt-2 border-t border-line/30">
-                <div class="bg-gradient-to-br from-surface-subtle to-surface border border-line/30 rounded-xl px-3 py-3 transition-colors duration-300 group-hover:border-line/50">
-                  <p class="text-xs text-secondaryText/70 uppercase tracking-wider font-semibold">Filière</p>
-                  <p class="text-sm font-bold text-principalText mt-1">{{ groupe.field }}</p>
-                </div>
-                <div class="bg-gradient-to-br from-surface-subtle to-surface border border-line/30 rounded-xl px-3 py-3 transition-colors duration-300 group-hover:border-line/50">
-                  <p class="text-xs text-secondaryText/70 uppercase tracking-wider font-semibold">Semestre</p>
-                  <p class="text-sm font-bold text-principalText mt-1">{{ groupe.semester }}</p>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          <!-- Add New Group Card -->
-          <button
-            type="button"
-            class="group flex min-h-[280px] flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-line/40 bg-gradient-to-br from-surface/50 to-surface-subtle p-6 text-center transition-all duration-300 hover:border-primary/50 hover:from-primary/5 hover:to-primary/5"
-            (click)="createClicked.emit()"
-          >
-            <span class="flex h-14 w-14 items-center justify-center rounded-xl border border-line/30 bg-surface text-secondaryText transition-all duration-300 group-hover:border-primary group-hover:text-primary group-hover:bg-primary/5">
-              <i class="fa-solid fa-plus text-base font-semibold" aria-hidden="true"></i>
-            </span>
-            <div>
-              <p class="text-base font-bold text-principalText transition-colors duration-300 group-hover:text-primary">Nouveau groupe</p>
-              <p class="mt-1 text-xs text-secondaryText/60">Cliquez pour ajouter</p>
-            </div>
-          </button>
-        </div>
-      </div>
+      <app-button
+        label="Ajouter un groupe"
+        icon="fa-solid fa-plus"
+        variant="primary"
+        [fullWidth]="false"
+        (clicked)="createClicked.emit()"
+        class="shadow-lg shadow-primary/20"
+      ></app-button>
     </div>
+
+    <!-- Filters Interface -->
+    <app-groupes-filters
+      [formations]="formationOptions()"
+      [searchValue]="searchQuery()"
+      [formationValue]="selectedFormation()"
+      (searchChange)="searchQuery.set($event)"
+      (formationFilterChange)="selectedFormation.set($event)"
+      (resetFilters)="resetFilters()"
+    ></app-groupes-filters>
+
+    <div class="-mt-2 mb-4 flex items-center justify-end gap-2">
+      <p
+        class="inline-flex items-center gap-2 rounded-2xl border border-primary-soft bg-primary-soft px-4 py-2 text-sm font-medium text-primary"
+      >
+        <span class="h-2 w-2 rounded-full bg-secondary"></span>
+        {{ filteredCount() }} Groupe(s) 
+      </p>
+    </div>
+
+    @if (selectedCount() > 0) {
+      <div class="-mt-2 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-3">
+        <p class="flex items-center gap-2 text-sm font-medium text-secondaryText">
+          <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary">
+            {{ selectedCount() }}
+          </span>
+          groupe(s) sélectionné(s)
+        </p>
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-danger/20 bg-danger/5 px-4 py-2 text-xs font-semibold text-danger transition-colors hover:bg-danger/10"
+          (click)="requestBulkDelete()"
+        >
+          <i class="fa-regular fa-trash-can"></i>
+          Supprimer la sélection
+        </button>
+      </div>
+    }
+
+    <!-- Grouped Content -->
+    <div *ngIf="groupedGroupes().length; else emptyState" class="space-y-6">
+      <section
+        *ngFor="let section of groupedGroupes()"
+        class="rounded-xl border border-line bg-surface shadow-sm overflow-hidden"
+      >
+        <header class="flex items-center justify-between gap-4 bg-surface-subtle px-5 py-4 border-b border-line">
+          <div class="flex items-center gap-3">
+            <input
+              type="checkbox"
+              class="h-4 w-4 rounded border-line accent-primary"
+              [checked]="isSectionSelected(section.groupes)"
+              [indeterminate]="isSectionPartiallySelected(section.groupes)"
+              (change)="toggleSectionSelection(section.groupes, $event)"
+              aria-label="Sélectionner les groupes de la formation"
+            />
+            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+               <i class="fa-solid fa-graduation-cap text-xs"></i>
+            </div>
+            <h3 class="text-sm font-bold text-principalText">{{ section.label }}</h3>
+          </div>
+          <span class="rounded-full bg-white border border-line px-3 py-1 text-[11px] font-bold text-secondaryText uppercase tracking-wider">
+            {{ section.groupes.length }} groupe(s)
+          </span>
+        </header>
+
+        <div class="divide-y divide-line">
+          <div
+            *ngFor="let groupe of section.groupes"
+            class="group flex items-center justify-between gap-4 px-5 py-4 hover:bg-surface-subtle/50 transition-colors"
+          >
+            <div class="flex items-center gap-4">
+              <input
+                type="checkbox"
+                class="h-4 w-4 rounded border-line accent-primary"
+                [checked]="isSelected(groupe.id)"
+                (change)="toggleSelected(groupe.id, $event)"
+                [attr.aria-label]="'Sélectionner ' + groupe.name"
+              />
+              <span
+                class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/5 text-sm font-bold text-primary border border-primary/10 transition-transform group-hover:scale-105"
+              >
+                {{ groupe.name.charAt(0).toUpperCase() }}
+              </span>
+              <div>
+                <p class="font-bold text-principalText leading-none mb-1">{{ groupe.name }}</p>
+              </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              <app-icon-button
+                icon="fa-regular fa-pen-to-square"
+                label="Modifier"
+                tone="primary"
+                size="sm"
+                (click)="manageClicked.emit(groupe)"
+              ></app-icon-button>
+              <app-icon-button
+                icon="fa-regular fa-trash-can"
+                label="Supprimer"
+                tone="danger"
+                size="sm"
+                (click)="deleteClicked.emit(groupe)"
+              ></app-icon-button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Empty State -->
+    <ng-template #emptyState>
+      <div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-surface p-12 text-center">
+        <h3 class="text-base font-bold text-principalText">Aucun groupe trouvé</h3>
+        <p class="text-sm text-secondaryText max-w-xs mt-2">Ajustez les filtres ou créez un nouveau groupe.</p>
+      </div>
+    </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GroupesList {
+  // --- Inputs & Outputs ---
   readonly groupes = input.required<GroupeItem[]>();
   readonly totalGroupes = input.required<number>();
   readonly createClicked = output<void>();
   readonly manageClicked = output<GroupeItem>();
   readonly deleteClicked = output<GroupeItem>();
+  readonly bulkDeleteRequested = output<readonly GroupeItem[]>();
 
-  groupedByFormation() {
-    const grouped = new Map<string, { name: string; groupes: GroupeItem[]; count: number }>();
+  // --- State (Signals) ---
+  readonly searchQuery = signal('');
+  readonly selectedFormation = signal<string | null>(null);
+  readonly selectedIds = signal<readonly number[]>([]);
+  readonly selectedIdSet = computed(() => new Set(this.selectedIds()));
 
-    this.groupes().forEach((groupe) => {
-      if (!grouped.has(groupe.formationName)) {
-        grouped.set(groupe.formationName, {
-          name: groupe.formationName,
-          groupes: [],
-          count: 0,
-        });
-      }
+  // --- Logic (Computed) ---
+  
+  /**
+   * Extrait les formations uniques pour le filtre dropdown
+   */
+  readonly formationOptions = computed<DropdownOption[]>(() => {
+    const uniques = [...new Set(this.groupes().map(g => g.formationLabel))];
+    return uniques.sort().map(label => ({ label, value: label }));
+  });
 
-      const entry = grouped.get(groupe.formationName)!;
-      entry.groupes.push(groupe);
-      if (groupe.status === 'active') {
-        entry.count++;
-      }
+  readonly groupedGroupes = computed(() => {
+    const query = this.searchQuery().toLowerCase().trim();
+    const formationFilter = this.selectedFormation();
+
+    // 1. Filtrage combiné (Recherche + Dropdown)
+    let filtered = this.groupes();
+
+    if (query) {
+      filtered = filtered.filter(g => 
+        g.name.toLowerCase().includes(query) || 
+        g.formationLabel.toLowerCase().includes(query)
+      );
+    }
+
+    if (formationFilter) {
+      filtered = filtered.filter(g => g.formationLabel === formationFilter);
+    }
+
+    // 2. Groupement par formation
+    const groupedMap = new Map<string, GroupeItem[]>();
+
+    filtered.forEach((groupe) => {
+      const label = groupe.formationLabel || 'Formation non définie';
+      const bucket = groupedMap.get(label) || [];
+      bucket.push(groupe);
+      groupedMap.set(label, bucket);
     });
 
-    return Array.from(grouped.values());
+    // 3. Transformation en tableau d'objets pour le template
+    return [...groupedMap.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([label, list]) => ({
+        label,
+        groupes: [...list].sort((a, b) => a.name.localeCompare(b.name)),
+      }));
+  });
+
+  readonly filteredCount = computed(() =>
+    this.groupedGroupes().reduce((total, section) => total + section.groupes.length, 0),
+  );
+
+  readonly selectedCount = computed(() => this.selectedIds().length);
+
+  resetFilters(): void {
+    this.searchQuery.set('');
+    this.selectedFormation.set(null);
   }
 
-  trackByFormation(index: number, formation: any): string {
-    return formation.name;
+  toggleSelected(id: number, event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const next = new Set(this.selectedIds());
+    if (target.checked) {
+      next.add(id);
+    } else {
+      next.delete(id);
+    }
+    this.selectedIds.set([...next]);
   }
 
-  trackByGroupeId(index: number, groupe: GroupeItem): string {
-    return groupe.id;
+  isSelected(id: number): boolean {
+    return this.selectedIdSet().has(id);
+  }
+
+  isSectionSelected(groupes: readonly GroupeItem[]): boolean {
+    if (groupes.length === 0) {
+      return false;
+    }
+    const selected = this.selectedIdSet();
+    return groupes.every((groupe) => selected.has(groupe.id));
+  }
+
+  isSectionPartiallySelected(groupes: readonly GroupeItem[]): boolean {
+    const selected = this.selectedIdSet();
+    const selectedCount = groupes.filter((groupe) => selected.has(groupe.id)).length;
+    return selectedCount > 0 && selectedCount < groupes.length;
+  }
+
+  toggleSectionSelection(groupes: readonly GroupeItem[], event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const next = new Set(this.selectedIds());
+    groupes.forEach((groupe) => {
+      if (target.checked) {
+        next.add(groupe.id);
+      } else {
+        next.delete(groupe.id);
+      }
+    });
+    this.selectedIds.set([...next]);
+  }
+
+  requestBulkDelete(): void {
+    const selected = this.groupes().filter((groupe) => this.selectedIdSet().has(groupe.id));
+    if (selected.length === 0) {
+      return;
+    }
+    this.bulkDeleteRequested.emit(selected);
   }
 }

@@ -5,17 +5,11 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import ma.eniad.userservice.dto.structure.FormationRequestDTO;
 import ma.eniad.userservice.dto.structure.FormationResponseDTO;
-import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
-import ma.eniad.userservice.entity.structure.Cycle;
-import ma.eniad.userservice.entity.structure.Filiere;
-import ma.eniad.userservice.entity.structure.Formation;
+import ma.eniad.userservice.entity.structure.*;
 import ma.eniad.userservice.exception.structure.DuplicateResourceException;
 import ma.eniad.userservice.exception.structure.ResourceNotFoundException;
 import ma.eniad.userservice.mapper.structure.FormationMapper;
-import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
-import ma.eniad.userservice.repository.structure.CycleRepository;
-import ma.eniad.userservice.repository.structure.FiliereRepository;
-import ma.eniad.userservice.repository.structure.FormationRepository;
+import ma.eniad.userservice.repository.structure.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,30 +25,63 @@ public class FormationService {
     private final FormationMapper mapper;
 
     public FormationResponseDTO create(FormationRequestDTO request) {
-        if (repository.existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(
-                request.getAnneeUniversitaireId(), request.getFiliereId(), request.getCycleId())) {
-            throw new DuplicateResourceException("Formation already exists for the given year, filiere, and cycle");
+
+        Cycle cycle = getCycle(request.getCycleId());
+
+        if (cycle.getType().name().equals("PREPA") && request.getFiliereId() != null) {
+            throw new IllegalArgumentException("PREPA cycle must not have filiere");
         }
+
+        if (!cycle.getType().name().equals("PREPA") && request.getFiliereId() == null) {
+            throw new IllegalArgumentException("Filiere is required for non-PREPA cycle");
+        }
+
+        if (repository.existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(
+                request.getAnneeUniversitaireId(),
+                request.getFiliereId(),
+                request.getCycleId()
+        )) {
+            throw new DuplicateResourceException("Formation already exists");
+        }
+
         Formation entity = mapper.toEntity(request);
+
         entity.setAnneeUniversitaire(getAnnee(request.getAnneeUniversitaireId()));
-        entity.setFiliere(getFiliere(request.getFiliereId()));
-        entity.setCycle(getCycle(request.getCycleId()));
+        entity.setCycle(cycle);
+        
+        if (request.getFiliereId() != null) {
+            entity.setFiliere(getFiliere(request.getFiliereId()));
+        } else {
+            entity.setFiliere(null);
+        }
+
         return mapper.toResponse(repository.save(entity));
     }
 
     public FormationResponseDTO update(Long id, FormationRequestDTO request) {
+
         Formation entity = getEntity(id);
-        if (repository.existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(
-                request.getAnneeUniversitaireId(), request.getFiliereId(), request.getCycleId())
-                && !(entity.getAnneeUniversitaire().getId().equals(request.getAnneeUniversitaireId())
-                && entity.getFiliere().getId().equals(request.getFiliereId())
-                && entity.getCycle().getId().equals(request.getCycleId()))) {
-            throw new DuplicateResourceException("Formation already exists for the given year, filiere, and cycle");
+        Cycle cycle = getCycle(request.getCycleId());
+
+        if (cycle.getType().name().equals("PREPA") && request.getFiliereId() != null) {
+            throw new IllegalArgumentException("PREPA cycle must not have filiere");
         }
+
+        if (!cycle.getType().name().equals("PREPA") && request.getFiliereId() == null) {
+            throw new IllegalArgumentException("Filiere is required");
+        }
+
         mapper.updateEntity(request, entity);
+
         entity.setAnneeUniversitaire(getAnnee(request.getAnneeUniversitaireId()));
-        entity.setFiliere(getFiliere(request.getFiliereId()));
-        entity.setCycle(getCycle(request.getCycleId()));
+        entity.setCycle(cycle);
+
+        if (request.getFiliereId() != null) {
+            entity.setFiliere(getFiliere(request.getFiliereId()));
+        } else {
+            entity.setFiliere(null);
+        }
+
         return mapper.toResponse(repository.save(entity));
     }
 
@@ -74,21 +101,21 @@ public class FormationService {
 
     private Formation getEntity(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Formation not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Formation not found: " + id));
     }
 
     private AnneeUniversitaire getAnnee(Long id) {
         return anneeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Academic year not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Annee not found: " + id));
     }
 
     private Filiere getFiliere(Long id) {
         return filiereRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Filiere not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Filiere not found: " + id));
     }
 
     private Cycle getCycle(Long id) {
         return cycleRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Cycle not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Cycle not found: " + id));
     }
 }

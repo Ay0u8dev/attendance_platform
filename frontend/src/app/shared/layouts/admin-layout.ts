@@ -2,6 +2,7 @@ import { NgOptimizedImage } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   computed,
   inject,
@@ -9,8 +10,10 @@ import {
   viewChild,
 } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AuthService } from '../../core/auth/services/auth.service';
+import { AcademicYearContextService } from '../../core/structure/services/academic-year-context.service';
 
 type NavItem = {
   label: string;
@@ -189,6 +192,69 @@ type UtilityItem = {
                 </div>
 
                 <div class="flex shrink-0 items-center gap-1 sm:gap-2">
+                  <div #academicYearMenuRoot class="relative">
+                    <button
+                      type="button"
+                      class="flex h-11 min-w-0 items-center gap-2 rounded-xl border border-primary-soft bg-primary-soft/45 px-3 text-left text-primary transition-colors duration-200 hover:border-primary/30 hover:bg-primary-soft sm:min-w-56 sm:px-4"
+                      (click)="toggleAcademicYearMenu()"
+                      [attr.aria-expanded]="isAcademicYearMenuOpen()"
+                      aria-haspopup="menu"
+                      aria-label="Select active academic year"
+                      [disabled]="activeAcademicYears().length === 0"
+                    >
+                      <i class="fa-regular fa-calendar shrink-0 text-base" aria-hidden="true"></i>
+                      <span class="min-w-0 flex-1">
+                        <span class="block truncate text-sm font-bold">
+                          {{ selectedAcademicYearLabel() }}
+                        </span>
+                      </span>
+                      <i
+                        class="fa-solid fa-chevron-down shrink-0 text-[0.65rem] transition-transform"
+                        [class.rotate-180]="isAcademicYearMenuOpen()"
+                        aria-hidden="true"
+                      ></i>
+                    </button>
+
+                    @if (isAcademicYearMenuOpen()) {
+                      <div
+                        class="absolute left-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-line bg-surface p-2 shadow-shell sm:w-72"
+                      >
+                        <div class="px-3 py-2">
+                          <p class="text-xs font-semibold uppercase tracking-wide text-secondaryText">
+                            Années actives
+                          </p>
+                        </div>
+                        @for (year of activeAcademicYears(); track year.id) {
+                          <button
+                            type="button"
+                            class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-200 hover:bg-surface-subtle"
+                            [class.bg-primary-soft]="isSelectedAcademicYear(year.id)"
+                            (click)="selectAcademicYear(year.id)"
+                          >
+                            <span
+                              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary"
+                            >
+                              <i class="fa-regular fa-calendar-check text-xs" aria-hidden="true"></i>
+                            </span>
+                            <span class="min-w-0 flex-1">
+                              <span class="block truncate text-sm font-semibold text-principalText">
+                                {{ year.name }}
+                              </span>
+                              <span class="block text-xs text-secondaryText">Active</span>
+                            </span>
+                            @if (isSelectedAcademicYear(year.id)) {
+                              <i class="fa-solid fa-check text-sm text-primary" aria-hidden="true"></i>
+                            }
+                          </button>
+                        } @empty {
+                          <p class="px-3 py-4 text-sm text-secondaryText">
+                            Aucune année active.
+                          </p>
+                        }
+                      </div>
+                    }
+                  </div>
+
                   <button
                     type="button"
                     class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
@@ -274,7 +340,11 @@ type UtilityItem = {
 export class AdminLayout {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly academicYearContext = inject(AcademicYearContextService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly userMenuRoot = viewChild<ElementRef<HTMLElement>>('userMenuRoot');
+  private readonly academicYearMenuRoot =
+    viewChild<ElementRef<HTMLElement>>('academicYearMenuRoot');
 
   readonly navItems: NavItem[] = [
     { label: 'Dashboard', route: '/dashboard', icon: 'fa-solid fa-table-cells-large' },
@@ -290,6 +360,12 @@ export class AdminLayout {
   readonly isSidebarOpen = signal(false);
   readonly isSidebarCollapsed = signal(false);
   readonly isUserMenuOpen = signal(false);
+  readonly isAcademicYearMenuOpen = signal(false);
+  readonly activeAcademicYears = this.academicYearContext.activeAcademicYears;
+  readonly selectedAcademicYearId = this.academicYearContext.selectedAcademicYearId;
+  readonly selectedAcademicYearLabel = computed(
+    () => this.academicYearContext.selectedAcademicYear()?.name ?? 'Aucune année active',
+  );
   readonly sidebarMotionClasses = computed(() =>
     this.isSidebarOpen() ? 'translate-x-0' : '-translate-x-full',
   );
@@ -299,44 +375,76 @@ export class AdminLayout {
     return `${mobileState} w-68 ${desktopWidth}`;
   });
 
+  constructor() {
+    this.academicYearContext.loadYears().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+  }
+
   toggleSidebar(): void {
     const nextState = !this.isSidebarOpen();
     this.isSidebarOpen.set(nextState);
 
     if (nextState) {
       this.isUserMenuOpen.set(false);
+      this.isAcademicYearMenuOpen.set(false);
     }
   }
 
   toggleSidebarCollapsed(): void {
     this.isSidebarCollapsed.update((value) => !value);
     this.isUserMenuOpen.set(false);
+    this.isAcademicYearMenuOpen.set(false);
   }
 
   toggleUserMenu(): void {
     this.isUserMenuOpen.update((value) => !value);
+    this.isAcademicYearMenuOpen.set(false);
+  }
+
+  toggleAcademicYearMenu(): void {
+    if (this.activeAcademicYears().length === 0) {
+      return;
+    }
+
+    this.isAcademicYearMenuOpen.update((value) => !value);
+    this.isUserMenuOpen.set(false);
+  }
+
+  selectAcademicYear(yearId: number): void {
+    this.academicYearContext.setSelectedAcademicYear(yearId);
+    this.isAcademicYearMenuOpen.set(false);
+  }
+
+  isSelectedAcademicYear(yearId: number): boolean {
+    return String(yearId) === this.selectedAcademicYearId();
   }
 
   handleEscape(): void {
     this.isSidebarOpen.set(false);
     this.isUserMenuOpen.set(false);
+    this.isAcademicYearMenuOpen.set(false);
   }
 
   handleDocumentClick(event: Event): void {
-    if (!this.isUserMenuOpen()) {
+    if (!this.isUserMenuOpen() && !this.isAcademicYearMenuOpen()) {
       return;
     }
 
-    const root = this.userMenuRoot()?.nativeElement;
+    const userRoot = this.userMenuRoot()?.nativeElement;
+    const academicYearRoot = this.academicYearMenuRoot()?.nativeElement;
     const target = event.target;
 
-    if (!root || !(target instanceof Node)) {
+    if (!(target instanceof Node)) {
       this.isUserMenuOpen.set(false);
+      this.isAcademicYearMenuOpen.set(false);
       return;
     }
 
-    if (!root.contains(target)) {
+    if (!userRoot || !userRoot.contains(target)) {
       this.isUserMenuOpen.set(false);
+    }
+
+    if (!academicYearRoot || !academicYearRoot.contains(target)) {
+      this.isAcademicYearMenuOpen.set(false);
     }
   }
 

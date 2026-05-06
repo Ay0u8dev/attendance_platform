@@ -1,7 +1,11 @@
 package ma.eniad.userservice.entity.structure;
 
+import java.util.List;
+
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -32,4 +36,7 @@ public class Filiere extends BaseEntity {
     @Size(max = 120)
     @Column(nullable = false, length = 120)
     private String name;
+
+    @OneToMany(mappedBy = "filiere", cascade = CascadeType.REMOVE)
+    private List<Formation> formations;
 }
