@@ -1,9 +1,9 @@
 package ma.eniad.userservice.config;
 
-<<<<<<< HEAD
+
 import java.util.List;
 
-=======
+
 import ma.eniad.userservice.entity.Admin;
 import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Student;
@@ -16,23 +16,19 @@ import ma.eniad.userservice.entity.structure.Module;
 import ma.eniad.userservice.repository.InscriptionRepository;
 import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.structure.*;
->>>>>>> 0728ff1c577d254255a23418f1e2812c653cab0c
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-=======
+
+
 import java.time.LocalDate;
->>>>>>> 0728ff1c577d254255a23418f1e2812c653cab0c
 import java.util.List;
 import java.util.Set;
-=======
+
 import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.entity.enums.Role;
 import ma.eniad.userservice.repository.UserRepository;
->>>>>>> Stashed changes
 
 @Configuration
 public class DatabaseSeeder {
@@ -56,23 +52,18 @@ public class DatabaseSeeder {
                         .lastName("Elebbar")
                         .roles(Set.of(Role.ADMIN))
                         .build();
-
-<<<<<<< HEAD
-<<<<<<< Updated upstream
                         User.builder()
                                 .email("mariamfahim@ump.ac.ma")
                                 .firstName("Mariam")
                                 .lastName("Fahim")
                                 .roles(Set.of(Role.ADMIN))
                                 .build(),
-=======
                 Admin admin2 = Admin.builder()
                         .email("mariamfahim@ump.ac.ma")
                         .firstName("Mariam")
                         .lastName("Fahim")
                         .roles(Set.of(Role.ADMIN))
                         .build();
->>>>>>> 0728ff1c577d254255a23418f1e2812c653cab0c
 
                 Admin admin3 = Admin.builder()
                         .email("abdelaliferhan@ump.ac.ma")
@@ -114,7 +105,7 @@ public class DatabaseSeeder {
                 List<User> users = List.of(admin1, admin2, admin3, admin4, teacher1, student1, student2);
 
                 userRepository.saveAll(users);
-=======
+                
                         User user2 = User.builder()
                         .email("abdelkoddousselfadili@ump.ac.ma")
                         .firstName("Abdelkoddouss")
@@ -124,7 +115,6 @@ public class DatabaseSeeder {
 
                 userRepository.save(user);
                 userRepository.save(user2);
->>>>>>> Stashed changes
 
                 System.out.println("Database users seeded successfully!");
             } else {

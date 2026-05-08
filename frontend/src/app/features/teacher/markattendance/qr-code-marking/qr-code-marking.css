@@ -13,11 +13,11 @@
 
 /* Session Header */
 .session-header {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 1.25rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
   padding: 1.5rem;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -36,8 +36,8 @@
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: #16a34a;
-  background: #dcfce7;
+  color: var(--color-success);
+  background: var(--color-success-soft);
   border: 1px solid #bbf7d0;
   border-radius: 999px;
   padding: 0.2rem 0.65rem;
@@ -46,7 +46,7 @@
 .session-dot {
   width: 0.45rem;
   height: 0.45rem;
-  background: #16a34a;
+  background: var(--color-success);
   border-radius: 50%;
   animation: pulse 1.5s infinite;
 }
@@ -66,7 +66,7 @@
   align-items: center;
   gap: 0.35rem;
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--color-secondaryText);
 }
 
 .session-main {
@@ -80,7 +80,7 @@
 .session-title {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--color-primary-strong);
   margin: 0;
 }
 
@@ -89,8 +89,8 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.6rem 1.25rem;
-  background: #dc2626;
-  color: #fff;
+  background: var(--color-danger);
+  color: var(--color-surface);
   border: none;
   border-radius: 0.75rem;
   font-size: 0.85rem;
@@ -101,7 +101,7 @@
 }
 
 .btn-end:hover {
-  background: #b91c1c;
+  background: var(--color-danger-strong);
 }
 
 .session-meta {
@@ -109,7 +109,7 @@
   flex-wrap: wrap;
   gap: 1rem;
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--color-secondaryText);
 }
 
 .session-meta span {
@@ -120,11 +120,11 @@
 
 /* QR Code Section */
 .qr-section {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 1.25rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
   padding: 2rem;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-card);
 }
 
 .qr-container {
@@ -149,9 +149,9 @@
 .qr-placeholder {
   width: 240px;
   height: 240px;
-  background: #f8fafc;
-  border: 2px dashed #cbd5e1;
-  border-radius: 1.25rem;
+  background: var(--color-surface-subtle);
+  border: 2px dashed var(--color-line-strong);
+  border-radius: 0.75rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -161,13 +161,13 @@
 
 .qr-icon {
   font-size: 3.5rem;
-  color: #94a3b8;
+  color: var(--color-muted);
 }
 
 .qr-label {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-secondaryText);
   margin: 0;
 }
 
