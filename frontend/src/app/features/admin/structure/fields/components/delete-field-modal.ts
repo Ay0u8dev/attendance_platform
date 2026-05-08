@@ -1,10 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 import { DeleteModal } from '../../../../../shared/components/delete-modal/delete-modal';
-
-export interface DeletableField {
-  name: string;
-}
+import { type Filiere } from '../../../../../core/structure/models/filiere.model';
 
 @Component({
   selector: 'app-delete-field-modal',
@@ -26,7 +23,7 @@ export interface DeletableField {
 })
 export class DeleteFieldModal {
   readonly open = input(false);
-  readonly field = input<DeletableField | null>(null);
+  readonly field = input<Filiere | null>(null);
   readonly closeRequested = output<void>();
   readonly confirmDelete = output<void>();
 }

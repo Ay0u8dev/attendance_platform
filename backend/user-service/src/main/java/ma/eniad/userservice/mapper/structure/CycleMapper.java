@@ -12,13 +12,11 @@ public interface CycleMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "deleted", ignore = true)
     Cycle toEntity(CycleRequestDTO dto);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "deleted", ignore = true)
     void updateEntity(CycleRequestDTO dto, @MappingTarget Cycle entity);
 
     CycleResponseDTO toResponse(Cycle entity);

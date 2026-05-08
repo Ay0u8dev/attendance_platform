@@ -1,138 +1,94 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { NgFor, NgIf } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
+import { Button } from '../../../../../shared/components/button/button';
 import { IconButton } from '../../../../../shared/components/button/icon-button';
+import { DataTable } from '../../../../../shared/components/data-table/data-table';
+import { DataTableCellDef } from '../../../../../shared/components/data-table/data-table-cell-def';
+import { DataTableColumn } from '../../../../../shared/components/data-table/data-table.types';
+import { FormationsFilters } from './formations-filters';
+import { DropdownOption } from '../../../../../shared/components/dropdown-filter/dropdown-filter';
 
 export interface FormationItem {
-  id: string;
-  code: string;
+  id: number;
+  cycleId: number;
+  fieldId: number | null;
+  yearId: number;
   cycleName: string;
   fieldName: string;
-  semester: string;
-  year: string;
-  groups: number;
-  modules: number;
-  badgeColor: string;
-  status: 'active' | 'inactive' | 'archived';
+  academicYear: string;
 }
 
 @Component({
   selector: 'app-formations-list',
   standalone: true,
-  imports: [NgFor, NgIf, IconButton],
+  imports: [CommonModule, Button, DataTable, DataTableCellDef, IconButton, FormationsFilters],
   template: `
-    <div class="space-y-4">
-      <!-- Empty State -->
-      <div *ngIf="formations().length === 0" class="rounded-2xl border border-dashed border-line/40 bg-surface-subtle p-12 text-center">
-        <div class="flex justify-center mb-4">
-          <div class="flex h-16 w-16 items-center justify-center rounded-xl border border-line/30 bg-surface">
-            <i class="fa-solid fa-book-bookmark text-2xl text-secondaryText"></i>
-          </div>
-        </div>
-        <p class="text-lg font-bold text-principalText">Aucune formation trouvée</p>
-        <p class="mt-1 text-sm text-secondaryText/70">Essayez de modifier vos filtres ou créez une nouvelle formation.</p>
-      </div>
-
-      <!-- Formations Grid -->
-      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <article
-          *ngFor="let formation of formations(); trackBy: trackByFormationId"
-          class="group overflow-hidden rounded-2xl border border-line/40 bg-surface shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(0,0,0,0.12)] hover:border-line/60"
-        >
-          <!-- Header with Year Badge -->
-          <div class="flex items-start justify-between gap-4 bg-surface px-6 py-5 border-b border-line/30">
-            <span class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide bg-primary/10">
-              {{ formation.year }}
-            </span>
-            <div class="flex items-center gap-1.5">
-              <app-icon-button
-                icon="fa-regular fa-pen-to-square"
-                label="Modifier la formation"
-                tone="primary"
-                size="sm"
-                (click)="manageClicked.emit(formation)"
-              ></app-icon-button>
-              <app-icon-button
-                icon="fa-regular fa-trash-can"
-                label="Supprimer la formation"
-                tone="danger"
-                size="sm"
-                (click)="deleteClicked.emit(formation)"
-              ></app-icon-button>
-            </div>
-          </div>
-
-          <!-- Formation Code -->
-          <div class="px-6 py-4 border-b border-line/30">
-            <p class="text-xs uppercase tracking-wider text-secondaryText/70 font-bold mb-2">Formation</p>
-            <h3 class="text-2xl font-bold text-principalText leading-tight">{{ formation.code }}</h3>
-          </div>
-
-          <!-- Formation Details -->
-          <div class="space-y-3 px-6 py-4 pt-3">
-            <!-- Cycle -->
-            <div class="flex items-center gap-3 p-3 rounded-xl bg-surface-subtle/50 border border-line/30 transition-colors duration-300 group-hover:border-line/50">
-              <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary flex-shrink-0">
-                <i class="fa-solid fa-circle-play text-sm"></i>
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-xs uppercase tracking-wide text-secondaryText/70 font-semibold">Cycle</p>
-                <p class="font-bold text-principalText text-sm mt-0.5">{{ formation.cycleName }}</p>
-              </div>
-            </div>
-
-            <!-- Field -->
-            <div class="flex items-center gap-3 p-3 rounded-xl bg-surface-subtle/50 border border-line/30 transition-colors duration-300 group-hover:border-line/50">
-              <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary/10 text-secondary flex-shrink-0">
-                <i class="fa-solid fa-bookmark text-sm"></i>
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-xs uppercase tracking-wide text-secondaryText/70 font-semibold">Filière</p>
-                <p class="font-bold text-principalText text-sm mt-0.5">{{ formation.fieldName }}</p>
-              </div>
-            </div>
-
-            <!-- Semester -->
-            <div class="flex items-center gap-3 p-3 rounded-xl bg-surface-subtle/50 border border-line/30 transition-colors duration-300 group-hover:border-line/50">
-              <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10 text-warning flex-shrink-0">
-                <i class="fa-solid fa-calendar text-sm"></i>
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-xs uppercase tracking-wide text-secondaryText/70 font-semibold">Semestre</p>
-                <p class="font-bold text-principalText text-sm mt-0.5">{{ formation.semester }}</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Stats -->
-          <div class="grid grid-cols-2 gap-3 border-t border-line/30 bg-gradient-to-br from-surface-subtle/30 to-surface px-6 py-4 mt-1">
-            <div class="rounded-xl border border-line/30 bg-gradient-to-br from-surface-subtle to-surface px-3 py-3 transition-colors duration-300 group-hover:border-line/50">
-              <p class="text-xs uppercase tracking-wider text-secondaryText/70 font-semibold">Groupes</p>
-              <p class="mt-1.5 text-2xl font-bold text-principalText">{{ formation.groups }}</p>
-            </div>
-            <div class="rounded-xl border border-line/30 bg-gradient-to-br from-surface-subtle to-surface px-3 py-3 transition-colors duration-300 group-hover:border-line/50">
-              <p class="text-xs uppercase tracking-wider text-secondaryText/70 font-semibold">Modules</p>
-              <p class="mt-1.5 text-2xl font-bold text-principalText">{{ formation.modules }}</p>
-            </div>
-          </div>
-        </article>
-
-        <!-- Add New Formation Card -->
-        <button
-          type="button"
-          (click)="createClicked.emit()"
-          class="group flex min-h-[280px] flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-line/40 bg-gradient-to-br from-surface/50 to-surface-subtle p-6 text-center transition-all duration-300 hover:border-primary/50 hover:from-primary/5 hover:to-primary/5"
-        >
-          <span class="flex h-14 w-14 items-center justify-center rounded-xl border border-line/30 bg-surface text-secondaryText transition-all duration-300 group-hover:border-primary group-hover:text-primary group-hover:bg-primary/5">
-            <i class="fa-solid fa-plus text-base font-semibold" aria-hidden="true"></i>
-          </span>
-          <div>
-            <p class="text-base font-bold text-principalText transition-colors duration-300 group-hover:text-primary">Ajouter une formation</p>
-            <p class="mt-1 text-xs text-secondaryText/60">Créer une nouvelle période académique</p>
-          </div>
-        </button>
-      </div>
+    <div class="mt-4 flex justify-end mb-4">
+      <app-button
+        label="Ajouter une formation"
+        icon="fa-solid fa-plus"
+        variant="primary"
+        [fullWidth]="false"
+        (clicked)="createClicked.emit()"
+      ></app-button>
     </div>
+
+    <app-formations-filters
+      [cycles]="cycleOptions()"
+      [fields]="fieldOptions()"
+      [searchValue]="searchQuery()"
+      [cycleValue]="selectedCycle()"
+      [fieldValue]="selectedField()"
+      (searchChange)="searchQuery.set($event)"
+      (cycleFilterChange)="selectedCycle.set($event)"
+      (fieldFilterChange)="selectedField.set($event)"
+      (resetFilters)="resetFilters()"
+    ></app-formations-filters>
+
+    <app-data-table
+      title="Formations"
+      description="Associations entre années, cycles et filières."
+      [caption]="filteredFormations().length + ' Formation(s)'"
+      [rows]="filteredFormations()"
+      [columns]="columns"
+      [rowId]="formationRowId"
+      [enableRowSelection]="true"
+      (bulkDeleteRequested)="bulkDeleteRequested.emit($event)"
+      emptyStateTitle="Aucune formation trouvée"
+      emptyStateDescription="Ajustez les filtres ou créez une nouvelle formation."
+      [initialPageSize]="5"
+      [showToolbar]="false"
+    >
+      <ng-template [appDataTableCell]="'academicYear'" let-row="row">
+        <span class="inline-flex rounded-lg bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary">
+          {{ row.academicYear }}
+        </span>
+      </ng-template>
+
+      <ng-template [appDataTableCell]="'cycleName'" let-row="row">
+        <p class="font-semibold text-principalText">{{ row.cycleName }}</p>
+      </ng-template>
+
+      <ng-template [appDataTableCell]="'actions'" let-row="row">
+        <div class="flex justify-end gap-2">
+          <app-icon-button
+            icon="fa-regular fa-pen-to-square"
+            label="Modifier la formation"
+            tone="primary"
+            size="sm"
+            (click)="manageClicked.emit(row)"
+          ></app-icon-button>
+          <app-icon-button
+            icon="fa-regular fa-trash-can"
+            label="Supprimer la formation"
+            tone="danger"
+            size="sm"
+            (click)="deleteClicked.emit(row)"
+          ></app-icon-button>
+        </div>
+      </ng-template>
+    </app-data-table>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -142,8 +98,88 @@ export class FormationsList {
   readonly createClicked = output<void>();
   readonly manageClicked = output<FormationItem>();
   readonly deleteClicked = output<FormationItem>();
+  readonly bulkDeleteRequested = output<readonly FormationItem[]>();
 
-  trackByFormationId(index: number, formation: FormationItem): string {
-    return formation.id;
+  // Filtres (Signals)
+  readonly searchQuery = signal('');
+  readonly selectedCycle = signal<string | null>(null);
+  readonly selectedField = signal<string | null>(null);
+  readonly selectedAcademicYear = signal<string | null>(null);
+
+  /**
+   * Génère les options de filtrage à partir des données réelles
+   */
+  readonly academicYearOptions = computed(() => this.getUniqueOptions(this.formations(), 'academicYear'));
+  readonly cycleOptions = computed(() => this.getUniqueOptions(this.formations(), 'cycleName'));
+  readonly fieldOptions = computed(() => this.getUniqueOptions(this.formations(), 'fieldName'));
+
+  /**
+   * Logique de filtrage réactive
+   */
+  readonly filteredFormations = computed(() => {
+    let result = this.formations();
+    const query = this.searchQuery().toLowerCase().trim();
+    const cycle = this.selectedCycle();
+    const field = this.selectedField();
+    const year = this.selectedAcademicYear();
+
+    if (query) {
+      result = result.filter(f =>
+        f.cycleName.toLowerCase().includes(query) ||
+        f.fieldName.toLowerCase().includes(query) ||
+        f.academicYear.toLowerCase().includes(query)
+      );
+    }
+
+    if (cycle) result = result.filter(f => f.cycleName === cycle);
+    if (field) result = result.filter(f => f.fieldName === field);
+    if (year) result = result.filter(f => f.academicYear === year);
+
+    return result;
+  });
+
+  resetFilters(): void {
+    this.searchQuery.set('');
+    this.selectedCycle.set(null);
+    this.selectedField.set(null);
+    this.selectedAcademicYear.set(null);
   }
+
+  private getUniqueOptions(data: FormationItem[], key: keyof FormationItem): DropdownOption[] {
+    const uniques = [...new Set(data.map(item => String(item[key])))];
+    return uniques.sort().map(val => ({ label: val, value: val }));
+  }
+
+  readonly formationRowId = (formation: FormationItem) => String(formation.id);
+
+  readonly columns: readonly DataTableColumn<FormationItem>[] = [
+    {
+      id: 'academicYear',
+      header: 'Année',
+      accessor: (formation) => formation.academicYear,
+      width: '12rem',
+    },
+    {
+      id: 'cycleName',
+      header: 'Cycle',
+      accessor: (formation) => formation.cycleName,
+      width: '18rem',
+    },
+    {
+      id: 'fieldName',
+      header: 'Filière',
+      accessor: (formation) => formation.fieldName,
+      width: '20rem',
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      accessor: () => '',
+      sortable: false,
+      searchable: false,
+      hideable: false,
+      align: 'end',
+      width: '8rem',
+    },
+  ];
 }

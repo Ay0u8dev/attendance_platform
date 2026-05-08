@@ -12,14 +12,12 @@ public interface ModuleMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "deleted", ignore = true)
     @Mapping(target = "formation", ignore = true)
     Module toEntity(ModuleRequestDTO dto);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "deleted", ignore = true)
     @Mapping(target = "formation", ignore = true)
     void updateEntity(ModuleRequestDTO dto, @MappingTarget Module entity);
 

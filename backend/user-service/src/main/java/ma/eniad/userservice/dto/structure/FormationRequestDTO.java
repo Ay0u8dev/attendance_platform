@@ -11,8 +11,7 @@ public class FormationRequestDTO {
 	@NotNull
 	@Positive
 	private Long anneeUniversitaireId;
-
-	@NotNull
+	
 	@Positive
 	private Long filiereId;
 

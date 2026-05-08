@@ -1,56 +1,81 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
+import { FiliereRequest } from '../../../../../core/structure/models/filiere.model';
 import { Button } from '../../../../../shared/components/button/button';
 import { Modal } from '../../../../../shared/components/modal/modal';
 import { ModalFieldGroup } from '../../../../../shared/components/modal-field-group/modal-field-group';
+import {
+  hasMinimumLength,
+  normalizeCode,
+  normalizeLabel,
+  structureInputClass,
+} from '../../../../../shared/structure-form-ui';
 
 @Component({
   selector: 'app-create-field-modal',
   standalone: true,
-  imports: [Modal, Button, ModalFieldGroup],
+  imports: [Modal, Button, ModalFieldGroup, FormsModule],
   template: `
     <app-modal
       title="Ajouter une filière"
-      description="Créez une nouvelle filière en renseignant les informations ci-dessous."
+      description="Créez une nouvelle filière avec un code court et un libellé officiel."
       [open]="open()"
-      (closed)="closeRequested.emit()"
+      (closed)="close()"
     >
-      <form modal-body class="space-y-6">
-        <!-- Name Field -->
+      <form modal-body class="space-y-5">
         <app-modal-field-group
-          label="Libellé de la filière"
-          iconClass="fa-solid fa-bookmark"
-          iconBackgroundClass="bg-secondary/10 text-secondary"
-          fieldId="create-name"
+          label="Code de la filière"
+          iconClass="fa-solid fa-hashtag"
+          iconBackgroundClass="bg-primary-soft text-primary"
+          fieldId="create-field-code"
+          helper="Court, sans espace. Exemple : GI"
+          [required]="true"
+          [error]="codeError()"
         >
           <input
-            id="create-name"
-            #nameInput
+            id="create-field-code"
             type="text"
-            placeholder="Ex: Génie Informatique"
-            class="w-full rounded-xl border border-line bg-gradient-to-r from-surface to-surface-subtle px-4 py-3 text-sm text-principalText placeholder:text-muted transition focus:border-secondary focus:bg-surface focus:outline-none focus:ring-2 focus:ring-secondary/30 shadow-sm"
+            placeholder="Ex: GI"
+            [(ngModel)]="form.code"
+            name="code"
+            [class]="inputClass(!!codeError())"
           />
         </app-modal-field-group>
 
-        <!-- Description Field -->
         <app-modal-field-group
-          label="Description"
-          iconClass="fa-solid fa-file-lines"
-          iconBackgroundClass="bg-primary/10 text-primary"
-          fieldId="create-desc"
+          label="Libellé de la filière"
+          iconClass="fa-solid fa-bookmark"
+          iconBackgroundClass="bg-secondary-soft text-secondary"
+          fieldId="create-field-name"
+          [required]="true"
+          [error]="nameError()"
         >
-          <textarea
-            id="create-desc"
-            #descInput
-            rows="4"
-            placeholder="Résumé de la filière et ses caractéristiques"
-            class="w-full rounded-xl border border-line bg-gradient-to-r from-surface to-surface-subtle px-4 py-3 text-sm text-principalText placeholder:text-muted transition focus:border-primary focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30 shadow-sm"
-          ></textarea>
+          <input
+            id="create-field-name"
+            type="text"
+            placeholder="Ex: Génie informatique"
+            [(ngModel)]="form.name"
+            name="name"
+            [class]="inputClass(!!nameError())"
+          />
         </app-modal-field-group>
       </form>
-      <div modal-footer class="flex w-full items-center gap-3 justify-end border-t border-line pt-6">
-        <app-button label="Annuler" variant="outline" [fullWidth]="false" (clicked)="closeRequested.emit()"></app-button>
-        <app-button label="Créer la filière" icon="fa-solid fa-plus" variant="primary" [fullWidth]="false"></app-button>
+
+      <div modal-footer class="flex w-full items-center justify-end gap-3">
+        <app-button
+          label="Annuler"
+          variant="outline"
+          [fullWidth]="false"
+          (clicked)="close()"
+        ></app-button>
+        <app-button
+          label="Créer la filière"
+          icon=""
+          variant="primary"
+          [fullWidth]="false"
+          (clicked)="submit()"
+        ></app-button>
       </div>
     </app-modal>
   `,
@@ -59,4 +84,66 @@ import { ModalFieldGroup } from '../../../../../shared/components/modal-field-gr
 export class CreateFieldModal {
   readonly open = input(false);
   readonly closeRequested = output<void>();
+  readonly createRequested = output<FiliereRequest>();
+  readonly submitted = signal(false);
+
+  form: FiliereRequest = {
+    code: '',
+    name: '',
+  };
+
+  close(): void {
+    this.submitted.set(false);
+    this.resetForm();
+    this.closeRequested.emit();
+  }
+
+  inputClass(invalid: boolean): string {
+    return structureInputClass(invalid);
+  }
+
+  codeError(): string {
+    if (!this.submitted()) {
+      return '';
+    }
+
+    const code = normalizeCode(this.form.code);
+    if (!code) {
+      return 'Indiquez le code de la filière.';
+    }
+
+    return /^[A-Z0-9-]{2,12}$/.test(code)
+      ? ''
+      : 'Utilisez 2 à 12 caractères : lettres, chiffres ou tirets.';
+  }
+
+  nameError(): string {
+    if (!this.submitted()) {
+      return '';
+    }
+
+    return hasMinimumLength(this.form.name, 3) ? '' : 'Indiquez un libellé de 3 caractères minimum.';
+  }
+
+  submit(): void {
+    this.submitted.set(true);
+    if (this.codeError() || this.nameError()) {
+      return;
+    }
+
+    this.createRequested.emit({
+      code: normalizeCode(this.form.code),
+      name: normalizeLabel(this.form.name),
+    });
+
+    this.submitted.set(false);
+    this.resetForm();
+  }
+
+  private resetForm(): void {
+    this.form = {
+      code: '',
+      name: '',
+    };
+  }
 }

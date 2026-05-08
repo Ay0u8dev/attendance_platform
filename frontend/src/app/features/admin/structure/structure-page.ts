@@ -8,80 +8,72 @@ import { FormationsPage } from './formations/formations-page';
 import { GroupesPage } from './groupes/groupes-page';
 import { ModulesPage } from './modules/modules-page';
 
+type StructureUnitId = 'academic-year' | 'cycles' | 'fields' | 'formations' | 'groupes' | 'modules';
+
+type StructureUnit = {
+  readonly id: StructureUnitId;
+  readonly title: string;
+  readonly description: string;
+  readonly icon: string;
+};
+
 @Component({
   selector: 'app-structure-page',
-  imports: [PageHeader, AcademicYearPage, CyclesPage, FieldsPage, FormationsPage, GroupesPage, ModulesPage],
+  imports: [
+    PageHeader,
+    AcademicYearPage,
+    CyclesPage,
+    FieldsPage,
+    FormationsPage,
+    GroupesPage,
+    ModulesPage,
+  ],
   templateUrl: './structure.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StructurePage {
-  readonly units = [
+  readonly units: readonly StructureUnit[] = [
     {
       id: 'academic-year',
-      title: 'Annee Academique',
-      description: 'Definissez la periode officielle et ses parametres globaux.',
-      count: 3,
-      highlights: ['Calendriers', 'Semestres', 'Parametres generaux'],
+      title: 'Années',
+      description: 'Périodes officielles',
+      icon: 'fa-solid fa-calendar-days',
     },
     {
       id: 'cycles',
       title: 'Cycles',
-      description: 'Organisez les cycles et leurs niveaux.',
-      count: 5,
-      highlights: ['Niveaux', 'Durees', 'Regles'],
+      description: 'Socles pédagogiques',
+      icon: 'fa-solid fa-layer-group',
     },
     {
       id: 'fields',
-      title: 'Filieres',
-      description: 'Structurez les filieres et leurs parcours.',
-      count: 6,
-      highlights: ['Responsables', 'Axes', 'Statuts'],
+      title: 'Filières',
+      description: 'Parcours académiques',
+      icon: 'fa-solid fa-bookmark',
     },
     {
       id: 'formations',
       title: 'Formations',
-      description: 'Gerez les formations et leurs volumes horaires.',
-      count: 4,
-      highlights: ['Credits', 'Volumes', 'Modalites'],
+      description: 'Associations validées',
+      icon: 'fa-solid fa-diagram-project',
     },
     {
       id: 'groupes',
       title: 'Groupes',
-      description: 'Definissez les groupes et effectifs.',
-      count: 3,
-      highlights: ['Effectifs', 'Regroupements', 'Encadrement'],
+      description: 'Effectifs et sections',
+      icon: 'fa-solid fa-users',
     },
     {
       id: 'modules',
       title: 'Modules',
-      description: 'Repartissez les modules et leurs unites.',
-      count: 3,
-      highlights: ['Unites', 'Evaluations', 'Validation'],
+      description: "Unités d'enseignement",
+      icon: 'fa-solid fa-book-open',
     },
   ];
 
-  readonly checkpoints = [
-    {
-      title: 'Validation des references',
-      description: 'Verifiez les codes et libelles officiels.',
-    },
-    {
-      title: 'Alignement des volumes',
-      description: 'Controlez les volumes horaires et credits.',
-    },
-    {
-      title: 'Statuts a confirmer',
-      description: 'Elements en attente de validation.',
-    },
-  ];
+  activeUnitId: StructureUnitId = 'academic-year';
 
-  activeUnitId = this.units[0]?.id ?? 'academic-year';
-
-  get activeUnit() {
-    return this.units.find((unit) => unit.id === this.activeUnitId) ?? this.units[0];
-  }
-
-  setActiveUnit(unitId: string) {
+  setActiveUnit(unitId: StructureUnitId): void {
     this.activeUnitId = unitId;
   }
 }
