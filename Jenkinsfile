@@ -10,27 +10,57 @@ pipeline {
             }
         }
 
-        // stage('Backend Build') {
-        //     steps {
-        //         echo 'Building Spring services...'
-        //         sh './mvnw clean package -DskipTests'
-        //     }
-        // }
 
-        // stage('Frontend Build') {
-        //     steps {
-        //         dir('frontend') {
-        //             echo 'Building Angular frontend...'
-        //             sh 'npm install'
-        //             sh 'npm run build'
-        //         }
-        //     }
-        // }
+        stage('Backend Tests') {
+            steps {
+                dir('backend/auth-service') {
+                    sh './mvnw test'
+                }
+
+                dir('backend/user-service') {
+                    sh './mvnw test'
+                }
+
+                dir('backend/attendance-service') {
+                    sh './mvnw test'
+                }
+            }
+        }
 
         stage('Docker Compose Build') {
             steps {
                 echo 'Building Docker images...'
                 sh 'docker compose -f docker-compose.prod.yml build'
+            }
+        }
+
+        stage('Trivy Security Scan') {
+            steps {
+                sh '''
+                docker run --rm \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                -v trivy-cache:/root/.cache/ \
+                aquasec/trivy image \
+                --severity HIGH,CRITICAL \
+                --exit-code 1 \
+                frontend:latest
+
+                docker run --rm \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                -v trivy-cache:/root/.cache/ \
+                aquasec/trivy image \
+                --severity HIGH,CRITICAL \
+                --exit-code 1 \
+                auth-service:latest
+
+                docker run --rm \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                -v trivy-cache:/root/.cache/ \
+                aquasec/trivy image \
+                --severity HIGH,CRITICAL \
+                --exit-code 1 \
+                attendance-service:latest
+                '''
             }
         }
 
@@ -45,24 +75,12 @@ pipeline {
 
                     sh 'docker compose -f docker-compose.prod.yml down'                    
                     sh 'docker compose -f docker-compose.prod.yml up -d'
-                    
-                    // Wait for services to be healthy
-                    timeout(time: 5, unit: 'MINUTES') {
-                        sh '''
-                            echo "Waiting for services to be healthy..."
-                            docker compose -f docker-compose.prod.yml ps
-                            # Add specific health check commands as needed
-                        '''
-                    }
                 }
             }
         }
     }
 
     post {
-        // always {
-        //     sh 'rm -f .env.prod'
-        // }
         success {
             echo 'Pipeline completed successfully!'
         }
