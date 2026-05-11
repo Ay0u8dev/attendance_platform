@@ -45,7 +45,7 @@ pipeline {
                         'frontend'
                     ]
 
-                    List<String> vulnerableServices = []
+                    def vulnerableServices = []
 
                     for (service in services) {
                         echo "Scanning ${service}..."
@@ -71,7 +71,7 @@ pipeline {
                     }
 
                     if (vulnerableServices.size() > 0) {
-                        String servicesList = vulnerableServices.join('\\n- ')
+                        def servicesList = vulnerableServices.join('\\n- ')
 
                         sh """
                         curl -H "Content-Type: application/json" \
