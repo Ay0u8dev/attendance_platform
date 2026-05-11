@@ -1,7 +1,7 @@
 services:
   # ===================== Traefik (API Gateway) =======================
   traefik:
-    image: traefik:v3.7.0
+    image: traefik:latest
     container_name: traefik
     ports:
       - "18080:80" # traffic
