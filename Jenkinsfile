@@ -60,9 +60,9 @@ pipeline {
     }
 
     post {
-        always {
-            sh 'rm -f .env.prod'
-        }
+        // always {
+        //     sh 'rm -f .env.prod'
+        // }
         success {
             echo 'Pipeline completed successfully!'
         }
