@@ -105,18 +105,22 @@ pipeline {
         success {
             echo 'Pipeline completed successfully!'
             sh """
-                curl -X POST -H 'Content-type: application/json' \
-                --data '{"text":"✅ Deployment on branch ${BRANCH_NAME} succeeded: ${JOB_NAME} #${BUILD_NUMBER}"}' \
-                https://hooks.slack.com/services/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
+            curl -X POST \
+            -H 'Content-type: application/json' \
+            --data \
+            '{ "text":"✅ Deployment on branch ${env.BRANCH_NAME} succeeded: ${env.JOB_NAME} #${env.BUILD_NUMBER}" }' \
+            https://hooks.slack.com/services/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
             """
         }
 
         failure {
             echo 'Pipeline failed!'
             sh """
-                curl -X POST -H 'Content-type: application/json' \
-                --data '{"text":"❌ Deployment on branch ${BRANCH_NAME} failed: ${JOB_NAME} #${BUILD_NUMBER}"}' \
-                https://hooks.slack.com/services/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
+            curl -X POST \
+            -H 'Content-type: application/json' \
+            --data \
+            '{ "text":"❌ Deployment on branch ${env.BRANCH_NAME} failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}" }' \
+            https://hooks.slack.com/services/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
             """
         }
     }
