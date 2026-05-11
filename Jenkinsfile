@@ -65,7 +65,7 @@ pipeline {
 
                         echo result
 
-                        if (result.contains('CRITICAL')) {
+                        if (!result.contains('CRITICAL: 0')) {
                             vulnerableServices.add(service)
                         }
                     }
