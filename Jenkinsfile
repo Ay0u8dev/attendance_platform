@@ -105,29 +105,31 @@ pipeline {
     }
 
     post {
-        withCredentials([
-            string(credentialsId: 'slack-chat-webhook', variable: 'SLACK_WEBHOOK_URL')
-        ]) {
-            success {
-                echo 'Pipeline completed successfully!'
-                sh """
-                curl -X POST \
-                -H 'Content-type: application/json' \
-                --data \
-                '{ "text":"✅ Deployment succeeded: ${env.JOB_NAME} #${env.BUILD_NUMBER}" }' \
-                $SLACK_WEBHOOK_URL
+        success {
+            echo 'Pipeline completed successfully!'
+            script {
+                withCredentials([string(credentialsId: 'slack-chat-webhook', variable: 'SLACK_WEBHOOK_URL')]) {
+                    sh """
+                    curl -X POST \
+                    -H 'Content-type: application/json' \
+                    --data '{"text":"✅ Deployment succeeded: ${env.JOB_NAME} #${env.BUILD_NUMBER}"}' \
+                    \$SLACK_WEBHOOK_URL
                 """
+                }
             }
+        }
 
-            failure {
-                echo 'Pipeline failed!'
-                sh """
-            curl -X POST \
-            -H 'Content-type: application/json' \
-            --data \
-            '{ "text":"❌ Deployment failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}" }' \
-            $SLACK_WEBHOOK_URL
-            """
+        failure {
+            echo 'Pipeline failed!'
+            script {
+                withCredentials([string(credentialsId: 'slack-chat-webhook', variable: 'SLACK_WEBHOOK_URL')]) {
+                    sh """
+                    curl -X POST \
+                    -H 'Content-type: application/json' \
+                    --data '{"text":"❌ Deployment failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}"}' \
+                    \$SLACK_WEBHOOK_URL
+                """
+                }
             }
         }
     }
