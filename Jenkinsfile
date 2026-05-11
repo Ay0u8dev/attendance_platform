@@ -72,14 +72,17 @@ pipeline {
 
                     if (vulnerableServices.size() > 0) {
                         def servicesList = vulnerableServices.join('\\n- ')
-
-                        sh """
-                        curl -H "Content-Type: application/json" \
-                        -X POST \
-                        --data \
-                        '{ "text":"🚨 Trivy detected CRITICAL vulnerabilities!\\n\\nAffected services:\\n- ${servicesList}\\n\\nBuild: ${BUILD_URL}" }' \
-                        https://hooks.slack.com/services/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
-                        """
+                        withCredentials([
+                            string(credentialsId: 'slack-chat-webhook', variable: 'SLACK_WEBHOOK_URL')
+                        ]) {
+                            sh """
+                            curl -H "Content-Type: application/json" \
+                            -X POST \
+                            --data \
+                            '{ "text":"🚨 Trivy detected CRITICAL vulnerabilities!\\n\\nAffected services:\\n- ${servicesList}\\n\\nBuild: ${BUILD_URL}" }' \
+                            $SLACK_WEBHOOK_URL
+                            """
+                        }
                     }
                 }
             }
@@ -102,26 +105,30 @@ pipeline {
     }
 
     post {
-        success {
-            echo 'Pipeline completed successfully!'
-            sh """
-            curl -X POST \
-            -H 'Content-type: application/json' \
-            --data \
-            '{ "text":"✅ Deployment succeeded: ${env.JOB_NAME} #${env.BUILD_NUMBER}" }' \
-            https://hooks.slack.com/services/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
-            """
-        }
+        withCredentials([
+            string(credentialsId: 'slack-chat-webhook', variable: 'SLACK_WEBHOOK_URL')
+        ]) {
+            success {
+                echo 'Pipeline completed successfully!'
+                sh """
+                curl -X POST \
+                -H 'Content-type: application/json' \
+                --data \
+                '{ "text":"✅ Deployment succeeded: ${env.JOB_NAME} #${env.BUILD_NUMBER}" }' \
+                $SLACK_WEBHOOK_URL
+                """
+            }
 
-        failure {
-            echo 'Pipeline failed!'
-            sh """
+            failure {
+                echo 'Pipeline failed!'
+                sh """
             curl -X POST \
             -H 'Content-type: application/json' \
             --data \
             '{ "text":"❌ Deployment failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}" }' \
-            https://hooks.slack.com/services/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
+            $SLACK_WEBHOOK_URL
             """
+            }
         }
     }
 }
