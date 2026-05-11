@@ -35,7 +35,7 @@
               "allowedHosts": [
                 "localhost",
                 "host.docker.internal",
-                "attendance-platform.home",
+                "attendance-platform.ma",
                 "192.168.100.73"
               ]
             },
@@ -80,7 +80,7 @@
             "allowedHosts": [
               "host.docker.internal",
               "localhost",
-              "attendance-platform.home",
+              "attendance-platform.ma",
               "192.168.100.73"
             ]
           },
@@ -89,7 +89,7 @@
               "allowedHosts": [
                 "host.docker.internal",
                 "localhost",
-                "attendance-platform.home",
+                "attendance-platform.ma",
                 "192.168.100.73"
               ]
             },

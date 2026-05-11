@@ -47,7 +47,7 @@ public class SecurityConfig {
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:4200",
                 "http://localhost",
-                "http://attendance-platform.home",
+                "http://attendance-platform.ma",
                 "http://192.168.100.73:18080"
         ));
         config.setAllowedMethods(List.of(
