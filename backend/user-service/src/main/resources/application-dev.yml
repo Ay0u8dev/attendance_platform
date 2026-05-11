@@ -1,0 +1,22 @@
+server:
+  port: 8082
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/users_db
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  devtools:
+    livereload:
+      enabled: true
+    restart:
+      enabled: true
+      poll-interval: 2s
+      quiet-period: 1s
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
