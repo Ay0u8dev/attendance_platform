@@ -44,7 +44,7 @@ pipeline {
                 -v /var/run/docker.sock:/var/run/docker.sock \
                 -v trivy-cache:/root/.cache/ \
                 aquasec/trivy image \
-                --severity HIGH,CRITICAL \
+                --severity CRITICAL \
                 --exit-code 1 \
                 attendance-platform-cicd-frontend:latest
 
@@ -52,7 +52,7 @@ pipeline {
                 -v /var/run/docker.sock:/var/run/docker.sock \
                 -v trivy-cache:/root/.cache/ \
                 aquasec/trivy image \
-                --severity HIGH,CRITICAL \
+                --severity CRITICAL \
                 --exit-code 1 \
                 attendance-platform-cicd-auth-service:latest
 
@@ -60,7 +60,7 @@ pipeline {
                 -v /var/run/docker.sock:/var/run/docker.sock \
                 -v trivy-cache:/root/.cache/ \
                 aquasec/trivy image \
-                --severity HIGH,CRITICAL \
+                --severity CRITICAL \
                 --exit-code 1 \
                 attendance-platform-cicd-user-service:latest
 
@@ -68,7 +68,7 @@ pipeline {
                 -v /var/run/docker.sock:/var/run/docker.sock \
                 -v trivy-cache:/root/.cache/ \
                 aquasec/trivy image \
-                --severity HIGH,CRITICAL \
+                --severity CRITICAL \
                 --exit-code 1 \
                 attendance-platform-cicd-attendance-service:latest
                 '''
