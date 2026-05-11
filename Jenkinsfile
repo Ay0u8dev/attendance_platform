@@ -14,14 +14,17 @@ pipeline {
         stage('Backend Tests') {
             steps {
                 dir('backend/auth-service') {
+                    sh 'chmod +x mvnw'
                     sh './mvnw test'
                 }
 
                 dir('backend/user-service') {
+                    sh 'chmod +x mvnw'
                     sh './mvnw test'
                 }
 
                 dir('backend/attendance-service') {
+                    sh 'chmod +x mvnw'
                     sh './mvnw test'
                 }
             }
