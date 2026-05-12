@@ -33,7 +33,6 @@ import java.util.stream.Stream;
 
 import static ma.eniad.attendanceservice.controller.TestRequestHeaders.teacherUser;
 import static ma.eniad.attendanceservice.controller.TestRequestHeaders.user;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;

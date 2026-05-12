@@ -32,7 +32,12 @@
             "server": "src/main.server.ts",
             "outputMode": "server",
             "security": {
-              "allowedHosts": ["localhost", "host.docker.internal"]
+              "allowedHosts": [
+                "localhost",
+                "host.docker.internal",
+                "attendance-platform.ma",
+                "192.168.100.73"
+              ]
             },
             "ssr": {
               "entry": "src/server.ts"
@@ -40,6 +45,12 @@
           },
           "configurations": {
             "production": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
               "budgets": [
                 {
                   "type": "initial",
@@ -66,11 +77,21 @@
           "builder": "@angular/build:dev-server",
           "options": {
             "host": "0.0.0.0",
-            "allowedHosts": ["host.docker.internal", "localhost"]
+            "allowedHosts": [
+              "host.docker.internal",
+              "localhost",
+              "attendance-platform.ma",
+              "192.168.100.73"
+            ]
           },
           "configurations": {
             "options": {
-              "allowedHosts": ["host.docker.internal", "localhost"]
+              "allowedHosts": [
+                "host.docker.internal",
+                "localhost",
+                "attendance-platform.ma",
+                "192.168.100.73"
+              ]
             },
             "production": {
               "buildTarget": "frontend:build:production"

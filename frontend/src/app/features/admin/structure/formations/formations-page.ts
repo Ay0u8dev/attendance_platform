@@ -1,142 +1,167 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { forkJoin } from 'rxjs';
+import { finalize } from 'rxjs/operators';
 
-import { FormationsHeader } from './components/formations-header';
-import { FormationsFilters } from './components/formations-filters';
 import { FormationsList, type FormationItem } from './components/formations-list';
 import { CreateFormationModal } from './components/create-formation-modal';
 import { EditFormationModal } from './components/edit-formation-modal';
 import { DeleteFormationModal } from './components/delete-formation-modal';
+import { DeleteModal } from '../../../../shared/components/delete-modal/delete-modal';
+import { FormationService } from '../../../../core/structure/services/formation.service';
+import { CycleService } from '../../../../core/structure/services/cycle.service';
+import { FiliereService } from '../../../../core/structure/services/filiere.service';
+import { AnneeUniversitaireService } from '../../../../core/structure/services/annee-universitaire.service';
+import { AcademicYearContextService } from '../../../../core/structure/services/academic-year-context.service';
+import { ToastService } from '../../../../shared/components/toast/toast.service';
+import { Formation, FormationRequest } from '../../../../core/structure/models/formation.model';
+import { Cycle } from '../../../../core/structure/models/cycle.model';
+import { Filiere } from '../../../../core/structure/models/filiere.model';
+import { AnneeUniversitaire } from '../../../../core/structure/models/annee-universitaire.model';
+import { DropdownOption } from '../../../../shared/components/dropdown-filter/dropdown-filter';
 
 @Component({
   selector: 'app-formations-page',
   imports: [
-    FormationsHeader,
-    FormationsFilters,
     FormationsList,
     CreateFormationModal,
     EditFormationModal,
     DeleteFormationModal,
+    DeleteModal,
   ],
   templateUrl: './formations.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FormationsPage {
+  private readonly formationService = inject(FormationService);
+  private readonly cycleService = inject(CycleService);
+  private readonly filiereService = inject(FiliereService);
+  private readonly anneeService = inject(AnneeUniversitaireService);
+  private readonly academicYearContext = inject(AcademicYearContextService);
+  private readonly toastService = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
+
   activeModal: 'create' | 'edit' | 'delete' | null = null;
-  selectedFormation: FormationItem | null = null;
+  selectedFormation: Formation | null = null;
 
   searchQuery = signal('');
   selectedCycle = signal<string | null>(null);
   selectedField = signal<string | null>(null);
-  selectedSemester = signal<string | null>(null);
+  selectedAcademicYear = signal<string | null>(null);
 
-  readonly cycles = ['Cycle Préparatoire', 'Cycle Ingénieur'];
-  readonly fields = ['Génie Informatique', 'IRSI', 'Intelligence Artificielle', 'Robotique et Objets Connectés'];
-  readonly semesters = ['Semestre 1', 'Semestre 2', 'Semestre 3', 'Semestre 4', 'Semestre 5', 'Semestre 6'];
+  readonly formations = signal<Formation[]>([]);
+  readonly cycles = signal<Cycle[]>([]);
+  readonly fields = signal<Filiere[]>([]);
+  readonly academicYears = signal<AnneeUniversitaire[]>([]);
+  readonly isLoading = signal(false);
+  readonly bulkDeleteItems = signal<readonly FormationItem[]>([]);
+  readonly isBulkDeleteOpen = signal(false);
+  private readonly selectedAcademicYearSync = effect(
+    () => {
+      this.selectedAcademicYear.set(this.academicYearContext.selectedAcademicYearId());
+    },
+    { allowSignalWrites: true },
+  );
 
-  readonly allFormations: FormationItem[] = [
-    {
-      id: 'ci1-gi-s1',
-      code: 'CI1 GI - Sem 1',
-      cycleName: 'Cycle Ingénieur',
-      fieldName: 'Génie Informatique',
-      semester: 'Semestre 1',
-      year: '2024-2025',
-      groups: 5,
-      modules: 6,
-      badgeColor: 'bg-primary-soft text-primary',
-      status: 'active',
-    },
-    {
-      id: 'cp2-s1',
-      code: 'CP2 - Sem 1',
-      cycleName: 'Cycle Préparatoire',
-      fieldName: 'Tronc Commun Scientifique',
-      semester: 'Semestre 1',
-      year: '2024-2025',
-      groups: 5,
-      modules: 6,
-      badgeColor: 'bg-secondary-soft text-secondary',
-      status: 'active',
-    },
-    {
-      id: 'ci2-irsi-s2',
-      code: 'CI2 IRSI - Sem 2',
-      cycleName: 'Cycle Ingénieur',
-      fieldName: 'IRSI',
-      semester: 'Semestre 2',
-      year: '2024-2025',
-      groups: 5,
-      modules: 6,
-      badgeColor: 'bg-warning-soft text-warning',
-      status: 'active',
-    },
-    {
-      id: 'ci1-ia-s1',
-      code: 'CI1 IA - Sem 1',
-      cycleName: 'Cycle Ingénieur',
-      fieldName: 'Intelligence Artificielle',
-      semester: 'Semestre 1',
-      year: '2024-2025',
-      groups: 4,
-      modules: 5,
-      badgeColor: 'bg-success-soft text-success',
-      status: 'active',
-    },
-    {
-      id: 'ci1-roc-s1',
-      code: 'CI1 ROC - Sem 1',
-      cycleName: 'Cycle Ingénieur',
-      fieldName: 'Robotique et Objets Connectés',
-      semester: 'Semestre 1',
-      year: '2024-2025',
-      groups: 3,
-      modules: 5,
-      badgeColor: 'bg-danger-soft text-danger',
-      status: 'active',
-    },
-    {
-      id: 'cp1-tcs-s1',
-      code: 'CP1 TCS - Sem 1',
-      cycleName: 'Cycle Préparatoire',
-      fieldName: 'Tronc Commun Scientifique',
-      semester: 'Semestre 1',
-      year: '2024-2025',
-      groups: 8,
-      modules: 7,
-      badgeColor: 'bg-info-soft text-info',
-      status: 'active',
-    },
-  ];
+  readonly cycleOptions = computed<DropdownOption[]>(() =>
+    this.cycles().map((cycle) => ({
+      value: String(cycle.id),
+      label: `${cycle.code} - ${cycle.name}`,
+    })),
+  );
 
-  get filteredFormations(): FormationItem[] {
-    return this.allFormations.filter(formation => {
+  readonly fieldOptions = computed<DropdownOption[]>(() =>
+    this.fields().map((field) => ({
+      value: String(field.id),
+      label: `${field.code} - ${field.name}`,
+    })),
+  );
+
+  readonly academicYearOptions = computed<DropdownOption[]>(() =>
+    this.academicYears()
+      .filter((year) => year.active)
+      .map((year) => ({
+        value: String(year.id),
+        label: year.name,
+      })),
+  );
+
+  readonly formationViews = computed<FormationItem[]>(() => {
+    const cycles = new Map(this.cycles().map((cycle) => [cycle.id, cycle]));
+    const fields = new Map(this.fields().map((field) => [field.id, field]));
+    const years = new Map(this.academicYears().map((year) => [year.id, year]));
+    const selectedYear = this.selectedAcademicYear();
+
+    return this.formations()
+      .filter(
+        (formation) => !selectedYear || String(formation.anneeUniversitaireId) === selectedYear,
+      )
+      .map((formation) => {
+        const cycle = cycles.get(formation.cycleId);
+        const field = formation.filiereId != null ? fields.get(formation.filiereId) : null;
+        const year = years.get(formation.anneeUniversitaireId);
+
+        return {
+          id: formation.id,
+          cycleId: formation.cycleId,
+          fieldId: formation.filiereId ?? null,
+          yearId: formation.anneeUniversitaireId,
+          cycleName: cycle ? `${cycle.code} - ${cycle.name}` : `Cycle #${formation.cycleId}`,
+          fieldName: field ? `${field.code} - ${field.name}` : 'Préparatoire (CP)',
+          academicYear: year ? year.name : `Année #${formation.anneeUniversitaireId}`,
+        };
+      });
+  });
+
+  readonly filteredFormations = computed<FormationItem[]>(() => {
+    const query = this.searchQuery().toLowerCase().trim();
+    const selectedCycle = this.selectedCycle();
+    const selectedField = this.selectedField();
+    const selectedYear = this.selectedAcademicYear();
+
+    return this.formationViews().filter((formation) => {
       const matchesSearch =
-        formation.code.toLowerCase().includes(this.searchQuery().toLowerCase()) ||
-        formation.cycleName.toLowerCase().includes(this.searchQuery().toLowerCase()) ||
-        formation.fieldName.toLowerCase().includes(this.searchQuery().toLowerCase());
+        !query ||
+        formation.cycleName.toLowerCase().includes(query) ||
+        formation.fieldName.toLowerCase().includes(query) ||
+        formation.academicYear.toLowerCase().includes(query);
 
-      const matchesCycle = !this.selectedCycle() || formation.cycleName === this.selectedCycle();
-      const matchesField = !this.selectedField() || formation.fieldName === this.selectedField();
-      const matchesSemester = !this.selectedSemester() || formation.semester === this.selectedSemester();
+      const matchesCycle = !selectedCycle || String(selectedCycle) === String(formation.cycleId);
+      const matchesField =
+        !selectedField ||
+        (formation.fieldId != null && String(selectedField) === String(formation.fieldId));
+      const matchesYear = !selectedYear || String(selectedYear) === String(formation.yearId);
 
-      return matchesSearch && matchesCycle && matchesField && matchesSemester;
+      return matchesSearch && matchesCycle && matchesField && matchesYear;
     });
+  });
+
+  constructor() {
+    this.loadReferenceData();
   }
 
   onSearchChange(query: string): void {
     this.searchQuery.set(query);
   }
 
-  onCycleFilterChange(cycle: string | null): void {
-    this.selectedCycle.set(cycle);
+  onCycleFilterChange(cycleId: string | null): void {
+    this.selectedCycle.set(cycleId);
   }
 
-  onFieldFilterChange(field: string | null): void {
-    this.selectedField.set(field);
+  onFieldFilterChange(fieldId: string | null): void {
+    this.selectedField.set(fieldId);
   }
 
-  onSemesterFilterChange(semester: string | null): void {
-    this.selectedSemester.set(semester);
+  onAcademicYearFilterChange(yearId: string | null): void {
+    this.academicYearContext.setSelectedAcademicYear(yearId);
   }
 
   openCreate(): void {
@@ -145,16 +170,162 @@ export class FormationsPage {
   }
 
   openEdit(formation: FormationItem): void {
-    this.selectedFormation = formation;
+    const match = this.formations().find((item) => item.id === formation.id) ?? null;
+    this.selectedFormation = match;
     this.activeModal = 'edit';
   }
 
   openDelete(formation: FormationItem): void {
-    this.selectedFormation = formation;
+    const match = this.formations().find((item) => item.id === formation.id) ?? null;
+    this.selectedFormation = match;
     this.activeModal = 'delete';
   }
 
   closeModal(): void {
     this.activeModal = null;
+  }
+
+  closeBulkDelete(): void {
+    this.isBulkDeleteOpen.set(false);
+  }
+
+  onCreate(request: FormationRequest): void {
+    this.isLoading.set(true);
+    this.formationService
+      .create(request)
+      .pipe(
+        finalize(() => this.isLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => {
+          this.toastService.success('Formation créée', 'La formation a été ajoutée.');
+          this.closeModal();
+          this.loadFormations();
+        },
+        error: () => this.toastService.error('Erreur', "Impossible d'ajouter la formation."),
+      });
+  }
+
+  onUpdate(request: FormationRequest): void {
+    if (!this.selectedFormation) {
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.formationService
+      .update(this.selectedFormation.id, request)
+      .pipe(
+        finalize(() => this.isLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => {
+          this.toastService.success('Formation mise à jour', 'La formation a été mise à jour.');
+          this.closeModal();
+          this.loadFormations();
+        },
+        error: () => this.toastService.error('Erreur', 'Impossible de mettre à jour la formation.'),
+      });
+  }
+
+  onDelete(): void {
+    if (!this.selectedFormation) {
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.formationService
+      .delete(this.selectedFormation.id)
+      .pipe(
+        finalize(() => this.isLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => {
+          this.toastService.success('Formation supprimée', 'La formation a été supprimée.');
+          this.closeModal();
+          this.loadFormations();
+        },
+        error: () => this.toastService.error('Erreur', 'Impossible de supprimer la formation.'),
+      });
+  }
+
+  onBulkDeleteRequested(formations: readonly FormationItem[]): void {
+    if (formations.length === 0) {
+      return;
+    }
+
+    this.bulkDeleteItems.set(formations);
+    this.isBulkDeleteOpen.set(true);
+  }
+
+  onBulkDeleteConfirmed(): void {
+    const formations = this.bulkDeleteItems();
+    if (formations.length === 0) {
+      this.closeBulkDelete();
+      return;
+    }
+
+    this.isLoading.set(true);
+    forkJoin(formations.map((formation) => this.formationService.delete(formation.id)))
+      .pipe(
+        finalize(() => this.isLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => {
+          this.toastService.success(
+            'Formations supprimées',
+            `${formations.length} formation(s) ont été supprimée(s).`,
+          );
+          this.closeBulkDelete();
+          this.bulkDeleteItems.set([]);
+          this.loadFormations();
+        },
+        error: () =>
+          this.toastService.error('Erreur', 'Impossible de supprimer les formations.'),
+      });
+  }
+
+  resetFilters(): void {
+    this.searchQuery.set('');
+    this.selectedCycle.set(null);
+    this.selectedField.set(null);
+    this.selectedAcademicYear.set(this.academicYearContext.selectedAcademicYearId());
+  }
+
+  private loadReferenceData(): void {
+    this.isLoading.set(true);
+    forkJoin({
+      cycles: this.cycleService.getAll(),
+      fields: this.filiereService.getAll(),
+      academicYears: this.anneeService.getAll(),
+      formations: this.formationService.getAll(),
+    })
+      .pipe(
+        finalize(() => this.isLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: ({ cycles, fields, academicYears, formations }) => {
+          this.cycles.set(cycles);
+          this.fields.set(fields);
+          this.academicYears.set(academicYears);
+          this.academicYearContext.setAcademicYears(academicYears);
+          this.formations.set(formations);
+        },
+        error: () => this.toastService.error('Erreur', 'Impossible de charger les formations.'),
+      });
+  }
+
+  private loadFormations(): void {
+    this.formationService
+      .getAll()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (formations) => this.formations.set(formations),
+        error: () => this.toastService.error('Erreur', 'Impossible de charger les formations.'),
+      });
   }
 }

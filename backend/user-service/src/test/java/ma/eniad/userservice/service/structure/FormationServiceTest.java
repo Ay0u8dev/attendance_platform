@@ -95,7 +95,6 @@ class FormationServiceTest {
     void createThrowsWhenAcademicYearDoesNotExist() {
         FormationRequestDTO request = request(1L, 2L, 3L);
         when(repository.existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(1L, 2L, 3L)).thenReturn(false);
-        when(mapper.toEntity(request)).thenReturn(Formation.builder().build());
         when(anneeRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.create(request))
@@ -113,7 +112,6 @@ class FormationServiceTest {
         FormationResponseDTO response = response(10L, 1L, 2L, 3L);
 
         when(repository.findById(10L)).thenReturn(Optional.of(entity));
-        when(repository.existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(1L, 2L, 3L)).thenReturn(true);
         when(anneeRepository.findById(1L)).thenReturn(Optional.of(annee));
         when(filiereRepository.findById(2L)).thenReturn(Optional.of(filiere));
         when(cycleRepository.findById(3L)).thenReturn(Optional.of(cycle));

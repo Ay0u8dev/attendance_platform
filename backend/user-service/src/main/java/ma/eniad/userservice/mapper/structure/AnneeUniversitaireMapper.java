@@ -12,13 +12,11 @@ public interface AnneeUniversitaireMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "deleted", ignore = true)
     AnneeUniversitaire toEntity(AnneeRequestDTO dto);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "deleted", ignore = true)
     void updateEntity(AnneeRequestDTO dto, @MappingTarget AnneeUniversitaire entity);
 
     AnneeResponseDTO toResponse(AnneeUniversitaire entity);

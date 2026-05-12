@@ -12,14 +12,12 @@ public interface GroupeMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "deleted", ignore = true)
     @Mapping(target = "formation", ignore = true)
     Groupe toEntity(GroupeRequestDTO dto);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "deleted", ignore = true)
     @Mapping(target = "formation", ignore = true)
     void updateEntity(GroupeRequestDTO dto, @MappingTarget Groupe entity);
 

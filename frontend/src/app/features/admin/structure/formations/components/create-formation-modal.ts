@@ -1,120 +1,180 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-
+import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Button } from '../../../../../shared/components/button/button';
 import { Modal } from '../../../../../shared/components/modal/modal';
-import { DropdownFilter, type DropdownOption } from '../../../../../shared/components/dropdown-filter/dropdown-filter';
+import {
+  DropdownFilter,
+  type DropdownOption,
+} from '../../../../../shared/components/dropdown-filter/dropdown-filter';
+import { Cycle } from '../../../../../core/structure/models/cycle.model';
+import { FormationRequest } from '../../../../../core/structure/models/formation.model';
 
 @Component({
   selector: 'app-create-formation-modal',
   standalone: true,
-  imports: [Modal, Button, FormsModule, DropdownFilter],
+  imports: [Modal, Button, DropdownFilter, CommonModule],
   template: `
     <app-modal
-      title="Ajouter une formation"
-      description="Créez une nouvelle formation en renseignant les informations ci-dessous."
+      title="Créer une formation"
+      description="Établissez le point de raccordement pour les groupes et les modules académiques."
       [open]="open()"
-      (closed)="closeRequested.emit()"
+      size="lg"
+      (closed)="close()"
     >
-      <form modal-body class="space-y-5">
-        <fieldset class="space-y-2">
-          <label for="create-code" class="block text-sm font-medium text-principalText">Code de la formation</label>
-          <input
-            id="create-code"
-            type="text"
-            placeholder="Ex: CI1 GI - Sem 1"
-            class="w-full rounded-lg border border-line bg-surface-subtle px-3.5 py-2.5 text-sm text-principalText placeholder:text-muted transition focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary-soft"
-          />
-        </fieldset>
+      <form modal-body class="space-y-6 py-2">
+        <div class="grid gap-6 md:grid-cols-2">
+          <!-- Année Académique (Lecture seule) -->
+          <app-dropdown-filter
+            identifier="create-academic-year"
+            label="Année académique"
+            allLabel="Année par défaut"
+            [options]="academicYearOptions()"
+            [value]="selectedAcademicYear()"
+            [disabled]="true"
+            [searchable]="false"
+            iconClass="fa-solid fa-calendar-check"
+            iconBackgroundClass="bg-warning/10 text-warning"
+          ></app-dropdown-filter>
 
-        <fieldset class="space-y-2">
+          <!-- Sélection du Cycle -->
           <app-dropdown-filter
             identifier="create-cycle"
-            label="Cycle"
-            allLabel="Sélectionnez un cycle"
-            [options]="cycleOptions"
-            iconClass="fa-solid fa-circle-play"
-            iconBackgroundClass="bg-primary-soft text-primary"
-            iconColor="primary"
+            label="Cycle d'étude"
+            allLabel="Choisir un cycle"
+            [options]="cycleOptions()"
+            [value]="selectedCycle()"
+            [required]="true"
+            [searchable]="false"
+            [error]="submitted() && !selectedCycle() ? 'Le cycle est requis.' : ''"
+            iconClass="fa-solid fa-layer-group"
+            iconBackgroundClass="bg-primary/10 text-primary"
+            (filterChange)="onCycleChange($event)"
           ></app-dropdown-filter>
-        </fieldset>
 
-        <fieldset class="space-y-2">
-          <app-dropdown-filter
-            identifier="create-field"
-            label="Filière"
-            allLabel="Sélectionnez une filière"
-            [options]="fieldOptions"
-            iconClass="fa-solid fa-bookmark"
-            iconBackgroundClass="bg-secondary-soft text-secondary"
-            iconColor="secondary"
-          ></app-dropdown-filter>
-        </fieldset>
-
-        <fieldset class="space-y-2">
-          <app-dropdown-filter
-            identifier="create-semester"
-            label="Semestre"
-            allLabel="Sélectionnez un semestre"
-            [options]="semesterOptions"
-            iconClass="fa-solid fa-calendar"
-            iconBackgroundClass="bg-warning-soft text-warning"
-            iconColor="warning"
-          ></app-dropdown-filter>
-        </fieldset>
-
-        <div class="grid grid-cols-2 gap-4">
-          <fieldset class="space-y-2">
-            <label for="create-groups" class="block text-sm font-medium text-principalText">Nombre de groupes</label>
-            <input
-              id="create-groups"
-              type="number"
-              placeholder="Ex: 5"
-              class="w-full rounded-lg border border-line bg-surface-subtle px-3.5 py-2.5 text-sm text-principalText placeholder:text-muted transition focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary-soft"
-            />
-          </fieldset>
-
-          <fieldset class="space-y-2">
-            <label for="create-modules" class="block text-sm font-medium text-principalText">Nombre de modules</label>
-            <input
-              id="create-modules"
-              type="number"
-              placeholder="Ex: 6"
-              class="w-full rounded-lg border border-line bg-surface-subtle px-3.5 py-2.5 text-sm text-principalText placeholder:text-muted transition focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary-soft"
-            />
-          </fieldset>
+          <!-- Sélection de la Filière (Désactivée dynamiquement) -->
+          <div class="md:col-span-2">
+            <app-dropdown-filter
+              identifier="create-field"
+              label="Filière associée"
+              allLabel="Choisir une filière"
+              [helper]="fieldHelper()"
+              [options]="fieldOptions()"
+              [value]="selectedField()"
+              [required]="fieldRequired()"
+              [disabled]="fieldDisabled()" 
+              [searchable]="true"
+              [error]="submitted() && fieldRequired() && !selectedField() ? 'La filière est obligatoire pour ce cycle.' : ''"
+              iconClass="fa-solid fa-graduation-cap"
+              iconBackgroundClass="bg-secondary/10 text-secondary"
+              (filterChange)="selectedField.set($event)"
+            ></app-dropdown-filter>
+          </div>
         </div>
       </form>
-      <div modal-footer class="flex w-full items-center gap-3 justify-end">
-        <app-button label="Annuler" variant="outline" [fullWidth]="false" (clicked)="closeRequested.emit()"></app-button>
-        <app-button label="Créer la formation" variant="primary" [fullWidth]="false"></app-button>
+
+      <div modal-footer class="flex w-full items-center justify-end gap-3 pt-2">
+        <app-button
+          label="Annuler"
+          variant="outline"
+          (clicked)="close()"
+        ></app-button>
+        <app-button
+          label="Confirmer la création"
+          variant="primary"
+          [disabled]="submitted() && !isFormValid()"
+          (clicked)="submit()"
+          class="shadow-lg shadow-primary/20"
+        ></app-button>
       </div>
     </app-modal>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CreateFormationModal {
+  // Inputs
   readonly open = input(false);
   readonly closeRequested = output<void>();
+  readonly createRequested = output<FormationRequest>();
+  readonly cycles = input.required<Cycle[]>();
+  readonly defaultAcademicYearId = input<string | null>(null);
+  readonly cycleOptions = input.required<DropdownOption[]>();
+  readonly fieldOptions = input.required<DropdownOption[]>();
+  readonly academicYearOptions = input.required<DropdownOption[]>();
 
-  readonly cycleOptions: DropdownOption[] = [
-    { value: 'CP', label: 'Cycle Préparatoire' },
-    { value: 'CI', label: 'Cycle Ingénieur' }
-  ];
+  // State Signals
+  readonly selectedAcademicYear = signal<string | null>(null);
+  readonly selectedCycle = signal<string | null>(null);
+  readonly selectedField = signal<string | null>(null);
+  readonly submitted = signal(false);
 
-  readonly fieldOptions: DropdownOption[] = [
-    { value: 'GI', label: 'Génie Informatique' },
-    { value: 'IRSI', label: 'IRSI' },
-    { value: 'IA', label: 'Intelligence Artificielle' },
-    { value: 'ROC', label: 'Robotique et Objets Connectés' }
-  ];
+  // Logic Signals
+  readonly fieldRequired = computed(() => this.isIngenieurCycle(this.selectedCycle()));
 
-  readonly semesterOptions: DropdownOption[] = [
-    { value: 'S1', label: 'Semestre 1' },
-    { value: 'S2', label: 'Semestre 2' },
-    { value: 'S3', label: 'Semestre 3' },
-    { value: 'S4', label: 'Semestre 4' },
-    { value: 'S5', label: 'Semestre 5' },
-    { value: 'S6', label: 'Semestre 6' }
-  ];
+  readonly fieldDisabled = computed(() => {
+    const cycleId = this.selectedCycle();
+    return !cycleId || !this.isIngenieurCycle(cycleId);
+  });
+
+  readonly fieldHelper = computed(() => {
+    const cycleId = this.selectedCycle();
+    if (!cycleId) return 'Veuillez d\'abord choisir un cycle.';
+    return this.isIngenieurCycle(cycleId)
+      ? 'Sélection obligatoire pour les cycles Ingénieurs.'
+      : 'Non applicable pour les cycles Préparatoires (CP).';
+  });
+
+  private readonly syncAcademicYear = effect(
+    () => {
+      if (this.open()) {
+        this.selectedAcademicYear.set(this.defaultAcademicYearId());
+      }
+    },
+    { allowSignalWrites: true }
+  );
+
+  isFormValid(): boolean {
+    const hasYear = !!this.selectedAcademicYear();
+    const hasCycle = !!this.selectedCycle();
+    const hasFieldIfRequired = !this.fieldRequired() || !!this.selectedField();
+    return hasYear && hasCycle && hasFieldIfRequired;
+  }
+
+  close(): void {
+    this.submitted.set(false);
+    this.resetForm();
+    this.closeRequested.emit();
+  }
+
+  onCycleChange(cycleId: string | null): void {
+    this.selectedCycle.set(cycleId);
+    // Réinitialise la filière si le cycle change pour un type non-ingénieur
+    if (!cycleId || !this.isIngenieurCycle(cycleId)) {
+      this.selectedField.set(null);
+    }
+  }
+
+  submit(): void {
+    this.submitted.set(true);
+    if (!this.isFormValid()) return;
+
+    this.createRequested.emit({
+      anneeUniversitaireId: Number(this.selectedAcademicYear()),
+      cycleId: Number(this.selectedCycle()),
+      filiereId: this.fieldRequired() ? Number(this.selectedField()) : null,
+    });
+
+    this.submitted.set(false);
+    this.resetForm();
+  }
+
+  private resetForm(): void {
+    this.selectedAcademicYear.set(null);
+    this.selectedCycle.set(null);
+    this.selectedField.set(null);
+  }
+
+  private isIngenieurCycle(cycleId: string | null): boolean {
+    if (!cycleId) return false;
+    return this.cycles().find((cycle) => String(cycle.id) === cycleId)?.type === 'INGENIEUR';
+  }
 }

@@ -1,10 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 import { DeleteModal } from '../../../../../shared/components/delete-modal/delete-modal';
-
-export interface DeletableFormation {
-  code: string;
-}
+import { type Formation } from '../../../../../core/structure/models/formation.model';
 
 @Component({
   selector: 'app-delete-formation-modal',
@@ -13,7 +10,7 @@ export interface DeletableFormation {
   template: `
     <app-delete-modal
       title="Supprimer la formation ?"
-      [itemName]="formation()?.code ?? ''"
+      [itemName]="formation()?.id ? 'Formation #' + formation()?.id : ''"
       confirmMessage="Vous êtes sur le point de supprimer la formation :"
       warningMessage="Tous les groupes et modules associés seront affectés. Assurez-vous que cette formation ne contient aucune donnée critique avant de continuer."
       deleteButtonLabel="Supprimer la formation"
@@ -26,7 +23,7 @@ export interface DeletableFormation {
 })
 export class DeleteFormationModal {
   readonly open = input(false);
-  readonly formation = input<DeletableFormation | null>(null);
+  readonly formation = input<Formation | null>(null);
   readonly closeRequested = output<void>();
   readonly confirmDelete = output<void>();
 }
