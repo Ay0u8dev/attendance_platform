@@ -1,27 +1,11 @@
-server:
-  port: 8082
-
 spring:
   application:
     name: user-service
 
-  datasource:
-    url: jdbc:postgresql://localhost:5433/users_db
-    #    url: jdbc:postgresql://user-db:5432/users_db
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
-    driver-class-name: org.postgresql.Driver
-
-  devtools:
-    livereload:
-      enabled: true
-    restart:
-      enabled: true
-      poll-interval: 2s
-      quiet-period: 1s
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    show-sql: true
+  profiles:
+    active: ${PROFILE:dev}
 
 
+#logging:
+#  level:
+#    root: debug
