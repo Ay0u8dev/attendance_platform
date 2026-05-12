@@ -85,7 +85,11 @@ public class StudentService {
         }   
 
         studentMapper.updateEntity(request, student);
-        return studentMapper.toResponse(studentRepository.save(student));
+        try {
+            return studentMapper.toResponse(studentRepository.save(student));
+        } catch (DataIntegrityViolationException ex) {
+            throw new DuplicateResourceException("Email or numApogee already exists");
+        }
     }
 
     // -------------------------------------------------------------------------

@@ -1,5 +1,7 @@
 package ma.eniad.userservice.dto.student;
 
+import org.hibernate.validator.constraints.URL;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -10,7 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 @Data
-@ToString(exclude = {"email"})
+@ToString(exclude = {"email", "numApogee"})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -23,10 +25,8 @@ public class StudentRequestDTO {
     @Size(max = 100, message = "First name must not exceed 100 characters")
     private String firstName;
 
-    @Size(max = 100, message = "Last name must not exceed 100 characters")
     @URL(message = "Profile picture URL must be valid")
     @Size(max = 512, message = "Profile picture URL must not exceed 512 characters")
-    private String pfpUrl;    @Size(max = 512, message = "Profile picture URL must not exceed 512 characters")
     private String pfpUrl;
 
     @NotBlank(message = "Apogee number is required")
