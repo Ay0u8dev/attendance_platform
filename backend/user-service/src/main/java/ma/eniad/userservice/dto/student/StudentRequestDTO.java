@@ -1,0 +1,35 @@
+package ma.eniad.userservice.dto.student;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+@Data
+@ToString(exclude = {"email"})
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class StudentRequestDTO {
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email must be valid")
+    @Size(max = 254, message = "Email must not exceed 254 characters")
+    private String email;
+
+    @Size(max = 100, message = "First name must not exceed 100 characters")
+    private String firstName;
+
+    @Size(max = 100, message = "Last name must not exceed 100 characters")
+    @URL(message = "Profile picture URL must be valid")
+    @Size(max = 512, message = "Profile picture URL must not exceed 512 characters")
+    private String pfpUrl;    @Size(max = 512, message = "Profile picture URL must not exceed 512 characters")
+    private String pfpUrl;
+
+    @NotBlank(message = "Apogee number is required")
+    @Size(max = 30, message = "Apogee number must not exceed 30 characters")
+    private String numApogee;
+}

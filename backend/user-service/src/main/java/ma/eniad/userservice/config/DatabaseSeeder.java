@@ -1,7 +1,7 @@
 package ma.eniad.userservice.config;
 
 import ma.eniad.userservice.entity.Admin;
-import ma.eniad.userservice.entity.Inscription;
+// import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Student;
 import ma.eniad.userservice.entity.Teacher;
 import ma.eniad.userservice.entity.User;
@@ -148,25 +148,25 @@ public class DatabaseSeeder {
                 System.out.println("Structure entities seeded successfully!");
 
                 // Seed Inscriptions if we just created students and structure
-                if (inscriptionRepository.count() == 0) {
-                    User student1User = userRepository.findByEmail("ayoubelebbar15@gmail.com").orElse(null);
-                    User student2User = userRepository.findByEmail("student2@gmail.com").orElse(null);
+                // if (inscriptionRepository.count() == 0) {
+                //     User student1User = userRepository.findByEmail("ayoubelebbar15@gmail.com").orElse(null);
+                //     User student2User = userRepository.findByEmail("student2@gmail.com").orElse(null);
 
-                    if (student1User instanceof Student s1 && student2User instanceof Student s2) {
-                        Inscription inscription1 = new Inscription();
-                        inscription1.setStudent(s1);
-                        inscription1.setGroupe(groupe);
-                        inscription1.setAnneeUniversitaire(annee);
+                //     if (student1User instanceof Student s1 && student2User instanceof Student s2) {
+                //         Inscription inscription1 = new Inscription();
+                //         inscription1.setStudent(s1);
+                //         inscription1.setGroupe(groupe);
+                //         inscription1.setAnneeUniversitaire(annee);
 
-                        Inscription inscription2 = new Inscription();
-                        inscription2.setStudent(s2);
-                        inscription2.setGroupe(groupe);
-                        inscription2.setAnneeUniversitaire(annee);
+                //         Inscription inscription2 = new Inscription();
+                //         inscription2.setStudent(s2);
+                //         inscription2.setGroupe(groupe);
+                //         inscription2.setAnneeUniversitaire(annee);
 
-                        inscriptionRepository.saveAll(List.of(inscription1, inscription2));
-                        System.out.println("Inscriptions seeded successfully!");
-                    }
-                }
+                //         inscriptionRepository.saveAll(List.of(inscription1, inscription2));
+                //         System.out.println("Inscriptions seeded successfully!");
+                //     }
+                // }
             } else {
                 System.out.println("Structure entities already seeded. Skipping...");
             }
