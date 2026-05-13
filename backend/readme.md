@@ -14,8 +14,7 @@ This README is the quick entry point. Detailed documentation is split into dedic
 | ----------------------- | ------ | ----------- | ------------------------------------------------------------------------- |
 | `auth-service`          | `8081` | Implemented | Google token validation, internal JWT issuance, token validation endpoint |
 | `user-service`          | `8082` | Implemented | User lookup, role-protected user read, JPA user model                     |
-| `attendance-service`    | `8084` | Skeleton    | Spring app + config only, no REST controllers                             |
-| `session-service`       | `8083` | Skeleton    | Spring app + config only, no REST controllers                             |
+| `attendance-service`    | `8083` | Skeleton    | Spring app + config only, no REST controllers                             |
 | `justification-service` | `8085` | Skeleton    | Spring app + config only, no REST controllers                             |
 | `notification-service`  | `9000` | Skeleton    | Spring app + config only, no REST controllers                             |
 | `face-service`          | n/a    | Placeholder | Minimal FastAPI sample endpoints                                          |
