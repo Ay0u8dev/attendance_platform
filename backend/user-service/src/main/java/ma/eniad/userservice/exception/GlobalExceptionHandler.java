@@ -69,14 +69,6 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, Object>> handleIllegalArgument(
-            IllegalArgumentException ex,
-            WebRequest request) {
-        String message = ex.getMessage() != null ? ex.getMessage() : "Invalid request";
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request);
-    }
-
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(
             RuntimeException ex,
