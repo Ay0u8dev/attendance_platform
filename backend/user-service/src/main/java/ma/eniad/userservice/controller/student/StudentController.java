@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
+import ma.eniad.userservice.annotation.RequireRole;
 import ma.eniad.userservice.dto.student.StudentRequestDTO;
 import ma.eniad.userservice.dto.student.StudentResponseDTO;
 import ma.eniad.userservice.service.student.StudentService;
@@ -32,7 +33,7 @@ public class StudentController {
         this.service = service;
     }
 
-    // POST /api/users/student
+    // POST /users/student
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Student created successfully",
                     content = @Content(schema = @Schema(implementation = StudentResponseDTO.class))),
@@ -41,18 +42,20 @@ public class StudentController {
             @ApiResponse(responseCode = "422", description = "Validation failed",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
+    @RequireRole({"ADMIN"})
     @PostMapping
     public ResponseEntity<StudentResponseDTO> create(@Valid @RequestBody StudentRequestDTO request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(service.create(request));
     }
 
-    // GET /api/users/student
+    // GET /users/student
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "List of students retrieved successfully",
-                    content = @Content(schema = @Schema(implementation = StudentResponseDTO.class))),
-    })
-    @GetMapping
+                    content = @Content(mediaType = "application/json",
+                            array = @io.swagger.v3.oas.annotations.media.ArraySchema(
+                                    schema = @Schema(implementation = StudentResponseDTO.class))))
+    })    @GetMapping
     public ResponseEntity<List<StudentResponseDTO>> getAll() {
         return ResponseEntity.ok(service.getAll());
     }
@@ -69,7 +72,7 @@ public class StudentController {
         return ResponseEntity.ok(service.getById(id));
     }
 
-    // PUT /api/users/student/{id}
+    // PUT /users/student/{id}
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Student updated successfully",
                     content = @Content(schema = @Schema(implementation = StudentResponseDTO.class))),
@@ -80,18 +83,20 @@ public class StudentController {
             @ApiResponse(responseCode = "422", description = "Validation failed",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
+    @RequireRole({"ADMIN"})
     @PutMapping("/{id}")
     public ResponseEntity<StudentResponseDTO> update(@PathVariable Long id,
             @Valid @RequestBody StudentRequestDTO request) {
         return ResponseEntity.ok(service.update(id, request));
     }
 
-    // DELETE /api/users/student/{id}
+    // DELETE /users/student/{id}
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Student deleted successfully"),
             @ApiResponse(responseCode = "404", description = "Student not found",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
+    @RequireRole({"ADMIN"})
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);

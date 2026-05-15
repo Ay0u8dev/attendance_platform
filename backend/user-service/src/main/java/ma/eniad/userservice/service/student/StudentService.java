@@ -2,6 +2,7 @@ package ma.eniad.userservice.service.student;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -25,21 +26,21 @@ public class StudentService {
     private final UserRepository     userRepository;
     private final StudentMapper      studentMapper;
 
+    @Value("${app.allowed-domain}")
+    private String allowedDomain;
+
     // -------------------------------------------------------------------------
     // Create
     // -------------------------------------------------------------------------
     
     @Transactional
     public StudentResponseDTO create(StudentRequestDTO request) {
-        // Email must be unique across all User sub-types
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateResourceException("Email already exists");
-        }
+        String normalizedEmail = normalizeEmail(request.getEmail());
+        request.setEmail(normalizedEmail);
+        validateEmailDomain(normalizedEmail);
+        String normalizedApogee = normalizeApogee(request.getNumApogee());
+        request.setNumApogee(normalizedApogee);
 
-        // numApogee must be unique among students
-        if (studentRepository.existsByNumApogee(request.getNumApogee())) {
-            throw new DuplicateResourceException("NumApogee already exists");
-        }
 
         Student student = studentMapper.toEntity(request);
         student.getRoles().add(Role.STUDENT);
@@ -49,6 +50,13 @@ public class StudentService {
         try {
             return studentMapper.toResponse(studentRepository.save(student));
         } catch (DataIntegrityViolationException ex) {
+            // Parse exception to determine which constraint was violated
+            String message = ex.getMostSpecificCause().getMessage();
+            if (message.contains("email")) {
+                throw new DuplicateResourceException("Email already exists");
+            } else if (message.contains("num_apogee") || message.contains("numApogee")) {
+                throw new DuplicateResourceException("NumApogee already exists");
+            }
             throw new DuplicateResourceException("Email or numApogee already exists");
         }
     }
@@ -71,23 +79,28 @@ public class StudentService {
     @Transactional
     public StudentResponseDTO update(Long id, StudentRequestDTO request) {
         Student student = findStudentById(id);
-
-        // Check email uniqueness if it's being updated
-        if (request.getEmail() != null && !request.getEmail().equals(student.getEmail()) &&
-            userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateResourceException("Email already exists");
+        
+        if (request.getEmail() != null) {
+            String normalizedEmail = normalizeEmail(request.getEmail());
+            request.setEmail(normalizedEmail);
+            validateEmailDomain(normalizedEmail);
         }
-
-        // Check numApogee uniqueness if it's being updated
-        if (request.getNumApogee() != null && !request.getNumApogee().equals(student.getNumApogee()) &&
-            studentRepository.existsByNumApogeeAndIdNot(request.getNumApogee(), id)) {
-            throw new DuplicateResourceException("NumApogee already exists");
-        }   
+        if (request.getNumApogee() != null) {
+            String normalizedApogee = normalizeApogee(request.getNumApogee());
+            request.setNumApogee(normalizedApogee);
+        }
 
         studentMapper.updateEntity(request, student);
         try {
             return studentMapper.toResponse(studentRepository.save(student));
         } catch (DataIntegrityViolationException ex) {
+            // Parse exception to determine which constraint was violated
+            String message = ex.getMostSpecificCause().getMessage();
+            if (message.contains("email")) {
+                throw new DuplicateResourceException("Email already exists");
+            } else if (message.contains("num_apogee") || message.contains("numApogee")) {
+                throw new DuplicateResourceException("NumApogee already exists");
+            }
             throw new DuplicateResourceException("Email or numApogee already exists");
         }
     }
@@ -99,6 +112,7 @@ public class StudentService {
         Student student = findStudentById(id);
         studentRepository.delete(student);
     }
+    
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
@@ -106,5 +120,49 @@ public class StudentService {
     private Student findStudentById(Long id) {
         return studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+    }
+
+    private void validateEmailDomain(String email) {
+        if (email == null) {
+            return;
+        }
+
+        String normalizedEmail = email.trim().toLowerCase();
+        String normalizedDomain = normalizeDomain(allowedDomain);
+
+        if (!normalizedDomain.isEmpty() && !normalizedEmail.endsWith("@" + normalizedDomain)) {
+            throw new IllegalArgumentException(
+                "Email must be in the @" + normalizedDomain + " domain"
+            );
+        }
+    }
+
+    private String normalizeDomain(String domain) {
+        if (domain == null) {
+            return "";
+        }
+
+        String normalized = domain.trim().toLowerCase();
+        if (normalized.startsWith("@")) {
+            normalized = normalized.substring(1);
+        }
+
+        return normalized;
+    }
+
+    private String normalizeApogee(String numApogee) {
+        if (numApogee == null) {
+            return null;
+        }
+
+        return numApogee.trim();
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null) {
+            return null;
+        }
+
+        return email.trim().toLowerCase();
     }
 }

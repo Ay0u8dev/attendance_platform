@@ -5,6 +5,7 @@ import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import ma.eniad.userservice.entity.enums.Role;
@@ -13,8 +14,8 @@ import ma.eniad.userservice.entity.enums.Role;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString(exclude = {"email", "numApogee"})
-public class StudentResponseDTO {
+@EqualsAndHashCode(exclude = {"roles"})
+@ToString(exclude = {"email", "numApogee"})public class StudentResponseDTO {
     private Long id;
     private String email;
     private String firstName;

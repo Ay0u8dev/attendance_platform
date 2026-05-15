@@ -3,6 +3,7 @@ package ma.eniad.userservice.controller.student;
 import static org.mockito.ArgumentMatchers.any;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -69,6 +70,7 @@ class StudentControllerTest {
 
         assertThat(result.getStatusCode().value()).isEqualTo(200);
         assertThat(result.getBody()).containsExactly(response);
+        verify(studentService).getAll();
     }
 
     @Test
@@ -90,6 +92,7 @@ class StudentControllerTest {
 
         assertThat(result.getStatusCode().value()).isEqualTo(200);
         assertThat(result.getBody()).isEqualTo(response);
+        verify(studentService).update(1L, request);
     }
 
     @Test
@@ -99,5 +102,6 @@ class StudentControllerTest {
         ResponseEntity<Void> result = controller.delete(1L);
 
         assertThat(result.getStatusCode().value()).isEqualTo(204);
+        verify(studentService).delete(1L);
     }
 }

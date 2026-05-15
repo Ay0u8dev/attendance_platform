@@ -40,6 +40,13 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(InvalidExcelFileException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidExcelFile(
+            InvalidExcelFileException ex,
+            WebRequest request) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleMethodArgumentNotValid(
             MethodArgumentNotValidException ex,
@@ -59,6 +66,14 @@ public class GlobalExceptionHandler {
                 .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
                 .findFirst()
                 .orElse("Validation failed");
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgument(
+            IllegalArgumentException ex,
+            WebRequest request) {
+        String message = ex.getMessage() != null ? ex.getMessage() : "Invalid request";
         return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request);
     }
 

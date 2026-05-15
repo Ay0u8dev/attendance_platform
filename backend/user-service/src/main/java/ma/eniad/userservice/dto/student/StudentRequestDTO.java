@@ -22,8 +22,13 @@ public class StudentRequestDTO {
     @Size(max = 254, message = "Email must not exceed 254 characters")
     private String email;
 
+    @NotBlank(message = "First name is required")
     @Size(max = 100, message = "First name must not exceed 100 characters")
     private String firstName;
+
+    @NotBlank(message = "Last name is required")
+    @Size(max = 100, message = "Last name must not exceed 100 characters")
+    private String lastName;
 
     @URL(message = "Profile picture URL must be valid")
     @Size(max = 512, message = "Profile picture URL must not exceed 512 characters")
