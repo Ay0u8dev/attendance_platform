@@ -84,12 +84,13 @@ public class StudentImportService {
             /*
              * Duplicate email inside excel file
              */
-            String email = row.getEmail();
-            if (email == null) {
+            String normalizedEmail = row.getEmail().trim().toLowerCase();
+            if (!seenEmails.add(normalizedEmail)) {
+
                 RowErrorDTO error = buildError(
                     row,
                     "email",
-                    "Missing email"
+                    "Duplicate email inside file"
                 );
 
                 errors.add(error);
@@ -100,36 +101,18 @@ public class StudentImportService {
                         key -> new ArrayList<>()
                     )
                     .add(error);
-            } else {
-                String normalizedEmail = email.trim().toLowerCase();
-                if (!seenEmails.add(normalizedEmail)) {
-
-                    RowErrorDTO error = buildError(
-                        row,
-                        "email",
-                        "Duplicate email inside file"
-                    );
-
-                    errors.add(error);
-
-                    rowErrors
-                        .computeIfAbsent(
-                            row.getRowNumber(),
-                            key -> new ArrayList<>()
-                        )
-                        .add(error);
-                }
             }
 
             /*
              * Duplicate apogee inside excel file
              */
-            String numApogee = row.getNumApogee();
-            if (numApogee == null) {
+            String normalizedApogee = row.getNumApogee().trim();
+            if (!seenApogees.add(normalizedApogee)) {
+
                 RowErrorDTO error = buildError(
                     row,
                     "numApogee",
-                    "Missing apogee"
+                    "Duplicate apogee inside file"
                 );
 
                 errors.add(error);
@@ -140,25 +123,6 @@ public class StudentImportService {
                         key -> new ArrayList<>()
                     )
                     .add(error);
-            } else {
-                String normalizedApogee = numApogee.trim();
-                if (!seenApogees.add(normalizedApogee)) {
-
-                    RowErrorDTO error = buildError(
-                        row,
-                        "numApogee",
-                        "Duplicate apogee inside file"
-                    );
-
-                    errors.add(error);
-
-                    rowErrors
-                        .computeIfAbsent(
-                            row.getRowNumber(),
-                            key -> new ArrayList<>()
-                        )
-                        .add(error);
-                }
             }
         }
 
@@ -300,6 +264,16 @@ public class StudentImportService {
     private Student mapToStudent(
         StudentExcelRowDTO row
     ) {
+
+        String email = row.getEmail();
+        if (email != null) {
+            row.setEmail(email.trim().toLowerCase());
+        }
+
+        String numApogee = row.getNumApogee();
+        if (numApogee != null) {
+            row.setNumApogee(numApogee.trim());
+        }
 
         Student student =
             mapper.toEntity(row);

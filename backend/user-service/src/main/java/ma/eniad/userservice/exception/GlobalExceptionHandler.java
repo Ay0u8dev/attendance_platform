@@ -77,6 +77,13 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request);
     }
 
+    @ExceptionHandler(InvalidDomainException.class)
+        public ResponseEntity<Map<String, Object>> handleInvalidDomainException(
+                InvalidDomainException ex,
+                WebRequest request) {
+            return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(
             RuntimeException ex,

@@ -1,6 +1,7 @@
 package ma.eniad.userservice.utils.excel;
 
 import ma.eniad.userservice.dto.student.excel.StudentExcelRowDTO;
+import ma.eniad.userservice.exception.InvalidExcelFileException;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
@@ -55,7 +56,7 @@ public class StudentExcelParser {
             }
 
         } catch (IOException e) {
-            throw new RuntimeException("Failed to parse Excel file", e);
+            throw new InvalidExcelFileException("Failed to parse Excel file: " + e.getMessage());
         }
 
         return rows;

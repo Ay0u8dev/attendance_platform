@@ -12,6 +12,7 @@ import ma.eniad.userservice.dto.student.StudentResponseDTO;
 import ma.eniad.userservice.entity.Student;
 import ma.eniad.userservice.entity.enums.Role;
 import ma.eniad.userservice.exception.DuplicateResourceException;
+import ma.eniad.userservice.exception.InvalidDomainException;
 import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.mapper.student.StudentMapper;
 import ma.eniad.userservice.repository.UserRepository;
@@ -23,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class StudentService {
     private final StudentRepository studentRepository;
-    private final UserRepository     userRepository;
+    private final UserRepository userRepository;
     private final StudentMapper      studentMapper;
 
     @Value("${app.allowed-domain}")
@@ -50,14 +51,13 @@ public class StudentService {
         try {
             return studentMapper.toResponse(studentRepository.save(student));
         } catch (DataIntegrityViolationException ex) {
-            // Parse exception to determine which constraint was violated
-            String message = ex.getMostSpecificCause().getMessage();
-            if (message.contains("email")) {
+            if (normalizedEmail != null && userRepository.existsByEmail(normalizedEmail)) {
                 throw new DuplicateResourceException("Email already exists");
-            } else if (message.contains("num_apogee") || message.contains("numApogee")) {
+            }
+            if (normalizedApogee != null && studentRepository.existsByNumApogee(normalizedApogee)) {
                 throw new DuplicateResourceException("NumApogee already exists");
             }
-            throw new DuplicateResourceException("Email or numApogee already exists");
+            throw ex;
         }
     }
 
@@ -79,7 +79,7 @@ public class StudentService {
     @Transactional
     public StudentResponseDTO update(Long id, StudentRequestDTO request) {
         Student student = findStudentById(id);
-        
+
         if (request.getEmail() != null) {
             String normalizedEmail = normalizeEmail(request.getEmail());
             request.setEmail(normalizedEmail);
@@ -94,14 +94,20 @@ public class StudentService {
         try {
             return studentMapper.toResponse(studentRepository.save(student));
         } catch (DataIntegrityViolationException ex) {
-            // Parse exception to determine which constraint was violated
-            String message = ex.getMostSpecificCause().getMessage();
-            if (message.contains("email")) {
-                throw new DuplicateResourceException("Email already exists");
-            } else if (message.contains("num_apogee") || message.contains("numApogee")) {
+            if (request.getEmail() != null) {
+                userRepository.findByEmail(request.getEmail())
+                    .filter(existing -> !existing.getId().equals(id))
+                    .ifPresent(existing -> {
+                        throw new DuplicateResourceException("Email already exists");
+                    });
+            }
+
+            if (request.getNumApogee() != null &&
+                studentRepository.existsByNumApogeeAndIdNot(request.getNumApogee(), id)) {
                 throw new DuplicateResourceException("NumApogee already exists");
             }
-            throw new DuplicateResourceException("Email or numApogee already exists");
+
+            throw ex;
         }
     }
 
@@ -131,9 +137,7 @@ public class StudentService {
         String normalizedDomain = normalizeDomain(allowedDomain);
 
         if (!normalizedDomain.isEmpty() && !normalizedEmail.endsWith("@" + normalizedDomain)) {
-            throw new IllegalArgumentException(
-                "Email must be in the @" + normalizedDomain + " domain"
-            );
+            throw new InvalidDomainException("Email must be in the @" + normalizedDomain + " domain");
         }
     }
 

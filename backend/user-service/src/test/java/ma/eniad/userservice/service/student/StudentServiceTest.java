@@ -86,8 +86,8 @@ class StudentServiceTest {
         student.setRoles(new HashSet<>());
 
         when(studentMapper.toEntity(request)).thenReturn(student);
-        when(studentRepository.save(student))
-            .thenThrow(new DataIntegrityViolationException("constraint", new RuntimeException("email")));
+        when(studentRepository.save(student)).thenThrow(new DataIntegrityViolationException("constraint"));
+        when(userRepository.existsByEmail("student@ump.ac.ma")).thenReturn(true);
 
         assertThatThrownBy(() -> studentService.create(request))
                 .isInstanceOf(DuplicateResourceException.class)
@@ -104,8 +104,9 @@ class StudentServiceTest {
         student.setRoles(new HashSet<>());
 
         when(studentMapper.toEntity(request)).thenReturn(student);
-        when(studentRepository.save(student))
-            .thenThrow(new DataIntegrityViolationException("constraint", new RuntimeException("num_apogee")));
+        when(studentRepository.save(student)).thenThrow(new DataIntegrityViolationException("constraint"));
+        when(userRepository.existsByEmail("student@ump.ac.ma")).thenReturn(false);
+        when(studentRepository.existsByNumApogee("A123")).thenReturn(true);
 
         assertThatThrownBy(() -> studentService.create(request))
                 .isInstanceOf(DuplicateResourceException.class)
@@ -125,8 +126,7 @@ class StudentServiceTest {
         when(studentRepository.save(student)).thenThrow(new DataIntegrityViolationException("constraint"));
 
         assertThatThrownBy(() -> studentService.create(request))
-                .isInstanceOf(DuplicateResourceException.class)
-                .hasMessageContaining("Email or numApogee already exists");
+            .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
@@ -185,7 +185,6 @@ class StudentServiceTest {
         doNothing().when(studentMapper).updateEntity(request, student);
 
         assertThatThrownBy(() -> studentService.update(1L, request))
-                .isInstanceOf(DuplicateResourceException.class)
-                .hasMessageContaining("Email or numApogee already exists");
+            .isInstanceOf(DataIntegrityViolationException.class);
     }
 }

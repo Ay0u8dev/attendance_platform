@@ -1,7 +1,6 @@
 package ma.eniad.userservice.config;
 
 import ma.eniad.userservice.entity.Admin;
-// import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Student;
 import ma.eniad.userservice.entity.Teacher;
 import ma.eniad.userservice.entity.User;

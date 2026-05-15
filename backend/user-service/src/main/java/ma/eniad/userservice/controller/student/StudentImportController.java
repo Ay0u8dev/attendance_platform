@@ -31,8 +31,8 @@ public class StudentImportController {
         }
         
         String filename = file.getOriginalFilename();
-        if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls"))) {
-            throw new IllegalArgumentException("Only Excel files (.xlsx, .xls) are supported");
+        if (filename == null || !filename.endsWith(".xlsx")) {
+            throw new IllegalArgumentException("Only Excel files (.xlsx) are supported");
         }
         
         return studentImportService.importFromExcel(file);
