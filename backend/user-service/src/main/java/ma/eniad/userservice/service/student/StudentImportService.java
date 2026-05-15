@@ -279,7 +279,7 @@ public class StudentImportService {
             mapper.toEntity(row);
 
         student.setRoles(
-            Set.of(Role.STUDENT)
+            new HashSet<>(Set.of(Role.STUDENT))
         );
 
         student.setEnabled(true);
