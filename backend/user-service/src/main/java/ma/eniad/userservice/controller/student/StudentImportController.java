@@ -29,11 +29,6 @@ public class StudentImportController {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("File is required and cannot be empty");
         }
-        
-        String filename = file.getOriginalFilename();
-        if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls"))) {
-            throw new IllegalArgumentException("Only Excel files (.xlsx, .xls) are supported");
-        }
-        
+
         return studentImportService.importFromExcel(file);
     }}
