@@ -4,16 +4,15 @@ This document describes the backend architecture based on the currently implemen
 
 ## 1) Current Implementation Snapshot
 
-| Service               | Tech              | Port                             | Implementation Status | Notes |
-| --------------------- | ----------------- | -------------------------------- | --------------------- | ----- |
-| auth-service          | Spring Boot       | 8081                             | Implemented           | Google login, internal JWT issuance, token validation endpoint |
-| user-service          | Spring Boot + JPA | 8082                             | Implemented           | User lookup, auth-user flow, role-guarded read endpoint, internal student roster |
-| attendance-service    | Spring Boot       | 8084                             | Implemented           | Owns attendance session lifecycle, live Redis state, final attendance persistence, teacher/admin/student reads, and authenticated WebSocket updates |
-| session-service       | Spring Boot       | 8083                             | Skeleton              | Not the attendance owner; effectively dormant for the merged flow |
-| justification-service | Spring Boot       | 8085                             | Skeleton              | Bootstrap/config only |
-| notification-service  | Spring Boot       | 9000                             | Skeleton              | Bootstrap/config only |
-| face-service          | FastAPI           | n/a (compose comment shows 8000) | Placeholder           | Future internal caller of attendance mark endpoint |
-| qr-service            | Python            | n/a                              | Placeholder           | Future internal caller of attendance mark endpoint |
+| Service               | Tech              | Port                             | Implementation Status | Notes                                                                                                                                               |
+| --------------------- | ----------------- | -------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| auth-service          | Spring Boot       | 8081                             | Implemented           | Google login, internal JWT issuance, token validation endpoint                                                                                      |
+| user-service          | Spring Boot + JPA | 8082                             | Implemented           | User lookup, auth-user flow, role-guarded read endpoint, internal student roster                                                                    |
+| attendance-service    | Spring Boot       | 8083                             | Implemented           | Owns attendance session lifecycle, live Redis state, final attendance persistence, teacher/admin/student reads, and authenticated WebSocket updates |
+| justification-service | Spring Boot       | 8085                             | Skeleton              | Bootstrap/config only                                                                                                                               |
+| notification-service  | Spring Boot       | 9000                             | Skeleton              | Bootstrap/config only                                                                                                                               |
+| face-service          | FastAPI           | n/a (compose comment shows 8000) | Placeholder           | Future internal caller of attendance mark endpoint                                                                                                  |
+| qr-service            | Python            | n/a                              | Placeholder           | Future internal caller of attendance mark endpoint                                                                                                  |
 
 ## 2) Runtime Topology
 
@@ -96,7 +95,6 @@ In local development, Traefik runs in Docker and forwards traffic to services ru
   - live session state in Redis
   - final attendance records in `attendance_db`
   - teacher/admin/student attendance read models
-- `session-service` does not own attendance data.
 - `justification-service` is out of this flow.
 
 ## 6) Attendance Service Read Model
