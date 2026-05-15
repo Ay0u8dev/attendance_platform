@@ -8,10 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
-import ma.eniad.userservice.annotation.RequireRole;
 import ma.eniad.userservice.dto.teacher.TeacherRequestDTO;
 import ma.eniad.userservice.dto.teacher.TeacherResponseDTO;
-import ma.eniad.userservice.entity.Student;
 import ma.eniad.userservice.entity.Teacher;
 import ma.eniad.userservice.entity.enums.Role;
 import ma.eniad.userservice.exception.DuplicateResourceException;
