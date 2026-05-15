@@ -13,10 +13,6 @@ import org.springframework.data.repository.query.Param;
 @Repository
 public interface StudentRepository extends JpaRepository<Student, Long> {
 
-    boolean existsByNumApogee(String numApogee);
-
-    boolean existsByNumApogeeAndIdNot(String numApogee, Long excludedId);
-
     @Query("""
     SELECT s.numApogee
     FROM Student s
