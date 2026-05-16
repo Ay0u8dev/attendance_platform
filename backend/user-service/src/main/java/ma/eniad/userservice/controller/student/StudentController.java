@@ -60,7 +60,7 @@ public class StudentController {
         return ResponseEntity.ok(service.getAll());
     }
 
-    // GET /api/users/student/{id}
+    // GET /users/student/{id}
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Student retrieved successfully",
                     content = @Content(schema = @Schema(implementation = StudentResponseDTO.class))),

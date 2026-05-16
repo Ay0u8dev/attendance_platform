@@ -1,6 +1,6 @@
-package ma.eniad.userservice.utils.excel;
+package ma.eniad.userservice.utils.excel.teacher;
 
-import ma.eniad.userservice.dto.student.excel.StudentExcelRowDTO;
+import ma.eniad.userservice.dto.teacher.excel.TeacherExcelRowDTO;
 import ma.eniad.userservice.exception.InvalidExcelFileException;
 
 import org.apache.poi.ss.usermodel.Cell;
@@ -19,12 +19,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class StudentExcelParser {
-    private static final DataFormatter DATA_FORMATTER = new DataFormatter();
+public class TeacherExcelParser {
+    private static final ThreadLocal<DataFormatter> DATA_FORMATTER = 
+        ThreadLocal.withInitial(DataFormatter::new);
+    public List<TeacherExcelRowDTO> parse(MultipartFile file) {
 
-    public List<StudentExcelRowDTO> parse(MultipartFile file) {
-
-        List<StudentExcelRowDTO> rows = new ArrayList<>();
+        List<TeacherExcelRowDTO> rows = new ArrayList<>();
 
         try (
             InputStream inputStream =
@@ -33,6 +33,11 @@ public class StudentExcelParser {
             Workbook workbook =
                 new XSSFWorkbook(inputStream)
         ) {
+            
+            if (workbook.getNumberOfSheets() == 0) {
+                throw new InvalidExcelFileException("Excel file contains no sheets");
+            }
+            
 
             Sheet sheet = workbook.getSheetAt(0);
 
@@ -44,12 +49,11 @@ public class StudentExcelParser {
                     continue;
                 }
 
-                StudentExcelRowDTO excelRow = StudentExcelRowDTO.builder()
+                TeacherExcelRowDTO excelRow = TeacherExcelRowDTO.builder()
                     .rowNumber(i + 1)
                     .firstName(getCellValue(row.getCell(0)))
                     .lastName(getCellValue(row.getCell(1)))
                     .email(getCellValue(row.getCell(2)))
-                    .numApogee(getCellValue(row.getCell(3)))
                     .build();
 
                 rows.add(excelRow);
@@ -72,11 +76,11 @@ public class StudentExcelParser {
             case STRING:
                 return cell.getStringCellValue().trim();
             case NUMERIC:
-                return DATA_FORMATTER.formatCellValue(cell).trim();
+                return DATA_FORMATTER.get().formatCellValue(cell).trim();
             case BOOLEAN:
                 return String.valueOf(cell.getBooleanCellValue());
             case FORMULA:
-                return DATA_FORMATTER.formatCellValue(cell).trim();
+                return DATA_FORMATTER.get().formatCellValue(cell).trim();
             default:
                 return null;
         }

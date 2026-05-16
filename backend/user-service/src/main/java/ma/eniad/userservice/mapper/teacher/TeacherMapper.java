@@ -6,7 +6,10 @@ import org.mapstruct.MappingTarget;
 
 import ma.eniad.userservice.dto.teacher.TeacherRequestDTO;
 import ma.eniad.userservice.dto.teacher.TeacherResponseDTO;
+import ma.eniad.userservice.dto.teacher.excel.TeacherExcelRowDTO;
 import ma.eniad.userservice.entity.Teacher;
+import org.mapstruct.BeanMapping;
+import org.mapstruct.NullValuePropertyMappingStrategy;
 
 @Mapper(
     componentModel = "spring",
@@ -31,6 +34,7 @@ public interface TeacherMapper {
      * Null fields in the request are ignored to avoid accidental overwrites
      * of unchanged values during partial updates.
      */
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id",           ignore = true)
     @Mapping(target = "createdAt",    ignore = true)
     @Mapping(target = "updatedAt",    ignore = true)
@@ -41,9 +45,19 @@ public interface TeacherMapper {
 
     /**
      * Maps a Teacher entity to its response DTO.
-     * Lazy-loaded fields (inscriptions, embeddings) are not included
-     * to prevent LazyInitializationException and avoid data exposure.
      */
     TeacherResponseDTO toResponse(Teacher teacher);
-    
+
+    /**
+    * Maps an Excel row to a new Teacher entity.
+    * Same security controls as standard create mapping.
+    */
+    @Mapping(target = "id",           ignore = true)
+    @Mapping(target = "pfpUrl",       ignore = true)
+    @Mapping(target = "createdAt",    ignore = true)
+    @Mapping(target = "updatedAt",    ignore = true)  
+    @Mapping(target = "roles",        ignore = true)    
+    @Mapping(target = "enabled",      ignore = true)
+    @Mapping(target = "firstLogin",   ignore = true)
+    Teacher toEntity(TeacherExcelRowDTO excelRow);     
 }

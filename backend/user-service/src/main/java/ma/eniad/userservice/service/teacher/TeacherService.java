@@ -1,7 +1,6 @@
 package ma.eniad.userservice.service.teacher;
 
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -87,14 +86,12 @@ public class TeacherService {
         try {
             return teacherMapper.toResponse(teacherRepository.save(teacher));
         } catch (DataIntegrityViolationException ex) {
-            if (request.getEmail() != null && userRepository.existsByEmail(request.getEmail())) {
-                if(request.getEmail() != null) {
-                    userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
-                        if (!user.getId().equals(id)) {
-                            throw new InvalidDomainException("Email already exists");
-                        }
+             if (request.getEmail() != null) {
+                userRepository.findByEmail(request.getEmail())
+                    .filter(existing -> !existing.getId().equals(id))
+                    .ifPresent(existing -> {
+                        throw new DuplicateResourceException("Email already exists");
                     });
-                }
             }
 
             throw ex;

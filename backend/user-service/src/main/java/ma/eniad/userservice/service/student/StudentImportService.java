@@ -1,6 +1,6 @@
 package ma.eniad.userservice.service.student;
 
-import ma.eniad.userservice.dto.student.excel.RowErrorDTO;
+import ma.eniad.userservice.dto.RowErrorDTO;
 import ma.eniad.userservice.dto.student.excel.StudentExcelRowDTO;
 
 import ma.eniad.userservice.dto.student.excel.StudentImportResultDTO;
@@ -9,8 +9,8 @@ import ma.eniad.userservice.mapper.student.StudentMapper;
 import ma.eniad.userservice.exception.InvalidExcelFileException;
 import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
-import ma.eniad.userservice.utils.excel.ExcelRowValidator;
-import ma.eniad.userservice.utils.excel.StudentExcelParser;
+import ma.eniad.userservice.utils.excel.student.StudentExcelRowValidator;
+import ma.eniad.userservice.utils.excel.student.StudentExcelParser;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,7 +34,7 @@ public class StudentImportService {
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
 
     private final StudentExcelParser parser;
-    private final ExcelRowValidator validator;
+    private final StudentExcelRowValidator validator;
     private final StudentMapper mapper;
 
     private final StudentRepository studentRepository;
