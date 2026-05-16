@@ -22,11 +22,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @param emails Set of emails to check (should not be null or exceed 1000 elements)
      * @return Set of emails that exist in the database
      */
-    @Query("""
-    SELECT u.email
-    FROM User u
-    WHERE u.email IN :emails
-    """)
+    @Query("SELECT u.email " +
+           "FROM User u " +
+           "WHERE u.email IN :emails")
     Set<String> findExistingEmails(
         @Param("emails") Set<String> emails
     );
