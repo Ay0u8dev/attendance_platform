@@ -18,6 +18,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import ma.eniad.userservice.entity.BaseEntity;
+import ma.eniad.userservice.entity.Inscription;
 
 @Getter
 @Setter
@@ -55,4 +56,7 @@ public class Formation extends BaseEntity {
 
     @OneToMany(mappedBy = "formation", cascade = CascadeType.REMOVE)
     private List<Module> modules;
+
+    @OneToMany(mappedBy = "formation", cascade = CascadeType.REMOVE)
+    private List<Inscription> inscriptions;
 }

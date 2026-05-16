@@ -14,4 +14,6 @@ public interface InscriptionRepository extends JpaRepository<Inscription, Long> 
             @Param("groupIds") List<Long> groupIds,
             @Param("anneeUniversitaireId") Long anneeUniversitaireId
     );
+    
+    boolean existsByStudentIdAndAnneeUniversitaireId(Long studentId, Long anneeId);
 }

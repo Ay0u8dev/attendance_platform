@@ -1,5 +1,6 @@
 package ma.eniad.userservice.service.student;
 
+import java.util.HashSet;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -44,10 +45,12 @@ public class StudentService {
 
 
         Student student = studentMapper.toEntity(request);
+        if (student.getRoles() == null) {
+            student.setRoles(new HashSet<>());
+        }
         student.getRoles().add(Role.STUDENT);
         student.setEnabled(true);
         student.setFirstLogin(true);
-
         try {
             return studentMapper.toResponse(studentRepository.save(student));
         } catch (DataIntegrityViolationException ex) {

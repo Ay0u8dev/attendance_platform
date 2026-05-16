@@ -69,12 +69,11 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, Object>> handleIllegalArgument(
-            IllegalArgumentException ex,
+    @ExceptionHandler(InvalidInputException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidInput(
+            InvalidInputException ex,
             WebRequest request) {
-        String message = ex.getMessage() != null ? ex.getMessage() : "Invalid request";
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request);
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
     @ExceptionHandler(InvalidDomainException.class)

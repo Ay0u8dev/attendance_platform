@@ -99,7 +99,11 @@ public class TeacherExcelRowValidator {
             ));
         }
 
-        String normalizedEmail = row.getEmail().trim().toLowerCase();
+        String email = row.getEmail();
+        if (email == null) {
+            return; // Should not happen, but defensive guard
+        }
+        String normalizedEmail = email.trim().toLowerCase();
         String normalizedDomain = normalizeDomain(allowedDomain);
         if (!normalizedDomain.isEmpty() && !normalizedEmail.endsWith("@" + normalizedDomain)) {
             errors.add(buildError(
@@ -107,8 +111,7 @@ public class TeacherExcelRowValidator {
                 "email",
                 "Email must be in the @" + normalizedDomain + " domain"
             ));
-        }
-    }
+        }    }
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();

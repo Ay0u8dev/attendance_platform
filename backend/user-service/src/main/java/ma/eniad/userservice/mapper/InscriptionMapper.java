@@ -1,0 +1,32 @@
+package ma.eniad.userservice.mapper;
+
+import org.mapstruct.Mapper;
+
+import ma.eniad.userservice.dto.InscriptionRequestDTO;
+import ma.eniad.userservice.dto.InscriptionResponseDTO;
+import ma.eniad.userservice.entity.Inscription;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+
+@Mapper(componentModel = "spring")
+public interface InscriptionMapper {
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "student", ignore = true)
+    @Mapping(target = "formation", ignore = true)
+    @Mapping(target = "groupe", ignore = true)
+    @Mapping(target = "anneeUniversitaire", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    Inscription toEntity(InscriptionRequestDTO dto);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "student", ignore = true)
+    @Mapping(target = "formation", ignore = true)
+    @Mapping(target = "groupe", ignore = true)
+    @Mapping(target = "anneeUniversitaire", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    void updateEntity(InscriptionRequestDTO dto, @MappingTarget Inscription entity);
+
+    InscriptionResponseDTO toResponse(Inscription entity);
+}

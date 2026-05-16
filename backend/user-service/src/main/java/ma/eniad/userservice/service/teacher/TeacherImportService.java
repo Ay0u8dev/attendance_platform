@@ -83,9 +83,12 @@ public class TeacherImportService {
             /*
              * Duplicate email inside excel file
              */
-            String normalizedEmail = row.getEmail().trim().toLowerCase();
+            String email = row.getEmail();
+            if (email == null || email.isBlank()) {
+                continue;
+            }
+            String normalizedEmail = email.trim().toLowerCase();
             if (!seenEmails.add(normalizedEmail)) {
-
                 RowErrorDTO error = buildError(
                     row,
                     "email",
