@@ -14,7 +14,6 @@ public class InscriptionResponseDTO {
     private String studentName;
 
     private Long formationId;
-    private String formationName;
 
     private Long groupeId;
     private String groupeName;

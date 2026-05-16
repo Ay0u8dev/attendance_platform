@@ -13,7 +13,6 @@ import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
 import ma.eniad.userservice.entity.structure.Formation;
 import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.exception.DuplicateResourceException;
-import ma.eniad.userservice.exception.InvalidDomainException;
 import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.mapper.InscriptionMapper;
 import ma.eniad.userservice.repository.InscriptionRepository;

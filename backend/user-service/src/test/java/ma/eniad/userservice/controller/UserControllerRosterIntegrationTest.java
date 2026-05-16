@@ -158,12 +158,14 @@ class UserControllerRosterIntegrationTest {
 
         Inscription activeInscription = new Inscription();
         activeInscription.setStudent(activeStudent);
+        activeInscription.setFormation(formation);
         activeInscription.setGroupe(activeGroup);
         activeInscription.setAnneeUniversitaire(activeYear);
         inscriptionRepository.save(activeInscription);
 
         Inscription inactiveInscription = new Inscription();
         inactiveInscription.setStudent(inactiveStudent);
+        inactiveInscription.setFormation(formation);
         inactiveInscription.setGroupe(activeGroup);
         inactiveInscription.setAnneeUniversitaire(inactiveYear);
         inscriptionRepository.save(inactiveInscription);
