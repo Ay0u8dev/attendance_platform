@@ -5,6 +5,9 @@ spring:
   profiles:
     active: ${PROFILE:dev}
 
+app:
+  allowed-domain: "ump.ac.ma"
+
 
 #logging:
 #  level:
