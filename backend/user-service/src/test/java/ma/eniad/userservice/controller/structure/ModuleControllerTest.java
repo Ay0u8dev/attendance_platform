@@ -82,7 +82,12 @@ class ModuleControllerTest {
         Cycle cycle = Cycle.builder().code("C02").name("C2").type(CycleType.PREPA).build();
         cycle = cycleRepository.save(cycle);
 
-        Formation formation = Formation.builder().anneeUniversitaire(annee).filiere(filiere).cycle(cycle).build();
+        Formation formation = Formation.builder()
+            .name("Formation F2")
+            .anneeUniversitaire(annee)
+            .filiere(filiere)
+            .cycle(cycle)
+            .build();
         formation = formationRepository.save(formation);
 
         ModuleRequestDTO request = new ModuleRequestDTO();

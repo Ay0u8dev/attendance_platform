@@ -35,6 +35,11 @@ public class FormationService {
         )) {
             throw new DuplicateResourceException("Formation already exists for the given year, filiere, and cycle");
         }
+                
+        // Check for duplicate name
+        if (repository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Formation already exists with name: " + request.getName());
+        }
 
         AnneeUniversitaire annee = getAnnee(request.getAnneeUniversitaireId());
         Cycle cycle = getCycle(request.getCycleId());
@@ -64,6 +69,11 @@ public class FormationService {
     public FormationResponseDTO update(Long id, FormationRequestDTO request) {
 
         Formation entity = getEntity(id);
+
+        // Check for duplicate name (excluding the current entity)
+        if (!entity.getName().equals(request.getName()) && repository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Formation already exists with name: " + request.getName());
+        }
 
         boolean sameCombination = sameCombination(entity, request);
         if (!sameCombination && repository.existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(

@@ -82,7 +82,12 @@ class GroupeControllerTest {
         Cycle cycle = Cycle.builder().code("C01").name("C1").type(CycleType.INGENIEUR).build();
         cycle = cycleRepository.save(cycle);
 
-        Formation formation = Formation.builder().anneeUniversitaire(annee).filiere(filiere).cycle(cycle).build();
+        Formation formation = Formation.builder()
+            .name("Formation F1")
+            .anneeUniversitaire(annee)
+            .filiere(filiere)
+            .cycle(cycle)
+            .build();
         formation = formationRepository.save(formation);
 
         GroupeRequestDTO request = new GroupeRequestDTO();

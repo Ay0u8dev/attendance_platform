@@ -6,5 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface FormationRepository extends JpaRepository<Formation, Long> {
+    boolean existsByName(String name);
     boolean existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(Long anneeUniversitaireId, Long filiereId, Long cycleId);
 }

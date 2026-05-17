@@ -31,6 +31,8 @@ public interface FormationMapper {
     @Mapping(target = "inscriptions", ignore = true)
     void updateEntity(FormationRequestDTO dto, @MappingTarget Formation entity);
 
+    @Mapping(target = "id", source = "id")
+    @Mapping(target = "name", source = "name")
     @Mapping(target = "anneeUniversitaireId", source = "anneeUniversitaire.id")
     @Mapping(target = "filiereId", source = "filiere.id")
     @Mapping(target = "cycleId", source = "cycle.id")

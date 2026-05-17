@@ -82,6 +82,7 @@ class FormationControllerTest {
         cycle = cycleRepository.save(cycle);
 
         FormationRequestDTO request = new FormationRequestDTO();
+        request.setName("Formation X");
         request.setAnneeUniversitaireId(annee.getId());
         request.setFiliereId(filiere.getId());
         request.setCycleId(cycle.getId());

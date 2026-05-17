@@ -114,6 +114,7 @@ class UserControllerRosterIntegrationTest {
         filiere = filiereRepository.save(filiere);
 
         Formation formation = Formation.builder()
+                .name("Formation GI")
                 .anneeUniversitaire(activeYear)
                 .cycle(cycle)
                 .filiere(filiere)
