@@ -60,6 +60,7 @@ public interface StudentMapper {
      * Same security controls as standard create mapping.
      */
     @Mapping(target = "id",           ignore = true)
+    @Mapping(target = "pfpUrl",       ignore = true)
     @Mapping(target = "createdAt",    ignore = true)
     @Mapping(target = "updatedAt",    ignore = true)
     @Mapping(target = "roles",        ignore = true)

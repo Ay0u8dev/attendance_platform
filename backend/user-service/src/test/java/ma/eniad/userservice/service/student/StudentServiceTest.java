@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -23,8 +24,10 @@ import org.springframework.test.util.ReflectionTestUtils;
 import ma.eniad.userservice.dto.student.StudentRequestDTO;
 import ma.eniad.userservice.dto.student.StudentResponseDTO;
 import ma.eniad.userservice.entity.Student;
+import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.entity.enums.Role;
 import ma.eniad.userservice.exception.DuplicateResourceException;
+import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.mapper.student.StudentMapper;
 import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
@@ -185,6 +188,93 @@ class StudentServiceTest {
         doNothing().when(studentMapper).updateEntity(request, student);
 
         assertThatThrownBy(() -> studentService.update(1L, request))
+            .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void update_throwsWhenStudentNotFound() {
+        StudentRequestDTO request = new StudentRequestDTO();
+        request.setEmail("student@ump.ac.ma");
+        request.setNumApogee("A123");
+
+        when(studentRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> studentService.update(1L, request))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessage("Student not found");
+    }
+
+    @Test
+    void update_throwsWhenEmailExists() {
+        StudentRequestDTO request = new StudentRequestDTO();
+        request.setEmail("student@ump.ac.ma");
+        request.setNumApogee("A123");
+
+        Student student = new Student();
+        student.setId(1L);
+        student.setEmail("student@ump.ac.ma");
+        student.setNumApogee("A123");
+
+        User existingUser = new User();
+        existingUser.setId(2L);
+
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        doNothing().when(studentMapper).updateEntity(request, student);
+        when(studentRepository.save(student)).thenThrow(new DataIntegrityViolationException("constraint"));
+        when(userRepository.findByEmail("student@ump.ac.ma")).thenReturn(Optional.of(existingUser));
+
+        assertThatThrownBy(() -> studentService.update(1L, request))
+            .isInstanceOf(DuplicateResourceException.class)
+            .hasMessage("Email already exists");
+    }
+
+    @Test
+    void update_throwsWhenNumApogeeExists() {
+        StudentRequestDTO request = new StudentRequestDTO();
+        request.setEmail("student@ump.ac.ma");
+        request.setNumApogee("A123");
+
+        Student student = new Student();
+        student.setId(1L);
+        student.setEmail("student@ump.ac.ma");
+        student.setNumApogee("A123");
+
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        doNothing().when(studentMapper).updateEntity(request, student);
+        when(studentRepository.save(student)).thenThrow(new DataIntegrityViolationException("constraint"));
+        when(studentRepository.existsByNumApogeeAndIdNot("A123", 1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> studentService.update(1L, request))
+            .isInstanceOf(DuplicateResourceException.class)
+            .hasMessage("NumApogee already exists");
+    }
+
+    @Test
+    void delete_deletesStudent() {
+        Student student = new Student();
+        student.setId(1L);
+
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        doNothing().when(studentRepository).delete(student);
+
+        studentService.delete(1L);
+        verify(studentRepository).delete(student);
+    }
+
+    @Test
+    void delete_throwsWhenStudentNotFound() {
+        when(studentRepository.findById(1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> studentService.delete(1L))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessage("Student not found");
+    }
+
+    @Test
+    void delete_throwsWhenDeleteViolatesConstraint() {
+        Student student = new Student();
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        doThrow(new DataIntegrityViolationException("constraint")).when(studentRepository).delete(student);
+        assertThatThrownBy(() -> studentService.delete(1L))
             .isInstanceOf(DataIntegrityViolationException.class);
     }
 }

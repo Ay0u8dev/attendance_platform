@@ -17,11 +17,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     boolean existsByNumApogeeAndIdNot(String numApogee, Long excludedId);
 
-    @Query("""
-    SELECT s.numApogee
-    FROM Student s
-    WHERE s.numApogee IN :apogees
-    """)
+    @Query("SELECT s.numApogee FROM Student s WHERE s.numApogee IN :apogees")
     Set<String> findExistingApogees(
         @Param("apogees") Set<String> apogees
     );

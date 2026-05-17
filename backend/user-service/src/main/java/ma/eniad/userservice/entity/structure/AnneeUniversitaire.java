@@ -14,6 +14,7 @@ import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -43,6 +44,7 @@ public class AnneeUniversitaire extends BaseEntity {
         private LocalDate endDate;
 
         @Column(name = "is_active", nullable = false)
+        @Builder.Default
         private boolean active = false;
 
         @OneToMany(mappedBy = "anneeUniversitaire", cascade = CascadeType.REMOVE)

@@ -1,4 +1,4 @@
-package ma.eniad.userservice.utils.excel;
+package ma.eniad.userservice.utils.excel.student;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,18 +7,18 @@ import jakarta.validation.Validator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import ma.eniad.userservice.dto.student.excel.RowErrorDTO;
+import ma.eniad.userservice.dto.RowErrorDTO;
 import ma.eniad.userservice.dto.student.excel.StudentExcelRowDTO;
 
 
 @Component
-public class ExcelRowValidator {
+public class StudentExcelRowValidator {
     private final Validator validator;
 
     @Value("${app.allowed-domain}")
     private String allowedDomain;
 
-    public ExcelRowValidator(Validator validator) {
+    public StudentExcelRowValidator(Validator validator) {
         this.validator = validator;
     }
 
