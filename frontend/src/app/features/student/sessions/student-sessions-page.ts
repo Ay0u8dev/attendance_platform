@@ -1,159 +1,366 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  PLATFORM_ID,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { finalize } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 
+import { Modal } from '../../../shared/components/modal/modal';
 import { DataTableCellDef } from '../../../shared/components/data-table/data-table-cell-def';
 import { DataTable } from '../../../shared/components/data-table/data-table';
 import { DataTableColumn } from '../../../shared/components/data-table/data-table.types';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { SessionFilterBar } from '../../../shared/components/session-filter-bar/session-filter-bar';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
-import { STUDENT_SESSIONS, StudentSessionRow } from '../student-demo.data';
+import {
+  AttendanceStudentStatus,
+  StudentSessionDetailViewModel,
+  StudentSessionListItem,
+  StudentSessionsOverviewViewModel,
+} from '../../../core/attendance/models/student-attendance.model';
+import { StudentAttendanceService } from '../../../core/attendance/services/student-attendance.service';
+import {
+  canOpenJustification,
+  enrichSessionDetail,
+  enrichSessionListItem,
+  shouldShowJustificationCard,
+} from '../student-session-enrichment';
 
-type SessionPreset = 'all' | 'absent-only' | 'needs-justification';
+type SessionPreset = 'all' | 'present-only' | 'absent-only';
 
 @Component({
   selector: 'app-student-sessions-page',
-  imports: [PageHeader, SessionFilterBar, DataTable, DataTableCellDef, StatusBadge],
+  imports: [PageHeader, SessionFilterBar, DataTable, DataTableCellDef, StatusBadge, Modal],
   templateUrl: './student-sessions-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentSessionsPage {
   private readonly router = inject(Router);
+  private readonly attendanceService = inject(StudentAttendanceService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(this.platformId);
+  private readonly backendPageSize = 20;
 
   readonly selectedPreset = signal<SessionPreset>('all');
-  readonly sessions = STUDENT_SESSIONS;
-  readonly sessionRowId = (row: StudentSessionRow) => row.id;
-  readonly filteredSessions = computed(() => {
-    switch (this.selectedPreset()) {
-      case 'absent-only':
-        return this.sessions.filter((row) => row.attendanceStatus === 'Absent');
-      case 'needs-justification':
-        return this.sessions.filter(
-          (row) => row.attendanceStatus === 'Absent' && row.justificationStatus !== 'Acceptée',
-        );
-      default:
-        return this.sessions;
+  readonly localSearchQuery = signal('');
+  readonly dateFrom = signal('');
+  readonly dateTo = signal('');
+
+  readonly loadedSessions = signal<readonly StudentSessionListItem[]>([]);
+  readonly loadedPages = signal<readonly number[]>([]);
+  readonly totalElements = signal(0);
+  readonly totalPages = signal(0);
+  readonly overview = signal<StudentSessionsOverviewViewModel | null>(null);
+
+  readonly isLoading = signal(false);
+  readonly isLoadingMore = signal(false);
+  readonly errorMessage = signal<string | null>(null);
+
+  readonly selectedSessionId = signal<number | null>(null);
+  readonly activeSessionDetail = signal<StudentSessionDetailViewModel | null>(null);
+  readonly detailLoading = signal(false);
+  readonly detailError = signal<string | null>(null);
+  readonly detailCache = signal<Record<number, StudentSessionDetailViewModel>>({});
+
+  readonly visibleSessions = computed(() => {
+    const query = this.normalizeText(this.localSearchQuery());
+    if (!query) {
+      return this.loadedSessions();
     }
-  });
-  readonly filterOptions = computed(() => [
-    { value: 'all', label: 'Toutes', count: this.sessions.length },
-    {
-      value: 'absent-only',
-      label: 'Absences',
-      count: this.sessions.filter((row) => row.attendanceStatus === 'Absent').length,
-    },
-    {
-      value: 'needs-justification',
-      label: 'À justifier',
-      count: this.sessions.filter(
-        (row) => row.attendanceStatus === 'Absent' && row.justificationStatus !== 'Acceptée',
-      ).length,
-    },
-  ]);
-  readonly summaryLabel = computed(() => {
-    switch (this.selectedPreset()) {
-      case 'absent-only':
-        return 'Vue ciblée sur vos absences';
-      case 'needs-justification':
-        return 'Séances qui demandent encore une action';
-      default:
-        return 'Toutes les séances enregistrées';
-    }
+
+    return this.loadedSessions().filter((row) =>
+      this.normalizeText(
+        [
+          row.courseLabel,
+          row.teacherFullName,
+          row.roomLabel,
+          row.groupSummary,
+          row.dateLabel,
+          row.timeLabel,
+          row.sessionMethodLabel,
+          row.attendanceLabel,
+          row.justificationStatus ?? 'Aucune',
+        ].join(' '),
+      ).includes(query),
+    );
   });
 
-  readonly columns: readonly DataTableColumn<StudentSessionRow>[] = [
+  readonly filterOptions = computed(() => {
+    const overview = this.overview();
+    return [
+      { value: 'all', label: 'Toutes', count: overview?.totalSessions ?? 0 },
+      { value: 'present-only', label: 'Présences', count: overview?.presentCount ?? 0 },
+      { value: 'absent-only', label: 'Absences', count: overview?.absentCount ?? 0 },
+    ] as const;
+  });
+
+  readonly canLoadMore = computed(() => {
+    if (this.isLoading() || this.isLoadingMore()) {
+      return false;
+    }
+
+    const totalPages = this.totalPages();
+    if (totalPages === 0) {
+      return false;
+    }
+
+    return this.loadedPages().length < totalPages;
+  });
+
+  readonly sessionRowId = (row: StudentSessionListItem) => String(row.id);
+
+  readonly columns: readonly DataTableColumn<StudentSessionListItem>[] = [
     {
       id: 'session',
       header: 'Date et horaire',
-      accessor: (row) => `${row.date} ${row.time}`,
-      filterValue: (row) => [row.date, row.time],
-      width: '13rem',
-    },
-    {
-      id: 'module',
-      header: 'Module',
-      accessor: (row) => row.module,
-      filterValue: (row) => [row.module, row.teacher, row.campus],
-      filter: {
-        type: 'text',
-        label: 'Module',
-        placeholder: 'Filtrer par module',
-      },
+      accessor: (row) => `${row.dateLabel} ${row.timeLabel}`,
+      sortValue: (row) => row.startedAt,
       width: '15rem',
     },
     {
-      id: 'teacher',
-      header: 'Enseignant',
-      accessor: (row) => row.teacher,
-      initiallyHidden: true,
+      id: 'courseLabel',
+      header: 'Module',
+      accessor: (row) => row.courseLabel,
+      sortValue: (row) => row.courseLabel,
+      width: '16rem',
+    },
+    {
+      id: 'roomLabel',
+      header: 'Salle',
+      accessor: (row) => row.roomLabel,
+      sortValue: (row) => row.roomLabel,
       width: '11rem',
     },
     {
       id: 'attendanceStatus',
       header: 'Présence',
-      accessor: (row) => row.attendanceStatus,
-      filter: {
-        type: 'select',
-        options: [
-          { label: 'Présent', value: 'Présent' },
-          { label: 'Absent', value: 'Absent' },
-          { label: 'Retard', value: 'Retard' },
-        ],
-      },
-      align: 'end',
-      width: '8rem',
-    },
-    {
-      id: 'justificationStatus',
-      header: 'Justification',
-      accessor: (row) => row.justificationStatus,
-      filter: {
-        type: 'select',
-        options: [
-          { label: 'Aucune', value: 'Aucune' },
-          { label: 'En attente', value: 'En attente' },
-          { label: 'Acceptée', value: 'Acceptée' },
-          { label: 'Refusée', value: 'Refusée' },
-        ],
-      },
+      accessor: (row) => row.attendanceLabel,
+      sortValue: (row) => row.attendanceStatus,
       align: 'end',
       width: '9rem',
     },
     {
-      id: 'campus',
-      header: 'Lieu',
-      accessor: (row) => row.campus,
-      initiallyHidden: true,
-      width: '10rem',
-    },
-    {
-      id: 'actions',
-      header: 'Action',
-      accessor: () => '',
-      sortable: false,
-      searchable: false,
-      hideable: false,
+      id: 'justificationStatus',
+      header: 'Justification',
+      accessor: (row) => row.justificationStatus ?? 'Aucune',
+      sortValue: (row) => row.justificationStatus ?? 'Aucune',
       align: 'end',
-      width: '12rem',
-      cellClassName: 'whitespace-nowrap',
+      width: '10rem',
     },
   ];
 
-  openJustifications(): void {
-    void this.router.navigateByUrl('/student/justifications');
+  constructor() {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    this.loadOverview();
+    this.reloadSessions();
   }
 
   selectPreset(value: string): void {
     this.selectedPreset.set(value as SessionPreset);
+    this.reloadSessions();
   }
 
-  openJustificationDetail(row: StudentSessionRow): void {
-    const mappedId =
-      row.justificationStatus === 'En attente'
-        ? 'just-001'
-        : row.justificationStatus === 'Acceptée'
-          ? 'just-002'
-          : 'just-003';
-    void this.router.navigate(['/student/justifications', mappedId]);
+  updateSearchQuery(value: string): void {
+    this.localSearchQuery.set(value);
+  }
+
+  updateDateFrom(value: string): void {
+    this.dateFrom.set(value);
+  }
+
+  updateDateTo(value: string): void {
+    this.dateTo.set(value);
+  }
+
+  applyBackendFilters(): void {
+    this.reloadSessions();
+  }
+
+  resetBackendFilters(): void {
+    this.selectedPreset.set('all');
+    this.dateFrom.set('');
+    this.dateTo.set('');
+    this.localSearchQuery.set('');
+    this.reloadSessions();
+  }
+
+  loadMoreSessions(): void {
+    if (!this.canLoadMore()) {
+      return;
+    }
+
+    const nextPage = this.loadedPages().length;
+    this.fetchSessionsPage(nextPage, false);
+  }
+
+  openSessionDetails(row: StudentSessionListItem): void {
+    this.selectedSessionId.set(row.id);
+    this.detailError.set(null);
+
+    const cachedDetail = this.detailCache()[row.id];
+    if (cachedDetail) {
+      this.activeSessionDetail.set(cachedDetail);
+      return;
+    }
+
+    this.activeSessionDetail.set(null);
+    this.detailLoading.set(true);
+    this.attendanceService
+      .getStudentSession(row.id)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.detailLoading.set(false)),
+      )
+      .subscribe({
+        next: (detailDto) => {
+          const detail = enrichSessionDetail(
+            this.attendanceService.toSessionDetailViewModel(detailDto),
+          );
+          this.detailCache.update((current) => ({ ...current, [detail.sessionId]: detail }));
+          this.activeSessionDetail.set(detail);
+        },
+        error: (error) => {
+          this.detailError.set(this.resolveErrorMessage(error, 'Impossible de charger la séance.'));
+        },
+      });
+  }
+
+  closeSessionDetails(): void {
+    this.selectedSessionId.set(null);
+    this.activeSessionDetail.set(null);
+    this.detailError.set(null);
+    this.detailLoading.set(false);
+  }
+
+  openJustificationFromCard(session: StudentSessionDetailViewModel): void {
+    if (!session.justificationRoute || !this.canOpenJustification(session)) {
+      return;
+    }
+
+    this.closeSessionDetails();
+    void this.router.navigateByUrl(session.justificationRoute);
+  }
+
+  shouldShowJustificationCard(session: StudentSessionDetailViewModel): boolean {
+    return shouldShowJustificationCard(session);
+  }
+
+  canOpenJustification(session: StudentSessionDetailViewModel): boolean {
+    return canOpenJustification(session);
+  }
+
+  private loadOverview(): void {
+    this.attendanceService
+      .getStudentOverview()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (overviewDto) => {
+          this.overview.set(this.attendanceService.toOverviewViewModel(overviewDto));
+        },
+      });
+  }
+
+  private reloadSessions(): void {
+    this.loadedSessions.set([]);
+    this.loadedPages.set([]);
+    this.totalElements.set(0);
+    this.totalPages.set(0);
+    this.errorMessage.set(null);
+    this.fetchSessionsPage(0, true);
+  }
+
+  private fetchSessionsPage(page: number, resetLoadingState: boolean): void {
+    if (resetLoadingState) {
+      this.isLoading.set(true);
+    } else {
+      this.isLoadingMore.set(true);
+    }
+
+    this.attendanceService
+      .getStudentSessions({
+        status: this.backendStatusFilter(),
+        dateFrom: this.dateFrom() || undefined,
+        dateTo: this.dateTo() || undefined,
+        page,
+        size: this.backendPageSize,
+        sort: 'startedAt,desc',
+      })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => {
+          this.isLoading.set(false);
+          this.isLoadingMore.set(false);
+        }),
+      )
+      .subscribe({
+        next: (response) => {
+          const mappedItems = response.items
+            .map((item) => this.attendanceService.toSessionListItem(item))
+            .map((row) => enrichSessionListItem(row));
+
+          this.loadedSessions.update((current) =>
+            page === 0 ? mappedItems : this.mergeSessions(current, mappedItems),
+          );
+          this.loadedPages.update((current) => (current.includes(page) ? current : [...current, page]));
+          this.totalElements.set(response.totalElements);
+          this.totalPages.set(response.totalPages);
+          this.errorMessage.set(null);
+        },
+        error: (error) => {
+          this.errorMessage.set(
+            this.resolveErrorMessage(error, "Impossible de charger l'historique des séances."),
+          );
+        },
+      });
+  }
+
+  private mergeSessions(
+    current: readonly StudentSessionListItem[],
+    incoming: readonly StudentSessionListItem[],
+  ): readonly StudentSessionListItem[] {
+    const byId = new Map(current.map((row) => [row.id, row]));
+    for (const row of incoming) {
+      byId.set(row.id, row);
+    }
+
+    return [...byId.values()];
+  }
+
+  private backendStatusFilter(): AttendanceStudentStatus | undefined {
+    switch (this.selectedPreset()) {
+      case 'present-only':
+        return 'PRESENT';
+      case 'absent-only':
+        return 'ABSENT';
+      default:
+        return undefined;
+    }
+  }
+
+  private normalizeText(value: string): string {
+    return value.trim().toLowerCase();
+  }
+
+  private resolveErrorMessage(error: { status?: number }, fallback: string): string {
+    if (error.status === 403) {
+      return "Accès refusé à l'historique étudiant.";
+    }
+
+    if (error.status === 404) {
+      return 'Aucune séance trouvée pour cette demande.';
+    }
+
+    return fallback;
   }
 }

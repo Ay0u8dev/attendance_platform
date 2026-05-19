@@ -9,6 +9,7 @@ import java.util.List;
 public record AttendanceSessionDetailsResponse(
         Long sessionId,
         Long teacherId,
+        String teacherFullName,
         List<Long> groupIds,
         String courseLabel,
         String roomLabel,

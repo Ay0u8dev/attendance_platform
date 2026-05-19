@@ -2,13 +2,16 @@ package ma.eniad.userservice.service;
 
 import lombok.RequiredArgsConstructor;
 import ma.eniad.userservice.dto.AuthUserRequest;
+import ma.eniad.userservice.dto.InternalTeacherIdentityDto;
 import ma.eniad.userservice.dto.StudentRosterDto;
 import ma.eniad.userservice.dto.UserResponseDto;
 import ma.eniad.userservice.entity.Inscription;
+import ma.eniad.userservice.entity.Teacher;
 import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
 import ma.eniad.userservice.repository.InscriptionRepository;
 import ma.eniad.userservice.repository.UserRepository;
+import ma.eniad.userservice.repository.teacher.TeacherRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -21,6 +24,7 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final TeacherRepository teacherRepository;
     private final InscriptionRepository inscriptionRepository;
     private final AnneeUniversitaireRepository anneeUniversitaireRepository;
 
@@ -80,5 +84,16 @@ public class UserService {
                         inscription.getStudent().getNumApogee()
                 ))
                 .toList();
+    }
+
+    public InternalTeacherIdentityDto getTeacherIdentityById(Long teacherId) {
+        Teacher teacher = teacherRepository.findById(teacherId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found"));
+
+        return new InternalTeacherIdentityDto(
+                teacher.getId(),
+                teacher.getFirstName(),
+                teacher.getLastName()
+        );
     }
 }

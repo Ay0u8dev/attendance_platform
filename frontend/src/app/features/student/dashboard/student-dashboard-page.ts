@@ -1,6 +1,23 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  PLATFORM_ID,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs/operators';
 import { Router } from '@angular/router';
 
+import {
+  StudentSessionDetailViewModel,
+  StudentSessionListItem,
+  StudentSessionsOverviewViewModel,
+} from '../../../core/attendance/models/student-attendance.model';
+import { StudentAttendanceService } from '../../../core/attendance/services/student-attendance.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { DataTableCellDef } from '../../../shared/components/data-table/data-table-cell-def';
 import { DataTable } from '../../../shared/components/data-table/data-table';
@@ -9,7 +26,13 @@ import { Modal } from '../../../shared/components/modal/modal';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
 import { StudentAlertBanner } from '../../../shared/components/student-alert-banner/student-alert-banner';
 import { StudentModuleCard } from '../../../shared/components/student-module-card/student-module-card';
-import { STUDENT_JUSTIFICATIONS, STUDENT_PROFILE, STUDENT_SESSIONS, StudentSessionRow } from '../student-demo.data';
+import { STUDENT_JUSTIFICATIONS, STUDENT_PROFILE } from '../student-demo.data';
+import {
+  canOpenJustification,
+  enrichSessionDetail,
+  enrichSessionListItem,
+  shouldShowJustificationCard,
+} from '../student-session-enrichment';
 
 type DashboardQuickCard = {
   readonly id: string;
@@ -38,12 +61,23 @@ type DashboardQuickCard = {
 export class StudentDashboardPage {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  private readonly attendanceService = inject(StudentAttendanceService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(this.platformId);
 
   readonly profile = STUDENT_PROFILE;
-  readonly selectedSession = signal<StudentSessionRow | null>(null);
-  readonly activeSession = computed(() => this.selectedSession());
-  readonly recentSessions = STUDENT_SESSIONS.slice(0, 4);
-  readonly sessionRowId = (row: StudentSessionRow) => row.id;
+  readonly overview = signal<StudentSessionsOverviewViewModel | null>(null);
+  readonly recentSessions = signal<readonly StudentSessionListItem[]>([]);
+  readonly errorMessage = signal<string | null>(null);
+  readonly isLoading = signal(false);
+  readonly selectedSessionId = signal<number | null>(null);
+  readonly activeSessionDetail = signal<StudentSessionDetailViewModel | null>(null);
+  readonly detailLoading = signal(false);
+  readonly detailError = signal<string | null>(null);
+  readonly detailCache = signal<Record<number, StudentSessionDetailViewModel>>({});
+  readonly sessionRowId = (row: StudentSessionListItem) => String(row.id);
+
   readonly currentUserName = computed(() => {
     const user = this.authService.currentUser;
     if (!user) {
@@ -54,8 +88,7 @@ export class StudentDashboardPage {
   });
 
   readonly quickCards = computed<readonly DashboardQuickCard[]>(() => {
-    const totalSessions = STUDENT_SESSIONS.length;
-    const totalAbsences = STUDENT_SESSIONS.filter((row) => row.attendanceStatus === 'Absent').length;
+    const overview = this.overview();
     const pendingJustifications = STUDENT_JUSTIFICATIONS.filter(
       (row) => row.status === 'En attente',
     ).length;
@@ -64,7 +97,7 @@ export class StudentDashboardPage {
       {
         id: 'sessions',
         title: 'Nombre de séances',
-        value: totalSessions,
+        value: overview?.totalSessions ?? 0,
         subtitle: 'séances suivies',
         ctaLabel: 'Voir les séances',
         icon: 'fa-regular fa-calendar',
@@ -74,7 +107,7 @@ export class StudentDashboardPage {
       {
         id: 'absences',
         title: "Nombre d'absences",
-        value: totalAbsences,
+        value: overview?.absentCount ?? 0,
         subtitle: 'séances absentes',
         ctaLabel: 'Voir les absences',
         icon: 'fa-solid fa-user-xmark',
@@ -94,40 +127,40 @@ export class StudentDashboardPage {
     ];
   });
 
-  readonly columns: readonly DataTableColumn<StudentSessionRow>[] = [
+  readonly columns: readonly DataTableColumn<StudentSessionListItem>[] = [
     {
       id: 'session',
       header: 'Séance',
-      accessor: (row) => `${row.date} ${row.time}`,
+      accessor: (row) => `${row.dateLabel} ${row.timeLabel}`,
     },
     {
       id: 'module',
       header: 'Module',
-      accessor: (row) => row.module,
+      accessor: (row) => row.courseLabel,
       width: '16rem',
     },
     {
       id: 'attendanceStatus',
       header: 'Présence',
-      accessor: (row) => this.attendanceLabel(row),
+      accessor: (row) => row.attendanceLabel,
       align: 'end',
       width: '9rem',
     },
     {
       id: 'justificationStatus',
       header: 'Justification',
-      accessor: (row) => row.justificationStatus,
+      accessor: (row) => row.justificationStatus ?? 'Aucune',
       align: 'end',
       width: '10rem',
     },
   ];
 
-  attendanceLabel(row: StudentSessionRow): 'Présent' | 'Absent' {
-    return row.attendanceStatus === 'Absent' ? 'Absent' : 'Présent';
-  }
+  constructor() {
+    if (!this.isBrowser) {
+      return;
+    }
 
-  attendanceVariant(row: StudentSessionRow): 'success' | 'error' {
-    return row.attendanceStatus === 'Absent' ? 'error' : 'success';
+    this.loadDashboardData();
   }
 
   goTo(route: string): void {
@@ -138,39 +171,92 @@ export class StudentDashboardPage {
     void this.router.navigateByUrl('/student/justifications');
   }
 
-  openSessionDetails(session: StudentSessionRow): void {
-    this.selectedSession.set(session);
+  openSessionDetails(session: StudentSessionListItem): void {
+    this.selectedSessionId.set(session.id);
+    this.detailError.set(null);
+
+    const cachedDetail = this.detailCache()[session.id];
+    if (cachedDetail) {
+      this.activeSessionDetail.set(cachedDetail);
+      return;
+    }
+
+    this.activeSessionDetail.set(null);
+    this.detailLoading.set(true);
+    this.attendanceService
+      .getStudentSession(session.id)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.detailLoading.set(false)),
+      )
+      .subscribe({
+        next: (detailDto) => {
+          const detail = enrichSessionDetail(
+            this.attendanceService.toSessionDetailViewModel(detailDto),
+          );
+          this.detailCache.update((current) => ({ ...current, [detail.sessionId]: detail }));
+          this.activeSessionDetail.set(detail);
+        },
+        error: () => {
+          this.detailError.set('Impossible de charger la séance.');
+        },
+      });
   }
 
   closeSessionDetails(): void {
-    this.selectedSession.set(null);
+    this.selectedSessionId.set(null);
+    this.activeSessionDetail.set(null);
+    this.detailError.set(null);
+    this.detailLoading.set(false);
   }
 
-  canOpenJustification(session: StudentSessionRow): boolean {
-    return (
-      session.attendanceStatus === 'Absent' &&
-      session.justificationStatus !== 'Aucune' &&
-      this.sessionToJustificationRoute(session.id) !== null
-    );
+  shouldShowJustificationCard(session: StudentSessionDetailViewModel): boolean {
+    return shouldShowJustificationCard(session);
   }
 
-  openJustificationFromCard(session: StudentSessionRow): void {
-    const route = this.sessionToJustificationRoute(session.id);
-    if (!route || !this.canOpenJustification(session)) {
+  canOpenJustification(session: StudentSessionDetailViewModel): boolean {
+    return canOpenJustification(session);
+  }
+
+  openJustificationFromCard(session: StudentSessionDetailViewModel): void {
+    if (!session.justificationRoute || !this.canOpenJustification(session)) {
       return;
     }
 
     this.closeSessionDetails();
-    void this.router.navigateByUrl(route);
+    void this.router.navigateByUrl(session.justificationRoute);
   }
 
-  private sessionToJustificationRoute(sessionId: string): string | null {
-    const mapping: Record<string, string> = {
-      'session-001': '/student/justifications/just-001',
-      'session-004': '/student/justifications/just-002',
-      'session-006': '/student/justifications/just-003',
-    };
+  private loadDashboardData(): void {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
 
-    return mapping[sessionId] ?? null;
+    this.attendanceService
+      .getStudentOverview()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (overviewDto) => {
+          this.overview.set(this.attendanceService.toOverviewViewModel(overviewDto));
+        },
+      });
+
+    this.attendanceService
+      .getStudentSessions({ page: 0, size: 4, sort: 'startedAt,desc' })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isLoading.set(false)),
+      )
+      .subscribe({
+        next: (response) => {
+          this.recentSessions.set(
+            response.items
+              .map((item) => this.attendanceService.toSessionListItem(item))
+              .map((row) => enrichSessionListItem(row)),
+          );
+        },
+        error: () => {
+          this.errorMessage.set("Impossible de charger les dernières séances.");
+        },
+      });
   }
 }

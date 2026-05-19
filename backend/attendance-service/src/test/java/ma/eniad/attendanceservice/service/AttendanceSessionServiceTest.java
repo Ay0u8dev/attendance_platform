@@ -4,6 +4,7 @@ import ma.eniad.attendanceservice.client.UserServiceClient;
 import ma.eniad.attendanceservice.config.AttendanceSessionProperties;
 import ma.eniad.attendanceservice.dto.AttendanceSessionResponse;
 import ma.eniad.attendanceservice.dto.CreateAttendanceSessionRequest;
+import ma.eniad.attendanceservice.dto.InternalTeacherIdentityDto;
 import ma.eniad.attendanceservice.dto.LiveAttendanceSessionMeta;
 import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 import ma.eniad.attendanceservice.dto.StudentRosterDto;
@@ -54,6 +55,7 @@ class AttendanceSessionServiceTest {
     @Test
     void createSessionPersistsNormalizedDataAndInitializesLiveState() {
         when(attendanceSessionRepository.existsByTeacherIdAndStatus(77L, AttendanceSessionStatus.ACTIVE)).thenReturn(false);
+        when(userServiceClient.getTeacherIdentity(77L)).thenReturn(new InternalTeacherIdentityDto(77L, "Ayoub", "Elebbar"));
         when(userServiceClient.getStudentRosterByGroupIds(List.of(1L, 2L))).thenReturn(List.of(
                 new StudentRosterDto(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001"),
                 new StudentRosterDto(11L, 2L, "Yassine", "Fassi", "yassine@ump.ac.ma", "https://cdn.example.com/yassine.jpg", "A002")
@@ -68,6 +70,7 @@ class AttendanceSessionServiceTest {
 
         assertThat(response.sessionId()).isEqualTo(100L);
         assertThat(response.teacherId()).isEqualTo(77L);
+        assertThat(response.teacherFullName()).isEqualTo("Ayoub Elebbar");
         assertThat(response.groupIds()).containsExactly(1L, 2L);
         assertThat(response.courseLabel()).isEqualTo("Distributed Systems");
         assertThat(response.roomLabel()).isEqualTo("Room B12");
@@ -82,6 +85,7 @@ class AttendanceSessionServiceTest {
         verify(attendanceSessionRepository).saveAndFlush(sessionCaptor.capture());
         AttendanceSession persistedSession = sessionCaptor.getValue();
         assertThat(persistedSession.getTeacherId()).isEqualTo(77L);
+        assertThat(persistedSession.getTeacherFullName()).isEqualTo("Ayoub Elebbar");
         assertThat(persistedSession.getGroupIds()).containsExactly(1L, 2L);
         assertThat(persistedSession.getCourseLabel()).isEqualTo("Distributed Systems");
         assertThat(persistedSession.getRoomLabel()).isEqualTo("Room B12");
@@ -96,6 +100,7 @@ class AttendanceSessionServiceTest {
         verify(liveAttendanceSessionStore).initializeSession(metaCaptor.capture(), studentsCaptor.capture());
         assertThat(metaCaptor.getValue().sessionId()).isEqualTo(100L);
         assertThat(metaCaptor.getValue().teacherId()).isEqualTo(77L);
+        assertThat(metaCaptor.getValue().teacherFullName()).isEqualTo("Ayoub Elebbar");
         assertThat(metaCaptor.getValue().groupIds()).containsExactly(1L, 2L);
         assertThat(metaCaptor.getValue().status()).isEqualTo(AttendanceSessionStatus.ACTIVE);
         assertThat(studentsCaptor.getValue()).hasSize(2);
@@ -125,6 +130,7 @@ class AttendanceSessionServiceTest {
     @Test
     void createSessionPropagatesRosterLookupConflictWithoutPersistence() {
         when(attendanceSessionRepository.existsByTeacherIdAndStatus(77L, AttendanceSessionStatus.ACTIVE)).thenReturn(false);
+        when(userServiceClient.getTeacherIdentity(77L)).thenReturn(new InternalTeacherIdentityDto(77L, "Ayoub", "Elebbar"));
         when(userServiceClient.getStudentRosterByGroupIds(List.of(1L, 2L)))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "No active academic year found"));
 
@@ -140,12 +146,14 @@ class AttendanceSessionServiceTest {
     @Test
     void createSessionDeletesPersistedSessionWhenLiveStoreInitializationFails() {
         when(attendanceSessionRepository.existsByTeacherIdAndStatus(77L, AttendanceSessionStatus.ACTIVE)).thenReturn(false);
+        when(userServiceClient.getTeacherIdentity(77L)).thenReturn(new InternalTeacherIdentityDto(77L, "Ayoub", "Elebbar"));
         when(userServiceClient.getStudentRosterByGroupIds(List.of(1L, 2L))).thenReturn(List.of(
                 new StudentRosterDto(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001")
         ));
         AttendanceSession savedSession = AttendanceSession.builder()
                 .id(100L)
                 .teacherId(77L)
+                .teacherFullName("Ayoub Elebbar")
                 .groupIds(List.of(1L, 2L))
                 .courseLabel("Distributed Systems")
                 .roomLabel("Room B12")
@@ -169,6 +177,21 @@ class AttendanceSessionServiceTest {
 
         verify(attendanceSessionRepository).delete(savedSession);
         verify(attendanceSessionRepository).flush();
+    }
+
+    @Test
+    void createSessionFailsWhenTeacherIdentityLookupFails() {
+        when(attendanceSessionRepository.existsByTeacherIdAndStatus(77L, AttendanceSessionStatus.ACTIVE)).thenReturn(false);
+        when(userServiceClient.getTeacherIdentity(77L))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found"));
+
+        assertThatThrownBy(() -> attendanceSessionService.createSession(77L, baseRequest()))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+
+        verify(attendanceSessionRepository, never()).saveAndFlush(any());
+        verify(liveAttendanceSessionStore, never()).initializeSession(any(), any());
     }
 
     private CreateAttendanceSessionRequest baseRequest() {

@@ -143,6 +143,7 @@ public class AttendanceQueryService {
 
         return new StudentAttendanceSessionDetailResponse(
                 session.getId(),
+                session.getTeacherFullName(),
                 session.getCourseLabel(),
                 session.getRoomLabel(),
                 List.copyOf(session.getGroupIds()),
@@ -188,6 +189,7 @@ public class AttendanceQueryService {
                     AttendanceCounts counts = resolveCounts(session);
                     return new AttendanceSessionSummaryResponse(
                             session.getId(),
+                            session.getTeacherFullName(),
                             session.getCourseLabel(),
                             session.getRoomLabel(),
                             List.copyOf(session.getGroupIds()),
@@ -217,6 +219,7 @@ public class AttendanceQueryService {
     private StudentAttendanceSessionSummaryResponse toStudentSummary(AttendanceRecord record, AttendanceSession session) {
         return new StudentAttendanceSessionSummaryResponse(
                 session.getId(),
+                session.getTeacherFullName(),
                 session.getCourseLabel(),
                 session.getRoomLabel(),
                 List.copyOf(session.getGroupIds()),

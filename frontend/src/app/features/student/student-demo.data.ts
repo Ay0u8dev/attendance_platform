@@ -34,6 +34,7 @@ export type StudentSessionRow = {
 
 export type StudentJustificationRow = {
   readonly id: string;
+  readonly sessionId?: number;
   readonly submittedAt: string;
   readonly module: string;
   readonly sessionSlot: string;
@@ -45,6 +46,7 @@ export type StudentJustificationRow = {
 
 export type StudentJustificationDetail = {
   readonly id: string;
+  readonly sessionId?: number;
   readonly status: 'En attente' | 'Acceptée' | 'Refusée';
   readonly statusVariant: 'warning' | 'success' | 'error';
   readonly studentName: string;
@@ -216,6 +218,7 @@ export const STUDENT_SESSIONS: readonly StudentSessionRow[] = [
 export const STUDENT_JUSTIFICATIONS: readonly StudentJustificationRow[] = [
   {
     id: 'just-001',
+    sessionId: 1,
     submittedAt: '13 Oct. 2023',
     module: 'Algorithmique',
     sessionSlot: '12 Oct. 2023 • 14:00 - 16:00',
@@ -226,6 +229,7 @@ export const STUDENT_JUSTIFICATIONS: readonly StudentJustificationRow[] = [
   },
   {
     id: 'just-002',
+    sessionId: 4,
     submittedAt: '04 Oct. 2023',
     module: 'Anglais',
     sessionSlot: '03 Oct. 2023 • 13:00 - 15:00',
@@ -236,6 +240,7 @@ export const STUDENT_JUSTIFICATIONS: readonly StudentJustificationRow[] = [
   },
   {
     id: 'just-003',
+    sessionId: 6,
     submittedAt: '27 Sep. 2023',
     module: 'Réseaux',
     sessionSlot: '26 Sep. 2023 • 15:00 - 17:00',
@@ -249,6 +254,7 @@ export const STUDENT_JUSTIFICATIONS: readonly StudentJustificationRow[] = [
 export const STUDENT_JUSTIFICATION_DETAILS: readonly StudentJustificationDetail[] = [
   {
     id: 'just-001',
+    sessionId: 1,
     status: 'En attente',
     statusVariant: 'warning',
     studentName: 'Mariam Fahim',
@@ -284,6 +290,7 @@ export const STUDENT_JUSTIFICATION_DETAILS: readonly StudentJustificationDetail[
   },
   {
     id: 'just-002',
+    sessionId: 4,
     status: 'Acceptée',
     statusVariant: 'success',
     studentName: 'Mariam Fahim',
@@ -319,6 +326,7 @@ export const STUDENT_JUSTIFICATION_DETAILS: readonly StudentJustificationDetail[
   },
   {
     id: 'just-003',
+    sessionId: 6,
     status: 'Refusée',
     statusVariant: 'error',
     studentName: 'Mariam Fahim',

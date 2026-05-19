@@ -76,8 +76,8 @@ class AttendanceQueryServiceTest {
         PagedResponse<?> response = attendanceQueryService.getTeacherSessions(77L, null, null, null, PageRequest.of(0, 20));
 
         assertThat(response.items()).hasSize(2);
-        assertThat(response.items().getFirst().toString()).contains("presentCount=1", "unknownCount=1");
-        assertThat(response.items().getLast().toString()).contains("presentCount=1", "absentCount=1", "unknownCount=0");
+        assertThat(response.items().getFirst().toString()).contains("teacherFullName=Ayoub Elebbar", "presentCount=1", "unknownCount=1");
+        assertThat(response.items().getLast().toString()).contains("teacherFullName=Ayoub Elebbar", "presentCount=1", "absentCount=1", "unknownCount=0");
     }
 
     @Test
@@ -130,6 +130,7 @@ class AttendanceQueryServiceTest {
         StudentAttendanceSessionDetailResponse response = attendanceQueryService.getStudentSession(12L, 100L);
 
         assertThat(response.sessionId()).isEqualTo(100L);
+        assertThat(response.teacherFullName()).isEqualTo("Ayoub Elebbar");
         assertThat(response.studentId()).isEqualTo(12L);
         assertThat(response.markedGpsLat()).isEqualTo("34.6820");
     }
@@ -208,6 +209,7 @@ class AttendanceQueryServiceTest {
         return AttendanceSession.builder()
                 .id(id)
                 .teacherId(77L)
+                .teacherFullName("Ayoub Elebbar")
                 .groupIds(List.of(1L))
                 .courseLabel("Distributed Systems")
                 .roomLabel("Room B12")

@@ -64,6 +64,7 @@ public class AttendanceSessionReadService {
         return new AttendanceSessionDetailsResponse(
                 meta.sessionId(),
                 meta.teacherId(),
+                meta.teacherFullName(),
                 meta.groupIds(),
                 meta.courseLabel(),
                 meta.roomLabel(),
@@ -94,6 +95,7 @@ public class AttendanceSessionReadService {
         return new AttendanceSessionDetailsResponse(
                 meta.sessionId(),
                 meta.teacherId(),
+                meta.teacherFullName(),
                 meta.groupIds(),
                 meta.courseLabel(),
                 meta.roomLabel(),
@@ -135,6 +137,7 @@ public class AttendanceSessionReadService {
         return new AttendanceSessionDetailsResponse(
                 session.getId(),
                 session.getTeacherId(),
+                session.getTeacherFullName(),
                 session.getGroupIds() != null ? List.copyOf(session.getGroupIds()) : List.of(),
                 session.getCourseLabel(),
                 session.getRoomLabel(),

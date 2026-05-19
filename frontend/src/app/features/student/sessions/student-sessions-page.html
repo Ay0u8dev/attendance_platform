@@ -1,49 +1,116 @@
-<section class="space-y-6">
+<section class="space-y-8">
   <app-page-header
     eyebrow="Suivi d'assiduité"
     title="Mes sessions"
-    description="Consultez l'ensemble de vos séances pointées, filtrez les absences et identifiez rapidement celles qui demandent encore une action."
-    meta="Historique complet"
+    description="Consultez vos séances finalisées, filtrez vos absences et ouvrez le détail complet de chaque pointage."
   ></app-page-header>
 
   <app-session-filter-bar
+    eyebrow="Historique"
+    title="Vos séances finalisées"
+    description="Affinez votre historique avec les filtres de présence, les dates et une recherche rapide par module, salle ou justification."
     [options]="filterOptions()"
     [selected]="selectedPreset()"
-    [summaryLabel]="summaryLabel()"
     (selectedChange)="selectPreset($event)"
   ></app-session-filter-bar>
 
+  <section class="grid gap-4 rounded-[1.75rem] border border-line bg-surface p-6 shadow-card xl:grid-cols-[1.35fr_1fr_auto]">
+    <label class="space-y-2">
+      <span class="text-sm font-semibold text-principalText">Recherche</span>
+      <input
+        type="text"
+        class="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-principalText outline-none transition-colors duration-200 placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary-soft"
+        placeholder="Rechercher un module, une salle ou une justification..."
+        [value]="localSearchQuery()"
+        (input)="updateSearchQuery(($any($event.target).value ?? '').toString())"
+      />
+    </label>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <label class="space-y-2">
+        <span class="text-sm font-semibold text-principalText">Du</span>
+        <input
+          type="date"
+          class="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-principalText outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary-soft"
+          [value]="dateFrom()"
+          (input)="updateDateFrom(($any($event.target).value ?? '').toString())"
+        />
+      </label>
+
+      <label class="space-y-2">
+        <span class="text-sm font-semibold text-principalText">Au</span>
+        <input
+          type="date"
+          class="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-principalText outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary-soft"
+          [value]="dateTo()"
+          (input)="updateDateTo(($any($event.target).value ?? '').toString())"
+        />
+      </label>
+    </div>
+
+    <div class="flex flex-col gap-3 xl:justify-end">
+      <button
+        type="button"
+        class="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-card transition-all duration-200 hover:bg-primary-strong hover:shadow-card-strong"
+        (click)="applyBackendFilters()"
+      >
+        Appliquer
+      </button>
+      <button
+        type="button"
+        class="inline-flex min-h-11 items-center justify-center rounded-xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
+        (click)="resetBackendFilters()"
+      >
+        Réinitialiser
+      </button>
+    </div>
+  </section>
+
+  @if (errorMessage()) {
+    <section class="rounded-[1.5rem] border border-danger/20 bg-danger-soft px-4 py-4">
+      <p class="text-sm font-medium text-danger">{{ errorMessage() }}</p>
+    </section>
+  }
+
   <app-data-table
     title="Historique des séances"
-    description="Une seule page pour toutes vos séances, avec filtres, recherche et tri utilisables sans friction."
-    caption="Source unique de consultation"
-    [rows]="filteredSessions()"
+    description="Cliquez sur une ligne pour consulter le détail de la séance et, si elle existe, la justification liée à une absence."
+    [rows]="visibleSessions()"
     [columns]="columns"
     [rowId]="sessionRowId"
+    [rowClickable]="true"
+    [showToolbar]="false"
     [pageSizeOptions]="[5, 10, 20]"
-    [initialPageSize]="5"
-    searchPlaceholder="Rechercher un module, un enseignant ou un lieu..."
-    emptyStateTitle="Aucune séance ne correspond aux filtres"
-    emptyStateDescription="Essayez un autre filtre ou revenez à la vue complète."
+    [initialPageSize]="10"
+    emptyStateTitle="Aucune séance ne correspond aux critères"
+    emptyStateDescription="Ajustez les filtres ou chargez davantage d'historique."
+    (rowClicked)="openSessionDetails($event)"
   >
     <ng-template [appDataTableCell]="'session'" let-row="row">
       <div class="min-w-0">
-        <p class="font-medium text-principalText">{{ row.date }}</p>
-        <p class="truncate text-xs text-secondaryText">{{ row.time }}</p>
+        <p class="font-medium text-principalText">{{ row.dateLabel }}</p>
+        <p class="truncate text-xs text-secondaryText">{{ row.timeLabel }}</p>
       </div>
     </ng-template>
 
-    <ng-template [appDataTableCell]="'module'" let-row="row">
+    <ng-template [appDataTableCell]="'courseLabel'" let-row="row">
       <div class="min-w-0">
-        <p class="font-medium text-principalText">{{ row.module }}</p>
-        <p class="truncate text-xs text-secondaryText">{{ row.teacher }}</p>
+        <p class="font-medium text-principalText">{{ row.courseLabel }}</p>
+        <p class="truncate text-xs text-secondaryText">{{ row.teacherFullName }}</p>
+      </div>
+    </ng-template>
+
+    <ng-template [appDataTableCell]="'roomLabel'" let-row="row">
+      <div class="min-w-0">
+        <p class="font-medium text-principalText">{{ row.roomLabel }}</p>
+        <p class="truncate text-xs text-secondaryText">{{ row.sessionMethodLabel }}</p>
       </div>
     </ng-template>
 
     <ng-template [appDataTableCell]="'attendanceStatus'" let-row="row">
       <div class="flex justify-end">
         <app-status-badge
-          [label]="row.attendanceStatus"
+          [label]="row.attendanceLabel"
           [variant]="row.attendanceVariant"
         ></app-status-badge>
       </div>
@@ -52,34 +119,131 @@
     <ng-template [appDataTableCell]="'justificationStatus'" let-row="row">
       <div class="flex justify-end">
         <app-status-badge
-          [label]="row.justificationStatus"
-          [variant]="row.justificationVariant"
+          [label]="row.justificationStatus ?? 'Aucune'"
+          [variant]="row.justificationVariant ?? 'neutral'"
         ></app-status-badge>
       </div>
     </ng-template>
-
-    <ng-template [appDataTableCell]="'actions'" let-row="row">
-      <div class="flex justify-end gap-2">
-        @if (row.justificationStatus === 'Aucune' && row.attendanceStatus === 'Absent') {
-          <button
-            type="button"
-            class="inline-flex h-9 items-center justify-center rounded-xl border border-line bg-surface px-3 text-sm font-medium text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
-            (click)="openJustifications()"
-          >
-            Justifier
-          </button>
-        } @else if (row.justificationStatus !== 'Aucune') {
-          <button
-            type="button"
-            class="inline-flex h-9 items-center justify-center rounded-xl border border-line bg-surface px-3 text-sm font-medium text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
-            (click)="openJustificationDetail(row)"
-          >
-            Voir le suivi
-          </button>
-        } @else {
-          <span class="text-sm text-secondaryText">Aucune action</span>
-        }
-      </div>
-    </ng-template>
   </app-data-table>
+
+  @if (canLoadMore()) {
+    <div class="flex justify-center pt-1">
+      <button
+        type="button"
+        class="inline-flex min-h-11 items-center justify-center rounded-xl border border-line bg-surface px-5 py-3 text-sm font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
+        (click)="loadMoreSessions()"
+      >
+        @if (!isLoadingMore()) {
+          <span>Charger plus de séances</span>
+        } @else {
+          <span>Chargement...</span>
+        }
+      </button>
+    </div>
+  }
+
+  <app-modal
+    title="Détail de la séance"
+    description="Consultez les informations enregistrées pour cette séance."
+    [open]="selectedSessionId() !== null"
+    size="md"
+    (closed)="closeSessionDetails()"
+  >
+    <div modal-body class="space-y-5">
+      @if (detailLoading()) {
+        <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-6 text-center">
+          <p class="text-sm text-secondaryText">Chargement du détail de la séance...</p>
+        </div>
+      } @else if (detailError()) {
+        <div class="rounded-2xl border border-danger/20 bg-danger-soft px-4 py-4">
+          <p class="text-sm font-medium text-danger">{{ detailError() }}</p>
+        </div>
+      } @else if (activeSessionDetail(); as detail) {
+        <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-lg font-semibold text-principalText">{{ detail.courseLabel }}</p>
+            </div>
+
+            <app-status-badge
+              [label]="detail.attendanceLabel"
+              [variant]="detail.attendanceVariant"
+            ></app-status-badge>
+          </div>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="rounded-2xl bg-surface-subtle px-4 py-3">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
+              Salle
+            </p>
+            <p class="mt-2 text-base font-semibold text-principalText">{{ detail.roomLabel }}</p>
+          </div>
+
+          <div class="rounded-2xl bg-surface-subtle px-4 py-3">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
+              Enseignant
+            </p>
+            <p class="mt-2 text-base font-semibold text-principalText">{{ detail.teacherFullName }}</p>
+          </div>
+
+          <div class="rounded-2xl bg-surface-subtle px-4 py-3">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
+              Horaire
+            </p>
+            <p class="mt-2 text-base font-semibold text-principalText">
+              {{ detail.sessionScheduleLabel }}
+            </p>
+          </div>
+
+          <div class="rounded-2xl bg-surface-subtle px-4 py-3">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
+              Mode de pointage
+            </p>
+            <p class="mt-2 text-base font-semibold text-principalText">{{ detail.markMethodLabel }}</p>
+          </div>
+        </div>
+
+        @if (shouldShowJustificationCard(detail)) {
+          <button
+            type="button"
+            class="block w-full rounded-2xl border border-line px-4 py-4 text-left transition-colors duration-200"
+            [class.cursor-pointer]="canOpenJustification(detail)"
+            [class.hover:border-primary-soft]="canOpenJustification(detail)"
+            [class.hover:bg-primary-soft/35]="canOpenJustification(detail)"
+            [class.cursor-default]="!canOpenJustification(detail)"
+            (click)="openJustificationFromCard(detail)"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-principalText">État de la justification</p>
+                <p class="mt-1 text-sm text-secondaryText">
+                  {{
+                    canOpenJustification(detail)
+                      ? 'Ouvrir le détail de la justification enregistrée pour cette absence.'
+                      : 'Aucune justification consultable pour cette séance.'
+                  }}
+                </p>
+              </div>
+
+              <app-status-badge
+                [label]="detail.justificationStatus ?? 'Aucune'"
+                [variant]="detail.justificationVariant ?? 'neutral'"
+              ></app-status-badge>
+            </div>
+          </button>
+        }
+      }
+    </div>
+
+    <div modal-footer class="flex items-center justify-end gap-3">
+      <button
+        type="button"
+        class="inline-flex min-h-10 items-center justify-center rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
+        (click)="closeSessionDetails()"
+      >
+        Fermer
+      </button>
+    </div>
+  </app-modal>
 </section>

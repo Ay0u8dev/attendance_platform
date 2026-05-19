@@ -123,6 +123,7 @@ public class AttendanceFinalizationService {
         LiveAttendanceSessionMeta finalizedMeta = new LiveAttendanceSessionMeta(
                 meta.sessionId(),
                 meta.teacherId(),
+                meta.teacherFullName(),
                 meta.groupIds(),
                 meta.courseLabel(),
                 meta.roomLabel(),

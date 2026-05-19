@@ -31,14 +31,17 @@ public class AttendanceSessionService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Teacher already has an active session");
         }
 
+        InternalTeacherIdentityDto teacherIdentity = userServiceClient.getTeacherIdentity(teacherId);
         List<Long> normalizedGroupIds = request.groupIds().stream().distinct().toList();
         List<StudentRosterDto> roster = userServiceClient.getStudentRosterByGroupIds(normalizedGroupIds);
+        String teacherFullName = formatTeacherFullName(teacherIdentity);
 
         LocalDateTime startedAt = LocalDateTime.now();
         LocalDateTime endsAt = startedAt.plus(attendanceSessionProperties.autoEndDuration());
 
         AttendanceSession session = AttendanceSession.builder()
                 .teacherId(teacherId)
+                .teacherFullName(teacherFullName)
                 .courseLabel(request.courseLabel() != null ? request.courseLabel().trim() : null)
                 .roomLabel(request.roomLabel() != null ? request.roomLabel().trim() : null)
                 .gpsLat(request.gpsLat() != null ? request.gpsLat().trim() : null)
@@ -59,6 +62,7 @@ public class AttendanceSessionService {
                     new LiveAttendanceSessionMeta(
                             savedSession.getId(),
                             savedSession.getTeacherId(),
+                            savedSession.getTeacherFullName(),
                             List.copyOf(savedSession.getGroupIds()),
                             savedSession.getCourseLabel(),
                             savedSession.getRoomLabel(),
@@ -95,6 +99,7 @@ public class AttendanceSessionService {
         return new AttendanceSessionResponse(
                 savedSession.getId(),
                 savedSession.getTeacherId(),
+                savedSession.getTeacherFullName(),
                 List.copyOf(savedSession.getGroupIds()),
                 savedSession.getCourseLabel(),
                 savedSession.getRoomLabel(),
@@ -106,5 +111,16 @@ public class AttendanceSessionService {
                 savedSession.getStatus(),
                 roster.size()
         );
+    }
+
+    private String formatTeacherFullName(InternalTeacherIdentityDto teacherIdentity) {
+        String firstName = teacherIdentity.firstName() != null ? teacherIdentity.firstName().trim() : "";
+        String lastName = teacherIdentity.lastName() != null ? teacherIdentity.lastName().trim() : "";
+        String fullName = (firstName + " " + lastName).trim();
+        if (fullName.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Teacher name is missing");
+        }
+
+        return fullName;
     }
 }

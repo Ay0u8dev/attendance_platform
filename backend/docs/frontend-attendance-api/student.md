@@ -15,8 +15,8 @@ Purpose:
 Query params:
 
 - `status` optional
-- `dateFrom` optional ISO date-time
-- `dateTo` optional ISO date-time
+- `dateFrom` optional ISO date
+- `dateTo` optional ISO date
 - `page` optional, default `0`
 - `size` optional, default `20`
 - `sort` optional
@@ -25,24 +25,26 @@ Success response:
 
 ```json
 {
-  "content": [
+  "items": [
     {
       "sessionId": 5,
+      "teacherFullName": "Ayoub Elebbar",
       "courseLabel": "Distributed Systems",
       "roomLabel": "Room B12",
-      "groupId": 1,
-      "method": "QR_CODE",
-      "status": "PRESENT",
+      "groupIds": [1],
+      "sessionMethod": "QR_CODE",
+      "sessionStatus": "FINALIZED",
       "startedAt": "2026-04-28T12:00:00",
       "endedAt": "2026-04-28T12:30:00",
+      "attendanceStatus": "PRESENT",
+      "markMethod": "QR_CODE",
       "markedAt": "2026-04-28T12:01:00"
     }
   ],
   "page": 0,
   "size": 20,
   "totalElements": 1,
-  "totalPages": 1,
-  "last": true
+  "totalPages": 1
 }
 ```
 
@@ -61,23 +63,28 @@ Success response:
 ```json
 {
   "sessionId": 5,
+  "teacherFullName": "Ayoub Elebbar",
   "courseLabel": "Distributed Systems",
   "roomLabel": "Room B12",
+  "groupIds": [1],
+  "sessionMethod": "QR_CODE",
+  "sessionStatus": "FINALIZED",
+  "startedAt": "2026-04-28T12:00:00",
+  "endsAt": "2026-04-28T12:30:00",
+  "endedAt": "2026-04-28T12:30:00",
+  "studentId": 12,
   "groupId": 1,
   "firstName": "Aya",
   "lastName": "Bennani",
   "email": "aya.bennani@ump.ac.ma",
   "pfpUrl": "https://cdn.example.com/profiles/12.jpg",
   "numApogee": "22012345",
-  "method": "QR_CODE",
-  "status": "PRESENT",
-  "startedAt": "2026-04-28T12:00:00",
-  "endedAt": "2026-04-28T12:30:00",
-  "markedAt": "2026-04-28T12:01:00",
+  "attendanceStatus": "PRESENT",
   "markMethod": "QR_CODE",
   "deviceId": "scanner-entrance-01",
   "markedGpsLat": "34.6820",
-  "markedGpsLon": "-1.9091"
+  "markedGpsLon": "-1.9091",
+  "markedAt": "2026-04-28T12:01:00"
 }
 ```
 
@@ -97,8 +104,8 @@ Success response:
 ```json
 {
   "totalSessions": 24,
-  "presentCount": 20,
-  "absentCount": 4,
+  "presents": 20,
+  "absences": 4,
   "attendanceRate": 83.33
 }
 ```

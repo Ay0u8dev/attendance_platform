@@ -9,23 +9,24 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
       <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
           <p class="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-primary">
-            Consultation
+            {{ eyebrow() }}
           </p>
           <h2 class="mt-1 text-xl font-semibold tracking-tight text-principalText">
-            Toutes vos séances en un seul endroit
+            {{ title() }}
           </h2>
           <p class="mt-2 max-w-2xl text-sm leading-6 text-secondaryText">
-            Consultez l'historique complet, filtrez les absences et repérez rapidement les
-            séances qui nécessitent une justification.
+            {{ description() }}
           </p>
         </div>
 
-        <div
-          class="inline-flex items-center gap-2 rounded-2xl border border-primary-soft bg-primary-soft px-4 py-3 text-sm font-medium text-primary"
-        >
-          <span class="h-2.5 w-2.5 rounded-full bg-primary"></span>
-          {{ summaryLabel() }}
-        </div>
+        @if (summaryLabel()) {
+          <div
+            class="inline-flex items-center gap-2 rounded-2xl border border-primary-soft bg-primary-soft px-4 py-3 text-sm font-medium text-primary"
+          >
+            <span class="h-2.5 w-2.5 rounded-full bg-primary"></span>
+            {{ summaryLabel() }}
+          </div>
+        }
       </div>
 
       <div class="flex flex-wrap gap-3">
@@ -55,9 +56,14 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SessionFilterBar {
+  readonly eyebrow = input('Consultation');
+  readonly title = input('Toutes vos séances en un seul endroit');
+  readonly description = input(
+    "Consultez l'historique chargé, filtrez vos présences et vos absences, puis affinez la recherche localement sans confondre données chargées et historique complet.",
+  );
   readonly options = input.required<readonly { value: string; label: string; count: number }[]>();
   readonly selected = input.required<string>();
-  readonly summaryLabel = input.required<string>();
+  readonly summaryLabel = input('');
 
   readonly selectedChange = output<string>();
 }

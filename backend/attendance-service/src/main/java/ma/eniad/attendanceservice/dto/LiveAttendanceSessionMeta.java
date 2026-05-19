@@ -10,6 +10,7 @@ public record LiveAttendanceSessionMeta(
         Long sessionId,
 
         Long teacherId,
+        String teacherFullName,
         List<Long> groupIds,
 
         String courseLabel,

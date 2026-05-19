@@ -344,6 +344,7 @@ class AttendanceUpdateServiceTest {
                 new LiveAttendanceSessionMeta(
                         100L,
                         77L,
+                        "Ayoub Elebbar",
                         List.of(1L),
                         "Distributed Systems",
                         "Room B12",
