@@ -113,7 +113,9 @@
           @for (rowEntry of paginatedRows(); track rowEntry.id) {
             <tr
               class="transition-colors duration-200 hover:bg-surface-subtle/55"
+              [class.cursor-pointer]="rowClickable()"
               [class.bg-primary-soft]="isRowSelected(rowEntry.id)"
+              (click)="handleRowClick(rowEntry.row)"
             >
               @if (enableRowSelection()) {
                 <td class="border-b border-line px-4 py-4 align-top sm:px-5">

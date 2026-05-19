@@ -1,0 +1,54 @@
+<section class="space-y-6">
+  <app-page-header
+    eyebrow="Justifications"
+    title="Détail de la demande"
+    description="Une vue structurée du dossier, du justificatif et de l'historique de traitement. Une seule page, plusieurs états, zéro duplication inutile."
+    meta="Suivi détaillé"
+  ></app-page-header>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <app-status-badge [label]="detail().status" [variant]="detail().statusVariant"></app-status-badge>
+    <app-button
+      label="Retour aux justifications"
+      variant="outline"
+      size="sm"
+      [fullWidth]="false"
+      (clicked)="goBack()"
+    ></app-button>
+  </div>
+
+  <div class="grid gap-6 xl:grid-cols-[0.95fr_1.35fr]">
+    <div class="space-y-6">
+      <app-justification-summary-card
+        label="Étudiant"
+        [items]="studentSummary()"
+      ></app-justification-summary-card>
+
+      <app-justification-summary-card
+        label="Séance concernée"
+        [items]="sessionSummary()"
+      ></app-justification-summary-card>
+
+      <app-justification-summary-card
+        label="Motif déclaré"
+        [items]="reasonSummary()"
+      ></app-justification-summary-card>
+    </div>
+
+    <div class="space-y-6">
+      <app-document-preview-panel
+        [fileName]="detail().attachmentName"
+        [previewDescription]="detail().adminComment"
+      ></app-document-preview-panel>
+
+      <section class="rounded-[1.75rem] border border-line bg-surface p-5 shadow-card">
+        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
+          Commentaire administratif
+        </p>
+        <p class="mt-4 text-sm leading-7 text-principalText">{{ detail().adminComment }}</p>
+      </section>
+
+      <app-justification-timeline [items]="detail().history"></app-justification-timeline>
+    </div>
+  </div>
+</section>

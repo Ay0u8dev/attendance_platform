@@ -1,0 +1,85 @@
+<section class="space-y-6">
+  <app-page-header
+    eyebrow="Suivi d'assiduité"
+    title="Mes sessions"
+    description="Consultez l'ensemble de vos séances pointées, filtrez les absences et identifiez rapidement celles qui demandent encore une action."
+    meta="Historique complet"
+  ></app-page-header>
+
+  <app-session-filter-bar
+    [options]="filterOptions()"
+    [selected]="selectedPreset()"
+    [summaryLabel]="summaryLabel()"
+    (selectedChange)="selectPreset($event)"
+  ></app-session-filter-bar>
+
+  <app-data-table
+    title="Historique des séances"
+    description="Une seule page pour toutes vos séances, avec filtres, recherche et tri utilisables sans friction."
+    caption="Source unique de consultation"
+    [rows]="filteredSessions()"
+    [columns]="columns"
+    [rowId]="sessionRowId"
+    [pageSizeOptions]="[5, 10, 20]"
+    [initialPageSize]="5"
+    searchPlaceholder="Rechercher un module, un enseignant ou un lieu..."
+    emptyStateTitle="Aucune séance ne correspond aux filtres"
+    emptyStateDescription="Essayez un autre filtre ou revenez à la vue complète."
+  >
+    <ng-template [appDataTableCell]="'session'" let-row="row">
+      <div class="min-w-0">
+        <p class="font-medium text-principalText">{{ row.date }}</p>
+        <p class="truncate text-xs text-secondaryText">{{ row.time }}</p>
+      </div>
+    </ng-template>
+
+    <ng-template [appDataTableCell]="'module'" let-row="row">
+      <div class="min-w-0">
+        <p class="font-medium text-principalText">{{ row.module }}</p>
+        <p class="truncate text-xs text-secondaryText">{{ row.teacher }}</p>
+      </div>
+    </ng-template>
+
+    <ng-template [appDataTableCell]="'attendanceStatus'" let-row="row">
+      <div class="flex justify-end">
+        <app-status-badge
+          [label]="row.attendanceStatus"
+          [variant]="row.attendanceVariant"
+        ></app-status-badge>
+      </div>
+    </ng-template>
+
+    <ng-template [appDataTableCell]="'justificationStatus'" let-row="row">
+      <div class="flex justify-end">
+        <app-status-badge
+          [label]="row.justificationStatus"
+          [variant]="row.justificationVariant"
+        ></app-status-badge>
+      </div>
+    </ng-template>
+
+    <ng-template [appDataTableCell]="'actions'" let-row="row">
+      <div class="flex justify-end gap-2">
+        @if (row.justificationStatus === 'Aucune' && row.attendanceStatus === 'Absent') {
+          <button
+            type="button"
+            class="inline-flex h-9 items-center justify-center rounded-xl border border-line bg-surface px-3 text-sm font-medium text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
+            (click)="openJustifications()"
+          >
+            Justifier
+          </button>
+        } @else if (row.justificationStatus !== 'Aucune') {
+          <button
+            type="button"
+            class="inline-flex h-9 items-center justify-center rounded-xl border border-line bg-surface px-3 text-sm font-medium text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
+            (click)="openJustificationDetail(row)"
+          >
+            Voir le suivi
+          </button>
+        } @else {
+          <span class="text-sm text-secondaryText">Aucune action</span>
+        }
+      </div>
+    </ng-template>
+  </app-data-table>
+</section>

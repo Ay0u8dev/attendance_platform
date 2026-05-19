@@ -8,7 +8,8 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs/operators';
 
 import { AuthService } from '../../core/auth/services/auth.service';
 
@@ -77,7 +78,7 @@ type UtilityItem = {
                   <p class="truncate text-sm font-semibold text-principalText">
                     Attendance Platform
                   </p>
-                  <p class="truncate text-xs text-secondaryText">Student dashboard</p>
+                  <p class="truncate text-xs text-secondaryText">Portail étudiant</p>
                 </div>
               }
             </div>
@@ -180,10 +181,10 @@ type UtilityItem = {
                     <p
                       class="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-primary"
                     >
-                      Student workspace
+                      Espace étudiant
                     </p>
                     <h1 class="truncate text-lg font-semibold tracking-tight text-principalText">
-                      Dashboard
+                      {{ pageTitle() }}
                     </h1>
                   </div>
                 </div>
@@ -209,10 +210,10 @@ type UtilityItem = {
                       <span
                         class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary"
                       >
-                        <i class="fa-solid fa-user-shield text-xs" aria-hidden="true"></i>
+                        <i class="fa-solid fa-user-graduate text-xs" aria-hidden="true"></i>
                       </span>
                       <span class="hidden text-sm font-medium text-principalText md:inline"
-                        >Prof. Anderson</span
+                        >{{ currentUserName() }}</span
                       >
                       <!-- <i
                       class="fa-solid text-[0.6rem] text-secondaryText"
@@ -230,9 +231,9 @@ type UtilityItem = {
                           class="rounded-xl border border-primary-soft bg-primary-soft px-3 py-2"
                         >
                           <p class="truncate text-sm font-semibold text-principalText">
-                            Prof. Anderson
+                            {{ currentUserName() }}
                           </p>
-                          <p class="truncate text-xs text-secondaryText">Student</p>
+                          <p class="truncate text-xs text-secondaryText">Portail étudiant</p>
                         </div>
 
                         <button
@@ -241,7 +242,7 @@ type UtilityItem = {
                           (click)="openSettings()"
                         >
                           <i class="fa-solid fa-gear" aria-hidden="true"></i>
-                          <span>Settings</span>
+                          <span>Paramètres</span>
                         </button>
 
                         <button
@@ -250,7 +251,7 @@ type UtilityItem = {
                           (click)="logout()"
                         >
                           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-                          <span>Logout</span>
+                          <span>Déconnexion</span>
                         </button>
                       </div>
                     }
@@ -275,11 +276,19 @@ export class StudentLayout {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly userMenuRoot = viewChild<ElementRef<HTMLElement>>('userMenuRoot');
+  private readonly routeTitles: Record<string, string> = {
+    '/student/dashboard': 'Tableau de bord',
+    '/student/sessions': 'Mes sessions',
+    '/student/justifications': 'Justifications',
+  };
 
   readonly navItems: NavItem[] = [
-    { label: 'Dashboard', route: '/student/dashboard', icon: 'fa-solid fa-table-cells-large' },
-    { label: 'My sessions', route: '/student/sessions', icon: 'fa-regular fa-calendar' },
-    { label: 'My absences', route: '/student/absence', icon: 'fa-regular fa-circle-xmark' },
+    {
+      label: 'Tableau de bord',
+      route: '/student/dashboard',
+      icon: 'fa-solid fa-table-cells-large',
+    },
+    { label: 'Mes sessions', route: '/student/sessions', icon: 'fa-regular fa-calendar' },
     {
       label: 'Justifications',
       route: '/student/justifications',
@@ -287,7 +296,7 @@ export class StudentLayout {
     },
   ];
 
-  readonly utilityItems: UtilityItem[] = [{ label: 'Settings', icon: 'fa-solid fa-gear' }];
+  readonly utilityItems: UtilityItem[] = [{ label: 'Paramètres', icon: 'fa-solid fa-gear' }];
 
   readonly isSidebarOpen = signal(false);
   readonly isSidebarCollapsed = signal(false);
@@ -300,6 +309,23 @@ export class StudentLayout {
     const desktopWidth = this.isSidebarCollapsed() ? 'lg:w-19' : 'lg:w-68';
     return `${mobileState} w-68 ${desktopWidth}`;
   });
+  readonly currentUserName = computed(() => {
+    const user = this.authService.currentUser;
+    if (!user) {
+      return 'Étudiant';
+    }
+
+    return `${user.prenom} ${user.nom}`.trim();
+  });
+  readonly pageTitle = signal(this.resolvePageTitle(this.router.url));
+
+  constructor() {
+    this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe((event) => {
+        this.pageTitle.set(this.resolvePageTitle(event.urlAfterRedirects));
+      });
+  }
 
   toggleSidebar(): void {
     const nextState = !this.isSidebarOpen();
@@ -357,5 +383,13 @@ export class StudentLayout {
   logout(): void {
     this.isUserMenuOpen.set(false);
     this.authService.logout();
+  }
+
+  private resolvePageTitle(url: string): string {
+    if (url.startsWith('/student/justifications/')) {
+      return 'Détail de justification';
+    }
+
+    return this.routeTitles[url] ?? 'Espace étudiant';
   }
 }

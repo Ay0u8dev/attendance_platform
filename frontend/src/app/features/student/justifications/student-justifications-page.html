@@ -1,0 +1,161 @@
+<section class="space-y-6">
+  <app-page-header
+    eyebrow="Gestion des justificatifs"
+    title="Justifications"
+    description="Suivez l'état de vos demandes, déposez les pièces nécessaires et consultez les décisions sans quitter votre espace étudiant."
+    meta="Suivi administratif"
+  ></app-page-header>
+
+  <div class="space-y-4 rounded-[1.75rem] border border-line bg-surface p-5 shadow-card">
+    <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div>
+        <p class="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-primary">
+          Filtrage
+        </p>
+        <h2 class="mt-1 text-xl font-semibold tracking-tight text-principalText">
+          Suivi de vos demandes
+        </h2>
+      </div>
+
+      <app-button
+        label="Déposer un justificatif"
+        icon="fa-solid fa-plus"
+        size="sm"
+        [fullWidth]="false"
+        (clicked)="openSubmissionModal()"
+      ></app-button>
+    </div>
+
+    <app-status-filter-tabs
+      [tabs]="tabs"
+      [selected]="selectedFilter()"
+      (selectedChange)="selectFilter($event)"
+    ></app-status-filter-tabs>
+  </div>
+
+  <app-data-table
+    title="Demandes déposées"
+    description="Une table exploitable, avec recherche, filtres et actions utiles, au lieu d'un écran décoratif sans profondeur."
+    caption="3 demandes"
+    [rows]="filteredRows()"
+    [columns]="columns"
+    [rowId]="justificationRowId"
+    [pageSizeOptions]="[5, 10]"
+    [initialPageSize]="5"
+    searchPlaceholder="Rechercher un module ou un document..."
+    emptyStateTitle="Aucune justification ne correspond aux filtres"
+    emptyStateDescription="Ajustez vos filtres ou revenez à la vue globale."
+  >
+    <ng-template [appDataTableCell]="'submittedAt'" let-row="row">
+      <div class="min-w-0">
+        <p class="font-medium text-principalText">{{ row.submittedAt }}</p>
+        <p class="truncate text-xs text-secondaryText">{{ row.sessionSlot }}</p>
+      </div>
+    </ng-template>
+
+    <ng-template [appDataTableCell]="'module'" let-row="row">
+      <div class="min-w-0">
+        <p class="font-medium text-principalText">{{ row.module }}</p>
+        <p class="truncate text-xs text-secondaryText">{{ row.attachmentName }}</p>
+      </div>
+    </ng-template>
+
+    <ng-template [appDataTableCell]="'status'" let-row="row">
+      <div class="flex justify-end">
+        <app-status-badge [label]="row.status" [variant]="row.statusVariant"></app-status-badge>
+      </div>
+    </ng-template>
+
+    <ng-template [appDataTableCell]="'actions'" let-row="row">
+      <div class="flex justify-end gap-2">
+        <button
+          type="button"
+          class="inline-flex h-9 items-center justify-center rounded-xl border border-line bg-surface px-3 text-sm font-medium text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
+          (click)="openDetail(row.id)"
+        >
+          Détail
+        </button>
+      </div>
+    </ng-template>
+  </app-data-table>
+</section>
+
+<app-modal
+  title="Déposer un justificatif"
+  description="Sélectionnez une séance absente, ajoutez une pièce jointe et laissez un commentaire utile. Pas de bruit, juste ce qu'il faut."
+  [open]="isModalOpen()"
+  size="lg"
+  (closed)="closeSubmissionModal()"
+>
+  <div modal-body class="space-y-6">
+    <div class="space-y-3">
+      <p class="text-sm font-semibold uppercase tracking-[0.16em] text-secondaryText">
+        Séance concernée
+      </p>
+
+      <div class="grid gap-3">
+        @for (session of absentSessions; track session.id) {
+          <button
+            type="button"
+            class="flex items-start justify-between gap-4 rounded-[1.35rem] border p-4 text-left transition-colors duration-200"
+            [class]="selectedSessionId() === session.id
+              ? 'border-primary bg-primary-soft'
+              : 'border-line bg-surface hover:border-primary-soft hover:bg-surface-subtle'"
+            (click)="selectedSessionId.set(session.id)"
+          >
+            <div class="space-y-1">
+              <p class="font-medium text-principalText">{{ session.module }}</p>
+              <p class="text-sm text-secondaryText">{{ session.date }} • {{ session.time }}</p>
+              <p class="text-sm text-secondaryText">{{ session.teacher }}</p>
+            </div>
+
+            <span
+              class="inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs"
+              [class]="selectedSessionId() === session.id
+                ? 'border-primary bg-primary text-white'
+                : 'border-line bg-surface text-secondaryText'"
+            >
+              <i class="fa-solid fa-check" aria-hidden="true"></i>
+            </span>
+          </button>
+        }
+      </div>
+    </div>
+
+    <app-file-upload-dropzone
+      [selectedFileName]="selectedFileName()"
+      (fileSelected)="handleFileSelection($event)"
+    ></app-file-upload-dropzone>
+
+    <label class="block space-y-2">
+      <span class="text-sm font-semibold uppercase tracking-[0.16em] text-secondaryText">
+        Motif / commentaire
+      </span>
+      <textarea
+        rows="4"
+        class="w-full rounded-[1.35rem] border border-line bg-surface px-4 py-3 text-sm text-principalText outline-none transition-colors duration-200 placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary-soft"
+        placeholder="Décrivez brièvement la raison de votre absence..."
+        [ngModel]="commentDraft()"
+        (ngModelChange)="commentDraft.set($event)"
+      ></textarea>
+    </label>
+  </div>
+
+  <div modal-footer class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+    <app-button
+      label="Annuler"
+      variant="outline"
+      size="sm"
+      [fullWidth]="false"
+      (clicked)="closeSubmissionModal()"
+    ></app-button>
+    <app-button
+      label="Envoyer la demande"
+      icon="fa-solid fa-paper-plane"
+      size="sm"
+      [fullWidth]="false"
+      [disabled]="!canSubmit()"
+      (clicked)="submitDraft()"
+    ></app-button>
+  </div>
+</app-modal>
