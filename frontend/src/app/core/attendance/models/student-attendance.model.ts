@@ -21,7 +21,7 @@ export interface StudentAttendanceSessionSummaryDto {
   readonly startedAt: string;
   readonly endedAt: string | null;
   readonly attendanceStatus: AttendanceStudentStatus;
-  readonly markMethod: AttendanceSessionMethod;
+  readonly markMethod: AttendanceSessionMethod | null;
   readonly markedAt: string | null;
 }
 
@@ -44,7 +44,7 @@ export interface StudentAttendanceSessionDetailDto {
   readonly pfpUrl: string | null;
   readonly numApogee: string;
   readonly attendanceStatus: AttendanceStudentStatus;
-  readonly markMethod: AttendanceSessionMethod;
+  readonly markMethod: AttendanceSessionMethod | null;
   readonly deviceId: string | null;
   readonly markedGpsLat: string | null;
   readonly markedGpsLon: string | null;
@@ -94,7 +94,7 @@ export interface StudentSessionListItem {
   readonly markedAt: string | null;
   readonly attendanceStatus: AttendanceStudentStatus;
   readonly sessionMethod: AttendanceSessionMethod;
-  readonly markMethod: AttendanceSessionMethod;
+  readonly markMethod: AttendanceSessionMethod | null;
   readonly justificationStatus?: StudentJustificationStatus;
   readonly justificationVariant?: StudentJustificationVariant;
   readonly justificationRoute?: string | null;

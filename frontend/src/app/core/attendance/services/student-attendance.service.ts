@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
+import { Observable, of, throwError } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
 import {
@@ -15,6 +16,11 @@ import {
   StudentSessionListItem,
   StudentSessionsOverviewViewModel,
 } from '../models/student-attendance.model';
+import {
+  buildMockStudentAttendanceOverview,
+  MOCK_STUDENT_ATTENDANCE_DETAILS,
+  MOCK_STUDENT_ATTENDANCE_SUMMARIES,
+} from './student-attendance.mock';
 
 @Injectable({ providedIn: 'root' })
 export class StudentAttendanceService {
@@ -37,7 +43,13 @@ export class StudentAttendanceService {
     minute: '2-digit',
   });
 
-  getStudentSessions(query: StudentAttendanceSessionQuery) {
+  getStudentSessions(
+    query: StudentAttendanceSessionQuery,
+  ): Observable<PagedResponseDto<StudentAttendanceSessionSummaryDto>> {
+    if (environment.useMockStudentAttendance) {
+      return of(this.getMockStudentSessions(query));
+    }
+
     return this.http.get<PagedResponseDto<StudentAttendanceSessionSummaryDto>>(
       `${this.baseUrl}/sessions`,
       {
@@ -46,11 +58,33 @@ export class StudentAttendanceService {
     );
   }
 
-  getStudentSession(sessionId: number) {
+  getStudentSession(sessionId: number): Observable<StudentAttendanceSessionDetailDto> {
+    if (environment.useMockStudentAttendance) {
+      const detail = MOCK_STUDENT_ATTENDANCE_DETAILS.find(
+        (session) => session.sessionId === sessionId,
+      );
+      if (!detail) {
+        return throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 404,
+              statusText: 'Not Found',
+              url: `${this.baseUrl}/sessions/${sessionId}`,
+            }),
+        );
+      }
+
+      return of(detail);
+    }
+
     return this.http.get<StudentAttendanceSessionDetailDto>(`${this.baseUrl}/sessions/${sessionId}`);
   }
 
-  getStudentOverview() {
+  getStudentOverview(): Observable<StudentAttendanceOverviewDto> {
+    if (environment.useMockStudentAttendance) {
+      return of(buildMockStudentAttendanceOverview());
+    }
+
     return this.http.get<StudentAttendanceOverviewDto>(`${this.baseUrl}/overview`);
   }
 
@@ -152,7 +186,79 @@ export class StudentAttendanceService {
     }
   }
 
-  private methodLabel(method: AttendanceSessionMethod): string {
+  private getMockStudentSessions(
+    query: StudentAttendanceSessionQuery,
+  ): PagedResponseDto<StudentAttendanceSessionSummaryDto> {
+    const page = query.page ?? 0;
+    const size = query.size ?? 20;
+    const filteredItems = MOCK_STUDENT_ATTENDANCE_SUMMARIES.filter((session) =>
+      this.matchesMockQuery(session, query),
+    );
+    const sortedItems = this.sortMockSessions(filteredItems, query.sort);
+    const startIndex = page * size;
+    const items = sortedItems.slice(startIndex, startIndex + size);
+
+    return {
+      items,
+      page,
+      size,
+      totalElements: sortedItems.length,
+      totalPages: size <= 0 ? 0 : Math.ceil(sortedItems.length / size),
+    };
+  }
+
+  private matchesMockQuery(
+    session: StudentAttendanceSessionSummaryDto,
+    query: StudentAttendanceSessionQuery,
+  ): boolean {
+    if (query.status && session.attendanceStatus !== query.status) {
+      return false;
+    }
+
+    const startedAt = new Date(session.startedAt).getTime();
+    if (query.dateFrom && startedAt < this.startOfDay(query.dateFrom).getTime()) {
+      return false;
+    }
+
+    if (query.dateTo && startedAt >= this.startOfNextDay(query.dateTo).getTime()) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private sortMockSessions(
+    sessions: readonly StudentAttendanceSessionSummaryDto[],
+    sort: string | undefined,
+  ): readonly StudentAttendanceSessionSummaryDto[] {
+    const [property = 'startedAt', direction = 'desc'] = sort?.split(',') ?? [];
+    if (property !== 'startedAt') {
+      return [...sessions];
+    }
+
+    const directionMultiplier = direction.toLowerCase() === 'asc' ? 1 : -1;
+    return [...sessions].sort(
+      (first, second) =>
+        (new Date(first.startedAt).getTime() - new Date(second.startedAt).getTime()) *
+        directionMultiplier,
+    );
+  }
+
+  private startOfDay(date: string): Date {
+    return new Date(`${date}T00:00:00`);
+  }
+
+  private startOfNextDay(date: string): Date {
+    const value = this.startOfDay(date);
+    value.setDate(value.getDate() + 1);
+    return value;
+  }
+
+  private methodLabel(method: AttendanceSessionMethod | null): string {
+    if (!method) {
+      return 'Non marqué';
+    }
+
     switch (method) {
       case 'QR_CODE':
         return 'QR code';
