@@ -17,12 +17,6 @@ export class Login {
   readonly isLoading = toSignal(this.authService.authInProgress$, { initialValue: false });
   readonly authError = toSignal(this.authService.authError$, { initialValue: null });
 
-  ngOnInit(): void {
-    if (this.authService.isAuthenticated()) {
-      this.authService.redirectToRoleHome(undefined, true);
-    }
-  }
-
   signInWithGoogle(): void {
     this.authService.loginWithGoogle();
   }

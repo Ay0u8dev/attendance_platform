@@ -54,11 +54,18 @@ export class AuthService {
 
     this.configureOAuth();
     this.setupGlobalTokenListener();
+
+    if (!this.isOAuthCallbackRoute()) {
+      this.tryRestoreOAuthSession();
+    }
   }
 
   // initialize OAuth configuration
   private configureOAuth(): void {
     this.oauthService.configure(getGoogleAuthConfig());
+  }
+
+  private tryRestoreOAuthSession(): void {
     this.oauthService.loadDiscoveryDocumentAndTryLogin().catch((error: unknown) => {
       this.authErrorSignal.set('OAuth initialization failed. Please try again.');
       this.toastService.error('OAuth initialization failed', 'Please refresh and try again.');
@@ -116,6 +123,8 @@ export class AuthService {
             console.error('Backend auth exchange failed:', error);
           }
 
+          this.redirectCallbackFailureToLogin();
+
           return of(null); // Keep the listener alive for future attempts
         }),
       )
@@ -150,6 +159,7 @@ export class AuthService {
       .then(() => {
         if (!this.oauthService.hasValidIdToken()) {
           this.authInProgressSignal.set(false);
+          this.router.navigateByUrl('/', { replaceUrl: true });
         }
       })
       .catch((error: unknown) => {
@@ -157,6 +167,7 @@ export class AuthService {
         this.authErrorSignal.set('OAuth callback failed. Please try again.');
         this.toastService.error('OAuth callback failed', 'Please retry the login.');
         console.error('OAuth callback processing failed:', error);
+        this.router.navigateByUrl('/', { replaceUrl: true });
       });
   }
 
@@ -208,6 +219,7 @@ export class AuthService {
       this.authInProgressSignal.set(false);
       this.authErrorSignal.set('Received an invalid token from the server.');
       this.toastService.error('Invalid session token', 'The server returned an invalid token.');
+      this.redirectCallbackFailureToLogin();
       return;
     }
 
@@ -215,7 +227,8 @@ export class AuthService {
     this.currentUserSignal.set(user);
     this.authInProgressSignal.set(false);
     this.authErrorSignal.set(null);
-    this.toastService.success('Authentification réussie', 'Bienvenue sur la plateforme !');    this.redirectToRoleHome(user, true);
+    this.toastService.success('Authentification réussie', 'Bienvenue sur la plateforme !');
+    this.redirectToRoleHome(user, true);
   }
 
   // logout the user
@@ -350,32 +363,26 @@ export class AuthService {
     this.router.navigateByUrl(target, { replaceUrl });
   }
 
-  canAccessUrl(url: string): boolean {
+  canAccessRoute(allowedRoles: readonly Role[]): boolean {
     const role = this.currentUserSignal()?.role;
     if (!role) {
       return false;
     }
 
-    if (url.startsWith('/teacher')) {
-      return role === Role.TEACHER;
-    }
-
-    if (url.startsWith('/student')) {
-      return role === Role.STUDENT;
-    }
-
-    const adminPrefixes = [
-      '/dashboard',
-      '/students',
-      '/teachers',
-      '/structure',
-      '/attendance',
-      '/justifications',
-    ];
-    if (adminPrefixes.some((prefix) => url.startsWith(prefix))) {
-      return role === Role.ADMIN;
+    if (allowedRoles.length > 0) {
+      return allowedRoles.includes(role);
     }
 
     return true;
+  }
+
+  private isOAuthCallbackRoute(): boolean {
+    return this.isBrowser && window.location.pathname === '/popup-callback';
+  }
+
+  private redirectCallbackFailureToLogin(): void {
+    if (this.isOAuthCallbackRoute()) {
+      this.router.navigateByUrl('/', { replaceUrl: true });
+    }
   }
 }
