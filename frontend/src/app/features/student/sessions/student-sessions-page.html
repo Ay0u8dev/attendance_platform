@@ -2,67 +2,97 @@
   <app-page-header
     eyebrow="Suivi d'assiduité"
     title="Mes sessions"
-    description="Consultez vos séances finalisées, filtrez vos absences et ouvrez le détail complet de chaque pointage."
+    description="Consultez vos séances finalisées et filtrez l'historique par statut, date ou recherche."
   ></app-page-header>
 
-  <app-session-filter-bar
-    eyebrow="Historique"
-    title="Vos séances finalisées"
-    description="Affinez votre historique avec les filtres de présence, les dates et une recherche rapide par module, salle ou justification."
-    [options]="filterOptions()"
-    [selected]="selectedPreset()"
-    (selectedChange)="selectPreset($event)"
-  ></app-session-filter-bar>
-
-  <section class="grid gap-4 rounded-[1.75rem] border border-line bg-surface p-6 shadow-card xl:grid-cols-[1.35fr_1fr_auto]">
-    <label class="space-y-2">
-      <span class="text-sm font-semibold text-principalText">Recherche</span>
-      <input
-        type="text"
-        class="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-principalText outline-none transition-colors duration-200 placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary-soft"
-        placeholder="Rechercher un module, une salle ou une justification..."
-        [value]="localSearchQuery()"
-        (input)="updateSearchQuery(($any($event.target).value ?? '').toString())"
-      />
-    </label>
-
-    <div class="grid gap-4 sm:grid-cols-2">
-      <label class="space-y-2">
-        <span class="text-sm font-semibold text-principalText">Du</span>
-        <input
-          type="date"
-          class="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-principalText outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary-soft"
-          [value]="dateFrom()"
-          (input)="updateDateFrom(($any($event.target).value ?? '').toString())"
-        />
-      </label>
-
-      <label class="space-y-2">
-        <span class="text-sm font-semibold text-principalText">Au</span>
-        <input
-          type="date"
-          class="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-principalText outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary-soft"
-          [value]="dateTo()"
-          (input)="updateDateTo(($any($event.target).value ?? '').toString())"
-        />
-      </label>
-    </div>
-
-    <div class="flex flex-col gap-3 xl:justify-end">
-      <button
-        type="button"
-        class="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-card transition-all duration-200 hover:bg-primary-strong hover:shadow-card-strong"
-        (click)="applyBackendFilters()"
+  <section class="rounded-[1.5rem] border border-line bg-surface p-4 shadow-card sm:p-5">
+    <div class="flex flex-col gap-4">
+      <div
+        class="flex flex-wrap items-start justify-between gap-3"
+        aria-label="Filtrer par présence"
       >
-        Appliquer
-      </button>
-      <button
-        type="button"
-        class="inline-flex min-h-11 items-center justify-center rounded-xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
-        (click)="resetBackendFilters()"
-      >
-        Réinitialiser
-      </button>
+        <div class="flex flex-wrap gap-2">
+          @for (option of filterOptions(); track option.value) {
+            <button
+              type="button"
+              [class]="presetClasses(option.value)"
+              (click)="selectPreset(option.value)"
+            >
+              @switch (option.value) {
+                @case ('present-only') {
+                  <i class="fa-solid fa-check text-xs" aria-hidden="true"></i>
+                }
+                @case ('absent-only') {
+                  <i class="fa-solid fa-xmark text-xs" aria-hidden="true"></i>
+                }
+                @default {
+                  <i class="fa-solid fa-list-ul text-xs" aria-hidden="true"></i>
+                }
+              }
+              <span>{{ option.label }}</span>
+            </button>
+          }
+        </div>
+
+        <button
+          type="button"
+          class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
+          (click)="resetBackendFilters()"
+          aria-label="Réinitialiser les filtres"
+          title="Réinitialiser les filtres"
+        >
+          <i class="fa-solid fa-rotate-left text-xs" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="grid gap-3 xl:grid-cols-[minmax(16rem,1fr)_minmax(22rem,0.9fr)_auto]">
+        <label class="relative block">
+          <span class="sr-only">Recherche</span>
+          <i
+            class="fa-solid fa-magnifying-glass pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted"
+            aria-hidden="true"
+          ></i>
+          <input
+            type="text"
+            class="h-12 w-full rounded-xl border border-line bg-surface pl-11 pr-4 text-sm font-medium text-principalText outline-none transition-colors duration-200 placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary-soft"
+            placeholder="Module, salle, enseignant ou justification"
+            [value]="localSearchQuery()"
+            (input)="updateSearchQuery(($any($event.target).value ?? '').toString())"
+          />
+        </label>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class="relative block">
+            <span class="sr-only">Date de début</span>
+            <span
+              class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-[0.12em] text-muted"
+            >
+              Du
+            </span>
+            <input
+              type="date"
+              class="h-12 w-full rounded-xl border border-line bg-surface pl-14 pr-4 text-sm font-medium text-principalText outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary-soft"
+              [value]="dateFrom()"
+              (input)="updateDateFrom(($any($event.target).value ?? '').toString())"
+            />
+          </label>
+
+          <label class="relative block">
+            <span class="sr-only">Date de fin</span>
+            <span
+              class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-[0.12em] text-muted"
+            >
+              Au
+            </span>
+            <input
+              type="date"
+              class="h-12 w-full rounded-xl border border-line bg-surface pl-14 pr-4 text-sm font-medium text-principalText outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary-soft"
+              [value]="dateTo()"
+              (input)="updateDateTo(($any($event.target).value ?? '').toString())"
+            />
+          </label>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -184,7 +214,9 @@
             <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
               Enseignant
             </p>
-            <p class="mt-2 text-base font-semibold text-principalText">{{ detail.teacherFullName }}</p>
+            <p class="mt-2 text-base font-semibold text-principalText">
+              {{ detail.teacherFullName }}
+            </p>
           </div>
 
           <div class="rounded-2xl bg-surface-subtle px-4 py-3">
@@ -200,7 +232,9 @@
             <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
               Mode de pointage
             </p>
-            <p class="mt-2 text-base font-semibold text-principalText">{{ detail.markMethodLabel }}</p>
+            <p class="mt-2 text-base font-semibold text-principalText">
+              {{ detail.markMethodLabel }}
+            </p>
           </div>
         </div>
 

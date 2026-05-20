@@ -212,9 +212,9 @@ type UtilityItem = {
                       >
                         <i class="fa-solid fa-user-graduate text-xs" aria-hidden="true"></i>
                       </span>
-                      <span class="hidden text-sm font-medium text-principalText md:inline"
-                        >{{ currentUserName() }}</span
-                      >
+                      <span class="hidden text-sm font-medium text-principalText md:inline">{{
+                        currentUserName()
+                      }}</span>
                       <!-- <i
                       class="fa-solid text-[0.6rem] text-secondaryText"
                       [class.fa-chevron-up]="isUserMenuOpen()"
@@ -315,7 +315,19 @@ export class StudentLayout {
       return 'Étudiant';
     }
 
-    return `${user.prenom} ${user.nom}`.trim();
+    const nameParts = [user.prenom, user.nom]
+      .filter((value) => typeof value === 'string')
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+    if (nameParts.length > 0) {
+      return nameParts.join(' ');
+    }
+
+    if (typeof user.email === 'string' && user.email.trim().length > 0) {
+      return user.email.trim();
+    }
+
+    return 'Étudiant';
   });
   readonly pageTitle = signal(this.resolvePageTitle(this.router.url));
 

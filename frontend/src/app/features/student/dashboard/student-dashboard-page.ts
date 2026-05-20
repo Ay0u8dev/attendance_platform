@@ -47,14 +47,7 @@ type DashboardQuickCard = {
 
 @Component({
   selector: 'app-student-dashboard-page',
-  imports: [
-    StudentAlertBanner,
-    StudentModuleCard,
-    DataTable,
-    DataTableCellDef,
-    StatusBadge,
-    Modal,
-  ],
+  imports: [StudentAlertBanner, StudentModuleCard, DataTable, DataTableCellDef, StatusBadge, Modal],
   templateUrl: './student-dashboard-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -84,7 +77,46 @@ export class StudentDashboardPage {
       return 'Marie Dupont';
     }
 
-    return `${user.prenom} ${user.nom}`.trim();
+    const nameParts = [user.prenom, user.nom]
+      .filter((value) => typeof value === 'string')
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+    if (nameParts.length > 0) {
+      return nameParts.join(' ');
+    }
+
+    if (typeof user.email === 'string' && user.email.trim().length > 0) {
+      return user.email.trim();
+    }
+
+    return 'Étudiant';
+  });
+
+  readonly studentMetaLine = computed(() => {
+    const user = this.authService.currentUser as
+      | (typeof this.authService.currentUser & {
+          filiere?: string;
+          groupe?: string;
+          program?: string;
+          group?: string;
+        })
+      | null;
+    const program = this.normalizeLabel(user?.filiere ?? user?.program ?? this.profile.program);
+    const group = this.normalizeLabel(user?.groupe ?? user?.group ?? this.profile.group);
+
+    if (program && group) {
+      return `Filière: ${program} | Groupe: ${group}`;
+    }
+
+    if (program) {
+      return `Filière: ${program}`;
+    }
+
+    if (group) {
+      return `Groupe: ${group}`;
+    }
+
+    return null;
   });
 
   readonly quickCards = computed<readonly DashboardQuickCard[]>(() => {
@@ -138,6 +170,12 @@ export class StudentDashboardPage {
       header: 'Module',
       accessor: (row) => row.courseLabel,
       width: '16rem',
+    },
+    {
+      id: 'roomLabel',
+      header: 'Salle',
+      accessor: (row) => row.roomLabel,
+      width: '11rem',
     },
     {
       id: 'attendanceStatus',
@@ -203,6 +241,15 @@ export class StudentDashboardPage {
       });
   }
 
+  private normalizeLabel(value: unknown): string | null {
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
   closeSessionDetails(): void {
     this.selectedSessionId.set(null);
     this.activeSessionDetail.set(null);
@@ -255,7 +302,7 @@ export class StudentDashboardPage {
           );
         },
         error: () => {
-          this.errorMessage.set("Impossible de charger les dernières séances.");
+          this.errorMessage.set('Impossible de charger les dernières séances.');
         },
       });
   }

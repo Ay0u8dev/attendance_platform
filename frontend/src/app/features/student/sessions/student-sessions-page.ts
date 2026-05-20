@@ -17,7 +17,6 @@ import { DataTableCellDef } from '../../../shared/components/data-table/data-tab
 import { DataTable } from '../../../shared/components/data-table/data-table';
 import { DataTableColumn } from '../../../shared/components/data-table/data-table.types';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { SessionFilterBar } from '../../../shared/components/session-filter-bar/session-filter-bar';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
 import {
   AttendanceStudentStatus,
@@ -37,7 +36,7 @@ type SessionPreset = 'all' | 'present-only' | 'absent-only';
 
 @Component({
   selector: 'app-student-sessions-page',
-  imports: [PageHeader, SessionFilterBar, DataTable, DataTableCellDef, StatusBadge, Modal],
+  imports: [PageHeader, DataTable, DataTableCellDef, StatusBadge, Modal],
   templateUrl: './student-sessions-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -101,6 +100,27 @@ export class StudentSessionsPage {
       { value: 'absent-only', label: 'Absences', count: overview?.absentCount ?? 0 },
     ] as const;
   });
+
+  presetClasses(value: SessionPreset): string {
+    const baseClasses =
+      'inline-flex min-h-10 items-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-semibold transition-colors duration-200';
+    const isSelected = this.selectedPreset() === value;
+
+    switch (value) {
+      case 'present-only':
+        return isSelected
+          ? `${baseClasses} border-secondary-soft bg-secondary-soft text-secondary-strong`
+          : `${baseClasses} border-secondary-soft bg-surface text-secondary-strong hover:bg-secondary-soft`;
+      case 'absent-only':
+        return isSelected
+          ? `${baseClasses} border-danger/30 bg-danger-soft text-danger`
+          : `${baseClasses} border-danger/20 bg-surface text-danger hover:bg-danger-soft`;
+      default:
+        return isSelected
+          ? `${baseClasses} border-primary bg-primary-soft text-primary`
+          : `${baseClasses} border-line bg-surface text-secondaryText hover:border-primary-soft hover:bg-primary-soft hover:text-primary`;
+    }
+  }
 
   readonly canLoadMore = computed(() => {
     if (this.isLoading() || this.isLoadingMore()) {
@@ -177,13 +197,11 @@ export class StudentSessionsPage {
 
   updateDateFrom(value: string): void {
     this.dateFrom.set(value);
+    this.reloadSessions();
   }
 
   updateDateTo(value: string): void {
     this.dateTo.set(value);
-  }
-
-  applyBackendFilters(): void {
     this.reloadSessions();
   }
 
@@ -312,7 +330,9 @@ export class StudentSessionsPage {
           this.loadedSessions.update((current) =>
             page === 0 ? mappedItems : this.mergeSessions(current, mappedItems),
           );
-          this.loadedPages.update((current) => (current.includes(page) ? current : [...current, page]));
+          this.loadedPages.update((current) =>
+            current.includes(page) ? current : [...current, page],
+          );
           this.totalElements.set(response.totalElements);
           this.totalPages.set(response.totalPages);
           this.errorMessage.set(null);

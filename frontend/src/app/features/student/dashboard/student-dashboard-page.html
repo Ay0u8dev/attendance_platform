@@ -4,7 +4,9 @@
       <h1 class="text-3xl font-semibold tracking-tight text-principalText sm:text-[2.05rem]">
         Bienvenue, {{ currentUserName() }}
       </h1>
-      <p class="text-base text-secondaryText">Filière: {{ profile.program }} | Groupe: {{ profile.group }}</p>
+      @if (studentMetaLine(); as metaLine) {
+        <p class="text-base text-secondaryText">{{ metaLine }}</p>
+      }
     </div>
   </header>
 
@@ -129,7 +131,9 @@
             <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
               Enseignant
             </p>
-            <p class="mt-2 text-base font-semibold text-principalText">{{ detail.teacherFullName }}</p>
+            <p class="mt-2 text-base font-semibold text-principalText">
+              {{ detail.teacherFullName }}
+            </p>
           </div>
 
           <div class="rounded-2xl bg-surface-subtle px-4 py-3">
@@ -145,7 +149,9 @@
             <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
               Mode de pointage
             </p>
-            <p class="mt-2 text-base font-semibold text-principalText">{{ detail.markMethodLabel }}</p>
+            <p class="mt-2 text-base font-semibold text-principalText">
+              {{ detail.markMethodLabel }}
+            </p>
           </div>
         </div>
 

@@ -1,48 +1,58 @@
 <section class="space-y-6">
-  <app-page-header
-    eyebrow="Gestion des justificatifs"
-    title="Justifications"
-    description="Suivez l'état de vos demandes, déposez les pièces nécessaires et consultez les décisions sans quitter votre espace étudiant."
-    meta="Suivi administratif"
-  ></app-page-header>
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <app-page-header
+      eyebrow="Gestion des justificatifs"
+      title="Justifications"
+      description="Suivez l'état de vos demandes, déposez les pièces nécessaires et consultez les décisions sans quitter votre espace étudiant."
+    ></app-page-header>
 
-  <div class="space-y-4 rounded-[1.75rem] border border-line bg-surface p-5 shadow-card">
-    <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-      <div>
-        <p class="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-primary">
-          Filtrage
-        </p>
-        <h2 class="mt-1 text-xl font-semibold tracking-tight text-principalText">
-          Suivi de vos demandes
-        </h2>
-      </div>
+    <app-button
+      label="Déposer un justificatif"
+      icon="fa-solid fa-plus"
+      size="sm"
+      [fullWidth]="false"
+      [motion]="false"
+      (clicked)="openSubmissionModal()"
+    ></app-button>
+  </div>
 
-      <app-button
-        label="Déposer un justificatif"
-        icon="fa-solid fa-plus"
-        size="sm"
-        [fullWidth]="false"
-        (clicked)="openSubmissionModal()"
-      ></app-button>
+  <div class="rounded-[1.75rem] border border-line bg-surface p-5 shadow-card">
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <label class="relative w-full md:max-w-sm">
+        <span class="sr-only">Rechercher une justification</span>
+        <i
+          class="fa-solid fa-magnifying-glass pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted"
+          aria-hidden="true"
+        ></i>
+        <input
+          type="search"
+          class="h-11 w-full rounded-2xl border border-line bg-surface pl-10 pr-4 text-sm font-medium text-principalText outline-none transition-colors duration-200 placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary-soft"
+          placeholder="Rechercher par module, motif, document..."
+          [value]="searchQuery()"
+          (input)="updateSearchQuery(($any($event.target).value ?? '').toString())"
+        />
+      </label>
+
+      <app-status-filter-tabs
+        class="w-full md:w-auto"
+        [tabs]="tabs"
+        [selected]="selectedFilter()"
+        (selectedChange)="selectFilter($event)"
+      ></app-status-filter-tabs>
     </div>
-
-    <app-status-filter-tabs
-      [tabs]="tabs"
-      [selected]="selectedFilter()"
-      (selectedChange)="selectFilter($event)"
-    ></app-status-filter-tabs>
   </div>
 
   <app-data-table
     title="Demandes déposées"
-    description="Une table exploitable, avec recherche, filtres et actions utiles, au lieu d'un écran décoratif sans profondeur."
-    caption="3 demandes"
+    description="Consultez et suivez l'état de vos demandes soumises."
     [rows]="filteredRows()"
     [columns]="columns"
     [rowId]="justificationRowId"
+    [rowClickable]="true"
+    [showToolbar]="false"
+    (rowClicked)="openDetail($event.id)"
     [pageSizeOptions]="[5, 10]"
     [initialPageSize]="5"
-    searchPlaceholder="Rechercher un module ou un document..."
     emptyStateTitle="Aucune justification ne correspond aux filtres"
     emptyStateDescription="Ajustez vos filtres ou revenez à la vue globale."
   >
@@ -56,25 +66,22 @@
     <ng-template [appDataTableCell]="'module'" let-row="row">
       <div class="min-w-0">
         <p class="font-medium text-principalText">{{ row.module }}</p>
-        <p class="truncate text-xs text-secondaryText">{{ row.attachmentName }}</p>
+        <div class="mt-0.5 flex items-center gap-1.5 text-xs text-secondaryText">
+          <i class="fa-regular fa-file-lines" aria-hidden="true"></i>
+          <span class="truncate">{{ row.attachmentName }}</span>
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-template [appDataTableCell]="'reason'" let-row="row">
+      <div class="line-clamp-2 text-sm text-secondaryText" [title]="row.reason">
+        {{ row.reason }}
       </div>
     </ng-template>
 
     <ng-template [appDataTableCell]="'status'" let-row="row">
       <div class="flex justify-end">
         <app-status-badge [label]="row.status" [variant]="row.statusVariant"></app-status-badge>
-      </div>
-    </ng-template>
-
-    <ng-template [appDataTableCell]="'actions'" let-row="row">
-      <div class="flex justify-end gap-2">
-        <button
-          type="button"
-          class="inline-flex h-9 items-center justify-center rounded-xl border border-line bg-surface px-3 text-sm font-medium text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
-          (click)="openDetail(row.id)"
-        >
-          Détail
-        </button>
       </div>
     </ng-template>
   </app-data-table>
@@ -88,38 +95,123 @@
   (closed)="closeSubmissionModal()"
 >
   <div modal-body class="space-y-6">
-    <div class="space-y-3">
-      <p class="text-sm font-semibold uppercase tracking-[0.16em] text-secondaryText">
-        Séance concernée
-      </p>
+    <div class="space-y-4">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p class="text-sm font-semibold uppercase tracking-[0.16em] text-secondaryText">
+            Séances concernées
+          </p>
+          <p class="mt-1 text-xs text-secondaryText">
+            {{ selectedSessionCount() }} sélectionnée(s)
+          </p>
+        </div>
 
-      <div class="grid gap-3">
-        @for (session of absentSessions; track session.id) {
+        <div class="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            class="flex items-start justify-between gap-4 rounded-[1.35rem] border p-4 text-left transition-colors duration-200"
-            [class]="selectedSessionId() === session.id
-              ? 'border-primary bg-primary-soft'
-              : 'border-line bg-surface hover:border-primary-soft hover:bg-surface-subtle'"
-            (click)="selectedSessionId.set(session.id)"
+            class="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
+            [disabled]="filteredAbsentSessions().length === 0"
+            (click)="selectAllFilteredSessions()"
           >
-            <div class="space-y-1">
-              <p class="font-medium text-principalText">{{ session.module }}</p>
-              <p class="text-sm text-secondaryText">{{ session.date }} • {{ session.time }}</p>
-              <p class="text-sm text-secondaryText">{{ session.teacher }}</p>
-            </div>
-
-            <span
-              class="inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs"
-              [class]="selectedSessionId() === session.id
-                ? 'border-primary bg-primary text-white'
-                : 'border-line bg-surface text-secondaryText'"
-            >
-              <i class="fa-solid fa-check" aria-hidden="true"></i>
-            </span>
+            Tout sélectionner
           </button>
-        }
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
+            [disabled]="selectedSessionCount() === 0"
+            (click)="clearSelectedSessions()"
+          >
+            Tout désélectionner
+          </button>
+        </div>
       </div>
+
+      <div class="grid gap-3 sm:grid-cols-2">
+        <label class="relative">
+          <span
+            class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-[0.12em] text-muted"
+          >
+            Du
+          </span>
+          <input
+            type="date"
+            class="h-11 w-full rounded-2xl border border-line bg-surface pl-12 pr-4 text-sm font-medium text-principalText outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary-soft"
+            [value]="dateFrom()"
+            (input)="updateDateFrom(($any($event.target).value ?? '').toString())"
+          />
+        </label>
+
+        <label class="relative">
+          <span
+            class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-[0.12em] text-muted"
+          >
+            Au
+          </span>
+          <input
+            type="date"
+            class="h-11 w-full rounded-2xl border border-line bg-surface pl-12 pr-4 text-sm font-medium text-principalText outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary-soft"
+            [value]="dateTo()"
+            (input)="updateDateTo(($any($event.target).value ?? '').toString())"
+          />
+        </label>
+      </div>
+
+      @if (filteredAbsentSessions().length > 0) {
+        <div class="grid gap-3 max-h-[38vh] overflow-y-auto pr-2">
+          @for (session of filteredAbsentSessions(); track session.id) {
+            <button
+              type="button"
+              class="flex items-start justify-between gap-4 rounded-[1.35rem] border p-4 text-left transition-colors duration-200"
+              [class]="
+                isSessionSelected(session.id)
+                  ? 'border-primary bg-primary-soft'
+                  : 'border-line bg-surface hover:border-primary-soft hover:bg-surface-subtle'
+              "
+              (click)="toggleSession(session.id)"
+            >
+              <div class="space-y-1">
+                <p class="font-medium text-principalText">{{ session.module }}</p>
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-secondaryText">
+                  <span class="inline-flex items-center gap-1.5"
+                    ><i class="fa-regular fa-calendar" aria-hidden="true"></i>
+                    {{ session.date }}</span
+                  >
+                  <span class="inline-flex items-center gap-1.5"
+                    ><i class="fa-regular fa-clock" aria-hidden="true"></i> {{ session.time }}</span
+                  >
+                  <span class="inline-flex items-center gap-1.5"
+                    ><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i>
+                    {{ session.teacher }}</span
+                  >
+                </div>
+              </div>
+
+              <span
+                class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs transition-colors"
+                [class]="
+                  isSessionSelected(session.id)
+                    ? 'border-primary bg-primary text-white'
+                    : 'border-line bg-surface text-secondaryText'
+                "
+              >
+                <i
+                  class="fa-solid fa-check"
+                  [class.opacity-0]="!isSessionSelected(session.id)"
+                  aria-hidden="true"
+                ></i>
+              </span>
+            </button>
+          }
+        </div>
+      } @else {
+        <div
+          class="rounded-[1.35rem] border border-dashed border-line bg-surface-subtle px-4 py-8 text-center"
+        >
+          <i class="fa-solid fa-check-circle mb-3 text-2xl text-success" aria-hidden="true"></i>
+          <p class="text-sm font-medium text-principalText">Aucune absence à justifier</p>
+          <p class="mt-1 text-xs text-secondaryText">Ajustez la période ou revenez plus tard.</p>
+        </div>
+      }
     </div>
 
     <app-file-upload-dropzone
