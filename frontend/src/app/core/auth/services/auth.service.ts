@@ -297,10 +297,31 @@ export class AuthService {
         return null;
       }
 
-      return { ...(payload as Partial<User>), role } as User;
+      const prenom = this.normalizeString(payload['prenom'] ?? payload['firstName']);
+      const nom = this.normalizeString(payload['nom'] ?? payload['lastName']);
+      const firstName = this.normalizeString(payload['firstName']);
+      const lastName = this.normalizeString(payload['lastName']);
+
+      return {
+        ...(payload as Partial<User>),
+        role,
+        prenom: prenom ?? firstName,
+        nom: nom ?? lastName,
+        firstName,
+        lastName,
+      } as User;
     } catch {
       return null;
     }
+  }
+
+  private normalizeString(value: unknown): string | null {
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
   }
 
   private normalizeRole(roleValue: unknown): Role | null {

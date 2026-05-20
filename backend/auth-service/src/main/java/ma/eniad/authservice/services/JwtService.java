@@ -22,6 +22,8 @@ public class JwtService {
     private static final String CLAIM_ID = "id";
     private static final String CLAIM_EMAIL = "email";
     private static final String CLAIM_ROLES = "roles";
+    private static final String CLAIM_FIRST_NAME = "firstName";
+    private static final String CLAIM_LAST_NAME = "lastName";
 
     @Value("${app.jwt.secret}")
     private String secretKey;
@@ -36,6 +38,8 @@ public class JwtService {
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put(CLAIM_ID, user.getId());
         extraClaims.put(CLAIM_EMAIL, user.getEmail());
+        putIfNotBlank(extraClaims, CLAIM_FIRST_NAME, user.getFirstName());
+        putIfNotBlank(extraClaims, CLAIM_LAST_NAME, user.getLastName());
 
         List<String> roles = new ArrayList<>();
         if (user.getRoles() != null && !user.getRoles().isEmpty()) {
@@ -52,6 +56,17 @@ public class JwtService {
         extraClaims.put(CLAIM_ROLES, roles);
 
         return generateToken(extraClaims, user.getEmail());
+    }
+
+    private void putIfNotBlank(Map<String, Object> claims, String key, String value) {
+        if (value == null) {
+            return;
+        }
+
+        String trimmed = value.trim();
+        if (!trimmed.isEmpty()) {
+            claims.put(key, trimmed);
+        }
     }
 
     public String generateToken(Map<String, Object> extraClaims, String subject) {
