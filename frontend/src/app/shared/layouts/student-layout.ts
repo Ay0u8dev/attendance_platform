@@ -12,6 +12,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter } from 'rxjs/operators';
 
 import { AuthService } from '../../core/auth/services/auth.service';
+import { StudentProfileService } from '../../core/student/services/student-profile.service';
 
 type NavItem = {
   label: string;
@@ -274,6 +275,7 @@ type UtilityItem = {
 })
 export class StudentLayout {
   private readonly authService = inject(AuthService);
+  private readonly studentProfileService = inject(StudentProfileService);
   private readonly router = inject(Router);
   private readonly userMenuRoot = viewChild<ElementRef<HTMLElement>>('userMenuRoot');
   private readonly routeTitles: Record<string, string> = {
@@ -336,7 +338,10 @@ export class StudentLayout {
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event) => {
         this.pageTitle.set(this.resolvePageTitle(event.urlAfterRedirects));
+        this.studentProfileService.ensureLoaded();
       });
+
+    this.studentProfileService.ensureLoaded();
   }
 
   toggleSidebar(): void {

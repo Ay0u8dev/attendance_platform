@@ -19,6 +19,7 @@ import {
 } from '../../../core/attendance/models/student-attendance.model';
 import { StudentAttendanceService } from '../../../core/attendance/services/student-attendance.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { StudentProfileService } from '../../../core/student/services/student-profile.service';
 import { DataTableCellDef } from '../../../shared/components/data-table/data-table-cell-def';
 import { DataTable } from '../../../shared/components/data-table/data-table';
 import { DataTableColumn } from '../../../shared/components/data-table/data-table.types';
@@ -26,7 +27,7 @@ import { Modal } from '../../../shared/components/modal/modal';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
 import { StudentAlertBanner } from '../../../shared/components/student-alert-banner/student-alert-banner';
 import { StudentModuleCard } from '../../../shared/components/student-module-card/student-module-card';
-import { STUDENT_JUSTIFICATIONS, STUDENT_PROFILE } from '../student-demo.data';
+import { STUDENT_JUSTIFICATIONS } from '../student-demo.data';
 import {
   canOpenJustification,
   enrichSessionDetail,
@@ -54,12 +55,12 @@ type DashboardQuickCard = {
 export class StudentDashboardPage {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  private readonly studentProfileService = inject(StudentProfileService);
   private readonly attendanceService = inject(StudentAttendanceService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
 
-  readonly profile = STUDENT_PROFILE;
   readonly overview = signal<StudentSessionsOverviewViewModel | null>(null);
   readonly recentSessions = signal<readonly StudentSessionListItem[]>([]);
   readonly errorMessage = signal<string | null>(null);
@@ -93,16 +94,9 @@ export class StudentDashboardPage {
   });
 
   readonly studentMetaLine = computed(() => {
-    const user = this.authService.currentUser as
-      | (typeof this.authService.currentUser & {
-          filiere?: string;
-          groupe?: string;
-          program?: string;
-          group?: string;
-        })
-      | null;
-    const program = this.normalizeLabel(user?.filiere ?? user?.program ?? this.profile.program);
-    const group = this.normalizeLabel(user?.groupe ?? user?.group ?? this.profile.group);
+    const profile = this.studentProfileService.profile();
+    const program = this.normalizeLabel(profile?.filiere);
+    const group = this.normalizeLabel(profile?.groupe);
 
     if (program && group) {
       return `Filière: ${program} | Groupe: ${group}`;

@@ -28,7 +28,7 @@ public class UserService {
     private final InscriptionRepository inscriptionRepository;
     private final AnneeUniversitaireRepository anneeUniversitaireRepository;
 
-    public User findUser(AuthUserRequest request) {
+    public UserResponseDto findUser(AuthUserRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -38,7 +38,16 @@ public class UserService {
             user = userRepository.save(user);
         }
 
-        return user;
+        return UserResponseDto.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .pfpUrl(user.getPfpUrl())
+                .roles(user.getRoles().stream().map(Enum::name).toList())
+                .enabled(user.isEnabled())
+                .firstLogin(user.isFirstLogin())
+                .build();
     }
 
 
@@ -47,6 +56,7 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
 
         return UserResponseDto.builder()
+            .id(user.getId())
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
