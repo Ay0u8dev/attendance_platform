@@ -9,13 +9,15 @@ import {
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs/operators';
+import { EMPTY } from 'rxjs';
+import { expand, finalize, map, reduce } from 'rxjs/operators';
 import { Router } from '@angular/router';
 
 import {
   StudentSessionDetailViewModel,
   StudentSessionListItem,
   StudentSessionsOverviewViewModel,
+  StudentAttendanceSessionSummaryDto,
 } from '../../../core/attendance/models/student-attendance.model';
 import { StudentAttendanceService } from '../../../core/attendance/services/student-attendance.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
@@ -32,6 +34,7 @@ import {
   canOpenJustification,
   enrichSessionDetail,
   enrichSessionListItem,
+  isAbsenceJustified,
   shouldShowJustificationCard,
 } from '../student-session-enrichment';
 
@@ -44,6 +47,11 @@ type DashboardQuickCard = {
   readonly icon: string;
   readonly variant: 'default' | 'warning' | 'success';
   readonly route: string;
+};
+
+type AbsenceWarning = {
+  readonly moduleLabel: string;
+  readonly absenceCount: number;
 };
 
 @Component({
@@ -71,6 +79,7 @@ export class StudentDashboardPage {
   readonly detailError = signal<string | null>(null);
   readonly detailCache = signal<Record<number, StudentSessionDetailViewModel>>({});
   readonly sessionRowId = (row: StudentSessionListItem) => String(row.id);
+  readonly absenceWarning = signal<AbsenceWarning | null>(null);
 
   readonly currentUserName = computed(() => {
     const user = this.authService.currentUser;
@@ -193,6 +202,7 @@ export class StudentDashboardPage {
     }
 
     this.loadDashboardData();
+    this.loadAbsenceWarning();
   }
 
   goTo(route: string): void {
@@ -242,6 +252,77 @@ export class StudentDashboardPage {
 
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private loadAbsenceWarning(): void {
+    const initialQuery = {
+      status: 'ABSENT' as const,
+      page: 0,
+      size: 50,
+      sort: 'startedAt,desc',
+    };
+
+    this.attendanceService
+      .getStudentSessions(initialQuery)
+      .pipe(
+        expand((response) => {
+          const nextPage = response.page + 1;
+          if (nextPage >= response.totalPages) {
+            return EMPTY;
+          }
+
+          return this.attendanceService.getStudentSessions({
+            ...initialQuery,
+            page: nextPage,
+            size: response.size,
+          });
+        }),
+        map((response) => response.items),
+        reduce((all, items) => [...all, ...items], [] as StudentAttendanceSessionSummaryDto[]),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (absentSessions) => {
+          this.absenceWarning.set(this.buildAbsenceWarning(absentSessions));
+        },
+        error: () => {
+          this.absenceWarning.set(null);
+        },
+      });
+  }
+
+  private buildAbsenceWarning(
+    sessions: readonly StudentAttendanceSessionSummaryDto[],
+  ): AbsenceWarning | null {
+    const eligibleSessions = sessions.filter((session) => !isAbsenceJustified(session.sessionId));
+
+    if (eligibleSessions.length === 0) {
+      return null;
+    }
+
+    const counts = new Map<string, number>();
+    for (const session of eligibleSessions) {
+      const label = this.normalizeLabel(session.courseLabel);
+      if (!label) {
+        continue;
+      }
+
+      counts.set(label, (counts.get(label) ?? 0) + 1);
+    }
+
+    for (const session of eligibleSessions) {
+      const label = this.normalizeLabel(session.courseLabel);
+      if (!label) {
+        continue;
+      }
+
+      const count = counts.get(label) ?? 0;
+      if (count >= 2) {
+        return { moduleLabel: label, absenceCount: count };
+      }
+    }
+
+    return null;
   }
 
   closeSessionDetails(): void {

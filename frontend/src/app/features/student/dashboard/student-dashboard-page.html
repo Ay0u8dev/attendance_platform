@@ -10,12 +10,19 @@
     </div>
   </header>
 
-  <app-student-alert-banner
-    title="Avertissement: Vous avez 2 absences dans le module Algorithmique"
-    description=""
-    actionLabel="Justifier maintenant"
-    (actionClicked)="openJustifications()"
-  ></app-student-alert-banner>
+  @if (absenceWarning(); as warning) {
+    <app-student-alert-banner
+      [title]="
+        'Avertissement: Vous avez ' +
+        warning.absenceCount +
+        ' absences dans le module ' +
+        warning.moduleLabel
+      "
+      description=""
+      actionLabel="Justifier maintenant"
+      (actionClicked)="openJustifications()"
+    ></app-student-alert-banner>
+  }
 
   <section class="space-y-5 pt-4">
     <div>

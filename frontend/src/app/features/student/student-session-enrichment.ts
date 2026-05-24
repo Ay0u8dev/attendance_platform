@@ -54,6 +54,11 @@ export function canOpenJustification(
   return session.raw.attendanceStatus === 'ABSENT' && !!session.justificationRoute;
 }
 
+export function isAbsenceJustified(sessionId: number): boolean {
+  const justification = JUSTIFICATION_BY_SESSION_ID.get(sessionId);
+  return justification?.status === 'Acceptée';
+}
+
 function resolveJustification(
   sessionId: number,
   attendanceStatus: AttendanceStudentStatus,
