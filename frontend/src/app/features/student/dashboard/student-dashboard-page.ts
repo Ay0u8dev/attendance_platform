@@ -11,6 +11,8 @@ import {
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ZXingScannerModule } from '@zxing/ngx-scanner';
+import { BarcodeFormat } from '@zxing/library';
 import { EMPTY } from 'rxjs';
 import { expand, finalize, map, reduce } from 'rxjs/operators';
 import { Router } from '@angular/router';
@@ -58,11 +60,25 @@ type AbsenceWarning = {
   readonly absenceCount: number;
 };
 
-type CameraGuideKind = 'qr' | 'face';
+type AttendanceFlowPhase =
+  | 'idle'
+  | 'qr-scanning'
+  | 'qr-detected'
+  | 'face-countdown'
+  | 'face-captured'
+  | 'face-validated';
 
 @Component({
   selector: 'app-student-dashboard-page',
-  imports: [StudentAlertBanner, StudentModuleCard, DataTable, DataTableCellDef, StatusBadge, Modal],
+  imports: [
+    StudentAlertBanner,
+    StudentModuleCard,
+    DataTable,
+    DataTableCellDef,
+    StatusBadge,
+    Modal,
+    ZXingScannerModule,
+  ],
   templateUrl: './student-dashboard-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -92,7 +108,16 @@ export class StudentDashboardPage {
   readonly isStartingCamera = signal(false);
   readonly cameraError = signal<string | null>(null);
   readonly attendanceVideo = viewChild<ElementRef<HTMLVideoElement>>('attendanceVideo');
+  readonly attendanceFlowPhase = signal<AttendanceFlowPhase>('idle');
+  readonly faceCountdown = signal(5);
+  readonly capturedFaceImage = signal<string | null>(null);
+  readonly qrScannerEnabled = signal(false);
+  readonly qrScannerDevices = signal<readonly MediaDeviceInfo[]>([]);
+  readonly selectedQrDevice = signal<MediaDeviceInfo | undefined>(undefined);
+  readonly scannedQrContent = signal<string | null>(null);
+  readonly qrFormats = [BarcodeFormat.QR_CODE];
   private activeCameraStream: MediaStream | null = null;
+  private faceCountdownTimerId: number | null = null;
 
   readonly currentUserName = computed(() => {
     const user = this.authService.currentUser;
@@ -186,9 +211,7 @@ export class StudentDashboardPage {
       return '';
     }
 
-    return session.sessionMethod === 'FACE_ID'
-      ? 'Caméra frontale'
-      : 'Caméra arrière';
+    return session.sessionMethod === 'FACE_ID' ? 'Caméra frontale' : 'Caméra arrière';
   });
 
   readonly activeAttendanceCtaLabel = computed(() => {
@@ -205,6 +228,53 @@ export class StudentDashboardPage {
   readonly activeAttendanceCtaIcon = computed(() => {
     const session = this.activeAttendanceSession();
     return session?.sessionMethod === 'FACE_ID' ? 'fa-solid fa-user-check' : 'fa-solid fa-qrcode';
+  });
+
+  readonly canStartAttendanceFlow = computed(() => {
+    const session = this.activeAttendanceSession();
+    return session?.attendanceStatus === 'UNKNOWN';
+  });
+
+  readonly activeAttendanceStateIcon = computed(() => {
+    const session = this.activeAttendanceSession();
+    switch (session?.attendanceStatus) {
+      case 'PRESENT':
+        return 'fa-solid fa-circle-check';
+      case 'ABSENT':
+        return 'fa-solid fa-circle-exclamation';
+      case 'UNKNOWN':
+      default:
+        return this.activeAttendanceCtaIcon();
+    }
+  });
+
+  readonly activeAttendanceStateMessage = computed(() => {
+    const session = this.activeAttendanceSession();
+    switch (session?.attendanceStatus) {
+      case 'PRESENT':
+        return 'Présence confirmée. Aucune autre action n’est nécessaire.';
+      case 'ABSENT':
+        return 'Absence enregistrée pour cette séance. Le pointage étudiant est verrouillé.';
+      case 'UNKNOWN':
+      default:
+        return '';
+      // return session?.sessionMethod === 'FACE_ID'
+      //   ? 'Vérifie ton identité avec la caméra frontale.'
+      //   : 'Scanne le QR code projeté par l’enseignant.';
+    }
+  });
+
+  readonly activeAttendanceStateClasses = computed(() => {
+    const session = this.activeAttendanceSession();
+    switch (session?.attendanceStatus) {
+      case 'PRESENT':
+        return 'border-success/25 bg-success-soft text-success';
+      case 'ABSENT':
+        return 'border-warning/25 bg-warning-soft text-warning';
+      case 'UNKNOWN':
+      default:
+        return 'border-primary-soft bg-primary-soft text-primary';
+    }
   });
 
   readonly cameraModalTitle = computed(() => {
@@ -249,27 +319,22 @@ export class StudentDashboardPage {
       : 'Rapproche ou éloigne le téléphone jusqu’à ce que le code soit net.';
   });
 
-  readonly cameraGuideKind = computed<CameraGuideKind>(() => {
-    const session = this.activeAttendanceSession();
-    return session?.sessionMethod === 'FACE_ID' ? 'face' : 'qr';
-  });
+  // readonly activeAttendanceStatusLabel = computed(() => {
+  //   const session = this.activeAttendanceSession();
+  //   if (!session) {
+  //     return '';
+  //   }
 
-  readonly activeAttendanceStatusLabel = computed(() => {
-    const session = this.activeAttendanceSession();
-    if (!session) {
-      return '';
-    }
-
-    switch (session.attendanceStatus) {
-      case 'PRESENT':
-        return 'Présence déjà détectée';
-      case 'ABSENT':
-        return 'Absence enregistrée';
-      case 'UNKNOWN':
-      default:
-        return 'En attente de pointage';
-    }
-  });
+  //   switch (session.attendanceStatus) {
+  //     case 'PRESENT':
+  //       return 'Présence déjà détectée';
+  //     case 'ABSENT':
+  //       return 'Absence enregistrée';
+  //     case 'UNKNOWN':
+  //     default:
+  //       return 'En attente de pointage';
+  //   }
+  // });
 
   readonly columns: readonly DataTableColumn<StudentSessionListItem>[] = [
     {
@@ -313,7 +378,7 @@ export class StudentDashboardPage {
     this.loadDashboardData();
     this.loadAbsenceWarning();
     this.loadActiveAttendanceSession();
-    this.destroyRef.onDestroy(() => this.stopCamera());
+    this.destroyRef.onDestroy(() => this.releaseAttendanceCapture());
   }
 
   goTo(route: string): void {
@@ -325,20 +390,91 @@ export class StudentDashboardPage {
   }
 
   openAttendanceCamera(): void {
-    if (!this.activeAttendanceSession() || this.attendanceCameraOpen()) {
+    const session = this.activeAttendanceSession();
+    if (!session || this.attendanceCameraOpen() || session.attendanceStatus !== 'UNKNOWN') {
       return;
     }
 
+    this.resetAttendanceFlow();
     this.cameraError.set(null);
     this.attendanceCameraOpen.set(true);
-    window.setTimeout(() => void this.startCamera(), 0);
+
+    if (session.sessionMethod === 'QR_CODE') {
+      this.attendanceFlowPhase.set('qr-scanning');
+      this.qrScannerEnabled.set(true);
+      return;
+    }
+
+    window.setTimeout(() => void this.startFaceCamera(), 0);
   }
 
   closeAttendanceCamera(): void {
-    this.stopCamera();
+    this.releaseAttendanceCapture();
     this.attendanceCameraOpen.set(false);
     this.cameraError.set(null);
     this.isStartingCamera.set(false);
+    this.resetAttendanceFlow();
+  }
+
+  onQrCamerasFound(devices: MediaDeviceInfo[]): void {
+    this.qrScannerDevices.set(devices);
+    this.selectedQrDevice.set(this.pickRearCamera(devices));
+  }
+
+  onQrCamerasNotFound(): void {
+    this.cameraError.set('Aucune caméra disponible pour scanner le QR code.');
+  }
+
+  onQrPermissionResponse(hasPermission: boolean): void {
+    if (!hasPermission) {
+      this.cameraError.set('Accès caméra refusé. Autorise la caméra pour scanner le QR code.');
+    }
+  }
+
+  onQrScanError(): void {
+    if (!this.cameraError()) {
+      this.cameraError.set('Impossible de lire le QR code pour le moment.');
+    }
+  }
+
+  onQrScanSuccess(content: string): void {
+    if (this.attendanceFlowPhase() === 'qr-detected') {
+      return;
+    }
+
+    this.qrScannerEnabled.set(false);
+    this.scannedQrContent.set(content);
+    this.attendanceFlowPhase.set('qr-detected');
+    console.log('QR attendance content:', content);
+  }
+
+  restartQrScan(): void {
+    this.scannedQrContent.set(null);
+    this.cameraError.set(null);
+    this.attendanceFlowPhase.set('qr-scanning');
+    this.qrScannerEnabled.set(true);
+  }
+
+  retakeFaceCapture(): void {
+    this.capturedFaceImage.set(null);
+    this.cameraError.set(null);
+    void this.startFaceCamera();
+  }
+
+  validateFaceCapture(): void {
+    const session = this.activeAttendanceSession();
+    const image = this.capturedFaceImage();
+    if (!session || !image) {
+      return;
+    }
+
+    console.log('FACE_ID attendance payload ready:', {
+      sessionId: session.sessionId,
+      method: session.sessionMethod,
+      capturedAt: new Date().toISOString(),
+      imageDataUrlLength: image.length,
+    });
+    this.attendanceFlowPhase.set('face-validated');
   }
 
   openSessionDetails(session: StudentSessionListItem): void {
@@ -531,7 +667,7 @@ export class StudentDashboardPage {
       });
   }
 
-  private async startCamera(): Promise<void> {
+  private async startFaceCamera(): Promise<void> {
     const session = this.activeAttendanceSession();
     if (!session || !this.isBrowser) {
       return;
@@ -543,8 +679,11 @@ export class StudentDashboardPage {
     }
 
     this.stopCamera();
+    this.clearFaceCountdown();
     this.isStartingCamera.set(true);
     this.cameraError.set(null);
+    this.faceCountdown.set(3);
+    this.attendanceFlowPhase.set('face-countdown');
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -557,11 +696,60 @@ export class StudentDashboardPage {
         video.srcObject = stream;
         await video.play();
       }
+      this.startFaceCountdown();
     } catch {
       this.cameraError.set('Accès caméra refusé ou caméra indisponible.');
+      this.attendanceFlowPhase.set('idle');
     } finally {
       this.isStartingCamera.set(false);
     }
+  }
+
+  private startFaceCountdown(): void {
+    this.clearFaceCountdown();
+    this.faceCountdown.set(5);
+    this.faceCountdownTimerId = window.setInterval(() => {
+      const nextValue = this.faceCountdown() - 1;
+      if (nextValue <= 0) {
+        this.clearFaceCountdown();
+        this.captureFaceImage();
+        return;
+      }
+
+      this.faceCountdown.set(nextValue);
+    }, 1000);
+  }
+
+  private captureFaceImage(): void {
+    const video = this.attendanceVideo()?.nativeElement;
+    if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
+      this.cameraError.set('Impossible de capturer l’image. Réessaie avec une caméra active.');
+      this.stopCamera();
+      this.attendanceFlowPhase.set('idle');
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext('2d');
+    if (!context) {
+      this.cameraError.set('Capture indisponible dans ce navigateur.');
+      this.stopCamera();
+      this.attendanceFlowPhase.set('idle');
+      return;
+    }
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    this.capturedFaceImage.set(canvas.toDataURL('image/jpeg', 0.88));
+    this.stopCamera();
+    this.attendanceFlowPhase.set('face-captured');
+  }
+
+  private releaseAttendanceCapture(): void {
+    this.qrScannerEnabled.set(false);
+    this.clearFaceCountdown();
+    this.stopCamera();
   }
 
   private stopCamera(): void {
@@ -578,6 +766,31 @@ export class StudentDashboardPage {
     if (video) {
       video.srcObject = null;
     }
+  }
+
+  private clearFaceCountdown(): void {
+    if (this.faceCountdownTimerId === null) {
+      return;
+    }
+
+    window.clearInterval(this.faceCountdownTimerId);
+    this.faceCountdownTimerId = null;
+  }
+
+  private resetAttendanceFlow(): void {
+    this.attendanceFlowPhase.set('idle');
+    this.scannedQrContent.set(null);
+    this.capturedFaceImage.set(null);
+    this.qrScannerEnabled.set(false);
+    this.clearFaceCountdown();
+    this.faceCountdown.set(5);
+  }
+
+  private pickRearCamera(devices: readonly MediaDeviceInfo[]): MediaDeviceInfo | undefined {
+    return (
+      devices.find((device) => /back|rear|environment|arrière/i.test(device.label)) ??
+      devices[devices.length - 1]
+    );
   }
 
   private cameraFacingMode(method: AttendanceSessionMethod): MediaTrackConstraints {

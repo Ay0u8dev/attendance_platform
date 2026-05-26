@@ -1,27 +1,31 @@
 <section class="space-y-6">
-  <app-page-header
-    eyebrow="Justifications"
-    title="Détail de la demande"
-    description="Une vue structurée du dossier, du justificatif et de l'historique de traitement. Une seule page, plusieurs états, zéro duplication inutile."
-    meta="Suivi détaillé"
-  ></app-page-header>
+  <div class="space-y-4">
+    <app-page-header
+      eyebrow="Justifications"
+      title="Détail de la demande"
+      description="Dossier, justificatif et historique de traitement."
+      meta="Suivi détaillé"
+    ></app-page-header>
 
-  <div class="flex flex-wrap items-center gap-3">
-    <app-status-badge
-      [label]="detail().status"
-      [variant]="detail().statusVariant"
-    ></app-status-badge>
-    <app-button
-      label="Retour aux justifications"
-      variant="outline"
-      size="sm"
-      [fullWidth]="false"
-      (clicked)="goBack()"
-    ></app-button>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <app-status-badge
+        [label]="detail().status"
+        [variant]="detail().statusVariant"
+      ></app-status-badge>
+      <div class="w-full sm:w-auto">
+        <app-button
+          label="Retour aux justifications"
+          variant="outline"
+          size="sm"
+          [fullWidth]="true"
+          (clicked)="goBack()"
+        ></app-button>
+      </div>
+    </div>
   </div>
 
-  <div class="grid gap-6 xl:grid-cols-[0.95fr_1.35fr]">
-    <div class="space-y-6">
+  <div class="grid gap-4 xl:grid-cols-[0.95fr_1.35fr] xl:gap-6">
+    <div class="space-y-4 xl:space-y-6">
       <app-justification-summary-card
         label="Étudiant"
         [items]="studentSummary()"
@@ -38,13 +42,13 @@
       ></app-justification-summary-card>
     </div>
 
-    <div class="space-y-6">
+    <div class="space-y-4 xl:space-y-6">
       <app-document-preview-panel
         [fileName]="detail().attachmentName"
         previewDescription="Aperçu indisponible. Téléchargez le fichier pour le consulter."
       ></app-document-preview-panel>
 
-      <section class="rounded-[1.75rem] border border-line bg-surface p-5 shadow-card">
+      <section class="rounded-[1.5rem] border border-line bg-surface p-4 shadow-card sm:rounded-[1.75rem] sm:p-5">
         <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
           Commentaire administratif
         </p>
