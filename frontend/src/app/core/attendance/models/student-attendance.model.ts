@@ -51,6 +51,18 @@ export interface StudentAttendanceSessionDetailDto {
   readonly markedAt: string | null;
 }
 
+export interface StudentActiveAttendanceSessionDto {
+  readonly sessionId: number;
+  readonly teacherFullName: string | null;
+  readonly courseLabel: string;
+  readonly roomLabel: string;
+  readonly groupIds: readonly number[];
+  readonly sessionMethod: AttendanceSessionMethod;
+  readonly startedAt: string;
+  readonly endsAt: string;
+  readonly attendanceStatus: AttendanceStudentStatus;
+}
+
 export interface StudentAttendanceOverviewDto {
   readonly totalSessions: number;
   readonly presents: number;

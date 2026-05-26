@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 import { environment } from '../../../../environments/environment';
 import {
@@ -8,6 +9,7 @@ import {
   AttendanceSessionMethod,
   AttendanceStudentStatus,
   PagedResponseDto,
+  StudentActiveAttendanceSessionDto,
   StudentAttendanceOverviewDto,
   StudentAttendanceSessionDetailDto,
   StudentAttendanceSessionQuery,
@@ -86,6 +88,22 @@ export class StudentAttendanceService {
     }
 
     return this.http.get<StudentAttendanceOverviewDto>(`${this.baseUrl}/overview`);
+  }
+
+  getActiveStudentSession(): Observable<StudentActiveAttendanceSessionDto | null> {
+    if (environment.useMockStudentAttendance) {
+      return of(null);
+    }
+
+    return this.http.get<StudentActiveAttendanceSessionDto>(`${this.baseUrl}/sessions/active`).pipe(
+      catchError((error: HttpErrorResponse) => {
+        if (error.status === 404) {
+          return of(null);
+        }
+
+        return throwError(() => error);
+      }),
+    );
   }
 
   toSessionListItem(dto: StudentAttendanceSessionSummaryDto): StudentSessionListItem {

@@ -3,6 +3,7 @@ package ma.eniad.attendanceservice.controller;
 import lombok.RequiredArgsConstructor;
 import ma.eniad.attendanceservice.annotation.RequireRole;
 import ma.eniad.attendanceservice.dto.PagedResponse;
+import ma.eniad.attendanceservice.dto.StudentActiveAttendanceSessionResponse;
 import ma.eniad.attendanceservice.dto.StudentAttendanceOverviewResponse;
 import ma.eniad.attendanceservice.dto.StudentAttendanceSessionDetailResponse;
 import ma.eniad.attendanceservice.dto.StudentAttendanceSessionSummaryResponse;
@@ -37,6 +38,13 @@ public class AttendanceStudentController {
     ) {
         Long studentId = Long.valueOf(UserContext.getCurrentUser().userId());
         return ResponseEntity.ok(attendanceQueryService.getStudentSessions(studentId, status, dateFrom, dateTo, pageable));
+    }
+
+    @RequireRole({"STUDENT"})
+    @GetMapping("/sessions/active")
+    public ResponseEntity<StudentActiveAttendanceSessionResponse> getActiveSession() {
+        Long studentId = Long.valueOf(UserContext.getCurrentUser().userId());
+        return ResponseEntity.ok(attendanceQueryService.getActiveStudentSession(studentId));
     }
 
     @RequireRole({"STUDENT"})

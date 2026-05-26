@@ -16,5 +16,7 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
 
     Optional<AttendanceSession> findByIdAndTeacherId(Long id, Long teacherId);
 
+    List<AttendanceSession> findAllByStatus(AttendanceSessionStatus status);
+
     List<AttendanceSession> findAllByStatusAndEndsAtLessThanEqual(AttendanceSessionStatus status, LocalDateTime endsAt);
 }

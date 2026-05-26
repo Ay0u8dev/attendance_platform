@@ -3,7 +3,9 @@ package ma.eniad.attendanceservice.service;
 import ma.eniad.attendanceservice.dto.AdminOverviewResponse;
 import ma.eniad.attendanceservice.dto.AttendanceCounts;
 import ma.eniad.attendanceservice.dto.AttendanceSessionDetailsResponse;
+import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 import ma.eniad.attendanceservice.dto.PagedResponse;
+import ma.eniad.attendanceservice.dto.StudentActiveAttendanceSessionResponse;
 import ma.eniad.attendanceservice.dto.StudentAttendanceSessionDetailResponse;
 import ma.eniad.attendanceservice.entity.AttendanceRecord;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
@@ -151,6 +153,54 @@ class AttendanceQueryServiceTest {
         when(attendanceSessionRepository.findById(100L)).thenReturn(Optional.of(baseSession(100L, AttendanceSessionStatus.ACTIVE)));
 
         assertThatThrownBy(() -> attendanceQueryService.getStudentSession(12L, 100L))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void activeStudentSessionReturnsAssignedQrOrFaceSession() {
+        AttendanceSession manualSession = baseSession(99L, AttendanceSessionStatus.ACTIVE);
+        manualSession.setMethod(AttendanceSessionMethod.MANUAL);
+        AttendanceSession qrSession = baseSession(100L, AttendanceSessionStatus.ACTIVE);
+
+        when(attendanceSessionRepository.findAllByStatus(AttendanceSessionStatus.ACTIVE))
+                .thenReturn(List.of(manualSession, qrSession));
+        when(liveAttendanceSessionStore.findStudentState(100L, 12L))
+                .thenReturn(Optional.of(new LiveAttendanceStudentState(
+                        12L,
+                        1L,
+                        "Aya",
+                        "Bennani",
+                        "aya@ump.ac.ma",
+                        null,
+                        "A001",
+                        AttendanceStudentStatus.UNKNOWN,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )));
+
+        StudentActiveAttendanceSessionResponse response = attendanceQueryService.getActiveStudentSession(12L);
+
+        assertThat(response.sessionId()).isEqualTo(100L);
+        assertThat(response.sessionMethod()).isEqualTo(AttendanceSessionMethod.QR_CODE);
+        assertThat(response.attendanceStatus()).isEqualTo(AttendanceStudentStatus.UNKNOWN);
+    }
+
+    @Test
+    void activeStudentSessionReturnsNotFoundForManualOnlyOrUnassignedSessions() {
+        AttendanceSession manualSession = baseSession(99L, AttendanceSessionStatus.ACTIVE);
+        manualSession.setMethod(AttendanceSessionMethod.MANUAL);
+        AttendanceSession qrSession = baseSession(100L, AttendanceSessionStatus.ACTIVE);
+
+        when(attendanceSessionRepository.findAllByStatus(AttendanceSessionStatus.ACTIVE))
+                .thenReturn(List.of(manualSession, qrSession));
+        when(liveAttendanceSessionStore.findStudentState(100L, 12L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> attendanceQueryService.getActiveStudentSession(12L))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
                 .isEqualTo(HttpStatus.NOT_FOUND);
