@@ -1,4 +1,4 @@
-package ma.eniad.userservice.repository;
+package ma.eniad.userservice.repository.inscription;
 
 import ma.eniad.userservice.entity.Inscription;
 import org.springframework.data.jpa.repository.JpaRepository;

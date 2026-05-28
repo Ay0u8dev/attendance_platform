@@ -2,7 +2,7 @@ package ma.eniad.userservice.controller;
 
 import ma.eniad.userservice.annotation.RequireRole;
 import ma.eniad.userservice.dto.AuthUserRequest;
-import ma.eniad.userservice.dto.StudentRosterDto;
+import ma.eniad.userservice.dto.student.StudentRosterDto;
 import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;

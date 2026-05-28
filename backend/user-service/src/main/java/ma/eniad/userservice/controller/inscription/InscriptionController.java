@@ -1,13 +1,13 @@
-package ma.eniad.userservice.controller;
+package ma.eniad.userservice.controller.inscription;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
-import ma.eniad.userservice.service.InscriptionService;
-import ma.eniad.userservice.dto.InscriptionRequestDTO;
-import ma.eniad.userservice.dto.InscriptionResponseDTO;
 import ma.eniad.userservice.annotation.RequireRole;
+import ma.eniad.userservice.dto.inscription.InscriptionRequestDTO;
+import ma.eniad.userservice.dto.inscription.InscriptionResponseDTO;
+import ma.eniad.userservice.service.inscription.InscriptionService;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;

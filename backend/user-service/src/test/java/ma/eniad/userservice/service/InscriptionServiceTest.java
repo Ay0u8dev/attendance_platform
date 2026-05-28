@@ -9,8 +9,8 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Optional;
 
-import ma.eniad.userservice.dto.InscriptionRequestDTO;
-import ma.eniad.userservice.dto.InscriptionResponseDTO;
+import ma.eniad.userservice.dto.inscription.InscriptionRequestDTO;
+import ma.eniad.userservice.dto.inscription.InscriptionResponseDTO;
 import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Student;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
@@ -18,12 +18,14 @@ import ma.eniad.userservice.entity.structure.Formation;
 import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.exception.DuplicateResourceException;
 import ma.eniad.userservice.exception.ResourceNotFoundException;
-import ma.eniad.userservice.mapper.InscriptionMapper;
-import ma.eniad.userservice.repository.InscriptionRepository;
+import ma.eniad.userservice.mapper.inscription.InscriptionMapper;
+import ma.eniad.userservice.repository.inscription.InscriptionRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
 import ma.eniad.userservice.repository.structure.FormationRepository;
 import ma.eniad.userservice.repository.structure.GroupeRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
+import ma.eniad.userservice.service.inscription.InscriptionService;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

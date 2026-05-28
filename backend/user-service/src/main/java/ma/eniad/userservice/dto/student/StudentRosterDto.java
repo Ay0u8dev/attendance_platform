@@ -1,4 +1,4 @@
-package ma.eniad.userservice.dto;
+package ma.eniad.userservice.dto.student;
 
 public class StudentRosterDto {
         private final Long studentId;

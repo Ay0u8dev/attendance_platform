@@ -1,12 +1,12 @@
-package ma.eniad.userservice.service;
+package ma.eniad.userservice.service.inscription;
 
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
-import ma.eniad.userservice.dto.InscriptionRequestDTO;
-import ma.eniad.userservice.dto.InscriptionResponseDTO;
+import ma.eniad.userservice.dto.inscription.InscriptionRequestDTO;
+import ma.eniad.userservice.dto.inscription.InscriptionResponseDTO;
 import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Student;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
@@ -14,8 +14,8 @@ import ma.eniad.userservice.entity.structure.Formation;
 import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.exception.DuplicateResourceException;
 import ma.eniad.userservice.exception.ResourceNotFoundException;
-import ma.eniad.userservice.mapper.InscriptionMapper;
-import ma.eniad.userservice.repository.InscriptionRepository;
+import ma.eniad.userservice.mapper.inscription.InscriptionMapper;
+import ma.eniad.userservice.repository.inscription.InscriptionRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
 import ma.eniad.userservice.repository.structure.FormationRepository;
 import ma.eniad.userservice.repository.structure.GroupeRepository;

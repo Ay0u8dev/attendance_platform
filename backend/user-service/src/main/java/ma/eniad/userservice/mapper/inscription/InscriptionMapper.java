@@ -1,9 +1,9 @@
-package ma.eniad.userservice.mapper;
+package ma.eniad.userservice.mapper.inscription;
 
 import org.mapstruct.Mapper;
 
-import ma.eniad.userservice.dto.InscriptionRequestDTO;
-import ma.eniad.userservice.dto.InscriptionResponseDTO;
+import ma.eniad.userservice.dto.inscription.InscriptionRequestDTO;
+import ma.eniad.userservice.dto.inscription.InscriptionResponseDTO;
 import ma.eniad.userservice.entity.Inscription;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;

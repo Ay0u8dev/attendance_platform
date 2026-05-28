@@ -1,4 +1,4 @@
-package ma.eniad.userservice.dto;
+package ma.eniad.userservice.dto.inscription;
 
 import lombok.Getter;
 import lombok.Setter;

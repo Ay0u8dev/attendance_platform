@@ -3,7 +3,7 @@ package ma.eniad.userservice.controller.structure;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ma.eniad.userservice.dto.structure.FiliereRequestDTO;
-import ma.eniad.userservice.repository.InscriptionRepository;
+import ma.eniad.userservice.repository.inscription.InscriptionRepository;
 import ma.eniad.userservice.repository.structure.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -2,13 +2,13 @@ package ma.eniad.userservice.service;
 
 import lombok.RequiredArgsConstructor;
 import ma.eniad.userservice.dto.AuthUserRequest;
-import ma.eniad.userservice.dto.StudentRosterDto;
 import ma.eniad.userservice.dto.UserResponseDto;
+import ma.eniad.userservice.dto.student.StudentRosterDto;
 import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
-import ma.eniad.userservice.repository.InscriptionRepository;
 import ma.eniad.userservice.repository.UserRepository;
+import ma.eniad.userservice.repository.inscription.InscriptionRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;

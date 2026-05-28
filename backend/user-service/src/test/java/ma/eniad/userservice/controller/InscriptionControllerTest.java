@@ -8,9 +8,11 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 
-import ma.eniad.userservice.dto.InscriptionRequestDTO;
-import ma.eniad.userservice.dto.InscriptionResponseDTO;
-import ma.eniad.userservice.service.InscriptionService;
+import ma.eniad.userservice.controller.inscription.InscriptionController;
+import ma.eniad.userservice.dto.inscription.InscriptionRequestDTO;
+import ma.eniad.userservice.dto.inscription.InscriptionResponseDTO;
+import ma.eniad.userservice.service.inscription.InscriptionService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
