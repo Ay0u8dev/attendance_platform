@@ -80,6 +80,7 @@ type AttendanceFlowPhase =
     ZXingScannerModule,
   ],
   templateUrl: './student-dashboard-page.html',
+  styleUrl: './student-dashboard-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentDashboardPage {
