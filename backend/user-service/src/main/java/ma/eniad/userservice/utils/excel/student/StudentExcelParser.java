@@ -1,6 +1,6 @@
 package ma.eniad.userservice.utils.excel.student;
 
-import ma.eniad.userservice.dto.student.excel.StudentExcelRowDTO;
+import ma.eniad.userservice.dto.student.StudentExcelRowDTO;
 import ma.eniad.userservice.exception.InvalidExcelFileException;
 
 import org.apache.poi.ss.usermodel.Cell;

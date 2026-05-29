@@ -1,4 +1,4 @@
-package ma.eniad.userservice.dto.teacher.excel;
+package ma.eniad.userservice.dto.teacher;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

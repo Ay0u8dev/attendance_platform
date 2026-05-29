@@ -7,8 +7,8 @@ import jakarta.validation.Validator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import ma.eniad.userservice.dto.RowErrorDTO;
-import ma.eniad.userservice.dto.student.excel.StudentExcelRowDTO;
+import ma.eniad.userservice.dto.excel.RowErrorDTO;
+import ma.eniad.userservice.dto.student.StudentExcelRowDTO;
 
 
 @Component

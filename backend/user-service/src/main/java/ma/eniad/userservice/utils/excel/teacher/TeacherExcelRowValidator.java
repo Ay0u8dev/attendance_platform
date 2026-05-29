@@ -7,8 +7,8 @@ import jakarta.validation.Validator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import ma.eniad.userservice.dto.RowErrorDTO;
-import ma.eniad.userservice.dto.teacher.excel.TeacherExcelRowDTO;
+import ma.eniad.userservice.dto.excel.RowErrorDTO;
+import ma.eniad.userservice.dto.teacher.TeacherExcelRowDTO;
 
 @Component
 public class TeacherExcelRowValidator {

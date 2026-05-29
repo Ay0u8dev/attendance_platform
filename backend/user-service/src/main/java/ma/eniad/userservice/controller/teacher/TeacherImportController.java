@@ -9,7 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.MediaType;
 import lombok.RequiredArgsConstructor;
 import ma.eniad.userservice.annotation.RequireRole;
-import ma.eniad.userservice.dto.teacher.excel.TeacherImportResultDTO;
+import ma.eniad.userservice.dto.teacher.TeacherImportResultDTO;
 import ma.eniad.userservice.service.teacher.TeacherImportService;
 
 @RestController

@@ -1,8 +1,8 @@
 package ma.eniad.userservice.mapper.student;
 
+import ma.eniad.userservice.dto.student.StudentExcelRowDTO;
 import ma.eniad.userservice.dto.student.StudentRequestDTO;
 import ma.eniad.userservice.dto.student.StudentResponseDTO;
-import ma.eniad.userservice.dto.student.excel.StudentExcelRowDTO;
 import ma.eniad.userservice.entity.Student;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;

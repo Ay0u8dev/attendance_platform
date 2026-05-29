@@ -1,22 +1,23 @@
 package ma.eniad.userservice.service.student;
 
-import ma.eniad.userservice.dto.RowErrorDTO;
-import ma.eniad.userservice.dto.student.excel.StudentExcelRowDTO;
-
-import ma.eniad.userservice.dto.student.excel.StudentImportResultDTO;
+import ma.eniad.userservice.dto.excel.RowErrorDTO;
+import ma.eniad.userservice.dto.student.StudentChangeDTO;
+import ma.eniad.userservice.dto.student.StudentExcelRowDTO;
+import ma.eniad.userservice.dto.student.StudentImportResultDTO;
 import ma.eniad.userservice.entity.Student;
 import ma.eniad.userservice.mapper.student.StudentMapper;
 import ma.eniad.userservice.exception.InvalidExcelFileException;
-import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
 import ma.eniad.userservice.utils.excel.student.StudentExcelRowValidator;
 import ma.eniad.userservice.utils.excel.student.StudentExcelParser;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import ma.eniad.userservice.entity.enums.Role;
@@ -38,7 +39,6 @@ public class StudentImportService {
     private final StudentMapper mapper;
 
     private final StudentRepository studentRepository;
-    private final UserRepository userRepository;
 
     @Transactional
     public StudentImportResultDTO importFromExcel(MultipartFile file) {
@@ -47,6 +47,8 @@ public class StudentImportService {
         List<StudentExcelRowDTO> rows = parser.parse(file);
 
         List<RowErrorDTO> errors = new ArrayList<>();
+        List<StudentChangeDTO> changes = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
 
         /*
          * Keeps track of rows that contain errors.
@@ -84,7 +86,7 @@ public class StudentImportService {
             /*
              * Duplicate email inside excel file
              */
-            String normalizedEmail = row.getEmail().trim().toLowerCase();
+            String normalizedEmail = normalizeEmail(row.getEmail());
             if (!seenEmails.add(normalizedEmail)) {
 
                 RowErrorDTO error = buildError(
@@ -106,7 +108,7 @@ public class StudentImportService {
             /*
              * Duplicate apogee inside excel file
              */
-            String normalizedApogee = row.getNumApogee().trim();
+            String normalizedApogee = normalizeApogee(row.getNumApogee());
             if (!seenApogees.add(normalizedApogee)) {
 
                 RowErrorDTO error = buildError(
@@ -126,154 +128,153 @@ public class StudentImportService {
             }
         }
 
+        int createdStudents = 0;
+        int updatedStudents = 0;
+
+        List<Student> studentsToCreate = new ArrayList<>();
+        List<Student> studentsToUpdate = new ArrayList<>();
+
         /*
          * STEP 2
-         * Collect rows without validation errors
+         * Apply import rules per valid row
          */
-        List<StudentExcelRowDTO> validRows =
-            rows.stream()
-                .filter(row ->
-                    !rowErrors.containsKey(
-                        row.getRowNumber()
-                    )
-                )
-                .toList();
+        for (StudentExcelRowDTO row : rows) {
+
+            if (rowErrors.containsKey(row.getRowNumber())) {
+                continue;
+            }
+
+            normalizeRow(row);
+
+            String email = row.getEmail();
+            String apogee = row.getNumApogee();
+
+            Optional<Student> studentByEmail =
+                studentRepository.findByEmailIgnoreCase(email);
+
+            Optional<Student> studentByApogee =
+                studentRepository.findByNumApogee(apogee);
+
+            if (studentByEmail.isEmpty() && studentByApogee.isEmpty()) {
+                Student student = mapToStudent(row);
+
+                studentsToCreate.add(student);
+                createdStudents++;
+
+                changes.add(buildChange(
+                    row,
+                    "CREATED",
+                    List.of("Created student")
+                ));
+
+                continue;
+            }
+
+            if (studentByEmail.isPresent()
+                && studentByApogee.isPresent()
+                && studentByEmail.get().getId().equals(studentByApogee.get().getId())) {
+
+                Student student = studentByEmail.get();
+                List<String> nameChanges = applyNameUpdates(student, row);
+
+                if (!nameChanges.isEmpty()) {
+                    studentsToUpdate.add(student);
+                    updatedStudents++;
+
+                    changes.add(buildChange(
+                        row,
+                        "UPDATED",
+                        nameChanges
+                    ));
+                } else {
+                    changes.add(buildChange(
+                        row,
+                        "SKIPPED",
+                        List.of("No changes detected")
+                    ));
+                }
+
+                continue;
+            }
+
+            if (studentByEmail.isPresent() && studentByApogee.isPresent()) {
+                addRowError(
+                    row,
+                    "row",
+                    "Email and apogee belong to different students",
+                    errors,
+                    rowErrors
+                );
+                continue;
+            }
+
+            if (studentByEmail.isPresent()) {
+                addRowError(
+                    row,
+                    "email",
+                    "Email already exists with a different apogee",
+                    errors,
+                    rowErrors
+                );
+                continue;
+            }
+
+            if (studentByApogee.isPresent()) {
+                addRowError(
+                    row,
+                    "numApogee",
+                    "Apogee already exists with a different email",
+                    errors,
+                    rowErrors
+                );
+                continue;
+            }
+
+            addRowError(
+                row,
+                "row",
+                "Unable to import row",
+                errors,
+                rowErrors
+            );
+        }
 
         /*
          * STEP 3
-         * Check duplicates in database
+         * Persist changes
          */
-        Set<String> emails =
-            validRows.stream()
-                .map(row ->
-                    row.getEmail()
-                        .trim()
-                        .toLowerCase()
-                )
-                .collect(HashSet::new, HashSet::add, HashSet::addAll);
+        if (!studentsToCreate.isEmpty()) {
+            studentRepository.saveAll(studentsToCreate);
+        }
 
-        Set<String> apogees =
-            validRows.stream()
-                .map(row ->
-                    row.getNumApogee().trim()
-                )
-                .collect(HashSet::new, HashSet::add, HashSet::addAll);
+        if (!studentsToUpdate.isEmpty()) {
+            studentRepository.saveAll(studentsToUpdate);
+        }
 
-        Set<String> existingEmails =
-            userRepository.findExistingEmails(emails);
-
-        Set<String> existingApogees =
-            studentRepository.findExistingApogees(apogees);
+        int failedRows = rowErrors.size();
 
         /*
          * STEP 4
-         * Mark DB duplicates as errors
-         */
-        for (StudentExcelRowDTO row : validRows) {
-
-            String normalizedEmail =
-                row.getEmail()
-                    .trim()
-                    .toLowerCase();
-
-            String normalizedApogee =
-                row.getNumApogee()
-                    .trim();
-
-            if (existingEmails.contains(normalizedEmail)) {
-
-                RowErrorDTO error = buildError(
-                    row,
-                    "email",
-                    "Email already exists"
-                );
-
-                errors.add(error);
-
-                rowErrors
-                    .computeIfAbsent(
-                        row.getRowNumber(),
-                        key -> new ArrayList<>()
-                    )
-                    .add(error);
-            }
-
-            if (existingApogees.contains(normalizedApogee)) {
-
-                RowErrorDTO error = buildError(
-                    row,
-                    "numApogee",
-                    "Apogee already exists"
-                );
-
-                errors.add(error);
-
-                rowErrors
-                    .computeIfAbsent(
-                        row.getRowNumber(),
-                        key -> new ArrayList<>()
-                    )
-                    .add(error);
-            }
-        }
-
-        /*
-         * STEP 5
-         * Keep only rows without ANY error
-         */
-        List<StudentExcelRowDTO> rowsToImport =
-            rows.stream()
-                .filter(row ->
-                    !rowErrors.containsKey(
-                        row.getRowNumber()
-                    )
-                )
-                .toList();
-
-        /*
-         * STEP 6
-         * Map rows to Student entities
-         */
-        List<Student> students =
-            rowsToImport.stream()
-                .map(this::mapToStudent)
-                .toList();
-
-        /*
-         * STEP 7
-         * Save all valid students
-         */
-        if (!students.isEmpty()) {
-            studentRepository.saveAll(students);
-        }
-
-        /*
-         * STEP 8
          * Return import summary
          */
         return StudentImportResultDTO.builder()
+            .fileName(file.getOriginalFilename())
+            .importedAt(LocalDateTime.now())
             .totalRows(rows.size())
-            .importedRows(students.size())
-            .failedRows(
-                rows.size() - students.size()
-            )
+            .createdStudents(createdStudents)
+            .updatedStudents(updatedStudents)
+            .failedRows(failedRows)
+            .status(resolveStatus(createdStudents, updatedStudents, failedRows))
+            .changes(changes)
             .errors(errors)
+            .warnings(warnings)
             .build();
     }
 
     private Student mapToStudent(
         StudentExcelRowDTO row
     ) {
-
-        String email = row.getEmail();
-        if (email != null) {
-            row.setEmail(email.trim().toLowerCase());
-        }
-
-        String numApogee = row.getNumApogee();
-        if (numApogee != null) {
-            row.setNumApogee(numApogee.trim());
-        }
+        normalizeRow(row);
 
         Student student =
             mapper.toEntity(row);
@@ -287,6 +288,110 @@ public class StudentImportService {
         student.setFirstLogin(true);
 
         return student;
+    }
+
+    private void normalizeRow(StudentExcelRowDTO row) {
+        String email = row.getEmail();
+        if (email != null) {
+            row.setEmail(normalizeEmail(email));
+        }
+
+        String numApogee = row.getNumApogee();
+        if (numApogee != null) {
+            row.setNumApogee(normalizeApogee(numApogee));
+        }
+
+        String firstName = row.getFirstName();
+        if (firstName != null) {
+            row.setFirstName(firstName.trim());
+        }
+
+        String lastName = row.getLastName();
+        if (lastName != null) {
+            row.setLastName(lastName.trim());
+        }
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase();
+    }
+
+    private String normalizeApogee(String numApogee) {
+        return numApogee == null ? null : numApogee.trim();
+    }
+
+    private List<String> applyNameUpdates(
+        Student student,
+        StudentExcelRowDTO row
+    ) {
+        List<String> changes = new ArrayList<>();
+
+        String newFirstName = row.getFirstName();
+        String newLastName = row.getLastName();
+
+        if (newFirstName != null && !newFirstName.equals(student.getFirstName())) {
+            changes.add(buildChangeDetail("firstName", student.getFirstName(), newFirstName));
+            student.setFirstName(newFirstName);
+        }
+
+        if (newLastName != null && !newLastName.equals(student.getLastName())) {
+            changes.add(buildChangeDetail("lastName", student.getLastName(), newLastName));
+            student.setLastName(newLastName);
+        }
+
+        return changes;
+    }
+
+    private String buildChangeDetail(String field, String oldValue, String newValue) {
+        String safeOldValue = oldValue == null ? "" : oldValue;
+        String safeNewValue = newValue == null ? "" : newValue;
+        return field + ": '" + safeOldValue + "' -> '" + safeNewValue + "'";
+    }
+
+    private StudentChangeDTO buildChange(
+        StudentExcelRowDTO row,
+        String action,
+        List<String> changes
+    ) {
+        return StudentChangeDTO.builder()
+            .rowNumber(row.getRowNumber())
+            .apogee(row.getNumApogee())
+            .email(row.getEmail())
+            .action(action)
+            .changes(changes)
+            .build();
+    }
+
+    private void addRowError(
+        StudentExcelRowDTO row,
+        String field,
+        String message,
+        List<RowErrorDTO> errors,
+        Map<Integer, List<RowErrorDTO>> rowErrors
+    ) {
+        RowErrorDTO error = buildError(row, field, message);
+
+        errors.add(error);
+
+        rowErrors
+            .computeIfAbsent(row.getRowNumber(), key -> new ArrayList<>())
+            .add(error);
+    }
+
+    private String resolveStatus(
+        int createdStudents,
+        int updatedStudents,
+        int failedRows
+    ) {
+        if (failedRows == 0) {
+            return "SUCCESS";
+        }
+
+        if (createdStudents == 0 && updatedStudents == 0) {
+            return "FAILED";
+        }
+
+        return "PARTIAL";
     }
 
     private RowErrorDTO buildError(

@@ -3,6 +3,7 @@ package ma.eniad.userservice.repository.student;
 import ma.eniad.userservice.entity.Student;
 
 import java.util.Set;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -16,6 +17,10 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     boolean existsByNumApogee(String numApogee);
 
     boolean existsByNumApogeeAndIdNot(String numApogee, Long excludedId);
+
+    Optional<Student> findByNumApogee(String numApogee);
+
+    Optional<Student> findByEmailIgnoreCase(String email);
 
     @Query("SELECT s.numApogee FROM Student s WHERE s.numApogee IN :apogees")
     Set<String> findExistingApogees(
