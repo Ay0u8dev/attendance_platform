@@ -164,21 +164,10 @@ public class DatabaseSeeder {
                     .status(present ? AttendanceStudentStatus.PRESENT : AttendanceStudentStatus.ABSENT)
                     .markMethod(present ? method : null)
                     .markedAt(markedAt)
-                    .deviceId(resolveDeviceId(method, present, student.studentId()))
-                    .markedGpsLat(method == AttendanceSessionMethod.QR_CODE && present ? GPS_LAT : null)
-                    .markedGpsLon(method == AttendanceSessionMethod.QR_CODE && present ? GPS_LON : null)
                     .build());
         }
 
         attendanceRecordRepository.saveAll(records);
-    }
-
-    private String resolveDeviceId(AttendanceSessionMethod method, boolean present, Long studentId) {
-        if (!present || method != AttendanceSessionMethod.QR_CODE) {
-            return null;
-        }
-
-        return "seed-device-" + studentId;
     }
 
     private record SeedStudent(

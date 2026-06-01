@@ -32,7 +32,6 @@ Success response:
       "courseLabel": "Distributed Systems",
       "roomLabel": "Room B12",
       "groupIds": [1],
-      "sessionMethod": "QR_CODE",
       "sessionStatus": "FINALIZED",
       "startedAt": "2026-04-28T12:00:00",
       "endedAt": "2026-04-28T12:30:00",
@@ -67,7 +66,6 @@ Success response:
   "courseLabel": "Distributed Systems",
   "roomLabel": "Room B12",
   "groupIds": [1],
-  "sessionMethod": "QR_CODE",
   "sessionStatus": "FINALIZED",
   "startedAt": "2026-04-28T12:00:00",
   "endsAt": "2026-04-28T12:30:00",
@@ -81,9 +79,6 @@ Success response:
   "numApogee": "22012345",
   "attendanceStatus": "PRESENT",
   "markMethod": "QR_CODE",
-  "deviceId": "scanner-entrance-01",
-  "markedGpsLat": "34.6820",
-  "markedGpsLon": "-1.9091",
   "markedAt": "2026-04-28T12:01:00"
 }
 ```

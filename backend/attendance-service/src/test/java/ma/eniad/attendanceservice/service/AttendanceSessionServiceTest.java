@@ -9,7 +9,6 @@ import ma.eniad.attendanceservice.dto.LiveAttendanceSessionMeta;
 import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 import ma.eniad.attendanceservice.dto.StudentRosterDto;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
-import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
 import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
@@ -76,7 +75,6 @@ class AttendanceSessionServiceTest {
         assertThat(response.roomLabel()).isEqualTo("Room B12");
         assertThat(response.gpsLat()).isEqualTo("34.6814");
         assertThat(response.gpsLon()).isEqualTo("-1.9086");
-        assertThat(response.method()).isEqualTo(AttendanceSessionMethod.QR_CODE);
         assertThat(response.status()).isEqualTo(AttendanceSessionStatus.ACTIVE);
         assertThat(response.studentCount()).isEqualTo(2);
         assertThat(Duration.between(response.startedAt(), response.endsAt())).isEqualTo(Duration.ofMinutes(30));
@@ -161,7 +159,6 @@ class AttendanceSessionServiceTest {
                 .gpsLon("-1.9086")
                 .startedAt(LocalDateTime.of(2026, 4, 28, 12, 0))
                 .endsAt(LocalDateTime.of(2026, 4, 28, 12, 30))
-                .method(AttendanceSessionMethod.QR_CODE)
                 .status(AttendanceSessionStatus.ACTIVE)
                 .presentCount(0)
                 .absentCount(0)
@@ -199,7 +196,6 @@ class AttendanceSessionServiceTest {
                 List.of(1L, 2L, 1L),
                 "  Distributed Systems  ",
                 "  Room B12  ",
-                AttendanceSessionMethod.QR_CODE,
                 " 34.6814 ",
                 " -1.9086 "
         );

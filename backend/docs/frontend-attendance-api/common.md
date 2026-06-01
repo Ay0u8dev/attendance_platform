@@ -9,11 +9,13 @@
 
 ## Enums
 
-### Session method
+### Mark method
 
 - `QR_CODE`
 - `FACE_ID`
 - `MANUAL`
+
+Attendance sessions are method-neutral. `QR_CODE`, `FACE_ID`, and `MANUAL` describe how a student row was marked, not the session mode.
 
 ### Attendance status
 

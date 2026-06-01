@@ -39,10 +39,6 @@
                 <i class="fa-solid fa-tower-broadcast"></i>
               </span>
               <app-status-badge label="Séance active" variant="success"></app-status-badge>
-              <app-status-badge
-                [label]="activeAttendanceMethodLabel()"
-                variant="neutral"
-              ></app-status-badge>
             </div>
 
             <div class="min-w-0">
@@ -72,14 +68,24 @@
             }
 
             @if (canStartAttendanceFlow()) {
-              <button
-                type="button"
-                class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-primary-strong focus:outline-none focus:ring-2 focus:ring-primary-soft focus:ring-offset-2"
-                (click)="openAttendanceCamera()"
-              >
-                <i [class]="activeAttendanceCtaIcon()" aria-hidden="true"></i>
-                {{ activeAttendanceCtaLabel() }}
-              </button>
+              <div class="grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-primary-strong focus:outline-none focus:ring-2 focus:ring-primary-soft focus:ring-offset-2"
+                  (click)="openAttendanceCamera('QR_CODE')"
+                >
+                  <i class="fa-solid fa-qrcode" aria-hidden="true"></i>
+                  Scanner le QR code
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft focus:outline-none focus:ring-2 focus:ring-primary-soft focus:ring-offset-2"
+                  (click)="openAttendanceCamera('FACE_ID')"
+                >
+                  <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+                  Scanner mon visage
+                </button>
+              </div>
             }
           </div>
         </div>
@@ -345,7 +351,7 @@
             class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary"
             aria-hidden="true"
           >
-            <i [class]="activeAttendanceCtaIcon()"></i>
+            <i [class]="selectedAttendanceIcon()"></i>
           </span>
           <div class="min-w-0">
             <p class="text-sm font-semibold text-principalText">{{ cameraInstruction() }}</p>
@@ -354,7 +360,7 @@
         </div>
       </div>
 
-      @if (activeAttendanceSession()?.sessionMethod === 'QR_CODE') {
+      @if (selectedAttendanceChoice() === 'QR_CODE') {
         <div class="space-y-4">
           <div class="attendance-media-frame qr-scanner-frame">
             @if (attendanceFlowPhase() !== 'qr-detected') {
@@ -458,7 +464,7 @@
         {{ activeAttendanceCameraLabel() }}
       </span>
       @if (
-        activeAttendanceSession()?.sessionMethod === 'QR_CODE' &&
+        selectedAttendanceChoice() === 'QR_CODE' &&
         attendanceFlowPhase() === 'qr-detected'
       ) {
         <button
@@ -471,7 +477,7 @@
         </button>
       }
       @if (
-        activeAttendanceSession()?.sessionMethod === 'FACE_ID' &&
+        selectedAttendanceChoice() === 'FACE_ID' &&
         attendanceFlowPhase() === 'face-captured'
       ) {
         <button

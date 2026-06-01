@@ -16,7 +16,6 @@ export interface StudentAttendanceSessionSummaryDto {
   readonly courseLabel: string;
   readonly roomLabel: string;
   readonly groupIds: readonly number[];
-  readonly sessionMethod: AttendanceSessionMethod;
   readonly sessionStatus: AttendanceSessionStatus;
   readonly startedAt: string;
   readonly endedAt: string | null;
@@ -31,7 +30,6 @@ export interface StudentAttendanceSessionDetailDto {
   readonly courseLabel: string;
   readonly roomLabel: string;
   readonly groupIds: readonly number[];
-  readonly sessionMethod: AttendanceSessionMethod;
   readonly sessionStatus: AttendanceSessionStatus;
   readonly startedAt: string;
   readonly endsAt: string;
@@ -45,9 +43,6 @@ export interface StudentAttendanceSessionDetailDto {
   readonly numApogee: string;
   readonly attendanceStatus: AttendanceStudentStatus;
   readonly markMethod: AttendanceSessionMethod | null;
-  readonly deviceId: string | null;
-  readonly markedGpsLat: string | null;
-  readonly markedGpsLon: string | null;
   readonly markedAt: string | null;
 }
 
@@ -57,7 +52,6 @@ export interface StudentActiveAttendanceSessionDto {
   readonly courseLabel: string;
   readonly roomLabel: string;
   readonly groupIds: readonly number[];
-  readonly sessionMethod: AttendanceSessionMethod;
   readonly startedAt: string;
   readonly endsAt: string;
   readonly attendanceStatus: AttendanceStudentStatus;
@@ -99,13 +93,11 @@ export interface StudentSessionListItem {
   readonly timeLabel: string;
   readonly attendanceLabel: string;
   readonly attendanceVariant: AttendanceBadgeVariant;
-  readonly sessionMethodLabel: string;
   readonly markMethodLabel: string;
   readonly startedAt: string;
   readonly endedAt: string | null;
   readonly markedAt: string | null;
   readonly attendanceStatus: AttendanceStudentStatus;
-  readonly sessionMethod: AttendanceSessionMethod;
   readonly markMethod: AttendanceSessionMethod | null;
   readonly justificationStatus?: StudentJustificationStatus;
   readonly justificationVariant?: StudentJustificationVariant;
@@ -120,7 +112,6 @@ export interface StudentSessionDetailViewModel {
   readonly groupSummary: string;
   readonly attendanceLabel: string;
   readonly attendanceVariant: AttendanceBadgeVariant;
-  readonly sessionMethodLabel: string;
   readonly markMethodLabel: string;
   readonly sessionScheduleLabel: string;
   readonly startedAtLabel: string;
@@ -130,8 +121,6 @@ export interface StudentSessionDetailViewModel {
   readonly studentFullName: string;
   readonly studentEmail: string;
   readonly numApogee: string;
-  readonly deviceId: string | null;
-  readonly gpsLabel: string | null;
   readonly justificationStatus?: StudentJustificationStatus;
   readonly justificationVariant?: StudentJustificationVariant;
   readonly justificationRoute?: string | null;

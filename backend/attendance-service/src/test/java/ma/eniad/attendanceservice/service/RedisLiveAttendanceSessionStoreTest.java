@@ -2,7 +2,6 @@ package ma.eniad.attendanceservice.service;
 
 import ma.eniad.attendanceservice.dto.LiveAttendanceSessionMeta;
 import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
-import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
 import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import org.junit.jupiter.api.Test;
@@ -39,7 +38,6 @@ class RedisLiveAttendanceSessionStoreTest {
                 "-1.9086",
                 LocalDateTime.of(2026, 5, 2, 15, 0),
                 LocalDateTime.of(2026, 5, 2, 15, 30),
-                AttendanceSessionMethod.QR_CODE,
                 AttendanceSessionStatus.ACTIVE
         );
         when(valueOperations.get(RedisLiveAttendanceSessionStore.sessionMetaKey(100L)))
@@ -68,7 +66,7 @@ class RedisLiveAttendanceSessionStoreTest {
                 "A001",
                 AttendanceStudentStatus.PRESENT,
                 LocalDateTime.of(2026, 5, 2, 15, 10),
-                AttendanceSessionMethod.QR_CODE,
+                ma.eniad.attendanceservice.entity.AttendanceSessionMethod.QR_CODE,
                 "phone-10",
                 "34.6820",
                 "-1.9091"

@@ -18,7 +18,6 @@ import { expand, finalize, map, reduce } from 'rxjs/operators';
 import { Router } from '@angular/router';
 
 import {
-  AttendanceSessionMethod,
   StudentActiveAttendanceSessionDto,
   StudentSessionDetailViewModel,
   StudentSessionListItem,
@@ -68,6 +67,8 @@ type AttendanceFlowPhase =
   | 'face-captured'
   | 'face-validated';
 
+type StudentAttendanceChoice = 'QR_CODE' | 'FACE_ID';
+
 @Component({
   selector: 'app-student-dashboard-page',
   imports: [
@@ -110,6 +111,7 @@ export class StudentDashboardPage {
   readonly cameraError = signal<string | null>(null);
   readonly attendanceVideo = viewChild<ElementRef<HTMLVideoElement>>('attendanceVideo');
   readonly attendanceFlowPhase = signal<AttendanceFlowPhase>('idle');
+  readonly selectedAttendanceChoice = signal<StudentAttendanceChoice>('QR_CODE');
   readonly faceCountdown = signal(5);
   readonly capturedFaceImage = signal<string | null>(null);
   readonly qrScannerEnabled = signal(false);
@@ -201,35 +203,13 @@ export class StudentDashboardPage {
     ];
   });
 
-  readonly activeAttendanceMethodLabel = computed(() => {
-    const session = this.activeAttendanceSession();
-    return session ? this.methodLabel(session.sessionMethod) : '';
-  });
-
   readonly activeAttendanceCameraLabel = computed(() => {
-    const session = this.activeAttendanceSession();
-    if (!session) {
-      return '';
-    }
-
-    return session.sessionMethod === 'FACE_ID' ? 'Caméra frontale' : 'Caméra arrière';
+    return this.selectedAttendanceChoice() === 'FACE_ID' ? 'Caméra frontale' : 'Caméra arrière';
   });
 
-  readonly activeAttendanceCtaLabel = computed(() => {
-    const session = this.activeAttendanceSession();
-    if (!session) {
-      return 'Marquer ma présence';
-    }
-
-    return session.sessionMethod === 'FACE_ID'
-      ? 'Démarrer la vérification faciale'
-      : 'Scanner le QR code';
-  });
-
-  readonly activeAttendanceCtaIcon = computed(() => {
-    const session = this.activeAttendanceSession();
-    return session?.sessionMethod === 'FACE_ID' ? 'fa-solid fa-user-check' : 'fa-solid fa-qrcode';
-  });
+  readonly selectedAttendanceIcon = computed(() =>
+    this.selectedAttendanceChoice() === 'FACE_ID' ? 'fa-solid fa-user-check' : 'fa-solid fa-qrcode',
+  );
 
   readonly canStartAttendanceFlow = computed(() => {
     const session = this.activeAttendanceSession();
@@ -245,7 +225,7 @@ export class StudentDashboardPage {
         return 'fa-solid fa-circle-exclamation';
       case 'UNKNOWN':
       default:
-        return this.activeAttendanceCtaIcon();
+        return 'fa-solid fa-qrcode';
     }
   });
 
@@ -259,9 +239,6 @@ export class StudentDashboardPage {
       case 'UNKNOWN':
       default:
         return '';
-      // return session?.sessionMethod === 'FACE_ID'
-      //   ? 'Vérifie ton identité avec la caméra frontale.'
-      //   : 'Scanne le QR code projeté par l’enseignant.';
     }
   });
 
@@ -284,7 +261,7 @@ export class StudentDashboardPage {
       return '';
     }
 
-    return session.sessionMethod === 'FACE_ID' ? 'Vérification faciale' : 'Scanner le QR code';
+    return this.selectedAttendanceChoice() === 'FACE_ID' ? 'Vérification faciale' : 'Scanner le QR code';
   });
 
   readonly cameraModalDescription = computed(() => {
@@ -293,7 +270,7 @@ export class StudentDashboardPage {
       return '';
     }
 
-    return session.sessionMethod === 'FACE_ID'
+    return this.selectedAttendanceChoice() === 'FACE_ID'
       ? 'Utilise la caméra frontale pour préparer la vérification.'
       : 'Utilise la caméra arrière pour viser le QR code projeté.';
   });
@@ -304,7 +281,7 @@ export class StudentDashboardPage {
       return '';
     }
 
-    return session.sessionMethod === 'FACE_ID'
+    return this.selectedAttendanceChoice() === 'FACE_ID'
       ? 'Garde ton visage dans le cadre.'
       : 'Place le QR code dans le cadre.';
   });
@@ -315,7 +292,7 @@ export class StudentDashboardPage {
       return '';
     }
 
-    return session.sessionMethod === 'FACE_ID'
+    return this.selectedAttendanceChoice() === 'FACE_ID'
       ? 'Reste immobile, face éclairée, regard vers l’écran.'
       : 'Rapproche ou éloigne le téléphone jusqu’à ce que le code soit net.';
   });
@@ -390,17 +367,18 @@ export class StudentDashboardPage {
     void this.router.navigateByUrl('/student/justifications');
   }
 
-  openAttendanceCamera(): void {
+  openAttendanceCamera(choice: StudentAttendanceChoice): void {
     const session = this.activeAttendanceSession();
     if (!session || this.attendanceCameraOpen() || session.attendanceStatus !== 'UNKNOWN') {
       return;
     }
 
+    this.selectedAttendanceChoice.set(choice);
     this.resetAttendanceFlow();
     this.cameraError.set(null);
     this.attendanceCameraOpen.set(true);
 
-    if (session.sessionMethod === 'QR_CODE') {
+    if (choice === 'QR_CODE') {
       this.attendanceFlowPhase.set('qr-scanning');
       this.qrScannerEnabled.set(true);
       return;
@@ -471,7 +449,7 @@ export class StudentDashboardPage {
 
     console.log('FACE_ID attendance payload ready:', {
       sessionId: session.sessionId,
-      method: session.sessionMethod,
+      method: this.selectedAttendanceChoice(),
       capturedAt: new Date().toISOString(),
       imageDataUrlLength: image.length,
     });
@@ -563,11 +541,6 @@ export class StudentDashboardPage {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (session) => {
-          if (session?.sessionMethod === 'MANUAL') {
-            this.activeAttendanceSession.set(null);
-            return;
-          }
-
           this.activeAttendanceSession.set(session);
         },
         error: () => {
@@ -688,7 +661,7 @@ export class StudentDashboardPage {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: this.cameraFacingMode(session.sessionMethod),
+        video: this.cameraFacingMode(this.selectedAttendanceChoice()),
         audio: false,
       });
       this.activeCameraStream = stream;
@@ -794,24 +767,11 @@ export class StudentDashboardPage {
     );
   }
 
-  private cameraFacingMode(method: AttendanceSessionMethod): MediaTrackConstraints {
+  private cameraFacingMode(method: StudentAttendanceChoice): MediaTrackConstraints {
     if (method === 'FACE_ID') {
       return { facingMode: 'user' };
     }
 
     return { facingMode: { ideal: 'environment' } };
-  }
-
-  private methodLabel(method: AttendanceSessionMethod): string {
-    switch (method) {
-      case 'QR_CODE':
-        return 'QR code';
-      case 'FACE_ID':
-        return 'Reconnaissance faciale';
-      case 'MANUAL':
-        return 'Manuel';
-      default:
-        return method;
-    }
   }
 }

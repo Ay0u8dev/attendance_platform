@@ -30,8 +30,7 @@ public class AttendanceUpdateService {
             "qr-service", AttendanceSessionMethod.QR_CODE,
             "face-service", AttendanceSessionMethod.FACE_ID
     );
-    private static final String QR_DEVICE_REQUIRED_MESSAGE = "deviceId is required for QR_CODE attendance";
-    private static final String QR_GPS_REQUIRED_MESSAGE = "gpsLat and gpsLon are required for QR_CODE attendance";
+    private static final String DEVICE_REQUIRED_MESSAGE = "deviceId is required for student self attendance";
 
     private final LiveAttendanceSessionStore liveAttendanceSessionStore;
     private final SimpMessagingTemplate messagingTemplate;
@@ -86,33 +85,31 @@ public class AttendanceUpdateService {
         }
 
         return withSessionLock(sessionId, () -> {
-            LiveAttendanceSessionMeta sessionMeta = requireActiveSession(sessionId);
-            if (sessionMeta.method() != request.method()) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Attendance method does not match session mode");
-            }
+            requireActiveSession(sessionId);
 
             LiveAttendanceStudentState currentStudent = requireStudent(sessionId, request.studentId());
+            if (currentStudent.status() != AttendanceStudentStatus.UNKNOWN) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Student attendance is already resolved");
+            }
             AttendanceMarkData markData = resolveMarkData(request);
 
-            if (request.method() == AttendanceSessionMethod.QR_CODE) {
-                liveAttendanceSessionStore.findDeviceIdByStudent(sessionId, request.studentId())
-                        .filter(existingDeviceId -> !existingDeviceId.equals(markData.deviceId()))
-                        .ifPresent(existingDeviceId -> {
-                            throw new ResponseStatusException(
-                                    HttpStatus.CONFLICT,
-                                    "Student is already bound to another device in this session"
-                            );
-                        });
+            liveAttendanceSessionStore.findDeviceIdByStudent(sessionId, request.studentId())
+                    .filter(existingDeviceId -> !existingDeviceId.equals(markData.deviceId()))
+                    .ifPresent(existingDeviceId -> {
+                        throw new ResponseStatusException(
+                                HttpStatus.CONFLICT,
+                                "Student is already bound to another device in this session"
+                        );
+                    });
 
-                liveAttendanceSessionStore.findStudentIdByDevice(sessionId, markData.deviceId())
-                        .filter(existingStudentId -> !existingStudentId.equals(request.studentId()))
-                        .ifPresent(existingStudentId -> {
-                            throw new ResponseStatusException(
-                                    HttpStatus.CONFLICT,
-                                    "Device is already used by another student in this session"
-                            );
-                        });
-            }
+            liveAttendanceSessionStore.findStudentIdByDevice(sessionId, markData.deviceId())
+                    .filter(existingStudentId -> !existingStudentId.equals(request.studentId()))
+                    .ifPresent(existingStudentId -> {
+                        throw new ResponseStatusException(
+                                HttpStatus.CONFLICT,
+                                "Device is already used by another student in this session"
+                        );
+                    });
 
             LocalDateTime now = LocalDateTime.now();
             LiveAttendanceStudentState updatedStudent = new LiveAttendanceStudentState(
@@ -132,9 +129,7 @@ public class AttendanceUpdateService {
             );
 
             liveAttendanceSessionStore.saveStudentState(sessionId, updatedStudent);
-            if (request.method() == AttendanceSessionMethod.QR_CODE) {
-                liveAttendanceSessionStore.bindDeviceToStudent(sessionId, markData.deviceId(), request.studentId());
-            }
+            liveAttendanceSessionStore.bindDeviceToStudent(sessionId, markData.deviceId(), request.studentId());
             return buildResponseAndBroadcast(sessionId, updatedStudent);
         });
     }
@@ -160,9 +155,6 @@ public class AttendanceUpdateService {
                 updatedStudent.studentId(),
                 updatedStudent.status(),
                 updatedStudent.markMethod(),
-                updatedStudent.deviceId(),
-                updatedStudent.markedGpsLat(),
-                updatedStudent.markedGpsLon(),
                 updatedStudent.markedAt(),
                 counts.presentCount(),
                 counts.absentCount(),
@@ -177,9 +169,6 @@ public class AttendanceUpdateService {
                         updatedStudent.studentId(),
                         updatedStudent.status(),
                         updatedStudent.markMethod(),
-                        updatedStudent.deviceId(),
-                        updatedStudent.markedGpsLat(),
-                        updatedStudent.markedGpsLon(),
                         updatedStudent.markedAt(),
                         counts.presentCount(),
                         counts.absentCount(),
@@ -199,15 +188,13 @@ public class AttendanceUpdateService {
 
     private AttendanceMarkData resolveMarkData(InternalAttendanceUpdateRequest request) {
         if (request.method() == AttendanceSessionMethod.QR_CODE) {
-            String deviceId = requireNonBlank(request.deviceId(), QR_DEVICE_REQUIRED_MESSAGE);
-            String gpsLat = requireNonBlank(request.gpsLat(), QR_GPS_REQUIRED_MESSAGE);
-            String gpsLon = requireNonBlank(request.gpsLon(), QR_GPS_REQUIRED_MESSAGE);
-            return new AttendanceMarkData(deviceId, gpsLat, gpsLon);
+            String deviceId = requireNonBlank(request.deviceId(), DEVICE_REQUIRED_MESSAGE);
+            return new AttendanceMarkData(deviceId, normalizeOptional(request.gpsLat()), normalizeOptional(request.gpsLon()));
         }
 
         if (request.method() == AttendanceSessionMethod.FACE_ID) {
             return new AttendanceMarkData(
-                    normalizeOptional(request.deviceId()),
+                    requireNonBlank(request.deviceId(), DEVICE_REQUIRED_MESSAGE),
                     normalizeOptional(request.gpsLat()),
                     normalizeOptional(request.gpsLon())
             );

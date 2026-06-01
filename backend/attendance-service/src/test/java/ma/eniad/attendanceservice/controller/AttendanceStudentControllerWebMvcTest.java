@@ -46,8 +46,7 @@ class AttendanceStudentControllerWebMvcTest {
                 .thenReturn(new PagedResponse<>(
                         List.of(new StudentAttendanceSessionSummaryResponse(
                                 100L, "Ayoub Elebbar", "Distributed Systems", "Room B12", List.of(1L),
-                                AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.FINALIZED,
-                                LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30),
+                                AttendanceSessionStatus.FINALIZED, LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30),
                                 AttendanceStudentStatus.PRESENT, AttendanceSessionMethod.QR_CODE, LocalDateTime.of(2026, 4, 28, 12, 5)
                         )),
                         0, 20, 1, 1
@@ -63,11 +62,9 @@ class AttendanceStudentControllerWebMvcTest {
         when(attendanceQueryService.getStudentSession(12L, 100L))
                 .thenReturn(new StudentAttendanceSessionDetailResponse(
                         100L, "Ayoub Elebbar", "Distributed Systems", "Room B12", List.of(1L),
-                        AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.FINALIZED,
-                        LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30), LocalDateTime.of(2026, 4, 28, 12, 30),
+                        AttendanceSessionStatus.FINALIZED, LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30), LocalDateTime.of(2026, 4, 28, 12, 30),
                         12L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001",
-                        AttendanceStudentStatus.PRESENT, AttendanceSessionMethod.QR_CODE, "phone-10", "34.6820", "-1.9091",
-                        LocalDateTime.of(2026, 4, 28, 12, 5)
+                        AttendanceStudentStatus.PRESENT, AttendanceSessionMethod.QR_CODE, LocalDateTime.of(2026, 4, 28, 12, 5)
                 ));
         when(attendanceQueryService.getStudentOverview(12L))
                 .thenReturn(new StudentAttendanceOverviewResponse(10, 9, 1, 0.9));
@@ -76,7 +73,7 @@ class AttendanceStudentControllerWebMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.studentId").value(12))
                 .andExpect(jsonPath("$.teacherFullName").value("Ayoub Elebbar"))
-                .andExpect(jsonPath("$.markedGpsLat").value("34.6820"));
+                .andExpect(jsonPath("$.markedGpsLat").doesNotExist());
 
         mockMvc.perform(get("/attendance/student/overview").with(studentUser()))
                 .andExpect(status().isOk())

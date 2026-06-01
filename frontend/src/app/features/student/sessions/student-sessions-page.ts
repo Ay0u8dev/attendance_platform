@@ -84,7 +84,7 @@ export class StudentSessionsPage {
           row.groupSummary,
           row.dateLabel,
           row.timeLabel,
-          row.sessionMethodLabel,
+          row.markMethodLabel,
           row.attendanceLabel,
           row.justificationStatus ?? 'Aucune',
         ].join(' '),
