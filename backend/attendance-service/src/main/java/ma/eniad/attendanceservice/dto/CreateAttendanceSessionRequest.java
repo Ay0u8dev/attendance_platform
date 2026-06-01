@@ -20,10 +20,8 @@ public record CreateAttendanceSessionRequest(
         @NotNull(message = "method is required")
         AttendanceSessionMethod method,
 
-        @NotBlank(message = "gpsLat is required")
         String gpsLat,
 
-        @NotBlank(message = "gpsLon is required")
         String gpsLon
 ) {
 }

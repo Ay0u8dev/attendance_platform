@@ -6,8 +6,8 @@ import lombok.RequiredArgsConstructor;
 import ma.eniad.userservice.dto.structure.AnneeRequestDTO;
 import ma.eniad.userservice.dto.structure.AnneeResponseDTO;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
-import ma.eniad.userservice.exception.structure.DuplicateResourceException;
-import ma.eniad.userservice.exception.structure.ResourceNotFoundException;
+import ma.eniad.userservice.exception.DuplicateResourceException;
+import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.mapper.structure.AnneeUniversitaireMapper;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
 import org.springframework.stereotype.Service;
@@ -25,6 +25,7 @@ public class AnneeUniversitaireService {
         if (repository.existsByName(request.getName())) {
             throw new DuplicateResourceException("Academic year name already exists");
         }
+        deactivateOtherYearsIfRequestedActive(request, null);
         AnneeUniversitaire entity = mapper.toEntity(request);
         return mapper.toResponse(repository.save(entity));
     }
@@ -34,6 +35,7 @@ public class AnneeUniversitaireService {
         if (!entity.getName().equals(request.getName()) && repository.existsByName(request.getName())) {
             throw new DuplicateResourceException("Academic year name already exists");
         }
+        deactivateOtherYearsIfRequestedActive(request, id);
         mapper.updateEntity(request, entity);
         return mapper.toResponse(repository.save(entity));
     }
@@ -55,5 +57,11 @@ public class AnneeUniversitaireService {
     private AnneeUniversitaire getEntity(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Academic year not found with id: " + id));
+    }
+
+    private void deactivateOtherYearsIfRequestedActive(AnneeRequestDTO request, Long currentId) {
+        if (request.isActive()) {
+            repository.deactivateOtherActiveYears(currentId);
+        }
     }
 }

@@ -32,6 +32,10 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
         String source = request.getHeader("X-Request-Source");
         String requestUri = request.getRequestURI();
 
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
+
         if (Objects.equals(source, "auth-service")) {
             return true;
         }

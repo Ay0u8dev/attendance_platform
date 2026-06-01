@@ -2,14 +2,20 @@
   <app-page-header
     title="Student Management"
     description="Monitor your students' attendance, performance, and engagement across your modules."
-    meta="142 students in your courses"
+    [meta]="selectedGroupName() ? students().length + ' students in ' + selectedGroupName() : students().length + ' students in your courses'"
   ></app-page-header>
+
+  @if (error()) {
+    <div class="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm font-semibold text-danger">
+      {{ error() }}
+    </div>
+  }
 
   <app-data-table
     title="My Students"
-    description="Overview of students enrolled in your modules. Track attendance trends and identify students at risk."
+    [description]="selectedGroupName() ? 'Students enrolled in ' + selectedGroupName() + '.' : 'Overview of students enrolled in your modules. Track attendance trends and identify students at risk.'"
     caption="Attendance data synchronized with the latest session reports"
-    [rows]="students"
+    [rows]="students()"
     [columns]="columns"
     [rowId]="studentRowId"
     [pageSizeOptions]="[10, 25, 50]"
@@ -58,6 +64,7 @@
           type="button"
           class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
           title="View History"
+          (click)="openHistory()"
         >
           <i class="fa-solid fa-clock-rotate-left text-xs"></i>
         </button>
@@ -65,6 +72,7 @@
           type="button"
           class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
           title="Message Student"
+          (click)="messageStudent(row)"
         >
           <i class="fa-regular fa-envelope text-xs"></i>
         </button>

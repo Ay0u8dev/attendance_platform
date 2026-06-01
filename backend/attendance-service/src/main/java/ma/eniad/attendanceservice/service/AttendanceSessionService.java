@@ -27,9 +27,7 @@ public class AttendanceSessionService {
 
     @Transactional
     public AttendanceSessionResponse createSession(Long teacherId, CreateAttendanceSessionRequest request) {
-        if (attendanceSessionRepository.existsByTeacherIdAndStatus(teacherId, AttendanceSessionStatus.ACTIVE)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Teacher already has an active session");
-        }
+        resolveActiveSessionConflict(teacherId);
 
         List<Long> normalizedGroupIds = request.groupIds().stream().distinct().toList();
         List<StudentRosterDto> roster = userServiceClient.getStudentRosterByGroupIds(normalizedGroupIds);
@@ -106,5 +104,18 @@ public class AttendanceSessionService {
                 savedSession.getStatus(),
                 roster.size()
         );
+    }
+
+    private void resolveActiveSessionConflict(Long teacherId) {
+        attendanceSessionRepository.findByTeacherIdAndStatus(teacherId, AttendanceSessionStatus.ACTIVE)
+                .ifPresent(activeSession -> {
+                    if (liveAttendanceSessionStore.findSessionMeta(activeSession.getId()).isPresent()) {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "Teacher already has an active session");
+                    }
+
+                    activeSession.setStatus(AttendanceSessionStatus.FINALIZED);
+                    activeSession.setEndedAt(LocalDateTime.now());
+                    attendanceSessionRepository.save(activeSession);
+                });
     }
 }

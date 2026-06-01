@@ -5,8 +5,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
-import ma.eniad.userservice.exception.structure.DuplicateResourceException;
-import ma.eniad.userservice.exception.structure.ResourceNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -42,6 +40,13 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(InvalidExcelFileException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidExcelFile(
+            InvalidExcelFileException ex,
+            WebRequest request) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleMethodArgumentNotValid(
             MethodArgumentNotValidException ex,
@@ -62,6 +67,21 @@ public class GlobalExceptionHandler {
                 .findFirst()
                 .orElse("Validation failed");
         return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgument(
+            IllegalArgumentException ex,
+            WebRequest request) {
+        String message = ex.getMessage() != null ? ex.getMessage() : "Invalid request";
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request);
+    }
+
+    @ExceptionHandler(InvalidDomainException.class)
+        public ResponseEntity<Map<String, Object>> handleInvalidDomainException(
+                InvalidDomainException ex,
+                WebRequest request) {
+            return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
     @ExceptionHandler(RuntimeException.class)

@@ -1,5 +1,9 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { finalize } from 'rxjs';
 
+import { StudentUser } from '../../../core/users/models/student.model';
+import { StudentUserService } from '../../../core/users/services/student-user.service';
 import { DataTableCellDef } from '../../../shared/components/data-table/data-table-cell-def';
 import { DataTable } from '../../../shared/components/data-table/data-table';
 import { DataTableColumn } from '../../../shared/components/data-table/data-table.types';
@@ -11,13 +15,10 @@ type StudentStatusVariant = 'success' | 'warning' | 'error';
 type StudentRow = {
   readonly name: string;
   readonly email: string;
-  readonly program: string;
-  readonly group: string;
-  readonly absences: number;
-  readonly attendanceRate: number;
+  readonly apogee: string;
+  readonly lastSeen: string;
   readonly status: string;
   readonly variant: StudentStatusVariant;
-  readonly lastCheckIn: string;
 };
 
 @Component({
@@ -28,8 +29,64 @@ type StudentRow = {
   styleUrl: './students-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TeacherStudentsPage {
+export class TeacherStudentsPage implements OnInit {
+  private readonly studentService = inject(StudentUserService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly students = signal<StudentRow[]>([]);
+  readonly selectedGroupName = signal<string | null>(null);
+
   readonly studentRowId = (student: StudentRow) => student.email;
+
+  ngOnInit(): void {
+    this.route.queryParamMap.subscribe((params) => {
+      const groupId = Number(params.get('groupId'));
+      this.selectedGroupName.set(params.get('groupName'));
+
+      if (Number.isFinite(groupId) && groupId > 0) {
+        this.loadStudentsByGroupe(groupId);
+      } else {
+        this.loadStudents();
+      }
+    });
+  }
+
+  loadStudents(): void {
+    this.loading.set(true);
+    this.error.set(null);
+
+    this.studentService
+      .getAll()
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: (students) => this.students.set(students.map((student) => this.toRow(student))),
+        error: () => this.error.set('Impossible de charger les étudiants.'),
+      });
+  }
+
+  loadStudentsByGroupe(groupeId: number): void {
+    this.loading.set(true);
+    this.error.set(null);
+
+    this.studentService
+      .getByGroupeId(groupeId)
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: (students) => this.students.set(students.map((student) => this.toRow(student))),
+        error: () => this.error.set('Impossible de charger les etudiants de ce groupe.'),
+      });
+  }
+
+  openHistory(): void {
+    this.router.navigate(['/teacher/sessions']);
+  }
+
+  messageStudent(row: StudentRow): void {
+    window.location.href = `mailto:${row.email}`;
+  }
 
   getInitials(name: string): string {
     return name
@@ -39,108 +96,55 @@ export class TeacherStudentsPage {
       .toUpperCase();
   }
 
-  readonly students: readonly StudentRow[] = [
-    {
-      name: 'Sofiane Meziane',
-      email: 'sofiane.meziane@ump.ac.ma',
-      program: 'Software Engineering',
-      group: 'Group 02',
-      absences: 1,
-      attendanceRate: 98,
-      status: 'Regular',
-      variant: 'success',
-      lastCheckIn: 'Today, 08:54',
-    },
-    {
-      name: 'Leila Bensalem',
-      email: 'leila.bensalem@ump.ac.ma',
-      program: 'Data Science',
-      group: 'Group 05',
-      absences: 3,
-      attendanceRate: 89,
-      status: 'Warning',
-      variant: 'warning',
-      lastCheckIn: 'Today, 09:12',
-    },
-    {
-      name: 'Yassine El Idrissi',
-      email: 'yassine.idrissi@ump.ac.ma',
-      program: 'Networks & Security',
-      group: 'Group 03',
-      absences: 6,
-      attendanceRate: 74,
-      status: 'At Risk',
-      variant: 'error',
-      lastCheckIn: 'Yesterday, 11:08',
-    },
-    {
-      name: 'Meryem Toumi',
-      email: 'meryem.toumi@ump.ac.ma',
-      program: 'Software Engineering',
-      group: 'Group 01',
-      absences: 0,
-      attendanceRate: 100,
-      status: 'Regular',
-      variant: 'success',
-      lastCheckIn: 'Today, 08:46',
-    },
-    {
-      name: 'Bilal Aït Hamou',
-      email: 'bilal.ait.hamou@ump.ac.ma',
-      program: 'Data Science',
-      group: 'Group 04',
-      absences: 2,
-      attendanceRate: 93,
-      status: 'Regular',
-      variant: 'success',
-      lastCheckIn: 'Today, 10:02',
-    },
-  ];
+  private toRow(student: StudentUser): StudentRow {
+    const lastSeen = student.updatedAt
+      ? new Date(student.updatedAt).toLocaleDateString()
+      : 'Jamais';
+    const isActive = student.updatedAt
+      ? Date.now() - new Date(student.updatedAt).getTime() < 1000 * 60 * 60 * 24 * 30
+      : false;
+
+    return {
+      name: `${student.firstName} ${student.lastName}`.trim(),
+      email: student.email,
+      apogee: student.numApogee,
+      lastSeen,
+      status: student.enabled ? (isActive ? 'Actif' : 'Inactif') : 'Désactivé',
+      variant: student.enabled ? (isActive ? 'success' : 'warning') : 'error',
+    };
+  }
 
   readonly columns: readonly DataTableColumn<StudentRow>[] = [
     {
       id: 'student',
-      header: 'Student',
+      header: 'Étudiant',
       accessor: (student) => student.name,
       sortValue: (student) => student.name,
-      filterValue: (student) => [student.name, student.email, student.group],
+      filterValue: (student) => [student.name, student.email, student.apogee],
       width: '18rem',
     },
     {
-      id: 'group',
-      header: 'Group',
-      accessor: (student) => student.group,
-      filter: {
-        type: 'select',
-        options: [
-          { label: 'Group 01', value: 'Group 01' },
-          { label: 'Group 02', value: 'Group 02' },
-          { label: 'Group 03', value: 'Group 03' },
-          { label: 'Group 04', value: 'Group 04' },
-          { label: 'Group 05', value: 'Group 05' },
-        ],
-      },
-      width: '10rem',
+      id: 'email',
+      header: 'Email',
+      accessor: (student) => student.email,
+      sortValue: (student) => student.email,
+      width: '15rem',
     },
     {
-      id: 'attendanceRate',
-      header: 'Attendance',
-      accessor: (student) => student.attendanceRate,
-      sortValue: (student) => student.attendanceRate,
-      align: 'end',
-      width: '10rem',
+      id: 'apogee',
+      header: 'Numéro Apogée',
+      accessor: (student) => student.apogee,
+      width: '12rem',
     },
     {
-      id: 'absences',
-      header: 'Absences',
-      accessor: (student) => student.absences,
-      sortValue: (student) => student.absences,
-      align: 'end',
-      width: '8rem',
+      id: 'lastSeen',
+      header: 'Dernière activité',
+      accessor: (student) => student.lastSeen,
+      width: '12rem',
     },
     {
       id: 'status',
-      header: 'Status',
+      header: 'Statut',
       accessor: (student) => student.status,
       align: 'end',
       width: '10rem',

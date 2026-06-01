@@ -24,18 +24,41 @@
     </header>
   }
 
-  <app-data-table-toolbar
-    [searchValue]="searchQuery()"
-    [searchPlaceholder]="searchPlaceholder()"
-    [filterControls]="toolbarFilters()"
-    [columnVisibilityOptions]="columnVisibilityOptions()"
-    [filteredCount]="filteredRows().length"
-    [totalCount]="allRows().length"
-    [selectedCount]="selectedFilteredRowCount()"
-    (searchValueChange)="updateSearchQuery($event)"
-    (filterValueChange)="updateColumnFilter($event)"
-    (columnVisibilityChange)="updateColumnVisibility($event)"
-  ></app-data-table-toolbar>
+  @if (showToolbar()) {
+    <app-data-table-toolbar
+      [searchValue]="searchQuery()"
+      [searchPlaceholder]="searchPlaceholder()"
+      [filterControls]="toolbarFilters()"
+      [columnVisibilityOptions]="columnVisibilityOptions()"
+      [filteredCount]="filteredRows().length"
+      [totalCount]="allRows().length"
+      [selectedCount]="selectedFilteredRowCount()"
+      (searchValueChange)="updateSearchQuery($event)"
+      (filterValueChange)="updateColumnFilter($event)"
+      (columnVisibilityChange)="updateColumnVisibility($event)"
+    ></app-data-table-toolbar>
+  }
+
+  @if (enableRowSelection() && selectedFilteredRowCount() > 0) {
+    <div class="border-b border-line px-5 py-3 sm:px-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="flex items-center gap-2 text-sm font-medium text-secondaryText">
+          <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary">
+            {{ selectedFilteredRowCount() }}
+          </span>
+          ligne(s) sélectionnée(s)
+        </p>
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-danger/20 bg-danger/5 px-4 py-2 text-xs font-semibold text-danger transition-colors hover:bg-danger/10"
+          (click)="requestBulkDelete()"
+        >
+          <i class="fa-regular fa-trash-can"></i>
+          Supprimer la sélection
+        </button>
+      </div>
+    </div>
+  }
 
   <div class="overflow-x-auto">
     <table class="min-w-full border-separate border-spacing-0">
@@ -147,6 +170,7 @@
     [pageSizeOptions]="pageSizeOptions()"
     (pageChange)="goToPage($event)"
     (pageSizeChange)="updatePageSize($event)"
+    (deleteSelected)="requestBulkDelete()"
   ></app-data-table-pagination>
 </section>
 

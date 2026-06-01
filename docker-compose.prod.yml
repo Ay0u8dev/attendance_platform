@@ -1,0 +1,154 @@
+services:
+  # ===================== Traefik (API Gateway) =======================
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    ports:
+      - "18080:80" # traffic
+      - "9000:8080" # dashboard # disable in prod or setup auth
+    labels:
+      # Middlewares
+      - "traefik.http.middlewares.forward-auth.forwardauth.address=http://auth-service:8080/auth/validate"
+      - "traefik.http.middlewares.forward-auth.forwardauth.authResponseHeaders=X-User-Id,X-User-Roles,X-User-Email"
+
+      - "traefik.http.middlewares.strip-api-auth.stripprefix.prefixes=/api"
+      - "traefik.http.middlewares.strip-api-user.stripprefix.prefixes=/api"
+      - "traefik.http.middlewares.strip-api-attendance.stripprefix.prefixes=/api"
+      - "traefik.http.middlewares.strip-api-ws-attendance.stripprefix.prefixes=/api/ws"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.prod.yml:/etc/traefik/traefik.yml:ro
+
+  # ===================== Redis =======================
+  redis:
+    image: redis:8.6-alpine
+    container_name: redis
+    env_file:
+      - .env.prod
+
+  # ===================== Databases =======================
+  user-db:
+    image: postgres:15-alpine
+    container_name: user-db
+    environment:
+      POSTGRES_DB: users_db
+    env_file:
+      - .env.prod
+    volumes:
+      - users_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  attendance-db:
+    image: postgres:15-alpine
+    container_name: attendance-db
+    environment:
+      POSTGRES_DB: attendance_db
+    env_file:
+      - .env.prod
+    volumes:
+      - attendance_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # ===================== Services =======================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ./Dockerfile.prod
+    container_name: frontend
+    labels:
+      - "traefik.enable=true"
+
+      # Router
+      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.routers.frontend.priority=1"
+
+        # Internal container port
+      - "traefik.http.services.frontend.loadbalancer.server.port=4000"
+
+  auth-service:
+    build:
+      context: ./backend/auth-service
+      dockerfile: ./Dockerfile.prod
+    container_name: auth-service
+    labels:
+      - "traefik.enable=true"
+
+      # Router
+      - "traefik.http.routers.auth.rule=PathPrefix(`/api/auth`)"
+      - "traefik.http.routers.auth.entrypoints=web"
+
+      # Attach middleware
+      - "traefik.http.routers.auth.middlewares=strip-api-auth"
+
+      # Internal container port
+      - "traefik.http.services.auth.loadbalancer.server.port=8080"
+    env_file:
+      - .env.prod
+
+  user-service:
+    build:
+      context: ./backend/user-service
+      dockerfile: ./Dockerfile.prod
+    container_name: user-service
+    labels:
+      - "traefik.enable=true"
+
+      # Router
+      - "traefik.http.routers.user.rule=PathPrefix(`/api/users`)"
+      - "traefik.http.routers.user.entrypoints=web"
+
+      # Attach middlewares
+      - "traefik.http.routers.user.middlewares=forward-auth,strip-api-user"
+
+      # Internal port
+      - "traefik.http.services.user.loadbalancer.server.port=8080"
+    env_file:
+      - .env.prod
+    depends_on:
+      user-db:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+
+  attendance-service:
+    build:
+      context: ./backend/attendance-service
+      dockerfile: ./Dockerfile.prod
+    container_name: attendance-service
+    labels:
+      - "traefik.enable=true"
+
+      # Router
+      - "traefik.http.routers.attendance.rule=PathPrefix(`/api/attendance`)"
+      - "traefik.http.routers.attendance.entrypoints=web"
+      - "traefik.http.routers.attendance-ws.rule=Path(`/api/ws/attendance/ws`)"
+      - "traefik.http.routers.attendance-ws.entrypoints=web"
+
+      # Attach middlewares
+      - "traefik.http.routers.attendance.middlewares=forward-auth,strip-api-attendance"
+      - "traefik.http.routers.attendance-ws.middlewares=strip-api-ws-attendance"
+
+      - "traefik.http.routers.attendance-ws.service=attendance"
+
+      # Internal port
+      - "traefik.http.services.attendance.loadbalancer.server.port=8080"
+    env_file:
+      - .env.prod
+    depends_on:
+      attendance-db:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+
+volumes:
+  users_db_data:
+  attendance_db_data:

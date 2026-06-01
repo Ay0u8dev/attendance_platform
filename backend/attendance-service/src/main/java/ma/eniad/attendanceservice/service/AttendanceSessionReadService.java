@@ -9,7 +9,6 @@ import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 import ma.eniad.attendanceservice.entity.AttendanceRecord;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.repository.AttendanceRecordRepository;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 import org.springframework.http.HttpStatus;

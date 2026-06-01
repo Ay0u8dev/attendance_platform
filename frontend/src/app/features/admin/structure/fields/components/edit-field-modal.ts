@@ -1,61 +1,79 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, input, output, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
+import { Filiere, FiliereRequest } from '../../../../../core/structure/models/filiere.model';
 import { Button } from '../../../../../shared/components/button/button';
 import { Modal } from '../../../../../shared/components/modal/modal';
 import { ModalFieldGroup } from '../../../../../shared/components/modal-field-group/modal-field-group';
-
-export interface EditableField {
-  name: string;
-  description: string;
-}
+import {
+  hasMinimumLength,
+  normalizeCode,
+  normalizeLabel,
+  structureInputClass,
+} from '../../../../../shared/structure-form-ui';
 
 @Component({
   selector: 'app-edit-field-modal',
   standalone: true,
-  imports: [Modal, Button, ModalFieldGroup],
+  imports: [Modal, Button, ModalFieldGroup, FormsModule],
   template: `
     <app-modal
-      title="Éditer la filière"
-      description="Modifiez les informations de la filière sélectionnée."
+      title="Modifier la filière"
+      description="Mettez à jour le code et le libellé de la filière sélectionnée."
       [open]="open()"
-      (closed)="closeRequested.emit()"
+      (closed)="close()"
     >
-      <form modal-body class="space-y-6">
-        <!-- Name Field -->
+      <form modal-body class="space-y-5">
         <app-modal-field-group
-          label="Libellé de la filière"
-          iconClass="fa-solid fa-bookmark"
-          iconBackgroundClass="bg-secondary/10 text-secondary"
-          fieldId="edit-name"
+          label="Code de la filière"
+          iconClass="fa-solid fa-hashtag"
+          iconBackgroundClass="bg-primary-soft text-primary"
+          fieldId="edit-field-code"
+          helper="Court, sans espace. Exemple : GI"
+          [required]="true"
+          [error]="codeError()"
         >
           <input
-            id="edit-name"
-            #nameInput
+            id="edit-field-code"
             type="text"
-            [value]="field()?.name ?? ''"
-            class="w-full rounded-xl border border-line bg-gradient-to-r from-surface to-surface-subtle px-4 py-3 text-sm text-principalText placeholder:text-muted transition focus:border-secondary focus:bg-surface focus:outline-none focus:ring-2 focus:ring-secondary/30 shadow-sm"
+            [(ngModel)]="form.code"
+            name="code"
+            [class]="inputClass(!!codeError())"
           />
         </app-modal-field-group>
 
-        <!-- Description Field -->
         <app-modal-field-group
-          label="Description"
-          iconClass="fa-solid fa-file-lines"
-          iconBackgroundClass="bg-primary/10 text-primary"
-          fieldId="edit-desc"
+          label="Libellé de la filière"
+          iconClass="fa-solid fa-bookmark"
+          iconBackgroundClass="bg-secondary-soft text-secondary"
+          fieldId="edit-field-name"
+          [required]="true"
+          [error]="nameError()"
         >
-          <textarea
-            id="edit-desc"
-            #descInput
-            rows="4"
-            [value]="field()?.description ?? ''"
-            class="w-full rounded-xl border border-line bg-gradient-to-r from-surface to-surface-subtle px-4 py-3 text-sm text-principalText placeholder:text-muted transition focus:border-primary focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30 shadow-sm"
-          ></textarea>
+          <input
+            id="edit-field-name"
+            type="text"
+            [(ngModel)]="form.name"
+            name="name"
+            [class]="inputClass(!!nameError())"
+          />
         </app-modal-field-group>
       </form>
-      <div modal-footer class="flex w-full items-center gap-3 justify-end border-t border-line pt-6">
-        <app-button label="Annuler" variant="outline" [fullWidth]="false" (clicked)="closeRequested.emit()"></app-button>
-        <app-button label="Enregistrer" variant="primary" [fullWidth]="false"></app-button>
+
+      <div modal-footer class="flex w-full items-center justify-end gap-3">
+        <app-button
+          label="Annuler"
+          variant="outline"
+          [fullWidth]="false"
+          (clicked)="close()"
+        ></app-button>
+        <app-button
+          label="Enregistrer"
+          icon=""
+          variant="primary"
+          [fullWidth]="false"
+          (clicked)="submit()"
+        ></app-button>
       </div>
     </app-modal>
   `,
@@ -63,6 +81,68 @@ export interface EditableField {
 })
 export class EditFieldModal {
   readonly open = input(false);
-  readonly field = input<EditableField | null>(null);
+  readonly field = input<Filiere | null>(null);
   readonly closeRequested = output<void>();
+  readonly updateRequested = output<FiliereRequest>();
+  readonly submitted = signal(false);
+
+  form: FiliereRequest = { code: '', name: '' };
+
+  private readonly syncForm = effect(() => {
+    const value = this.field();
+    this.submitted.set(false);
+    this.form = value ? { code: value.code, name: value.name } : { code: '', name: '' };
+  });
+
+  close(): void {
+    this.submitted.set(false);
+    this.resetForm();
+    this.closeRequested.emit();
+  }
+
+  inputClass(invalid: boolean): string {
+    return structureInputClass(invalid);
+  }
+
+  codeError(): string {
+    if (!this.submitted()) {
+      return '';
+    }
+
+    const code = normalizeCode(this.form.code);
+    if (!code) {
+      return 'Indiquez le code de la filière.';
+    }
+
+    return /^[A-Z0-9-]{2,12}$/.test(code)
+      ? ''
+      : 'Utilisez 2 à 12 caractères : lettres, chiffres ou tirets.';
+  }
+
+  nameError(): string {
+    if (!this.submitted()) {
+      return '';
+    }
+
+    return hasMinimumLength(this.form.name, 3) ? '' : 'Indiquez un libellé de 3 caractères minimum.';
+  }
+
+  submit(): void {
+    this.submitted.set(true);
+    if (this.codeError() || this.nameError()) {
+      return;
+    }
+
+    this.updateRequested.emit({
+      code: normalizeCode(this.form.code),
+      name: normalizeLabel(this.form.name),
+    });
+
+    this.submitted.set(false);
+    this.resetForm();
+  }
+
+  private resetForm(): void {
+    this.form = { code: '', name: '' };
+  }
 }

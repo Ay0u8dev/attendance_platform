@@ -1,10 +1,20 @@
-import { ChangeDetectionStrategy, Component, signal, computed } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { finalize } from 'rxjs';
+
+import {
+  AttendanceSessionResponse,
+  AttendanceStudentStatus,
+  AttendanceStudentView,
+} from '../../../../core/attendance/models/attendance.model';
+import { AttendanceService } from '../../../../core/attendance/services/attendance.service';
 
 export type AttendanceStatus = 'present' | 'absent' | null;
 
 export interface Student {
-  id: string;
+  id: number;
   name: string;
   apogee: string;
   avatarInitials: string;
@@ -14,64 +24,40 @@ export interface Student {
 
 @Component({
   selector: 'app-manual-marking',
-  imports: [FormsModule],
+  imports: [DatePipe, FormsModule],
   templateUrl: './manual-marking.html',
   styleUrl: './manual-marking.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ManualMarking {
-  readonly sessionInfo = {
-    module: 'Algorithmique et Programmation',
-    group: 'Groupe GI A',
-    time: '08:30 - 10:30',
-    location: 'AmphithéPtre A',
-    date: 'Lundi 22 Mai, 2024',
-  };
+export class ManualMarking implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly attendanceService = inject(AttendanceService);
 
+  readonly session = signal<AttendanceSessionResponse | null>(null);
   readonly searchQuery = signal('');
+  readonly allStudents = signal<Student[]>([]);
+  readonly loading = signal(false);
+  readonly savingStudentId = signal<number | null>(null);
+  readonly ending = signal(false);
+  readonly error = signal<string | null>(null);
 
-  readonly allStudents = signal<Student[]>([
-    {
-      id: '1',
-      name: 'Marc-André Lefebvre',
-      apogee: '2023-GI-0045',
-      avatarInitials: 'ML',
-      status: 'present',
-      hasNote: false,
-    },
-    {
-      id: '2',
-      name: 'Sophie Valcourt',
-      apogee: '2023-GI-0012',
-      avatarInitials: 'SV',
-      status: 'absent',
-      hasNote: true,
-    },
-    {
-      id: '3',
-      name: 'Thomas Bernard',
-      apogee: '2023-GI-0089',
-      avatarInitials: 'TB',
-      status: null,
-      hasNote: false,
-    },
-    {
-      id: '4',
-      name: 'Julien Moreau',
-      apogee: '2023-GI-0033',
-      avatarInitials: 'JM',
-      status: 'present',
-      hasNote: false,
-    },
-    {
-      id: '5',
-      name: 'Léa Dubois',
-      apogee: '2023-GI-0105',
-      avatarInitials: 'LD',
-      status: 'present',
-      hasNote: false,
-    },
-  ]);
+  readonly sessionInfo = computed(() => {
+    const session = this.session();
+    return {
+      module: session?.courseLabel ?? 'Session d appel',
+      group: session?.groupIds?.length ? `Groupes ${session.groupIds.join(', ')}` : 'Groupes',
+      time: session?.startedAt
+        ? `${new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${
+            session.endsAt
+              ? new Date(session.endsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : 'en cours'
+          }`
+        : '',
+      location: session?.roomLabel ?? 'Salle non renseignee',
+      date: session?.startedAt ?? null,
+    };
+  });
 
   readonly filteredStudents = computed(() => {
     const q = this.searchQuery().toLowerCase();
@@ -92,22 +78,124 @@ export class ManualMarking {
   );
 
   readonly currentPage = signal(1);
-  readonly pageSize = 5;
-  readonly totalPages = computed(() => Math.ceil(this.allStudents().length / this.pageSize));
+  readonly pageSize = 10;
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredStudents().length / this.pageSize)));
+  readonly pageNumbers = computed(() =>
+    Array.from({ length: this.totalPages() }, (_, index) => index + 1),
+  );
 
-  markAll(): void {
-    this.allStudents.update((students) =>
-      students.map((s) => ({ ...s, status: 'present' as AttendanceStatus })),
-    );
+  readonly pagedStudents = computed(() => {
+    const start = (this.currentPage() - 1) * this.pageSize;
+    return this.filteredStudents().slice(start, start + this.pageSize);
+  });
+
+  ngOnInit(): void {
+    const sessionId = Number(this.route.snapshot.queryParamMap.get('sessionId'));
+    this.loadSession(Number.isFinite(sessionId) && sessionId > 0 ? sessionId : null);
   }
 
-  setStatus(studentId: string, status: AttendanceStatus): void {
+  loadSession(sessionId: number | null): void {
+    this.loading.set(true);
+    this.error.set(null);
+
+    const request = sessionId
+      ? this.attendanceService.getSession(sessionId)
+      : this.attendanceService.getActiveSession();
+
+    request.pipe(finalize(() => this.loading.set(false))).subscribe({
+      next: (session) => this.applySession(session),
+      error: () => this.error.set('Impossible de charger la session active.'),
+    });
+  }
+
+  markAll(): void {
+    this.allStudents()
+      .filter((student) => student.status !== 'present')
+      .forEach((student) => this.setStatus(student.id, 'present'));
+  }
+
+  setStatus(studentId: number, status: AttendanceStatus): void {
+    const sessionId = this.session()?.sessionId;
+    if (!sessionId || !status) return;
+
+    const previous = this.allStudents();
+    this.savingStudentId.set(studentId);
     this.allStudents.update((students) =>
-      students.map((s) => (s.id === studentId ? { ...s, status } : s)),
+      students.map((student) => (student.id === studentId ? { ...student, status } : student)),
     );
+
+    this.attendanceService
+      .updateAttendance(sessionId, { studentId, status: this.toApiStatus(status) })
+      .pipe(finalize(() => this.savingStudentId.set(null)))
+      .subscribe({
+        next: (update) => {
+          this.session.update((current) =>
+            current
+              ? {
+                  ...current,
+                  presentCount: update.presentCount,
+                  absentCount: update.absentCount,
+                  unknownCount: update.unknownCount,
+                }
+              : current,
+          );
+        },
+        error: () => {
+          this.allStudents.set(previous);
+          this.error.set('Impossible de mettre a jour la presence de cet etudiant.');
+        },
+      });
   }
 
   endSession(): void {
-    // Navigate away or show confirmation
+    const sessionId = this.session()?.sessionId;
+    if (!sessionId) return;
+
+    this.ending.set(true);
+    this.error.set(null);
+    this.attendanceService
+      .endSession(sessionId)
+      .pipe(finalize(() => this.ending.set(false)))
+      .subscribe({
+        next: () => this.router.navigate(['/teacher/sessions']),
+        error: () => this.error.set('Impossible de terminer la session.'),
+      });
+  }
+
+  private applySession(session: AttendanceSessionResponse): void {
+    this.session.set(session);
+    this.allStudents.set((session.students ?? []).map((student) => this.toStudent(student)));
+  }
+
+  private toStudent(student: AttendanceStudentView): Student {
+    const name = `${student.firstName} ${student.lastName}`.trim();
+    return {
+      id: student.studentId,
+      name,
+      apogee: student.numApogee,
+      avatarInitials: this.getInitials(name),
+      status: this.fromApiStatus(student.status),
+      hasNote: false,
+    };
+  }
+
+  private getInitials(name: string): string {
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .map((part) => part[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  }
+
+  private fromApiStatus(status: AttendanceStudentStatus): AttendanceStatus {
+    if (status === 'PRESENT') return 'present';
+    if (status === 'ABSENT') return 'absent';
+    return null;
+  }
+
+  private toApiStatus(status: Exclude<AttendanceStatus, null>): 'PRESENT' | 'ABSENT' {
+    return status === 'present' ? 'PRESENT' : 'ABSENT';
   }
 }

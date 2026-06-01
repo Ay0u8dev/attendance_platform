@@ -1,10 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 import { DeleteModal } from '../../../../../shared/components/delete-modal/delete-modal';
-
-export interface DeletableCycle {
-  name: string;
-}
+import { type Cycle } from '../../../../../core/structure/models/cycle.model';
 
 @Component({
   selector: 'app-delete-cycle-modal',
@@ -26,7 +23,7 @@ export interface DeletableCycle {
 })
 export class DeleteCycleModal {
   readonly open = input(false);
-  readonly cycle = input<DeletableCycle | null>(null);
+  readonly cycle = input<Cycle | null>(null);
   readonly closeRequested = output<void>();
   readonly confirmDelete = output<void>();
 }

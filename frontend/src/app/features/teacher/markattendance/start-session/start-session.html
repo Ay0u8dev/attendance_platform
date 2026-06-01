@@ -1,7 +1,12 @@
 <div class="start-session-page">
   <h1 class="page-title">Nouvelle Session d'Appel</h1>
 
-  <!-- Course Configuration -->
+  @if (error()) {
+    <div class="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm font-semibold text-danger">
+      {{ error() }}
+    </div>
+  }
+
   <section class="card">
     <div class="section-header">
       <i class="fa-solid fa-sliders text-primary" aria-hidden="true"></i>
@@ -12,32 +17,64 @@
       <div class="config-field">
         <label class="field-label">GROUPES</label>
         <div class="group-tags">
-          @for (group of groups; track group) {
-            <span class="group-tag">{{ group }}</span>
+          @if (loading()) {
+            <span class="text-sm text-secondaryText">Chargement...</span>
+          } @else {
+            @for (group of groups(); track group.id) {
+              <label
+                class="group-tag cursor-pointer"
+                [class.selected]="selectedGroupIds().includes(group.id)"
+              >
+                <input
+                  type="checkbox"
+                  class="sr-only"
+                  [checked]="selectedGroupIds().includes(group.id)"
+                  (change)="toggleGroup(group.id, $any($event.target).checked)"
+                />
+                {{ group.name }}
+              </label>
+            }
           }
         </div>
       </div>
 
       <div class="config-field">
-        <label class="field-label">MODULE</label>
-        <div class="field-value">{{ module }}</div>
+        <label class="field-label" for="module">MODULE</label>
+        <select
+          id="module"
+          class="field-value w-full border-0 bg-transparent outline-none"
+          [ngModel]="selectedModuleId()"
+          (ngModelChange)="updateModule($event)"
+        >
+          <option [ngValue]="null">Choisir un module</option>
+          @for (module of modules(); track module.id) {
+            <option [ngValue]="module.id">{{ module.name }}</option>
+          }
+        </select>
       </div>
 
       <div class="config-field">
-        <label class="field-label">CRÉNEAU</label>
-        <div class="field-value">{{ timeSlot }}</div>
+        <label class="field-label" for="room">LIEU</label>
+        <input
+          id="room"
+          type="text"
+          class="field-value w-full border-0 bg-transparent outline-none"
+          [ngModel]="roomLabel()"
+          (ngModelChange)="updateRoom($event)"
+        />
       </div>
 
       <div class="config-field">
-        <label class="field-label">LIEU</label>
-        <div class="field-value">{{ location }}</div>
+        <label class="field-label">SELECTION</label>
+        <div class="field-value">
+          {{ selectedGroups().length }} groupe(s)
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- Method Selection -->
   <section class="method-section">
-    <h2 class="method-title">Choisir la méthode de marquage</h2>
+    <h2 class="method-title">Choisir la methode de marquage</h2>
 
     <div class="methods-grid">
       @for (method of methods; track method.id) {
@@ -59,55 +96,57 @@
     </div>
   </section>
 
-  <!-- Start Button -->
   <div class="start-footer">
     <button
       type="button"
       class="btn-start"
-      [disabled]="!selectedMethod()"
+      [disabled]="!canStart() || starting()"
       (click)="openConfirmModal()"
     >
       <i class="fa-solid fa-circle-play" aria-hidden="true"></i>
-      Démarrer la session
+      {{ starting() ? 'Demarrage...' : 'Demarrer la session' }}
     </button>
     <p class="start-notice">
-      En démarrant la session, les données seront synchronisées avec le serveur académique.
+      En demarrant la session, les donnees seront synchronisees avec le serveur academique.
     </p>
   </div>
 </div>
 
-<!-- Confirmation Modal -->
 @if (showConfirmModal()) {
   <div class="modal-backdrop" (click)="cancelModal()">
     <div class="modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <i class="fa-regular fa-circle-question modal-icon" aria-hidden="true"></i>
-        <h3 class="modal-title">Confirmer le démarrage</h3>
+        <h3 class="modal-title">Confirmer le demarrage</h3>
       </div>
 
       <p class="modal-body">
-        Êtes-vous sûr de vouloir démarrer cette session d'appel avec la configuration suivante ?
+        Voulez-vous demarrer cette session d'appel avec la configuration suivante ?
       </p>
 
       <div class="modal-details">
         <div class="detail-row">
           <span class="detail-key">Module</span>
-          <span class="detail-val">{{ module }}</span>
+          <span class="detail-val">{{ selectedModule()?.name }}</span>
         </div>
         <div class="detail-row">
-          <span class="detail-key">Méthode</span>
+          <span class="detail-key">Groupes</span>
+          <span class="detail-val">{{ selectedGroups().length }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">Methode</span>
           <span class="detail-val">{{ methodLabel() }}</span>
         </div>
         <div class="detail-row">
           <span class="detail-key">Lieu</span>
-          <span class="detail-val">Amphithéâtre A</span>
+          <span class="detail-val">{{ roomLabel() }}</span>
         </div>
       </div>
 
       <div class="modal-actions">
         <button type="button" class="btn-cancel" (click)="cancelModal()">Annuler</button>
-        <button type="button" class="btn-confirm" (click)="confirmAndStart()">
-          Confirmer et Démarrer
+        <button type="button" class="btn-confirm" [disabled]="starting()" (click)="confirmAndStart()">
+          Confirmer et demarrer
         </button>
       </div>
     </div>

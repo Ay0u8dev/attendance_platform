@@ -1,0 +1,34 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://attendance-db:5432/attendance_db
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  data:
+    redis:
+      host: redis
+      port: 6379
+      # password: ${REDIS_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+services:
+  auth-service:
+    url: http://auth-service:8080
+  user-service:
+    url: http://user-service:8080
+
+attendance:
+  session:
+    auto-end-duration: PT30M
+    finalized-state-retention: PT1H
+    auto-finalize-poll-interval: PT30S
+  websocket:
+    allowed-origin-patterns: http://*

@@ -79,7 +79,7 @@ export const routes: Routes = [
   },
   {
     path: 'teacher',
-    // canActivate: [authGuard],
+    canActivate: [authGuard],
     loadComponent: () =>
       import('./shared/layouts/teacher-layout').then((module) => module.TeacherLayout),
     children: [
@@ -145,6 +145,7 @@ export const routes: Routes = [
             (module) => module.TeacherJustificationsPage,
           ),
       },
+      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ],
   },
   {

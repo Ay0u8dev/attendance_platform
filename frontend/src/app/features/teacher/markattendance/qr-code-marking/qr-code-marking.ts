@@ -1,7 +1,14 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+
+import {
+  AttendanceSessionResponse,
+  AttendanceStudentView,
+} from '../../../../core/attendance/models/attendance.model';
+import { AttendanceService } from '../../../../core/attendance/services/attendance.service';
 
 interface ScannedStudent {
-  id: string;
+  id: number;
   name: string;
   studentId: string;
   initials: string;
@@ -15,34 +22,54 @@ interface ScannedStudent {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class QrCodeMarking implements OnInit, OnDestroy {
-  readonly sessionInfo = {
-    module: 'Algorithmique et Programmation',
-    group: 'Groupe GI A',
-    time: '08:30 - 10:30',
-    location: 'AmphithéPtre A',
-    date: 'Lundi 22 Mai, 2024',
-  };
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly attendanceService = inject(AttendanceService);
 
-  readonly totalStudents = 45;
-  readonly countdownSeconds = signal(323); // 5:23
-  readonly maxSeconds = 600; // 10 minutes
-
-  readonly scannedStudents = signal<ScannedStudent[]>([
-    { id: '1', name: 'Ahmed Benali', studentId: '645', initials: 'AB', scannedAt: ':12' },
-    { id: '2', name: 'Sara Mansouri', studentId: '645-12', initials: 'SM', scannedAt: ':55' },
-    { id: '3', name: 'Karim Tazi', studentId: '645-89', initials: 'KT', scannedAt: ':30' },
-  ]);
+  readonly session = signal<AttendanceSessionResponse | null>(null);
+  readonly countdownSeconds = signal(600);
+  readonly maxSeconds = 600;
+  readonly scannedStudents = signal<ScannedStudent[]>([]);
+  readonly totalStudents = signal(0);
+  readonly error = signal<string | null>(null);
+  readonly ending = signal(false);
 
   private timer?: ReturnType<typeof setInterval>;
+  private refreshTimer?: ReturnType<typeof setInterval>;
 
   ngOnInit(): void {
+    const sessionId = Number(this.route.snapshot.queryParamMap.get('sessionId'));
+    this.loadSession(Number.isFinite(sessionId) && sessionId > 0 ? sessionId : null);
+
     this.timer = setInterval(() => {
       this.countdownSeconds.update((s) => (s > 0 ? s - 1 : 0));
     }, 1000);
+
+    this.refreshTimer = setInterval(() => this.refreshSession(), 5000);
   }
 
   ngOnDestroy(): void {
     clearInterval(this.timer);
+    clearInterval(this.refreshTimer);
+  }
+
+  get sessionInfo() {
+    const session = this.session();
+    return {
+      module: session?.courseLabel ?? 'Session QR Code',
+      group: session?.groupIds?.length ? `Groupes ${session.groupIds.join(', ')}` : 'Groupes',
+      time: session?.startedAt
+        ? `${new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${
+            session.endsAt
+              ? new Date(session.endsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : 'en cours'
+          }`
+        : '',
+      location: session?.roomLabel ?? 'Salle non renseignee',
+      date: session?.startedAt
+        ? new Date(session.startedAt).toLocaleDateString()
+        : '',
+    };
   }
 
   get formattedCountdown(): string {
@@ -58,13 +85,73 @@ export class QrCodeMarking implements OnInit, OnDestroy {
 
   regenerateQr(): void {
     this.countdownSeconds.set(600);
+    this.refreshSession();
   }
 
   extendTime(): void {
-    this.countdownSeconds.update((s) => s + 300);
+    this.countdownSeconds.update((s) => Math.min(s + 300, this.maxSeconds));
   }
 
   endSession(): void {
-    // Navigate away
+    const sessionId = this.session()?.sessionId;
+    if (!sessionId) return;
+
+    this.ending.set(true);
+    this.attendanceService.endSession(sessionId).subscribe({
+      next: () => this.router.navigate(['/teacher/sessions']),
+      error: () => {
+        this.ending.set(false);
+        this.error.set('Impossible de terminer la session.');
+      },
+    });
+  }
+
+  private loadSession(sessionId: number | null): void {
+    const request = sessionId
+      ? this.attendanceService.getSession(sessionId)
+      : this.attendanceService.getActiveSession();
+
+    request.subscribe({
+      next: (session) => this.applySession(session),
+      error: () => this.error.set('Impossible de charger la session QR.'),
+    });
+  }
+
+  private refreshSession(): void {
+    const sessionId = this.session()?.sessionId;
+    if (!sessionId) return;
+    this.attendanceService.getSession(sessionId).subscribe({
+      next: (session) => this.applySession(session),
+      error: () => undefined,
+    });
+  }
+
+  private applySession(session: AttendanceSessionResponse): void {
+    this.session.set(session);
+    this.totalStudents.set(session.students?.length ?? session.studentCount ?? 0);
+    this.scannedStudents.set(
+      (session.students ?? [])
+        .filter((student) => student.status === 'PRESENT')
+        .map((student) => this.toScannedStudent(student)),
+    );
+  }
+
+  private toScannedStudent(student: AttendanceStudentView): ScannedStudent {
+    const name = `${student.firstName} ${student.lastName}`.trim();
+    return {
+      id: student.studentId,
+      name,
+      studentId: student.numApogee,
+      initials: name
+        .split(' ')
+        .filter(Boolean)
+        .map((part) => part[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase(),
+      scannedAt: student.markedAt
+        ? new Date(student.markedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : '--:--',
+    };
   }
 }

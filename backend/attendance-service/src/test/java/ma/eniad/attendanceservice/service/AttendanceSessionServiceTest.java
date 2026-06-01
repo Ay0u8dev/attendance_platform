@@ -21,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -49,11 +50,11 @@ class AttendanceSessionServiceTest {
                 liveAttendanceSessionStore,
                 new AttendanceSessionProperties(Duration.ofMinutes(30), Duration.ofHours(1), Duration.ofMinutes(1))
         );
+        when(attendanceSessionRepository.findByTeacherIdAndStatus(77L, AttendanceSessionStatus.ACTIVE)).thenReturn(Optional.empty());
     }
 
     @Test
     void createSessionPersistsNormalizedDataAndInitializesLiveState() {
-        when(attendanceSessionRepository.existsByTeacherIdAndStatus(77L, AttendanceSessionStatus.ACTIVE)).thenReturn(false);
         when(userServiceClient.getStudentRosterByGroupIds(List.of(1L, 2L))).thenReturn(List.of(
                 new StudentRosterDto(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001"),
                 new StudentRosterDto(11L, 2L, "Yassine", "Fassi", "yassine@ump.ac.ma", "https://cdn.example.com/yassine.jpg", "A002")
@@ -111,7 +112,25 @@ class AttendanceSessionServiceTest {
 
     @Test
     void createSessionRejectsSecondActiveSessionForTeacher() {
-        when(attendanceSessionRepository.existsByTeacherIdAndStatus(77L, AttendanceSessionStatus.ACTIVE)).thenReturn(true);
+        AttendanceSession activeSession = AttendanceSession.builder()
+                .id(99L)
+                .teacherId(77L)
+                .status(AttendanceSessionStatus.ACTIVE)
+                .build();
+        when(attendanceSessionRepository.findByTeacherIdAndStatus(77L, AttendanceSessionStatus.ACTIVE)).thenReturn(Optional.of(activeSession));
+        when(liveAttendanceSessionStore.findSessionMeta(99L)).thenReturn(Optional.of(new LiveAttendanceSessionMeta(
+                99L,
+                77L,
+                List.of(1L),
+                "Distributed Systems",
+                "Room B12",
+                null,
+                null,
+                LocalDateTime.of(2026, 4, 28, 12, 0),
+                LocalDateTime.of(2026, 4, 28, 12, 30),
+                AttendanceSessionMethod.MANUAL,
+                AttendanceSessionStatus.ACTIVE
+        )));
 
         assertThatThrownBy(() -> attendanceSessionService.createSession(77L, baseRequest()))
                 .isInstanceOf(ResponseStatusException.class)
@@ -123,8 +142,40 @@ class AttendanceSessionServiceTest {
     }
 
     @Test
+    void createSessionFinalizesStaleActiveSessionWhenLiveStateIsMissing() {
+        AttendanceSession staleSession = AttendanceSession.builder()
+                .id(99L)
+                .teacherId(77L)
+                .startedAt(LocalDateTime.of(2026, 4, 28, 11, 0))
+                .endsAt(LocalDateTime.of(2026, 4, 28, 11, 30))
+                .method(AttendanceSessionMethod.MANUAL)
+                .status(AttendanceSessionStatus.ACTIVE)
+                .presentCount(0)
+                .absentCount(0)
+                .unknownCount(2)
+                .build();
+        when(attendanceSessionRepository.findByTeacherIdAndStatus(77L, AttendanceSessionStatus.ACTIVE)).thenReturn(Optional.of(staleSession));
+        when(liveAttendanceSessionStore.findSessionMeta(99L)).thenReturn(Optional.empty());
+        when(userServiceClient.getStudentRosterByGroupIds(List.of(1L, 2L))).thenReturn(List.of(
+                new StudentRosterDto(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", null, "A001")
+        ));
+        when(attendanceSessionRepository.saveAndFlush(any(AttendanceSession.class))).thenAnswer(invocation -> {
+            AttendanceSession session = invocation.getArgument(0);
+            session.setId(100L);
+            return session;
+        });
+
+        AttendanceSessionResponse response = attendanceSessionService.createSession(77L, baseRequest());
+
+        assertThat(response.sessionId()).isEqualTo(100L);
+        assertThat(staleSession.getStatus()).isEqualTo(AttendanceSessionStatus.FINALIZED);
+        assertThat(staleSession.getEndedAt()).isNotNull();
+        verify(attendanceSessionRepository).save(staleSession);
+        verify(liveAttendanceSessionStore).initializeSession(any(), any());
+    }
+
+    @Test
     void createSessionPropagatesRosterLookupConflictWithoutPersistence() {
-        when(attendanceSessionRepository.existsByTeacherIdAndStatus(77L, AttendanceSessionStatus.ACTIVE)).thenReturn(false);
         when(userServiceClient.getStudentRosterByGroupIds(List.of(1L, 2L)))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "No active academic year found"));
 
@@ -139,7 +190,6 @@ class AttendanceSessionServiceTest {
 
     @Test
     void createSessionDeletesPersistedSessionWhenLiveStoreInitializationFails() {
-        when(attendanceSessionRepository.existsByTeacherIdAndStatus(77L, AttendanceSessionStatus.ACTIVE)).thenReturn(false);
         when(userServiceClient.getStudentRosterByGroupIds(List.of(1L, 2L))).thenReturn(List.of(
                 new StudentRosterDto(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001")
         ));

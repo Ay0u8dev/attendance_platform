@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { AttendanceSessionSummary } from '../../../../core/attendance/models/attendance.model';
+import { AttendanceService } from '../../../../core/attendance/services/attendance.service';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
 import { QuickActionTile } from '../../../../shared/components/quick-action-tile/quick-action-tile';
 import { StatCard } from '../../../../shared/components/stat-card/stat-card';
@@ -12,7 +14,11 @@ import { StatusBadge } from '../../../../shared/components/status-badge/status-b
   templateUrl: './dashboard.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TeacherDashboard {
+export class TeacherDashboard implements OnInit {
+  private readonly attendanceService = inject(AttendanceService);
+
+  readonly recentSessions = signal<AttendanceSessionSummary[]>([]);
+
   readonly highlights = [
     'Peak check-in at 09:10 AM',
     'No critical service degradation detected',
@@ -25,80 +31,77 @@ export class TeacherDashboard {
     { label: 'Escalated incidents', value: '0', variant: 'success' as const },
   ];
 
-  readonly stats = [
-    {
-      label: 'Sessions today',
-      value: '12',
-      icon: 'fa-regular fa-calendar-days',
-      badge: '+12%',
-      variant: 'info' as const,
-    },
-    {
-      label: 'Absent students',
-      value: '3',
-      icon: 'fa-solid fa-user-slash',
-      badge: '-3%',
-      variant: 'error' as const,
-    },
-    {
-      label: 'Pending justifications',
-      value: '5',
-      icon: 'fa-regular fa-clipboard',
-      badge: 'New',
-      variant: 'info' as const,
-    },
-    {
-      label: 'Critical students',
-      value: '1',
-      icon: 'fa-solid fa-circle-exclamation',
-      badge: 'Warning',
-      variant: 'warning' as const,
-    },
-  ];
+  readonly stats = computed(() => {
+    const sessions = this.recentSessions();
+    const absentStudents = sessions.reduce((sum, session) => sum + session.absentCount, 0);
+    const totalStudents = sessions.reduce(
+      (sum, session) => sum + session.presentCount + session.absentCount + session.unknownCount,
+      0,
+    );
+    const attendanceRate = totalStudents
+      ? Math.round((sessions.reduce((sum, session) => sum + session.presentCount, 0) / totalStudents) * 100)
+      : 0;
 
-  readonly sessions = [
-    {
-      date: 'Oct 24, 2023',
-      time: '09:00 AM',
-      classroom: 'Computer Science A1',
-      module: 'Advanced Algorithms',
-      teacher: 'Dr. Robert Chen',
-      method: 'In-person',
-      variant: 'success' as const,
-    },
-    {
-      date: 'Oct 24, 2023',
-      time: '11:30 AM',
-      classroom: 'Economics B3',
-      module: 'Macro Analysis',
-      teacher: 'Sarah Jenkins',
-      method: 'Remote',
-      variant: 'info' as const,
-    },
-    {
-      date: 'Oct 23, 2023',
-      time: '02:00 PM',
-      classroom: 'Physics C2',
-      module: 'Quantum Mechanics',
-      teacher: 'Prof. Marcus Thorne',
-      method: 'In-person',
-      variant: 'success' as const,
-    },
-  ];
+    return [
+      {
+        label: 'Sessions loaded',
+        value: String(sessions.length),
+        icon: 'fa-regular fa-calendar-days',
+        badge: 'Backend',
+        variant: 'info' as const,
+      },
+      {
+        label: 'Absent students',
+        value: String(absentStudents),
+        icon: 'fa-solid fa-user-slash',
+        badge: `${attendanceRate}%`,
+        variant: absentStudents > 0 ? ('error' as const) : ('success' as const),
+      },
+      {
+        label: 'Pending justifications',
+        value: '0',
+        icon: 'fa-regular fa-clipboard',
+        badge: 'Soon',
+        variant: 'info' as const,
+      },
+      {
+        label: 'Critical students',
+        value: String(sessions.filter((session) => session.absentCount > 1).length),
+        icon: 'fa-solid fa-circle-exclamation',
+        badge: 'Watch',
+        variant: 'warning' as const,
+      },
+    ];
+  });
+
+  readonly sessions = computed(() =>
+    this.recentSessions().slice(0, 3).map((session) => {
+      const startedAt = new Date(session.startedAt);
+      return {
+        date: startedAt.toLocaleDateString(),
+        time: startedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        classroom: session.roomLabel ?? 'Salle non renseignee',
+        module: session.courseLabel,
+        teacher: 'Vous',
+        method: session.method,
+        variant: session.status === 'FINALIZED' ? ('success' as const) : ('warning' as const),
+      };
+    }),
+  );
 
   readonly quickActions = [
     {
       label: 'Add student',
       description: 'Create or import a new student record.',
       icon: 'fa-solid fa-user-plus',
-      route: '/students',
+      route: '/teacher/students',
       tone: 'primary' as const,
     },
     {
       label: 'New session',
       description: 'Register a new attendance session.',
       icon: 'fa-regular fa-calendar-plus',
-      route: '/attendance',
+      route: '/teacher/mark-attendance/start-session',
       tone: 'secondary' as const,
     },
     {
@@ -112,11 +115,18 @@ export class TeacherDashboard {
       label: 'Review reports',
       description: 'Open analytical exports and summaries.',
       icon: 'fa-regular fa-file-lines',
-      route: '/statistics',
+      route: '/teacher/sessions',
       tone: 'primary' as const,
     },
   ];
 
   readonly trendPoints =
     '8,146 72,100 136,122 200,80 264,40 328,58 392,150 456,188 520,124 584,32 648,18 712,112';
+
+  ngOnInit(): void {
+    this.attendanceService.getTeacherSessions({ page: 0, size: 10, sort: 'startedAt,desc' }).subscribe({
+      next: (page) => this.recentSessions.set(page.items),
+      error: () => this.recentSessions.set([]),
+    });
+  }
 }

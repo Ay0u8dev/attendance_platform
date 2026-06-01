@@ -1,15 +1,17 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+
+import {
+  AttendanceSessionResponse,
+  AttendanceStudentView,
+} from '../../../../core/attendance/models/attendance.model';
+import { AttendanceService } from '../../../../core/attendance/services/attendance.service';
 
 export type AttendanceStatus = 'present' | 'absent' | null;
 
 export interface RecognizedStudent {
-  id: string;
+  id: number;
   name: string;
   apogee: string;
   avatarInitials: string;
@@ -21,7 +23,6 @@ export interface RecognizedStudent {
 export interface DetectionBox {
   id: string;
   name: string;
-  /** percent offsets inside the video feed */
   x: number;
   y: number;
   w: number;
@@ -36,138 +37,159 @@ export interface DetectionBox {
   styleUrl: './facial-recognition.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class FacialRecognition {
-  // ── Session info ──────────────────────────────────────────────
-  readonly sessionInfo = {
-    module: 'Algorithmique et Programmation',
-    group: 'Groupe GI A',
-    time: '08:30 - 10:30',
-    location: 'AmphithéPtre A',
-    date: 'Lundi 22 Mai, 2024',
-  };
+export class FacialRecognition implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly attendanceService = inject(AttendanceService);
+
+  readonly session = signal<AttendanceSessionResponse | null>(null);
+  readonly allStudents = signal<RecognizedStudent[]>([]);
+  readonly loading = signal(false);
+  readonly ending = signal(false);
+  readonly error = signal<string | null>(null);
+
+  readonly sessionInfo = computed(() => {
+    const session = this.session();
+    return {
+      module: session?.courseLabel ?? 'Session reconnaissance faciale',
+      group: session?.groupIds?.length ? `Groupes ${session.groupIds.join(', ')}` : 'Groupes',
+      time: session?.startedAt
+        ? `${new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${
+            session.endsAt
+              ? new Date(session.endsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : 'en cours'
+          }`
+        : '',
+      location: session?.roomLabel ?? 'Salle non renseignee',
+      date: session?.startedAt ? new Date(session.startedAt).toLocaleDateString() : '',
+    };
+  });
 
   readonly confidenceThreshold = 85;
-  readonly uptime = '01:14:22';
-  readonly totalStudents = 45;
+  readonly uptime = 'live';
+  readonly totalStudents = computed(() => this.allStudents().length);
 
-  // ── Detection boxes on the video feed ────────────────────────
-  readonly activeDetections = signal<DetectionBox[]>([
-    {
-      id: 'd1',
-      name: 'IDENTITÉ: M. DUPONT',
-      x: 35,
-      y: 18,
-      w: 26,
-      h: 46,
-      confirmed: true,
-    },
-  ]);
+  readonly activeDetections = signal<DetectionBox[]>([]);
+  readonly autoIdentified = computed(() =>
+    this.allStudents().filter((student) => student.status === 'present'),
+  );
+  readonly autoIdentifiedCount = computed(() => this.autoIdentified().length);
 
-  // ── Auto-identified students ──────────────────────────────────
-  private readonly _autoIdentified = signal<RecognizedStudent[]>([
-    {
-      id: '1',
-      name: 'Ahmed Benali',
-      apogee: 'Et-2023-045',
-      avatarInitials: 'AB',
-      avatarBg: '#dbeafe',
-      avatarColor: '#2563eb',
-      status: 'present',
-    },
-    {
-      id: '2',
-      name: 'Sara Mansouri',
-      apogee: 'Et-2023-012',
-      avatarInitials: 'SM',
-      avatarBg: '#fce7f3',
-      avatarColor: '#db2777',
-      status: 'present',
-    },
-    {
-      id: '3',
-      name: 'Karim Tazi',
-      apogee: 'Et-2023-088',
-      avatarInitials: 'KT',
-      avatarBg: '#dcfce7',
-      avatarColor: '#16a34a',
-      status: 'present',
-    },
-  ]);
-
-  readonly autoIdentified = this._autoIdentified.asReadonly();
-  readonly autoIdentifiedCount = computed(() => this._autoIdentified().length);
-
-  // ── All students pool (auto + not-yet-identified) ─────────────
-  private readonly _allStudents = signal<RecognizedStudent[]>([
-    ...this._autoIdentified(),
-    {
-      id: '4',
-      name: 'Nadia El Fassi',
-      apogee: 'Et-2023-031',
-      avatarInitials: 'NE',
-      avatarBg: '#fef9c3',
-      avatarColor: '#ca8a04',
-      status: null,
-    },
-    {
-      id: '5',
-      name: 'Youssef Amrani',
-      apogee: 'Et-2023-062',
-      avatarInitials: 'YA',
-      avatarBg: '#ede9fe',
-      avatarColor: '#7c3aed',
-      status: null,
-    },
-    {
-      id: '6',
-      name: 'Fatima Zahra Idrissi',
-      apogee: 'Et-2023-019',
-      avatarInitials: 'FZ',
-      avatarBg: '#ffedd5',
-      avatarColor: '#ea580c',
-      status: null,
-    },
-  ]);
-
-  // ── Manual search ─────────────────────────────────────────────
   manualSearchQuery = '';
 
   readonly manualSearchResults = computed(() => {
     const q = this.manualSearchQuery.toLowerCase().trim();
     if (!q) return [];
-    return this._allStudents().filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) || s.apogee.toLowerCase().includes(q)
+    return this.allStudents().filter(
+      (student) =>
+        student.name.toLowerCase().includes(q) || student.apogee.toLowerCase().includes(q),
     );
   });
 
-  // ── Actions ───────────────────────────────────────────────────
-  markPresent(studentId: string): void {
-    this._allStudents.update((students) =>
-      students.map((s) =>
-        s.id === studentId ? { ...s, status: 'present' as AttendanceStatus } : s
-      )
-    );
+  ngOnInit(): void {
+    const sessionId = Number(this.route.snapshot.queryParamMap.get('sessionId'));
+    this.loadSession(Number.isFinite(sessionId) && sessionId > 0 ? sessionId : null);
+  }
+
+  markPresent(studentId: number): void {
+    const sessionId = this.session()?.sessionId;
+    if (!sessionId) return;
+
+    this.attendanceService.updateAttendance(sessionId, { studentId, status: 'PRESENT' }).subscribe({
+      next: () => {
+        this.allStudents.update((students) =>
+          students.map((student) =>
+            student.id === studentId ? { ...student, status: 'present' } : student,
+          ),
+        );
+      },
+      error: () => this.error.set('Impossible de marquer cet etudiant present.'),
+    });
   }
 
   markSelectedPresent(): void {
-    const results = this.manualSearchResults();
-    if (results.length === 0) return;
-    const ids = new Set(results.map((s) => s.id));
-    this._allStudents.update((students) =>
-      students.map((s) =>
-        ids.has(s.id) ? { ...s, status: 'present' as AttendanceStatus } : s
-      )
-    );
+    this.manualSearchResults().forEach((student) => this.markPresent(student.id));
   }
 
   seeAllStudents(): void {
-    // Navigate to full student list or expand the panel
-    console.log('Navigate to full students list');
+    this.manualSearchQuery = '';
   }
 
   endSession(): void {
-    // Navigate away or show confirmation dialog
-    console.log('End session');
+    const sessionId = this.session()?.sessionId;
+    if (!sessionId) return;
+
+    this.ending.set(true);
+    this.attendanceService.endSession(sessionId).subscribe({
+      next: () => this.router.navigate(['/teacher/sessions']),
+      error: () => {
+        this.ending.set(false);
+        this.error.set('Impossible de terminer la session.');
+      },
+    });
+  }
+
+  private loadSession(sessionId: number | null): void {
+    this.loading.set(true);
+    const request = sessionId
+      ? this.attendanceService.getSession(sessionId)
+      : this.attendanceService.getActiveSession();
+
+    request.subscribe({
+      next: (session) => {
+        this.loading.set(false);
+        this.applySession(session);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.error.set('Impossible de charger la session faciale.');
+      },
+    });
+  }
+
+  private applySession(session: AttendanceSessionResponse): void {
+    this.session.set(session);
+    const students = (session.students ?? []).map((student) => this.toRecognizedStudent(student));
+    this.allStudents.set(students);
+    const lastPresent = students.find((student) => student.status === 'present');
+    this.activeDetections.set(
+      lastPresent
+        ? [
+            {
+              id: String(lastPresent.id),
+              name: `IDENTITE: ${lastPresent.name}`,
+              x: 35,
+              y: 18,
+              w: 26,
+              h: 46,
+              confirmed: true,
+            },
+          ]
+        : [],
+    );
+  }
+
+  private toRecognizedStudent(student: AttendanceStudentView): RecognizedStudent {
+    const name = `${student.firstName} ${student.lastName}`.trim();
+    return {
+      id: student.studentId,
+      name,
+      apogee: student.numApogee,
+      avatarInitials: this.initials(name),
+      avatarBg: '#dbeafe',
+      avatarColor: '#2563eb',
+      status:
+        student.status === 'PRESENT' ? 'present' : student.status === 'ABSENT' ? 'absent' : null,
+    };
+  }
+
+  private initials(name: string): string {
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .map((part) => part[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
   }
 }

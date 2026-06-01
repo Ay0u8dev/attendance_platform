@@ -14,8 +14,8 @@ import java.util.Optional;
 import ma.eniad.userservice.dto.structure.AnneeRequestDTO;
 import ma.eniad.userservice.dto.structure.AnneeResponseDTO;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
-import ma.eniad.userservice.exception.structure.DuplicateResourceException;
-import ma.eniad.userservice.exception.structure.ResourceNotFoundException;
+import ma.eniad.userservice.exception.DuplicateResourceException;
+import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.mapper.structure.AnneeUniversitaireMapper;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
 import org.junit.jupiter.api.Test;
@@ -48,6 +48,23 @@ class AnneeUniversitaireServiceTest {
         when(mapper.toResponse(entity)).thenReturn(response);
 
         assertThat(service.create(request)).isSameAs(response);
+        verify(repository).deactivateOtherActiveYears(null);
+        verify(repository).save(entity);
+    }
+
+    @Test
+    void createDoesNotDeactivateOthersWhenRequestIsInactive() {
+        AnneeRequestDTO request = request("2025-2026", false);
+        AnneeUniversitaire entity = entity(1L, "2025-2026", false);
+        AnneeResponseDTO response = response(1L, "2025-2026", false);
+
+        when(repository.existsByName("2025-2026")).thenReturn(false);
+        when(mapper.toEntity(request)).thenReturn(entity);
+        when(repository.save(entity)).thenReturn(entity);
+        when(mapper.toResponse(entity)).thenReturn(response);
+
+        assertThat(service.create(request)).isSameAs(response);
+        verify(repository, never()).deactivateOtherActiveYears(any());
         verify(repository).save(entity);
     }
 
@@ -75,6 +92,22 @@ class AnneeUniversitaireServiceTest {
 
         assertThat(service.update(1L, request)).isSameAs(response);
         verify(repository, never()).existsByName("2025-2026");
+        verify(repository).deactivateOtherActiveYears(1L);
+        verify(mapper).updateEntity(request, entity);
+    }
+
+    @Test
+    void updateDoesNotDeactivateOthersWhenRequestIsInactive() {
+        AnneeRequestDTO request = request("2025-2026", false);
+        AnneeUniversitaire entity = entity(1L, "2025-2026");
+        AnneeResponseDTO response = response(1L, "2025-2026", false);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(entity));
+        when(repository.save(entity)).thenReturn(entity);
+        when(mapper.toResponse(entity)).thenReturn(response);
+
+        assertThat(service.update(1L, request)).isSameAs(response);
+        verify(repository, never()).deactivateOtherActiveYears(any());
         verify(mapper).updateEntity(request, entity);
     }
 
@@ -115,31 +148,43 @@ class AnneeUniversitaireServiceTest {
     }
 
     private static AnneeRequestDTO request(String name) {
+        return request(name, true);
+    }
+
+    private static AnneeRequestDTO request(String name, boolean active) {
         AnneeRequestDTO request = new AnneeRequestDTO();
         request.setName(name);
         request.setStartDate(LocalDate.of(2025, 9, 1));
         request.setEndDate(LocalDate.of(2026, 7, 31));
-        request.setActive(true);
+        request.setActive(active);
         return request;
     }
 
     private static AnneeUniversitaire entity(Long id, String name) {
+        return entity(id, name, true);
+    }
+
+    private static AnneeUniversitaire entity(Long id, String name, boolean active) {
         return AnneeUniversitaire.builder()
                 .id(id)
                 .name(name)
                 .startDate(LocalDate.of(2025, 9, 1))
                 .endDate(LocalDate.of(2026, 7, 31))
-                .active(true)
+                .active(active)
                 .build();
     }
 
     private static AnneeResponseDTO response(Long id, String name) {
+        return response(id, name, true);
+    }
+
+    private static AnneeResponseDTO response(Long id, String name, boolean active) {
         return AnneeResponseDTO.builder()
                 .id(id)
                 .name(name)
                 .startDate(LocalDate.of(2025, 9, 1))
                 .endDate(LocalDate.of(2026, 7, 31))
-                .active(true)
+                .active(active)
                 .build();
     }
 }

@@ -12,19 +12,21 @@ public interface FormationMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "deleted", ignore = true)
     @Mapping(target = "anneeUniversitaire", ignore = true)
     @Mapping(target = "filiere", ignore = true)
     @Mapping(target = "cycle", ignore = true)
+    @Mapping(target = "groupes", ignore = true)
+    @Mapping(target = "modules", ignore = true)
     Formation toEntity(FormationRequestDTO dto);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "deleted", ignore = true)
     @Mapping(target = "anneeUniversitaire", ignore = true)
     @Mapping(target = "filiere", ignore = true)
     @Mapping(target = "cycle", ignore = true)
+    @Mapping(target = "groupes", ignore = true)
+    @Mapping(target = "modules", ignore = true)
     void updateEntity(FormationRequestDTO dto, @MappingTarget Formation entity);
 
     @Mapping(target = "anneeUniversitaireId", source = "anneeUniversitaire.id")

@@ -1,75 +1,134 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
 import { Button } from '../../../../../shared/components/button/button';
 import { Modal } from '../../../../../shared/components/modal/modal';
 import { ModalFieldGroup } from '../../../../../shared/components/modal-field-group/modal-field-group';
+import {
+  DropdownFilter,
+  DropdownOption,
+} from '../../../../../shared/components/dropdown-filter/dropdown-filter';
+import { ModuleRequest } from '../../../../../core/structure/models/module.model';
+import {
+  normalizeCode,
+  normalizeLabel,
+  structureInputClass,
+} from '../../../../../shared/structure-form-ui';
 
 @Component({
   selector: 'app-create-module-modal',
-  imports: [Modal, Button, ModalFieldGroup],
+  imports: [Modal, Button, ModalFieldGroup, DropdownFilter, FormsModule],
   template: `
     <app-modal
       title="Ajouter un module"
-      description="Créez un nouveau module pour une formation et un semestre."
+      description="Créez un module d'enseignement et rattachez-le à une formation."
       [open]="open()"
-      (closed)="closeRequested.emit()"
+      size="lg"
+      (closed)="close()"
     >
-      <form modal-body class="space-y-6">
+      <form modal-body class="grid gap-5 md:grid-cols-2">
         <app-modal-field-group
           label="Nom du module"
           iconClass="fa-solid fa-layer-group"
-          iconBackgroundClass="bg-primary/10 text-primary"
+          iconBackgroundClass="bg-primary-soft text-primary"
           fieldId="module-name"
+          [required]="true"
+          [error]="nameError()"
         >
           <input
             id="module-name"
             type="text"
             placeholder="Ex: Algorithmique et structures"
-            class="w-full rounded-xl border border-line bg-gradient-to-r from-surface to-surface-subtle px-4 py-3 text-sm text-principalText placeholder:text-muted transition focus:border-primary focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30 shadow-sm"
+            [(ngModel)]="form.name"
+            name="name"
+            [class]="inputClass(!!nameError())"
           />
         </app-modal-field-group>
 
         <app-modal-field-group
           label="Code du module"
           iconClass="fa-solid fa-tag"
-          iconBackgroundClass="bg-secondary/10 text-secondary"
+          iconBackgroundClass="bg-secondary-soft text-secondary"
           fieldId="module-code"
+          [required]="true"
+          [error]="codeError()"
         >
           <input
             id="module-code"
             type="text"
             placeholder="Ex: ALG-101"
-            class="w-full rounded-xl border border-line bg-gradient-to-r from-surface to-surface-subtle px-4 py-3 text-sm text-principalText placeholder:text-muted transition focus:border-secondary focus:bg-surface focus:outline-none focus:ring-2 focus:ring-secondary/30 shadow-sm"
+            [(ngModel)]="form.code"
+            name="code"
+            [class]="inputClass(!!codeError())"
           />
         </app-modal-field-group>
 
         <app-modal-field-group
-          label="Crédits et volume"
-          iconClass="fa-solid fa-chart-column"
-          iconBackgroundClass="bg-warning/10 text-warning"
-          fieldId="module-credits"
+          label="Semestre"
+          iconClass="fa-solid fa-calendar"
+          iconBackgroundClass="bg-warning-soft text-warning"
+          fieldId="module-semester"
+          helper="Optionnel si le découpage pédagogique n'est pas encore confirmé."
+          [error]="semesterError()"
         >
-          <div class="grid gap-3 sm:grid-cols-2">
-            <input
-              id="module-credits"
-              type="number"
-              min="0"
-              placeholder="Crédits"
-              class="w-full rounded-xl border border-line bg-gradient-to-r from-surface to-surface-subtle px-4 py-3 text-sm text-principalText placeholder:text-muted transition focus:border-warning focus:bg-surface focus:outline-none focus:ring-2 focus:ring-warning/30 shadow-sm"
-            />
-            <input
-              id="module-hours"
-              type="number"
-              min="0"
-              placeholder="Heures"
-              class="w-full rounded-xl border border-line bg-gradient-to-r from-surface to-surface-subtle px-4 py-3 text-sm text-principalText placeholder:text-muted transition focus:border-warning focus:bg-surface focus:outline-none focus:ring-2 focus:ring-warning/30 shadow-sm"
-            />
-          </div>
+          <input
+            id="module-semester"
+            type="number"
+            min="1"
+            placeholder="Ex: 3"
+            [(ngModel)]="form.semester"
+            name="semester"
+            [class]="inputClass(!!semesterError())"
+          />
         </app-modal-field-group>
+
+        <app-modal-field-group
+          label="Volume horaire"
+          iconClass="fa-solid fa-clock"
+          iconBackgroundClass="bg-surface-muted text-secondaryText"
+          fieldId="module-hours"
+          [error]="hoursError()"
+        >
+          <input
+            id="module-hours"
+            type="number"
+            min="0"
+            placeholder="Ex: 48"
+            [(ngModel)]="form.hours"
+            name="hours"
+            [class]="inputClass(!!hoursError())"
+          />
+        </app-modal-field-group>
+
+        <div class="md:col-span-2">
+          <app-dropdown-filter
+            identifier="module-formation"
+            label="Formation"
+            allLabel="Sélectionnez une formation"
+            [options]="formationOptions()"
+            [value]="selectedFormation()"
+            [required]="true"
+            [error]="submitted() && !selectedFormation() ? 'Sélectionnez une formation.' : ''"
+            iconClass="fa-solid fa-book-open"
+            iconBackgroundClass="bg-primary-soft text-primary"
+            iconColor="primary"
+            (filterChange)="selectedFormation.set($event)"
+          ></app-dropdown-filter>
+        </div>
       </form>
-      <div modal-footer class="flex w-full items-center gap-3 justify-end border-t border-line pt-6">
-        <app-button label="Annuler" variant="outline" [fullWidth]="false" (clicked)="closeRequested.emit()"></app-button>
-        <app-button label="Créer le module" icon="fa-solid fa-plus" variant="primary" [fullWidth]="false"></app-button>
+      <div modal-footer class="flex w-full items-center justify-end gap-3">
+        <app-button
+          label="Annuler"
+          variant="outline"
+          [fullWidth]="false"
+          (clicked)="close()"
+        ></app-button>
+        <app-button
+          label="Créer le module"
+          variant="primary"
+          [fullWidth]="false"
+          (clicked)="submit()"
+        ></app-button>
       </div>
     </app-modal>
   `,
@@ -78,4 +137,101 @@ import { ModalFieldGroup } from '../../../../../shared/components/modal-field-gr
 export class CreateModuleModal {
   readonly open = input(false);
   readonly closeRequested = output<void>();
+  readonly createRequested = output<ModuleRequest>();
+  readonly formationOptions = input.required<DropdownOption[]>();
+
+  readonly selectedFormation = signal<string | null>(null);
+  readonly submitted = signal(false);
+  form: ModuleRequest = {
+    name: '',
+    code: '',
+    semester: null,
+    hours: null,
+    formationId: 0,
+  };
+
+  inputClass(invalid: boolean): string {
+    return structureInputClass(invalid);
+  }
+
+  nameError(): string {
+    return this.submitted() && !this.form.name.trim() ? 'Indiquez le nom du module.' : '';
+  }
+
+  codeError(): string {
+    if (!this.submitted()) {
+      return '';
+    }
+
+    const code = normalizeCode(this.form.code);
+    if (!code) {
+      return 'Indiquez le code du module.';
+    }
+
+    return /^[A-Z0-9-]{2,20}$/.test(code)
+      ? ''
+      : 'Utilisez 2 à 20 caractères : lettres, chiffres ou tirets.';
+  }
+
+  semesterError(): string {
+    if (!this.submitted() || this.form.semester == null) {
+      return '';
+    }
+
+    const semester = Number(this.form.semester);
+    return Number.isInteger(semester) && semester >= 1 && semester <= 12
+      ? ''
+      : 'Le semestre doit être un entier entre 1 et 12.';
+  }
+
+  hoursError(): string {
+    if (!this.submitted() || this.form.hours == null) {
+      return '';
+    }
+
+    const hours = Number(this.form.hours);
+    return Number.isInteger(hours) && hours >= 0 && hours <= 999
+      ? ''
+      : 'Le volume horaire doit être un entier entre 0 et 999.';
+  }
+
+  close(): void {
+    this.submitted.set(false);
+    this.resetForm();
+    this.closeRequested.emit();
+  }
+
+  submit(): void {
+    this.submitted.set(true);
+    if (
+      this.nameError() ||
+      this.codeError() ||
+      this.semesterError() ||
+      this.hoursError() ||
+      !this.selectedFormation()
+    ) {
+      return;
+    }
+
+    this.createRequested.emit({
+      ...this.form,
+      name: normalizeLabel(this.form.name),
+      code: normalizeCode(this.form.code),
+      formationId: Number(this.selectedFormation()),
+    });
+
+    this.submitted.set(false);
+    this.resetForm();
+  }
+
+  private resetForm(): void {
+    this.selectedFormation.set(null);
+    this.form = {
+      name: '',
+      code: '',
+      semester: null,
+      hours: null,
+      formationId: 0,
+    };
+  }
 }

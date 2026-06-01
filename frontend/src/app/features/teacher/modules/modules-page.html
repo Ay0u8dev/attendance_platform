@@ -2,11 +2,21 @@
   <app-page-header
     title="My Modules"
     description="View and manage the academic modules assigned to you for this semester."
-    meta="4 active modules"
+    [meta]="moduleItems().length + ' active modules'"
   ></app-page-header>
 
+  @if (error()) {
+    <div class="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm font-semibold text-danger">
+      {{ error() }}
+    </div>
+  }
+
   <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
-    @for (module of modules; track module.id) {
+    @if (loading()) {
+      <div class="rounded-3xl border border-line bg-surface p-6 text-secondaryText">Chargement...</div>
+    }
+
+    @for (module of moduleItems(); track module.id) {
       <div class="group relative flex flex-col overflow-hidden rounded-3xl border border-line bg-surface p-6 transition-all duration-300 hover:border-primary-soft hover:shadow-shell hover:-translate-y-1">
         <div 
           class="absolute top-0 right-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full opacity-5 transition-transform duration-500 group-hover:scale-110"
@@ -57,11 +67,13 @@
 
         <div class="mt-6 flex items-center gap-3">
           <button 
+            routerLink="/teacher/sessions"
             class="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-primary/90 hover:shadow-lg active:scale-[0.98]"
           >
             View Details
           </button>
           <button 
+            routerLink="/teacher/mark-attendance/start-session"
             class="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
           >
             <i class="fa-solid fa-gear text-sm"></i>
@@ -71,7 +83,7 @@
     }
 
     <!-- Add Module Placeholder -->
-    <button class="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-line bg-transparent p-6 text-secondaryText transition-all duration-200 hover:border-primary-soft hover:bg-primary-soft/10 hover:text-primary group">
+    <button routerLink="/teacher/mark-attendance/start-session" class="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-line bg-transparent p-6 text-secondaryText transition-all duration-200 hover:border-primary-soft hover:bg-primary-soft/10 hover:text-primary group">
       <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-line/50 text-xl transition-colors duration-200 group-hover:bg-primary-soft">
         <i class="fa-solid fa-plus"></i>
       </div>

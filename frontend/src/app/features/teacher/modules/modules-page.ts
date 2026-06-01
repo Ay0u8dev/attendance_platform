@@ -1,9 +1,15 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
 
+import { AttendanceSessionSummary } from '../../../core/attendance/models/attendance.model';
+import { AttendanceService } from '../../../core/attendance/services/attendance.service';
+import { Module } from '../../../core/structure/models/module.model';
+import { ModuleService } from '../../../core/structure/services/module.service';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 
 type ModuleItem = {
-  readonly id: string;
+  readonly id: number;
   readonly code: string;
   readonly name: string;
   readonly program: string;
@@ -17,56 +23,66 @@ type ModuleItem = {
 @Component({
   selector: 'app-teacher-modules-page',
   standalone: true,
-  imports: [PageHeader],
+  imports: [PageHeader, RouterLink],
   templateUrl: './modules-page.html',
   styleUrl: './modules-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TeacherModulesPage {
-  readonly modules: readonly ModuleItem[] = [
-    {
-      id: 'm1',
-      code: 'GEN-302',
-      name: 'Advanced Web Development',
-      program: 'Software Engineering - Y3',
-      students: 42,
-      progress: 65,
-      sessions: 14,
-      icon: 'fa-solid fa-code',
-      color: 'bg-primary',
-    },
-    {
-      id: 'm2',
-      code: 'DAT-201',
-      name: 'Database Architecture',
-      program: 'Data Science - Y2',
-      students: 38,
-      progress: 40,
-      sessions: 8,
-      icon: 'fa-solid fa-database',
-      color: 'bg-secondary',
-    },
-    {
-      id: 'm3',
-      code: 'SEC-401',
-      name: 'Network Security',
-      program: 'Cybersecurity - Y4',
-      students: 25,
-      progress: 85,
-      sessions: 18,
-      icon: 'fa-solid fa-shield-halved',
-      color: 'bg-danger',
-    },
-    {
-      id: 'm4',
-      code: 'AI-305',
-      name: 'Machine Learning Basics',
-      program: 'Intelligence Artificielle - Y3',
-      students: 31,
-      progress: 25,
-      sessions: 5,
-      icon: 'fa-solid fa-brain',
-      color: 'bg-warning',
-    },
-  ];
+export class TeacherModulesPage implements OnInit {
+  private readonly moduleService = inject(ModuleService);
+  private readonly attendanceService = inject(AttendanceService);
+
+  readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly modules = signal<Module[]>([]);
+  readonly sessions = signal<AttendanceSessionSummary[]>([]);
+
+  readonly moduleItems = computed<ModuleItem[]>(() =>
+    this.modules().map((module, index) => {
+      const sessions = this.sessions().filter((session) => session.courseLabel === module.name).length;
+      return {
+        id: module.id,
+        code: module.code,
+        name: module.name,
+        program: `Formation ${module.formationId}`,
+        students: 12,
+        progress: Math.min(100, Math.max(10, sessions * 20)),
+        sessions,
+        icon: this.iconFor(index),
+        color: this.colorFor(index),
+      };
+    }),
+  );
+
+  ngOnInit(): void {
+    this.loadData();
+  }
+
+  loadData(): void {
+    this.loading.set(true);
+    this.error.set(null);
+
+    this.moduleService
+      .getAll()
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: (modules) => this.modules.set(modules),
+        error: () => this.error.set('Impossible de charger les modules.'),
+      });
+
+    this.attendanceService.getTeacherSessions({ page: 0, size: 50, sort: 'startedAt,desc' }).subscribe({
+      next: (page) => this.sessions.set(page.items),
+      error: () => undefined,
+    });
+  }
+
+  private iconFor(index: number): string {
+    return ['fa-solid fa-code', 'fa-solid fa-database', 'fa-solid fa-shield-halved', 'fa-solid fa-brain'][
+      index % 4
+    ];
+  }
+
+  private colorFor(index: number): string {
+    return ['bg-primary', 'bg-secondary', 'bg-danger', 'bg-warning'][index % 4];
+  }
 }

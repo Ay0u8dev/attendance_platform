@@ -25,9 +25,9 @@ public class AttendanceSession {
     @Column(nullable = false)
     private String roomLabel;
 
-    @Column(nullable = false)
+    @Column
     private String gpsLat;
-    @Column(nullable = false)
+    @Column
     private String gpsLon;
 
     @Column(nullable = false)

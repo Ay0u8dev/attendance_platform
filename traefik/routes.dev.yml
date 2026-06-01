@@ -9,13 +9,13 @@ http:
     auth:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/auth`)"
-      middlewares: ["strip-api-auth"]
+      middlewares: ["cors", "strip-api-auth"]
       service: auth-service
 
     user:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/users`)"
-      middlewares: ["forward-auth", "strip-api-user"]
+      middlewares: ["cors", "forward-auth", "strip-api-user"]
       service: user-service
 
     # Attendance WebSocket handshake route — no forward-auth here.
@@ -23,14 +23,14 @@ http:
     attendance-ws:
       entryPoints: ["web"]
       rule: "Path(`/api/ws/attendance/ws`)"
-      middlewares: ["strip-api-ws-attendance"]
+      middlewares: ["cors", "strip-api-ws-attendance"]
       service: attendance-service
 
     # Attendance routes — protected, JWT required
     attendance:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/attendance`)"
-      middlewares: ["forward-auth", "strip-api-attendance"]
+      middlewares: ["cors", "forward-auth", "strip-api-attendance"]
       service: attendance-service
 
     # # Face recognition routes — protected, JWT required
@@ -52,6 +52,32 @@ http:
   # ── Middlewares ───────────────────────────────────────────────
   # Middlewares transform the request before it reaches the service.
   middlewares:
+    cors:
+      headers:
+        accessControlAllowCredentials: true
+        accessControlAllowHeaders:
+          - "Authorization"
+          - "Content-Type"
+          - "Accept"
+          - "Origin"
+          - "X-Requested-With"
+          - "X-User-Id"
+          - "X-User-Roles"
+          - "X-User-Email"
+        accessControlAllowMethods:
+          - "GET"
+          - "POST"
+          - "PUT"
+          - "PATCH"
+          - "DELETE"
+          - "OPTIONS"
+        accessControlAllowOriginList:
+          - "http://localhost:4200"
+          - "http://localhost"
+          - "http://127.0.0.1:4200"
+        accessControlMaxAge: 100
+        addVaryHeader: true
+
     # StripPrefix removes the path prefix before forwarding.
     # Your Spring Boot service doesn't know it's behind a gateway,
     # so it expects /auth/login not /api/auth/login.
@@ -82,7 +108,6 @@ http:
     # If it returns 200, the request goes through + headers are injected.
     # If it returns 401, the request is blocked and the client gets 401.
 
-    # ======== WARNING : turn on when endpoint is ready ========
     forward-auth:
       forwardAuth:
         address: "http://host.docker.internal:8081/auth/validate"
@@ -114,12 +139,7 @@ http:
     attendance-service:
       loadBalancer:
         servers:
-          - url: "http://host.docker.internal:8084"
-
-    # face-service:
-    #   loadBalancer:
-    #     servers:
-    #       - url: "http://host.docker.internal:8000"
+          - url: "http://host.docker.internal:8083"
 
     frontend-service:
       loadBalancer:
