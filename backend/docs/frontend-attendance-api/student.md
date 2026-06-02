@@ -3,8 +3,37 @@
 Base path:
 
 - `/api/attendance/student`
+- QR self-marking uses `/api/qr/student/scan`
 
 Student routes expose only the authenticated student's own finalized records.
+
+For active sessions, the student dashboard uses `GET /api/attendance/student/sessions/active` to discover unresolved attendance, then submits scanned QR payloads to QR service.
+
+## `GET /api/attendance/student/sessions/active`
+
+Purpose:
+
+- Return the authenticated student's active unresolved or resolved session state.
+
+Success response:
+
+```json
+{
+  "sessionId": 5,
+  "teacherFullName": "Ayoub Elebbar",
+  "courseLabel": "Distributed Systems",
+  "roomLabel": "Room B12",
+  "groupIds": [1],
+  "startedAt": "2026-06-01T18:00:00",
+  "endsAt": "2026-06-01T18:30:00",
+  "attendanceStatus": "UNKNOWN"
+}
+```
+
+Common errors:
+
+- `403` caller is not a student
+- `404` no active session exists for this student
 
 ## `GET /api/attendance/student/sessions`
 

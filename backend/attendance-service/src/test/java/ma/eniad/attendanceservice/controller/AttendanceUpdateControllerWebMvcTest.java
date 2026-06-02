@@ -120,7 +120,7 @@ class AttendanceUpdateControllerWebMvcTest {
     }
 
     @Test
-    void internalFaceUpdateRouteAcceptsDeviceIdWithoutReturningIt() throws Exception {
+    void internalFaceUpdateRouteAcceptsDeviceAndGpsWithoutReturningThem() throws Exception {
         when(attendanceUpdateService.updateInternalAttendance(anyString(), anyLong(), any()))
                 .thenReturn(new AttendanceUpdateResponse(
                         100L, 10L, AttendanceStudentStatus.PRESENT, AttendanceSessionMethod.FACE_ID,
@@ -135,12 +135,14 @@ class AttendanceUpdateControllerWebMvcTest {
                                   "studentId": 10,
                                   "method": "FACE_ID",
                                   "deviceId": "phone-10",
-                                  "gpsLat": null,
-                                  "gpsLon": null
+                                  "gpsLat": "34.6820",
+                                  "gpsLon": "-1.9091"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.markMethod").value("FACE_ID"))
-                .andExpect(jsonPath("$.deviceId").doesNotExist());
+                .andExpect(jsonPath("$.deviceId").doesNotExist())
+                .andExpect(jsonPath("$.markedGpsLat").doesNotExist())
+                .andExpect(jsonPath("$.markedGpsLon").doesNotExist());
     }
 }

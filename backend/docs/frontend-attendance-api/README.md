@@ -12,6 +12,8 @@ WebSocket handshake path:
 
 The frontend must not call internal service routes such as `/attendance/internal/**`.
 
+QR student self-marking is exposed through `/api/qr/**`; QR service validates the QR proof and then calls attendance-service internally.
+
 ## Docs by role
 
 - [Common](./common.md)

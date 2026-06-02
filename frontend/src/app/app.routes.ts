@@ -4,6 +4,13 @@ import { Role } from './core/auth/models/auth.model';
 
 export const routes: Routes = [
   {
+    path: 'attendance/qr-display',
+    loadComponent: () =>
+      import('./features/attendance/qr-display/qr-display-page').then(
+        (module) => module.QrDisplayPage,
+      ),
+  },
+  {
     path: '',
     loadComponent: () => import('./shared/layouts/auth-layout').then((module) => module.AuthLayout),
     children: [

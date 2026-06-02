@@ -14,6 +14,7 @@ services:
       - "traefik.http.middlewares.strip-api-auth.stripprefix.prefixes=/api"
       - "traefik.http.middlewares.strip-api-user.stripprefix.prefixes=/api"
       - "traefik.http.middlewares.strip-api-attendance.stripprefix.prefixes=/api"
+      - "traefik.http.middlewares.strip-api-qr.stripprefix.prefixes=/api"
       - "traefik.http.middlewares.strip-api-ws-attendance.stripprefix.prefixes=/api/ws"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -147,6 +148,25 @@ services:
       attendance-db:
         condition: service_healthy
       auth-service:
+        condition: service_started
+
+  qr-service:
+    build:
+      context: ./backend/qr-service
+      dockerfile: ./Dockerfile.prod.example
+    container_name: qr-service
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.qr.rule=PathPrefix(`/api/qr`)"
+      - "traefik.http.routers.qr.entrypoints=web"
+      - "traefik.http.routers.qr.middlewares=forward-auth,strip-api-qr"
+      - "traefik.http.services.qr.loadbalancer.server.port=8000"
+    environment:
+      ATTENDANCE_SERVICE_URL: http://attendance-service:8080
+    env_file:
+      - .env.prod
+    depends_on:
+      attendance-service:
         condition: service_started
 
 volumes:

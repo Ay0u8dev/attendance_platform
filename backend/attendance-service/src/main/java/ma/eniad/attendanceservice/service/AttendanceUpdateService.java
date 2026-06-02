@@ -11,6 +11,7 @@ import ma.eniad.attendanceservice.dto.ManualAttendanceUpdateRequest;
 import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
 import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -31,10 +32,15 @@ public class AttendanceUpdateService {
             "face-service", AttendanceSessionMethod.FACE_ID
     );
     private static final String DEVICE_REQUIRED_MESSAGE = "deviceId is required for student self attendance";
+    private static final String GPS_REQUIRED_MESSAGE = "GPS coordinates are required for student self attendance";
+    private static final double EARTH_RADIUS_METERS = 6_371_000.0;
 
     private final LiveAttendanceSessionStore liveAttendanceSessionStore;
     private final SimpMessagingTemplate messagingTemplate;
     private final Map<Long, Object> sessionLocks = new ConcurrentHashMap<>();
+
+    @Value("${attendance.self-mark.max-distance-meters:${attendance.qr.max-distance-meters:100}}")
+    private double selfMarkMaxDistanceMeters = 100.0;
 
     public AttendanceUpdateResponse updateManualAttendance(Long teacherId,
                                                            Long sessionId,
@@ -85,13 +91,13 @@ public class AttendanceUpdateService {
         }
 
         return withSessionLock(sessionId, () -> {
-            requireActiveSession(sessionId);
+            LiveAttendanceSessionMeta sessionMeta = requireActiveSession(sessionId);
 
             LiveAttendanceStudentState currentStudent = requireStudent(sessionId, request.studentId());
             if (currentStudent.status() != AttendanceStudentStatus.UNKNOWN) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Student attendance is already resolved");
             }
-            AttendanceMarkData markData = resolveMarkData(request);
+            AttendanceMarkData markData = resolveMarkData(request, sessionMeta);
 
             liveAttendanceSessionStore.findDeviceIdByStudent(sessionId, request.studentId())
                     .filter(existingDeviceId -> !existingDeviceId.equals(markData.deviceId()))
@@ -186,21 +192,50 @@ public class AttendanceUpdateService {
         }
     }
 
-    private AttendanceMarkData resolveMarkData(InternalAttendanceUpdateRequest request) {
-        if (request.method() == AttendanceSessionMethod.QR_CODE) {
+    private AttendanceMarkData resolveMarkData(InternalAttendanceUpdateRequest request,
+                                               LiveAttendanceSessionMeta sessionMeta) {
+        if (isStudentSelfMarkMethod(request.method())) {
             String deviceId = requireNonBlank(request.deviceId(), DEVICE_REQUIRED_MESSAGE);
-            return new AttendanceMarkData(deviceId, normalizeOptional(request.gpsLat()), normalizeOptional(request.gpsLon()));
-        }
-
-        if (request.method() == AttendanceSessionMethod.FACE_ID) {
-            return new AttendanceMarkData(
-                    requireNonBlank(request.deviceId(), DEVICE_REQUIRED_MESSAGE),
-                    normalizeOptional(request.gpsLat()),
-                    normalizeOptional(request.gpsLon())
-            );
+            String gpsLat = requireNonBlank(request.gpsLat(), GPS_REQUIRED_MESSAGE);
+            String gpsLon = requireNonBlank(request.gpsLon(), GPS_REQUIRED_MESSAGE);
+            validateSelfMarkDistance(sessionMeta, gpsLat, gpsLon);
+            return new AttendanceMarkData(deviceId, gpsLat, gpsLon);
         }
 
         throw new ResponseStatusException(HttpStatus.CONFLICT, "Attendance method does not support internal updates");
+    }
+
+    private boolean isStudentSelfMarkMethod(AttendanceSessionMethod method) {
+        return method == AttendanceSessionMethod.QR_CODE || method == AttendanceSessionMethod.FACE_ID;
+    }
+
+    private void validateSelfMarkDistance(LiveAttendanceSessionMeta sessionMeta, String studentGpsLat, String studentGpsLon) {
+        double teacherLat = parseCoordinate(sessionMeta.gpsLat(), "Session GPS latitude is invalid");
+        double teacherLon = parseCoordinate(sessionMeta.gpsLon(), "Session GPS longitude is invalid");
+        double studentLat = parseCoordinate(studentGpsLat, "Student GPS latitude is invalid");
+        double studentLon = parseCoordinate(studentGpsLon, "Student GPS longitude is invalid");
+        double distance = distanceMeters(teacherLat, teacherLon, studentLat, studentLon);
+        if (distance > selfMarkMaxDistanceMeters) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Student is too far from the attendance session location");
+        }
+    }
+
+    private double parseCoordinate(String value, String message) {
+        try {
+            return Double.parseDouble(requireNonBlank(value, message));
+        } catch (NumberFormatException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+        }
+    }
+
+    private double distanceMeters(double lat1, double lon1, double lat2, double lon2) {
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return EARTH_RADIUS_METERS * c;
     }
 
     private String requireNonBlank(String value, String message) {

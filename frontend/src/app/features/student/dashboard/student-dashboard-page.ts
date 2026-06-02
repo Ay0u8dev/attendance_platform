@@ -25,6 +25,7 @@ import {
   StudentAttendanceSessionSummaryDto,
 } from '../../../core/attendance/models/student-attendance.model';
 import { StudentAttendanceService } from '../../../core/attendance/services/student-attendance.service';
+import { QrAttendanceService } from '../../../core/attendance/services/qr-attendance.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { StudentProfileService } from '../../../core/student/services/student-profile.service';
 import { DataTableCellDef } from '../../../shared/components/data-table/data-table-cell-def';
@@ -63,6 +64,8 @@ type AttendanceFlowPhase =
   | 'idle'
   | 'qr-scanning'
   | 'qr-detected'
+  | 'qr-submitting'
+  | 'qr-confirmed'
   | 'face-countdown'
   | 'face-captured'
   | 'face-validated';
@@ -89,6 +92,7 @@ export class StudentDashboardPage {
   private readonly authService = inject(AuthService);
   private readonly studentProfileService = inject(StudentProfileService);
   private readonly attendanceService = inject(StudentAttendanceService);
+  private readonly qrAttendanceService = inject(QrAttendanceService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
@@ -118,6 +122,7 @@ export class StudentDashboardPage {
   readonly qrScannerDevices = signal<readonly MediaDeviceInfo[]>([]);
   readonly selectedQrDevice = signal<MediaDeviceInfo | undefined>(undefined);
   readonly scannedQrContent = signal<string | null>(null);
+  readonly qrConfirmationMessage = signal<string | null>(null);
   readonly qrFormats = [BarcodeFormat.QR_CODE];
   private activeCameraStream: MediaStream | null = null;
   private faceCountdownTimerId: number | null = null;
@@ -417,18 +422,23 @@ export class StudentDashboardPage {
   }
 
   onQrScanSuccess(content: string): void {
-    if (this.attendanceFlowPhase() === 'qr-detected') {
+    if (
+      this.attendanceFlowPhase() === 'qr-detected' ||
+      this.attendanceFlowPhase() === 'qr-submitting' ||
+      this.attendanceFlowPhase() === 'qr-confirmed'
+    ) {
       return;
     }
 
     this.qrScannerEnabled.set(false);
     this.scannedQrContent.set(content);
     this.attendanceFlowPhase.set('qr-detected');
-    console.log('QR attendance content:', content);
+    void this.submitQrAttendance(content);
   }
 
   restartQrScan(): void {
     this.scannedQrContent.set(null);
+    this.qrConfirmationMessage.set(null);
     this.cameraError.set(null);
     this.attendanceFlowPhase.set('qr-scanning');
     this.qrScannerEnabled.set(true);
@@ -548,6 +558,71 @@ export class StudentDashboardPage {
           this.activeAttendanceSession.set(null);
         },
       });
+  }
+
+  private async submitQrAttendance(payload: string): Promise<void> {
+    const session = this.activeAttendanceSession();
+    if (!session || session.attendanceStatus !== 'UNKNOWN') {
+      return;
+    }
+
+    this.cameraError.set(null);
+    this.qrConfirmationMessage.set(null);
+    this.attendanceFlowPhase.set('qr-submitting');
+
+    const position = await this.tryGetCurrentPosition();
+    this.qrAttendanceService
+      .submitStudentQrScan({
+        payload,
+        deviceId: this.getOrCreateDeviceId(),
+        gpsLat: position?.coords.latitude.toString(),
+        gpsLon: position?.coords.longitude.toString(),
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.qrConfirmationMessage.set('Présence confirmée.');
+          this.activeAttendanceSession.update((current) =>
+            current ? { ...current, attendanceStatus: 'PRESENT' } : current,
+          );
+          this.attendanceFlowPhase.set('qr-confirmed');
+          this.closeAttendanceCamera();
+          this.loadDashboardData();
+        },
+        error: (error) => {
+          this.cameraError.set(this.qrAttendanceService.toUserMessage(error));
+          this.attendanceFlowPhase.set('qr-detected');
+        },
+      });
+  }
+
+  private tryGetCurrentPosition(): Promise<GeolocationPosition | null> {
+    if (!this.isBrowser || !navigator.geolocation) {
+      return Promise.resolve(null);
+    }
+
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => resolve(position),
+        () => resolve(null),
+        { enableHighAccuracy: false, maximumAge: 60_000, timeout: 3000 },
+      );
+    });
+  }
+
+  private getOrCreateDeviceId(): string {
+    const storageKey = 'attendance_student_device_id';
+    const existing = localStorage.getItem(storageKey);
+    if (existing?.trim()) {
+      return existing;
+    }
+
+    const generated =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(storageKey, generated);
+    return generated;
   }
 
   private buildAbsenceWarning(
@@ -754,6 +829,7 @@ export class StudentDashboardPage {
   private resetAttendanceFlow(): void {
     this.attendanceFlowPhase.set('idle');
     this.scannedQrContent.set(null);
+    this.qrConfirmationMessage.set(null);
     this.capturedFaceImage.set(null);
     this.qrScannerEnabled.set(false);
     this.clearFaceCountdown();

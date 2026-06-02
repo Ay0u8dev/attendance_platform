@@ -363,7 +363,11 @@
       @if (selectedAttendanceChoice() === 'QR_CODE') {
         <div class="space-y-4">
           <div class="attendance-media-frame qr-scanner-frame">
-            @if (attendanceFlowPhase() !== 'qr-detected') {
+            @if (
+              attendanceFlowPhase() !== 'qr-detected' &&
+              attendanceFlowPhase() !== 'qr-submitting' &&
+              attendanceFlowPhase() !== 'qr-confirmed'
+            ) {
               <zxing-scanner
                 [enable]="qrScannerEnabled()"
                 [device]="selectedQrDevice()"
@@ -398,14 +402,32 @@
                   class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-success-soft text-success"
                   aria-hidden="true"
                 >
-                  <i class="fa-solid fa-circle-check text-2xl"></i>
+                  <i
+                    [class]="
+                      attendanceFlowPhase() === 'qr-submitting'
+                        ? 'fa-solid fa-spinner fa-spin text-2xl'
+                        : 'fa-solid fa-circle-check text-2xl'
+                    "
+                  ></i>
                 </span>
-                <p class="mt-4 text-base font-semibold text-white">QR code détecté</p>
-                <p
-                  class="mt-2 max-w-sm break-words rounded-xl bg-white/10 px-3 py-2 text-sm text-white/85"
-                >
-                  {{ scannedQrContent() }}
-                </p>
+                @if (attendanceFlowPhase() === 'qr-submitting') {
+                  <p class="mt-4 text-base font-semibold text-white">Validation du QR code...</p>
+                  <p class="mt-2 max-w-sm text-sm text-white/85">
+                    La présence est en cours d’enregistrement.
+                  </p>
+                } @else if (attendanceFlowPhase() === 'qr-confirmed') {
+                  <p class="mt-4 text-base font-semibold text-white">
+                    {{ qrConfirmationMessage() || 'Présence confirmée.' }}
+                  </p>
+                  <p class="mt-2 max-w-sm text-sm text-white/85">
+                    Aucune autre action n’est nécessaire pour cette séance.
+                  </p>
+                } @else {
+                  <p class="mt-4 text-base font-semibold text-white">QR code détecté</p>
+                  <p class="mt-2 max-w-sm text-sm text-white/85">
+                    Le QR a été lu, mais la validation a échoué. Tu peux réessayer.
+                  </p>
+                }
               </div>
             }
           </div>
