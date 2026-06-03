@@ -71,6 +71,7 @@ type AttendanceFlowPhase =
   | 'face-validated';
 
 type StudentAttendanceChoice = 'QR_CODE' | 'FACE_ID';
+type QrLocationStatus = 'idle' | 'requesting' | 'ready' | 'unavailable';
 
 @Component({
   selector: 'app-student-dashboard-page',
@@ -123,9 +124,13 @@ export class StudentDashboardPage {
   readonly selectedQrDevice = signal<MediaDeviceInfo | undefined>(undefined);
   readonly scannedQrContent = signal<string | null>(null);
   readonly qrConfirmationMessage = signal<string | null>(null);
+  readonly qrLocationStatus = signal<QrLocationStatus>('idle');
+  readonly qrLocationPosition = signal<GeolocationPosition | null>(null);
+  readonly qrLocationError = signal<string | null>(null);
   readonly qrFormats = [BarcodeFormat.QR_CODE];
   private activeCameraStream: MediaStream | null = null;
   private faceCountdownTimerId: number | null = null;
+  private qrLocationRequestId = 0;
 
   readonly currentUserName = computed(() => {
     const user = this.authService.currentUser;
@@ -384,8 +389,7 @@ export class StudentDashboardPage {
     this.attendanceCameraOpen.set(true);
 
     if (choice === 'QR_CODE') {
-      this.attendanceFlowPhase.set('qr-scanning');
-      this.qrScannerEnabled.set(true);
+      void this.prepareQrScan();
       return;
     }
 
@@ -440,8 +444,7 @@ export class StudentDashboardPage {
     this.scannedQrContent.set(null);
     this.qrConfirmationMessage.set(null);
     this.cameraError.set(null);
-    this.attendanceFlowPhase.set('qr-scanning');
-    this.qrScannerEnabled.set(true);
+    void this.prepareQrScan();
   }
 
   retakeFaceCapture(): void {
@@ -566,17 +569,26 @@ export class StudentDashboardPage {
       return;
     }
 
+    const position = this.qrLocationPosition();
+    if (!position) {
+      this.qrScannerEnabled.set(false);
+      this.qrLocationStatus.set('unavailable');
+      this.qrLocationError.set(this.requiredGpsMessage());
+      this.cameraError.set(this.requiredGpsMessage());
+      this.attendanceFlowPhase.set('qr-detected');
+      return;
+    }
+
     this.cameraError.set(null);
     this.qrConfirmationMessage.set(null);
     this.attendanceFlowPhase.set('qr-submitting');
 
-    const position = await this.tryGetCurrentPosition();
     this.qrAttendanceService
       .submitStudentQrScan({
         payload,
         deviceId: this.getOrCreateDeviceId(),
-        gpsLat: position?.coords.latitude.toString(),
-        gpsLon: position?.coords.longitude.toString(),
+        gpsLat: position.coords.latitude.toString(),
+        gpsLon: position.coords.longitude.toString(),
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -596,7 +608,43 @@ export class StudentDashboardPage {
       });
   }
 
-  private tryGetCurrentPosition(): Promise<GeolocationPosition | null> {
+  private async prepareQrScan(): Promise<void> {
+    const session = this.activeAttendanceSession();
+    if (!session || session.attendanceStatus !== 'UNKNOWN' || !this.attendanceCameraOpen()) {
+      return;
+    }
+
+    const requestId = ++this.qrLocationRequestId;
+    this.qrScannerEnabled.set(false);
+    this.qrLocationStatus.set('requesting');
+    this.qrLocationError.set(null);
+    this.cameraError.set(null);
+    this.attendanceFlowPhase.set('idle');
+
+    const position = await this.getRequiredCurrentPosition();
+    if (
+      requestId !== this.qrLocationRequestId ||
+      !this.attendanceCameraOpen() ||
+      this.selectedAttendanceChoice() !== 'QR_CODE'
+    ) {
+      return;
+    }
+
+    if (!position) {
+      this.qrLocationPosition.set(null);
+      this.qrLocationStatus.set('unavailable');
+      this.qrLocationError.set(this.requiredGpsMessage());
+      this.cameraError.set(this.requiredGpsMessage());
+      return;
+    }
+
+    this.qrLocationPosition.set(position);
+    this.qrLocationStatus.set('ready');
+    this.attendanceFlowPhase.set('qr-scanning');
+    this.qrScannerEnabled.set(true);
+  }
+
+  private getRequiredCurrentPosition(): Promise<GeolocationPosition | null> {
     if (!this.isBrowser || !navigator.geolocation) {
       return Promise.resolve(null);
     }
@@ -605,9 +653,13 @@ export class StudentDashboardPage {
       navigator.geolocation.getCurrentPosition(
         (position) => resolve(position),
         () => resolve(null),
-        { enableHighAccuracy: false, maximumAge: 60_000, timeout: 3000 },
+        { enableHighAccuracy: true, maximumAge: 30_000, timeout: 12_000 },
       );
     });
+  }
+
+  private requiredGpsMessage(): string {
+    return 'Position GPS requise pour valider la présence. Autorise la localisation puis réessaie.';
   }
 
   private getOrCreateDeviceId(): string {
@@ -827,11 +879,15 @@ export class StudentDashboardPage {
   }
 
   private resetAttendanceFlow(): void {
+    this.qrLocationRequestId++;
     this.attendanceFlowPhase.set('idle');
     this.scannedQrContent.set(null);
     this.qrConfirmationMessage.set(null);
     this.capturedFaceImage.set(null);
     this.qrScannerEnabled.set(false);
+    this.qrLocationStatus.set('idle');
+    this.qrLocationPosition.set(null);
+    this.qrLocationError.set(null);
     this.clearFaceCountdown();
     this.faceCountdown.set(5);
   }
