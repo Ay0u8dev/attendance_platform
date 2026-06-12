@@ -117,8 +117,10 @@ export class QrDisplayPage {
         error: (error) => {
           this.isLoading.set(false);
           this.clearTimers();
+          this.activePayload.set(null);
+          this.clearQr();
           this.errorMessage.set(this.qrAttendanceService.toUserMessage(error));
-        },
+        }
       });
   }
 
