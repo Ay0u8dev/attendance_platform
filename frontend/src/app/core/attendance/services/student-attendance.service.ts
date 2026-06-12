@@ -117,13 +117,11 @@ export class StudentAttendanceService {
       timeLabel: this.formatTimeRange(dto.startedAt, dto.endedAt),
       attendanceLabel: this.attendanceLabel(dto.attendanceStatus),
       attendanceVariant: this.attendanceVariant(dto.attendanceStatus),
-      sessionMethodLabel: this.methodLabel(dto.sessionMethod),
       markMethodLabel: this.methodLabel(dto.markMethod),
       startedAt: dto.startedAt,
       endedAt: dto.endedAt,
       markedAt: dto.markedAt,
       attendanceStatus: dto.attendanceStatus,
-      sessionMethod: dto.sessionMethod,
       markMethod: dto.markMethod,
     };
   }
@@ -140,7 +138,6 @@ export class StudentAttendanceService {
       groupSummary: this.formatGroupSummary(dto.groupIds),
       attendanceLabel: this.attendanceLabel(dto.attendanceStatus),
       attendanceVariant: this.attendanceVariant(dto.attendanceStatus),
-      sessionMethodLabel: this.methodLabel(dto.sessionMethod),
       markMethodLabel: this.methodLabel(dto.markMethod),
       sessionScheduleLabel: this.formatScheduleRange(startedAt, endsAt),
       startedAtLabel: this.dateTimeFormatter.format(startedAt),
@@ -150,11 +147,6 @@ export class StudentAttendanceService {
       studentFullName: `${dto.firstName} ${dto.lastName}`.trim(),
       studentEmail: dto.email,
       numApogee: dto.numApogee,
-      deviceId: dto.deviceId,
-      gpsLabel:
-        dto.markedGpsLat && dto.markedGpsLon
-          ? `${dto.markedGpsLat}, ${dto.markedGpsLon}`
-          : null,
       raw: dto,
     };
   }

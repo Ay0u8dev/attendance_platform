@@ -103,7 +103,7 @@ class AttendanceQueryServiceTest {
         assertThat(response.finalizedSessions()).isEqualTo(1);
         assertThat(response.totalPresentMarks()).isEqualTo(3);
         assertThat(response.totalAbsentMarks()).isEqualTo(1);
-        assertThat(response.methodBreakdown().manualSessions()).isEqualTo(1);
+        assertThat(response.attendanceRate()).isEqualTo(0.75);
     }
 
     @Test
@@ -118,9 +118,6 @@ class AttendanceQueryServiceTest {
                 .numApogee("A001")
                 .status(AttendanceStudentStatus.PRESENT)
                 .markMethod(AttendanceSessionMethod.QR_CODE)
-                .deviceId("phone-10")
-                .markedGpsLat("34.6820")
-                .markedGpsLon("-1.9091")
                 .markedAt(LocalDateTime.of(2026, 4, 28, 12, 5))
                 .build();
         AttendanceSession session = baseSession(100L, AttendanceSessionStatus.FINALIZED);
@@ -134,7 +131,7 @@ class AttendanceQueryServiceTest {
         assertThat(response.sessionId()).isEqualTo(100L);
         assertThat(response.teacherFullName()).isEqualTo("Ayoub Elebbar");
         assertThat(response.studentId()).isEqualTo(12L);
-        assertThat(response.markedGpsLat()).isEqualTo("34.6820");
+        assertThat(response.markMethod()).isEqualTo(AttendanceSessionMethod.QR_CODE);
     }
 
     @Test
@@ -159,7 +156,7 @@ class AttendanceQueryServiceTest {
     }
 
     @Test
-    void activeStudentSessionReturnsAssignedQrOrFaceSession() {
+    void activeStudentSessionReturnsAssignedMethodNeutralSession() {
         AttendanceSession manualSession = baseSession(99L, AttendanceSessionStatus.ACTIVE);
         manualSession.setMethod(AttendanceSessionMethod.MANUAL);
         AttendanceSession qrSession = baseSession(100L, AttendanceSessionStatus.ACTIVE);
@@ -186,7 +183,6 @@ class AttendanceQueryServiceTest {
         StudentActiveAttendanceSessionResponse response = attendanceQueryService.getActiveStudentSession(12L);
 
         assertThat(response.sessionId()).isEqualTo(100L);
-        assertThat(response.sessionMethod()).isEqualTo(AttendanceSessionMethod.QR_CODE);
         assertThat(response.attendanceStatus()).isEqualTo(AttendanceStudentStatus.UNKNOWN);
     }
 

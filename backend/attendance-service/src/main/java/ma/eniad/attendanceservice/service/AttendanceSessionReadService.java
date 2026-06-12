@@ -73,7 +73,6 @@ public class AttendanceSessionReadService {
                 meta.startedAt(),
                 meta.endsAt(),
                 null,
-                meta.method(),
                 meta.status(),
                 counts.presentCount(),
                 counts.absentCount(),
@@ -104,7 +103,6 @@ public class AttendanceSessionReadService {
                 meta.startedAt(),
                 meta.endsAt(),
                 null,
-                meta.method(),
                 meta.status(),
                 counts.presentCount(),
                 counts.absentCount(),
@@ -127,9 +125,6 @@ public class AttendanceSessionReadService {
                         record.getNumApogee(),
                         record.getStatus(),
                         record.getMarkMethod(),
-                        record.getDeviceId(),
-                        record.getMarkedGpsLat(),
-                        record.getMarkedGpsLon(),
                         record.getMarkedAt()
                 ))
                 .toList();
@@ -146,7 +141,6 @@ public class AttendanceSessionReadService {
                 session.getStartedAt(),
                 session.getEndsAt(),
                 session.getEndedAt(),
-                session.getMethod(),
                 session.getStatus(),
                 session.getPresentCount(),
                 session.getAbsentCount(),
@@ -166,9 +160,6 @@ public class AttendanceSessionReadService {
                 student.numApogee(),
                 student.status(),
                 student.markMethod(),
-                student.deviceId(),
-                student.markedGpsLat(),
-                student.markedGpsLon(),
                 student.markedAt()
         );
     }

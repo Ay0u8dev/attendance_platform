@@ -106,9 +106,6 @@ public class AttendanceFinalizationService {
                         .status(student.status())
                         .markMethod(student.markMethod())
                         .markedAt(student.markedAt())
-                        .deviceId(student.deviceId())
-                        .markedGpsLat(student.markedGpsLat())
-                        .markedGpsLon(student.markedGpsLon())
                         .build())
                 .toList());
 
@@ -131,7 +128,6 @@ public class AttendanceFinalizationService {
                 meta.gpsLon(),
                 meta.startedAt(),
                 meta.endsAt(),
-                meta.method(),
                 AttendanceSessionStatus.FINALIZED
         );
         liveAttendanceSessionStore.finalizeSession(

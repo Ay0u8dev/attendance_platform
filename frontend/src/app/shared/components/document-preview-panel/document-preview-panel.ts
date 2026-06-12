@@ -56,6 +56,6 @@ export class DocumentPreviewPanel {
   readonly fileName = input.required<string>();
   readonly previewTitle = input('Prévisualisation du justificatif');
   readonly previewDescription = input(
-    "La maquette Figma montre une zone de prévisualisation riche. Tant que l'intégration document réelle n'existe pas, gardez une surface cohérente plutôt qu'un faux viewer cassé.",
+    'La prévisualisation du document sera disponible prochainement. En attendant, vous pouvez télécharger le fichier.',
   );
 }

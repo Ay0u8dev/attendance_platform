@@ -30,5 +30,7 @@ attendance:
     auto-end-duration: PT30M
     finalized-state-retention: PT1H
     auto-finalize-poll-interval: PT30S
+  self-mark:
+    max-distance-meters: ${ATTENDANCE_SELF_MARK_MAX_DISTANCE_METERS:100}
   websocket:
     allowed-origin-patterns: http://*

@@ -27,7 +27,6 @@ describe('StudentAttendanceService', () => {
       courseLabel: 'Distributed Systems',
       roomLabel: 'Room B12',
       groupIds: [1],
-      sessionMethod: 'QR_CODE',
       sessionStatus: 'FINALIZED',
       startedAt: '2026-04-28T12:00:00',
       endedAt: '2026-04-28T12:30:00',
@@ -48,7 +47,6 @@ describe('StudentAttendanceService', () => {
       courseLabel: 'Distributed Systems',
       roomLabel: 'Room B12',
       groupIds: [1],
-      sessionMethod: 'QR_CODE',
       sessionStatus: 'FINALIZED',
       startedAt: '2026-04-28T12:00:00',
       endsAt: '2026-04-28T12:30:00',
@@ -62,9 +60,6 @@ describe('StudentAttendanceService', () => {
       numApogee: 'A001',
       attendanceStatus: 'ABSENT',
       markMethod: null,
-      deviceId: null,
-      markedGpsLat: null,
-      markedGpsLon: null,
       markedAt: null,
     };
 
@@ -80,7 +75,6 @@ describe('StudentAttendanceService', () => {
       courseLabel: 'Distributed Systems',
       roomLabel: 'Room B12',
       groupIds: [1],
-      sessionMethod: 'QR_CODE',
       sessionStatus: 'FINALIZED',
       startedAt: '2026-04-28T12:00:00',
       endedAt: '2026-04-28T12:30:00',
@@ -101,7 +95,6 @@ describe('StudentAttendanceService', () => {
       courseLabel: 'Distributed Systems',
       roomLabel: 'Room B12',
       groupIds: [1],
-      sessionMethod: 'QR_CODE',
       sessionStatus: 'FINALIZED',
       startedAt: '2026-05-03T00:37:00',
       endsAt: '2026-05-03T01:07:00',
@@ -115,9 +108,6 @@ describe('StudentAttendanceService', () => {
       numApogee: 'A001',
       attendanceStatus: 'PRESENT',
       markMethod: 'QR_CODE',
-      deviceId: null,
-      markedGpsLat: null,
-      markedGpsLon: null,
       markedAt: '2026-05-03T00:40:00',
     };
 

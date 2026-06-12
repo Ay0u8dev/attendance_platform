@@ -3,8 +3,37 @@
 Base path:
 
 - `/api/attendance/student`
+- QR self-marking uses `/api/qr/student/scan`
 
 Student routes expose only the authenticated student's own finalized records.
+
+For active sessions, the student dashboard uses `GET /api/attendance/student/sessions/active` to discover unresolved attendance, then submits scanned QR payloads to QR service.
+
+## `GET /api/attendance/student/sessions/active`
+
+Purpose:
+
+- Return the authenticated student's active unresolved or resolved session state.
+
+Success response:
+
+```json
+{
+  "sessionId": 5,
+  "teacherFullName": "Ayoub Elebbar",
+  "courseLabel": "Distributed Systems",
+  "roomLabel": "Room B12",
+  "groupIds": [1],
+  "startedAt": "2026-06-01T18:00:00",
+  "endsAt": "2026-06-01T18:30:00",
+  "attendanceStatus": "UNKNOWN"
+}
+```
+
+Common errors:
+
+- `403` caller is not a student
+- `404` no active session exists for this student
 
 ## `GET /api/attendance/student/sessions`
 
@@ -32,7 +61,6 @@ Success response:
       "courseLabel": "Distributed Systems",
       "roomLabel": "Room B12",
       "groupIds": [1],
-      "sessionMethod": "QR_CODE",
       "sessionStatus": "FINALIZED",
       "startedAt": "2026-04-28T12:00:00",
       "endedAt": "2026-04-28T12:30:00",
@@ -67,7 +95,6 @@ Success response:
   "courseLabel": "Distributed Systems",
   "roomLabel": "Room B12",
   "groupIds": [1],
-  "sessionMethod": "QR_CODE",
   "sessionStatus": "FINALIZED",
   "startedAt": "2026-04-28T12:00:00",
   "endsAt": "2026-04-28T12:30:00",
@@ -81,9 +108,6 @@ Success response:
   "numApogee": "22012345",
   "attendanceStatus": "PRESENT",
   "markMethod": "QR_CODE",
-  "deviceId": "scanner-entrance-01",
-  "markedGpsLat": "34.6820",
-  "markedGpsLon": "-1.9091",
   "markedAt": "2026-04-28T12:01:00"
 }
 ```

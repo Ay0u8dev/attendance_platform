@@ -16,7 +16,7 @@ type TimelineItem = {
       </p>
 
       <div class="mt-5 space-y-5">
-        @for (item of items(); track item.title) {
+        @for (item of items(); track $index) {
           <div class="flex gap-4">
             <div class="flex flex-col items-center">
               <span

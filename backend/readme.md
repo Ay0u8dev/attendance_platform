@@ -1,6 +1,6 @@
 # Attendance Platform Backend
 
-This backend currently has two implemented service APIs (`auth-service` and `user-service`) and multiple scaffolded services.
+This backend currently has implemented service APIs for auth, users, attendance, and QR attendance, plus scaffolded services.
 
 This README is the quick entry point. Detailed documentation is split into dedicated files:
 
@@ -14,11 +14,11 @@ This README is the quick entry point. Detailed documentation is split into dedic
 | ----------------------- | ------ | ----------- | ------------------------------------------------------------------------- |
 | `auth-service`          | `8081` | Implemented | Google token validation, internal JWT issuance, token validation endpoint |
 | `user-service`          | `8082` | Implemented | User lookup, role-protected user read, JPA user model                     |
-| `attendance-service`    | `8083` | Skeleton    | Spring app + config only, no REST controllers                             |
+| `attendance-service`    | `8083` | Implemented | Attendance session lifecycle, live Redis state, final attendance records  |
 | `justification-service` | `8085` | Skeleton    | Spring app + config only, no REST controllers                             |
 | `notification-service`  | `9000` | Skeleton    | Spring app + config only, no REST controllers                             |
 | `face-service`          | n/a    | Placeholder | Minimal FastAPI sample endpoints                                          |
-| `qr-service`            | n/a    | Placeholder | `main.py` currently empty                                                 |
+| `qr-service`            | `8001` | Implemented | Signed rotating QR payloads and student QR scan forwarding                |
 
 ## 2) How Services Communicate
 
@@ -26,13 +26,13 @@ Current communication model:
 
 1. Client calls through Traefik on `http://localhost`.
 2. Auth endpoints (`/api/auth/**`) are routed to `auth-service` without forward-auth.
-3. Protected endpoints (`/api/users/**`) use Traefik `forward-auth` to call `GET /auth/validate`.
+3. Protected endpoints (`/api/users/**`, `/api/attendance/**`, `/api/qr/**`) use Traefik `forward-auth` to call `GET /auth/validate`.
 4. On valid token, auth returns:
    - `X-User-Id`
    - `X-User-Roles`
    - `X-User-Email`
 5. Traefik forwards those headers to downstream services.
-6. `user-service` enforces role checks using forwarded headers.
+6. Downstream services enforce role checks using forwarded headers.
 7. For internal login flow, `auth-service` calls `user-service` with:
    - `X-Request-Source: auth-service`
 
@@ -113,8 +113,24 @@ curl -X POST http://localhost:8082/users/auth-user \
 
 - Java `21`
 - Maven Wrapper (`mvnw` / `mvnw.cmd`)
+- Python `3.11+` for `qr-service`
 - PostgreSQL (`users_db`, and `attendance_db` for scaffolded services)
 - Docker Compose + Traefik for local routing/gateway setup
+
+### Run QR service locally
+
+```powershell
+cd backend/qr-service
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+$env:ATTENDANCE_SERVICE_URL = "http://localhost:8083"
+$env:QR_TOKEN_SECRET = "dev-only-change-me"
+$env:QR_TOKEN_TTL_SECONDS = "30"
+uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+```
+
+Traefik dev routes expect QR service at `http://host.docker.internal:8001`.
 
 ## 7) Scope Note
 

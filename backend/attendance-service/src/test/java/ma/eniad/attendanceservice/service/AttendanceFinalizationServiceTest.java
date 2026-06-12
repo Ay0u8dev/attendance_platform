@@ -76,7 +76,7 @@ class AttendanceFinalizationServiceTest {
         when(attendanceRecordRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
         AttendanceSessionDetailsResponse finalizedResponse = new AttendanceSessionDetailsResponse(
                 100L, 77L, "Ayoub Elebbar", List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
-                session.getStartedAt(), session.getEndsAt(), session.getEndsAt(), AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.FINALIZED,
+                session.getStartedAt(), session.getEndsAt(), session.getEndsAt(), AttendanceSessionStatus.FINALIZED,
                 1, 1, 0, List.of()
         );
         when(attendanceSessionReadService.getSession(100L, 77L)).thenReturn(finalizedResponse);
@@ -94,10 +94,8 @@ class AttendanceFinalizationServiceTest {
         AttendanceRecord absentRecord = records.getLast();
         assertThat(presentRecord.getFirstName()).isEqualTo("Aya");
         assertThat(presentRecord.getPfpUrl()).isEqualTo("https://cdn.example.com/aya.jpg");
-        assertThat(presentRecord.getMarkedGpsLat()).isEqualTo("34.6820");
         assertThat(absentRecord.getStatus()).isEqualTo(AttendanceStudentStatus.ABSENT);
         assertThat(absentRecord.getMarkMethod()).isNull();
-        assertThat(absentRecord.getMarkedGpsLat()).isNull();
 
         ArgumentCaptor<LiveAttendanceSessionMeta> metaCaptor = ArgumentCaptor.forClass(LiveAttendanceSessionMeta.class);
         @SuppressWarnings("unchecked")
@@ -144,25 +142,25 @@ class AttendanceFinalizationServiceTest {
     }
 
     @Test
-    void finalizeSessionPreservesNullDeviceAndGpsForFaceMarks() {
+    void finalizeSessionDoesNotPersistDeviceOrGpsForFaceMarks() {
         AttendanceSession session = baseSession(AttendanceSessionStatus.ACTIVE);
         session.setMethod(AttendanceSessionMethod.FACE_ID);
         when(attendanceSessionRepository.findByIdAndTeacherId(100L, 77L)).thenReturn(Optional.of(session));
         when(liveAttendanceSessionStore.findSessionMeta(100L)).thenReturn(Optional.of(new LiveAttendanceSessionMeta(
                 100L, 77L, "Ayoub Elebbar", List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
                 LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30),
-                AttendanceSessionMethod.FACE_ID, AttendanceSessionStatus.ACTIVE
+                AttendanceSessionStatus.ACTIVE
         )));
         when(liveAttendanceSessionStore.findAllStudentStates(100L)).thenReturn(List.of(
                 new LiveAttendanceStudentState(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001",
                         AttendanceStudentStatus.PRESENT, LocalDateTime.of(2026, 4, 28, 12, 5),
-                        AttendanceSessionMethod.FACE_ID, null, null, null)
+                        AttendanceSessionMethod.FACE_ID, "face-phone-10", "34.6820", "-1.9091")
         ));
         doNothing().when(attendanceRecordRepository).deleteBySessionId(100L);
         when(attendanceRecordRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(attendanceSessionReadService.getSession(100L, 77L)).thenReturn(new AttendanceSessionDetailsResponse(
                 100L, 77L, "Ayoub Elebbar", List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
-                session.getStartedAt(), session.getEndsAt(), session.getEndsAt(), AttendanceSessionMethod.FACE_ID, AttendanceSessionStatus.FINALIZED,
+                session.getStartedAt(), session.getEndsAt(), session.getEndsAt(), AttendanceSessionStatus.FINALIZED,
                 1, 0, 0, List.of()
         ));
 
@@ -173,9 +171,6 @@ class AttendanceFinalizationServiceTest {
         AttendanceRecord record = recordsCaptor.getValue().getFirst();
         assertThat(record.getMarkMethod()).isEqualTo(AttendanceSessionMethod.FACE_ID);
         assertThat(record.getPfpUrl()).isEqualTo("https://cdn.example.com/aya.jpg");
-        assertThat(record.getDeviceId()).isNull();
-        assertThat(record.getMarkedGpsLat()).isNull();
-        assertThat(record.getMarkedGpsLon()).isNull();
     }
 
     private AttendanceSession baseSession(AttendanceSessionStatus status) {
@@ -199,7 +194,7 @@ class AttendanceFinalizationServiceTest {
         return new LiveAttendanceSessionMeta(
                 100L, 77L, "Ayoub Elebbar", List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
                 LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30),
-                AttendanceSessionMethod.QR_CODE, status
+                status
         );
     }
 }

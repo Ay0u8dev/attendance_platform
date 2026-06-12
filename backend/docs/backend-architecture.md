@@ -12,7 +12,7 @@ This document describes the backend architecture based on the currently implemen
 | justification-service | Spring Boot       | 8085                             | Skeleton              | Bootstrap/config only                                                                                                                               |
 | notification-service  | Spring Boot       | 9000                             | Skeleton              | Bootstrap/config only                                                                                                                               |
 | face-service          | FastAPI           | n/a (compose comment shows 8000) | Placeholder           | Future internal caller of attendance mark endpoint                                                                                                  |
-| qr-service            | Python            | n/a                              | Placeholder           | Future internal caller of attendance mark endpoint                                                                                                  |
+| qr-service            | FastAPI           | 8001 in dev / 8000 in container  | Implemented           | Generates signed rotating QR payloads and forwards validated student scans to attendance-service                                                    |
 
 ## 2) Runtime Topology
 
@@ -27,6 +27,7 @@ In local development, Traefik runs in Docker and forwards traffic to services ru
 - `/api/auth/**` -> `auth-service`
 - `/api/users/**` -> `user-service` with forward-auth
 - `/api/attendance/**` -> `attendance-service` with forward-auth
+- `/api/qr/**` -> `qr-service` with forward-auth
 - `/api/ws/attendance/ws` -> `attendance-service websocket`
 - `/**` -> frontend
 
@@ -60,15 +61,20 @@ In local development, Traefik runs in Docker and forwards traffic to services ru
 
 ### 3.4 Internal attendance marking path
 
-1. `qr-service` or `face-service` calls `attendance-service` at `/attendance/internal/sessions/{sessionId}/attendance`.
-2. `attendance-service` validates:
+1. Teacher display clients call `qr-service` at `/qr/teacher/sessions/{sessionId}/payload`.
+2. `qr-service` confirms the teacher-owned attendance session is active and returns a signed 30-second payload.
+3. Student clients scan that payload and call `qr-service` at `/qr/student/scan`.
+4. `qr-service` validates the QR signature and expiry, then calls `attendance-service` at `/attendance/internal/sessions/{sessionId}/attendance`.
+5. `attendance-service` validates:
    - trusted `X-Request-Source`
-   - session mode
+   - source/method match
+   - active method-neutral session
    - student membership
-   - device uniqueness for `QR_CODE` only
-3. `attendance-service` updates Redis live state and broadcasts a WebSocket event.
+   - student self-mark GPS is present and close enough to the teacher session GPS
+   - one device may not mark another student in the same active session
+6. `attendance-service` updates Redis live state and broadcasts a WebSocket event.
 
-`FACE_ID` no longer uses student-phone self-service scanning. The teacher web client captures faces from the teacher device, `face-service` validates matches, and then `face-service` reports successful marks to `attendance-service`.
+`FACE_ID` is also a student-phone self-service choice. It uses the same device and GPS distance rules as QR. The placeholder face-service is still responsible for validating face proof before reporting successful marks internally.
 
 ### 3.5 WebSocket path
 
@@ -115,10 +121,9 @@ In local development, Traefik runs in Docker and forwards traffic to services ru
 ## 7) Current Gaps
 
 - Teacher authorization is still role-only. That is a deliberate compromise, not a strong academic authorization model.
-- GPS is stored as evidence only. No proximity or radius enforcement exists yet.
+- Student self-mark GPS is required for proximity validation. It is transient and is not persisted to finalized attendance records.
 - Error response formatting across services is still inconsistent.
-- `qr-service`, `face-service`, and `justification-service` are still unfinished.
-- `FACE_ID` marks may legitimately persist with `deviceId = null` and GPS fields `null`.
+- `face-service` and `justification-service` are still unfinished.
 
 ## 8) Practical Guidance
 

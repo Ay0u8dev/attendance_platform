@@ -1,6 +1,5 @@
 package ma.eniad.attendanceservice.dto;
 
-import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
 import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 
 import java.time.LocalDateTime;
@@ -12,7 +11,6 @@ public record StudentActiveAttendanceSessionResponse(
         String courseLabel,
         String roomLabel,
         List<Long> groupIds,
-        AttendanceSessionMethod sessionMethod,
         LocalDateTime startedAt,
         LocalDateTime endsAt,
         AttendanceStudentStatus attendanceStatus

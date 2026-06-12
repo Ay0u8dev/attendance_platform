@@ -136,7 +136,7 @@
               </span>
               <span class="inline-flex items-center gap-2">
                 <i class="fa-solid fa-location-dot text-muted" aria-hidden="true"></i>
-                {{ row.roomLabel }} · {{ row.sessionMethodLabel }}
+                {{ row.roomLabel }} · {{ row.markMethodLabel }}
               </span>
             </div>
 
@@ -190,7 +190,7 @@
       <ng-template [appDataTableCell]="'roomLabel'" let-row="row">
         <div class="min-w-0">
           <p class="font-medium text-principalText">{{ row.roomLabel }}</p>
-          <p class="truncate text-xs text-secondaryText">{{ row.sessionMethodLabel }}</p>
+          <p class="truncate text-xs text-secondaryText">{{ row.markMethodLabel }}</p>
         </div>
       </ng-template>
 

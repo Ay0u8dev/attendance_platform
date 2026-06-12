@@ -14,7 +14,6 @@ Query params:
 
 - `teacherId` optional
 - `groupId` optional
-- `method` optional
 - `status` optional
 - `dateFrom` optional ISO date
 - `dateTo` optional ISO date
@@ -33,7 +32,6 @@ Success response:
       "courseLabel": "Distributed Systems",
       "roomLabel": "Room B12",
       "groupIds": [1, 2],
-      "method": "QR_CODE",
       "status": "FINALIZED",
       "startedAt": "2026-04-28T12:00:00",
       "endedAt": "2026-04-28T12:30:00",
@@ -88,12 +86,7 @@ Success response:
   "finalizedSessions": 117,
   "totalPresentMarks": 3800,
   "totalAbsentMarks": 640,
-  "attendanceRate": 85.59,
-  "methodBreakdown": {
-    "qrCodeSessions": 80,
-    "faceIdSessions": 25,
-    "manualSessions": 15
-  }
+  "attendanceRate": 85.59
 }
 ```
 

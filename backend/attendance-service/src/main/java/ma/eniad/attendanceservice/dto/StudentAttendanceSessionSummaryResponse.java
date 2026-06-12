@@ -13,7 +13,6 @@ public record StudentAttendanceSessionSummaryResponse(
         String courseLabel,
         String roomLabel,
         List<Long> groupIds,
-        AttendanceSessionMethod sessionMethod,
         AttendanceSessionStatus sessionStatus,
         LocalDateTime startedAt,
         LocalDateTime endedAt,

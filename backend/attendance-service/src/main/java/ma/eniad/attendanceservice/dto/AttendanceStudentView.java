@@ -17,9 +17,6 @@ public record AttendanceStudentView(
         @NotNull String numApogee,
         @NotNull AttendanceStudentStatus status,
         AttendanceSessionMethod markMethod,
-        String deviceId,
-        String markedGpsLat,
-        String markedGpsLon,
         LocalDateTime markedAt
 ) {
 }
