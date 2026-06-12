@@ -31,6 +31,7 @@ class RedisLiveAttendanceSessionStoreTest {
         LiveAttendanceSessionMeta expected = new LiveAttendanceSessionMeta(
                 100L,
                 77L,
+                "Ayoub Elebbar",
                 List.of(1L, 2L),
                 "Distributed Systems",
                 "Room B12",

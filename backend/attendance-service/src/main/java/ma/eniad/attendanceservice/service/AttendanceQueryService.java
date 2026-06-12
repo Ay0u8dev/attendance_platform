@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -143,6 +144,7 @@ public class AttendanceQueryService {
 
         return new StudentAttendanceSessionDetailResponse(
                 session.getId(),
+                session.getTeacherFullName(),
                 session.getCourseLabel(),
                 session.getRoomLabel(),
                 List.copyOf(session.getGroupIds()),
@@ -167,6 +169,26 @@ public class AttendanceQueryService {
         );
     }
 
+    public StudentActiveAttendanceSessionResponse getActiveStudentSession(Long studentId) {
+        return attendanceSessionRepository.findAllByStatus(AttendanceSessionStatus.ACTIVE).stream()
+                .filter(session -> session.getMethod() != AttendanceSessionMethod.MANUAL)
+                .map(session -> liveAttendanceSessionStore.findStudentState(session.getId(), studentId)
+                        .map(student -> new StudentActiveAttendanceSessionResponse(
+                                session.getId(),
+                                session.getTeacherFullName(),
+                                session.getCourseLabel(),
+                                session.getRoomLabel(),
+                                List.copyOf(session.getGroupIds()),
+                                session.getMethod(),
+                                session.getStartedAt(),
+                                session.getEndsAt(),
+                                student.status()
+                        )))
+                .flatMap(Optional::stream)
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No active attendance session found"));
+    }
+
     public StudentAttendanceOverviewResponse getStudentOverview(Long studentId) {
         List<AttendanceRecord> records = attendanceRecordRepository.findStudentHistory(
                 studentId,
@@ -188,6 +210,7 @@ public class AttendanceQueryService {
                     AttendanceCounts counts = resolveCounts(session);
                     return new AttendanceSessionSummaryResponse(
                             session.getId(),
+                            session.getTeacherFullName(),
                             session.getCourseLabel(),
                             session.getRoomLabel(),
                             List.copyOf(session.getGroupIds()),
@@ -217,6 +240,7 @@ public class AttendanceQueryService {
     private StudentAttendanceSessionSummaryResponse toStudentSummary(AttendanceRecord record, AttendanceSession session) {
         return new StudentAttendanceSessionSummaryResponse(
                 session.getId(),
+                session.getTeacherFullName(),
                 session.getCourseLabel(),
                 session.getRoomLabel(),
                 List.copyOf(session.getGroupIds()),

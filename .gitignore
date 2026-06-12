@@ -4,3 +4,9 @@ stuff
 stuff/*
 .vscode
 .vscode/*
+.agents
+.agents/*
+.agent
+.agent/*
+.claude
+.claude/*

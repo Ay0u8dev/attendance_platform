@@ -66,7 +66,7 @@ class AttendanceSessionControllerWebMvcTest {
     void createSessionSucceedsForTeacher() throws Exception {
         when(attendanceSessionService.createSession(eq(77L), any(CreateAttendanceSessionRequest.class)))
                 .thenReturn(new AttendanceSessionResponse(
-                        100L, 77L, List.of(1L, 2L), "Distributed Systems", "Room B12",
+                        100L, 77L, "Ayoub Elebbar", List.of(1L, 2L), "Distributed Systems", "Room B12",
                         "34.6814", "-1.9086", LocalDateTime.of(2026, 4, 28, 12, 0),
                         LocalDateTime.of(2026, 4, 28, 12, 30), AttendanceSessionMethod.QR_CODE,
                         AttendanceSessionStatus.ACTIVE, 2
@@ -87,6 +87,7 @@ class AttendanceSessionControllerWebMvcTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.teacherId").value(77))
+                .andExpect(jsonPath("$.teacherFullName").value("Ayoub Elebbar"))
                 .andExpect(jsonPath("$.groupIds[0]").value(1))
                 .andExpect(jsonPath("$.courseLabel").value("Distributed Systems"))
                 .andExpect(jsonPath("$.method").value("QR_CODE"))
@@ -118,7 +119,7 @@ class AttendanceSessionControllerWebMvcTest {
                 eq(LocalDate.of(2026, 4, 1)), eq(LocalDate.of(2026, 4, 30)), any(Pageable.class)))
                 .thenReturn(new PagedResponse<>(
                         List.of(new AttendanceSessionSummaryResponse(
-                                100L, "Distributed Systems", "Room B12", List.of(1L),
+                                100L, "Ayoub Elebbar", "Distributed Systems", "Room B12", List.of(1L),
                                 AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.ACTIVE,
                                 LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30),
                                 null, 1, 0, 1
@@ -148,7 +149,7 @@ class AttendanceSessionControllerWebMvcTest {
     @Test
     void getActiveSessionReturnsTeacherView() throws Exception {
         when(attendanceQueryService.getActiveTeacherSession(77L)).thenReturn(new AttendanceSessionDetailsResponse(
-                100L, 77L, List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
+                100L, 77L, "Ayoub Elebbar", List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
                 LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30), null,
                 AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.ACTIVE, 1, 0, 1, List.of()
         ));
@@ -156,13 +157,14 @@ class AttendanceSessionControllerWebMvcTest {
         mockMvc.perform(get("/attendance/sessions/active").with(teacherUser()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sessionId").value(100))
+                .andExpect(jsonPath("$.teacherFullName").value("Ayoub Elebbar"))
                 .andExpect(jsonPath("$.presentCount").value(1));
     }
 
     @Test
     void getSessionReturnsTeacherView() throws Exception {
         when(attendanceSessionReadService.getSession(100L, 77L)).thenReturn(new AttendanceSessionDetailsResponse(
-                100L, 77L, List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
+                100L, 77L, "Ayoub Elebbar", List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
                 LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30), null,
                 AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.ACTIVE, 1, 0, 1,
                 List.of(new AttendanceStudentView(
@@ -181,7 +183,7 @@ class AttendanceSessionControllerWebMvcTest {
     @Test
     void endSessionReturnsFinalizedTeacherView() throws Exception {
         when(attendanceFinalizationService.finalizeSession(100L, 77L)).thenReturn(new AttendanceSessionDetailsResponse(
-                100L, 77L, List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
+                100L, 77L, "Ayoub Elebbar", List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
                 LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30),
                 LocalDateTime.of(2026, 4, 28, 12, 30), AttendanceSessionMethod.QR_CODE,
                 AttendanceSessionStatus.FINALIZED, 1, 1, 0, List.of()

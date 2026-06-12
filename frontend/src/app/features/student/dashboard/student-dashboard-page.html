@@ -1,0 +1,503 @@
+<section class="space-y-8">
+  <header class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div class="space-y-1">
+      <h1 class="text-3xl font-semibold tracking-tight text-principalText sm:text-[2.05rem]">
+        Bienvenue, {{ currentUserName() }}
+      </h1>
+      @if (studentMetaLine(); as metaLine) {
+        <p class="text-base text-secondaryText">{{ metaLine }}</p>
+      }
+    </div>
+  </header>
+
+  <div class="grid gap-4 sm:gap-5">
+    @if (absenceWarning(); as warning) {
+      <app-student-alert-banner
+        [title]="
+          'Avertissement: Vous avez ' +
+          warning.absenceCount +
+          ' absences dans le module ' +
+          warning.moduleLabel
+        "
+        description=""
+        actionLabel="Justifier maintenant"
+        (actionClicked)="openJustifications()"
+      ></app-student-alert-banner>
+    }
+
+    @if (activeAttendanceSession(); as liveSession) {
+      <section
+        class="rounded-2xl border border-primary-soft bg-surface px-4 py-4 shadow-sm sm:px-5 sm:py-5"
+      >
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div class="min-w-0 space-y-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <span
+                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary"
+                aria-hidden="true"
+              >
+                <i class="fa-solid fa-tower-broadcast"></i>
+              </span>
+              <app-status-badge label="Séance active" variant="success"></app-status-badge>
+              <app-status-badge
+                [label]="activeAttendanceMethodLabel()"
+                variant="neutral"
+              ></app-status-badge>
+            </div>
+
+            <div class="min-w-0">
+              <h2 class="text-lg font-semibold leading-7 text-principalText sm:text-xl">
+                {{ liveSession.courseLabel }}
+              </h2>
+              <p class="mt-1 text-sm text-secondaryText">
+                {{ liveSession.roomLabel }} ·
+                {{ liveSession.teacherFullName || 'Enseignant non renseigné' }}
+              </p>
+            </div>
+          </div>
+
+          <div class="w-full space-y-3 lg:max-w-sm">
+            @if (activeAttendanceStateMessage() !== '') {
+              <div
+                class="flex items-start gap-3 rounded-2xl border px-4 py-3"
+                [class]="activeAttendanceStateClasses()"
+              >
+                <i
+                  [class]="activeAttendanceStateIcon() + ' mt-0.5 text-base'"
+                  aria-hidden="true"
+                ></i>
+
+                <p class="text-sm font-semibold leading-6">{{ activeAttendanceStateMessage() }}</p>
+              </div>
+            }
+
+            @if (canStartAttendanceFlow()) {
+              <button
+                type="button"
+                class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-primary-strong focus:outline-none focus:ring-2 focus:ring-primary-soft focus:ring-offset-2"
+                (click)="openAttendanceCamera()"
+              >
+                <i [class]="activeAttendanceCtaIcon()" aria-hidden="true"></i>
+                {{ activeAttendanceCtaLabel() }}
+              </button>
+            }
+          </div>
+        </div>
+      </section>
+    } @else if (activeAttendanceError()) {
+      <section class="rounded-2xl border border-warning/20 bg-warning-soft px-4 py-4">
+        <p class="text-sm font-medium text-warning">{{ activeAttendanceError() }}</p>
+      </section>
+    }
+  </div>
+
+  <section class="space-y-4 pt-2 sm:space-y-5 sm:pt-4">
+    <div>
+      <h2 class="text-xl font-semibold tracking-tight text-principalText sm:text-2xl">
+        Infos rapides
+      </h2>
+    </div>
+
+    <div class="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
+      @for (card of quickCards(); track card.id) {
+        <app-student-module-card
+          [title]="card.title"
+          [value]="card.value"
+          [subtitle]="card.subtitle"
+          [ctaLabel]="card.ctaLabel"
+          [icon]="card.icon"
+          [variant]="card.variant"
+          (clicked)="goTo(card.route)"
+        ></app-student-module-card>
+      }
+    </div>
+  </section>
+
+  @if (errorMessage()) {
+    <section class="rounded-[1.5rem] border border-danger/20 bg-danger-soft px-4 py-4">
+      <p class="text-sm font-medium text-danger">{{ errorMessage() }}</p>
+    </section>
+  }
+
+  <section class="space-y-3 md:hidden">
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-lg font-semibold text-principalText">Dernières séances</h2>
+        <p class="text-sm text-secondaryText">Les derniers pointages enregistrés</p>
+      </div>
+      <button
+        type="button"
+        class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-surface text-primary"
+        (click)="goTo('/student/sessions')"
+        aria-label="Voir toutes les séances"
+      >
+        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    @if (recentSessions().length > 0) {
+      <div class="space-y-3">
+        @for (row of recentSessions(); track row.id) {
+          <button
+            type="button"
+            class="block w-full rounded-2xl border border-line bg-surface px-4 py-4 text-left shadow-sm transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft/25"
+            (click)="openSessionDetails(row)"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-principalText">{{ row.courseLabel }}</p>
+                <p class="mt-1 truncate text-xs text-secondaryText">
+                  {{ row.dateLabel }} · {{ row.timeLabel }}
+                </p>
+              </div>
+              <app-status-badge
+                [label]="row.attendanceLabel"
+                [variant]="row.attendanceVariant"
+              ></app-status-badge>
+            </div>
+            <div class="mt-3 flex items-center justify-between gap-3 text-xs text-secondaryText">
+              <span class="truncate">{{ row.teacherFullName }}</span>
+              <span class="shrink-0 font-semibold text-primary">Détails</span>
+            </div>
+          </button>
+        }
+      </div>
+    } @else {
+      <div
+        class="rounded-2xl border border-dashed border-line bg-surface-subtle px-4 py-8 text-center"
+      >
+        <p class="text-sm font-semibold text-principalText">Aucune séance récente à afficher</p>
+        <p class="mt-1 text-xs text-secondaryText">
+          Vos dernières séances marquées apparaîtront ici.
+        </p>
+      </div>
+    }
+  </section>
+
+  <div class="hidden md:block">
+    <app-data-table
+      title="Dernières séances marquées"
+      description="Consultez les dernières séances enregistrées dans votre dossier d’assiduité."
+      [rows]="recentSessions()"
+      [columns]="columns"
+      [rowId]="sessionRowId"
+      [rowClickable]="true"
+      [showToolbar]="false"
+      [initialPageSize]="4"
+      emptyStateTitle="Aucune séance récente à afficher"
+      emptyStateDescription="Vos dernières séances marquées apparaîtront ici."
+      (rowClicked)="openSessionDetails($event)"
+    >
+      <ng-template [appDataTableCell]="'session'" let-row="row">
+        <div class="min-w-0">
+          <p class="font-medium text-principalText">{{ row.dateLabel }}</p>
+          <p class="truncate text-xs text-secondaryText">{{ row.timeLabel }}</p>
+        </div>
+      </ng-template>
+
+      <ng-template [appDataTableCell]="'module'" let-row="row">
+        <div class="min-w-0">
+          <p class="font-medium text-principalText">{{ row.courseLabel }}</p>
+          <p class="truncate text-xs text-secondaryText">{{ row.teacherFullName }}</p>
+        </div>
+      </ng-template>
+
+      <ng-template [appDataTableCell]="'attendanceStatus'" let-row="row">
+        <div class="flex justify-end">
+          <app-status-badge
+            [label]="row.attendanceLabel"
+            [variant]="row.attendanceVariant"
+          ></app-status-badge>
+        </div>
+      </ng-template>
+
+      <ng-template [appDataTableCell]="'justificationStatus'" let-row="row">
+        <div class="flex justify-end">
+          <app-status-badge
+            [label]="row.justificationStatus ?? 'Aucune'"
+            [variant]="row.justificationVariant ?? 'neutral'"
+          ></app-status-badge>
+        </div>
+      </ng-template>
+    </app-data-table>
+  </div>
+
+  <app-modal
+    title="Détails de la séance"
+    description="Consultez les informations enregistrées pour cette séance."
+    [open]="selectedSessionId() !== null"
+    size="md"
+    (closed)="closeSessionDetails()"
+  >
+    <div modal-body class="space-y-5">
+      @if (detailLoading()) {
+        <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-6 text-center">
+          <p class="text-sm text-secondaryText">Chargement du détail de la séance...</p>
+        </div>
+      } @else if (detailError()) {
+        <div class="rounded-2xl border border-danger/20 bg-danger-soft px-4 py-4">
+          <p class="text-sm font-medium text-danger">{{ detailError() }}</p>
+        </div>
+      } @else if (activeSessionDetail(); as detail) {
+        <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-lg font-semibold text-principalText">{{ detail.courseLabel }}</p>
+            </div>
+
+            <app-status-badge
+              [label]="detail.attendanceLabel"
+              [variant]="detail.attendanceVariant"
+            ></app-status-badge>
+          </div>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="rounded-2xl bg-surface-subtle px-4 py-3">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
+              Salle
+            </p>
+            <p class="mt-2 text-base font-semibold text-principalText">{{ detail.roomLabel }}</p>
+          </div>
+
+          <div class="rounded-2xl bg-surface-subtle px-4 py-3">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
+              Enseignant
+            </p>
+            <p class="mt-2 text-base font-semibold text-principalText">
+              {{ detail.teacherFullName }}
+            </p>
+          </div>
+
+          <div class="rounded-2xl bg-surface-subtle px-4 py-3">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
+              Horaire
+            </p>
+            <p class="mt-2 text-base font-semibold text-principalText">
+              {{ detail.sessionScheduleLabel }}
+            </p>
+          </div>
+
+          <div class="rounded-2xl bg-surface-subtle px-4 py-3">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
+              Mode de pointage
+            </p>
+            <p class="mt-2 text-base font-semibold text-principalText">
+              {{ detail.markMethodLabel }}
+            </p>
+          </div>
+        </div>
+
+        @if (shouldShowJustificationCard(detail)) {
+          <button
+            type="button"
+            class="block w-full rounded-2xl border border-line px-4 py-4 text-left transition-colors duration-200"
+            [class.cursor-pointer]="canOpenJustification(detail)"
+            [class.hover:border-primary-soft]="canOpenJustification(detail)"
+            [class.hover:bg-primary-soft/35]="canOpenJustification(detail)"
+            [class.cursor-default]="!canOpenJustification(detail)"
+            (click)="openJustificationFromCard(detail)"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-principalText">État de la justification</p>
+                <p class="mt-1 text-sm text-secondaryText">
+                  {{
+                    canOpenJustification(detail)
+                      ? 'Ouvrir le détail de la justification enregistrée pour cette absence.'
+                      : 'Aucune justification consultable pour cette séance.'
+                  }}
+                </p>
+              </div>
+
+              <app-status-badge
+                [label]="detail.justificationStatus ?? 'Aucune'"
+                [variant]="detail.justificationVariant ?? 'neutral'"
+              ></app-status-badge>
+            </div>
+          </button>
+        }
+      }
+    </div>
+
+    <div modal-footer class="flex items-center justify-end gap-3">
+      <button
+        type="button"
+        class="inline-flex min-h-10 items-center justify-center rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
+        (click)="closeSessionDetails()"
+      >
+        Fermer
+      </button>
+    </div>
+  </app-modal>
+
+  <app-modal
+    [title]="cameraModalTitle()"
+    [description]="cameraModalDescription()"
+    [open]="attendanceCameraOpen()"
+    size="md"
+    (closed)="closeAttendanceCamera()"
+  >
+    <div modal-body class="space-y-5">
+      <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-4">
+        <div class="flex items-start gap-3">
+          <span
+            class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary"
+            aria-hidden="true"
+          >
+            <i [class]="activeAttendanceCtaIcon()"></i>
+          </span>
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-principalText">{{ cameraInstruction() }}</p>
+            <p class="mt-1 text-sm text-secondaryText">{{ cameraHelperText() }}</p>
+          </div>
+        </div>
+      </div>
+
+      @if (activeAttendanceSession()?.sessionMethod === 'QR_CODE') {
+        <div class="space-y-4">
+          <div class="attendance-media-frame qr-scanner-frame">
+            @if (attendanceFlowPhase() !== 'qr-detected') {
+              <zxing-scanner
+                [enable]="qrScannerEnabled()"
+                [device]="selectedQrDevice()"
+                [formats]="qrFormats"
+                [autostart]="true"
+                [tryHarder]="true"
+                [previewFitMode]="'cover'"
+                [timeBetweenScans]="250"
+                (camerasFound)="onQrCamerasFound($event)"
+                (camerasNotFound)="onQrCamerasNotFound()"
+                (permissionResponse)="onQrPermissionResponse($event)"
+                (scanError)="onQrScanError()"
+                (scanSuccess)="onQrScanSuccess($event)"
+              ></zxing-scanner>
+
+              <div class="attendance-overlay">
+                <div class="qr-target" aria-hidden="true">
+                  <span class="qr-corner qr-corner-top-left"></span>
+                  <span class="qr-corner qr-corner-top-right"></span>
+                  <span class="qr-corner qr-corner-bottom-left"></span>
+                  <span class="qr-corner qr-corner-bottom-right"></span>
+                  <span class="absolute left-4 right-4 top-1/2 h-px -translate-y-1/2 bg-white/25">
+                  </span>
+                </div>
+                <!-- <div class="media-caption">
+                  <p class="text-xs font-semibold text-white">Centre le QR code dans le carré.</p>
+                </div> -->
+              </div>
+            } @else {
+              <div class="flex min-h-80 flex-col items-center justify-center px-5 py-8 text-center">
+                <span
+                  class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-success-soft text-success"
+                  aria-hidden="true"
+                >
+                  <i class="fa-solid fa-circle-check text-2xl"></i>
+                </span>
+                <p class="mt-4 text-base font-semibold text-white">QR code détecté</p>
+                <p
+                  class="mt-2 max-w-sm break-words rounded-xl bg-white/10 px-3 py-2 text-sm text-white/85"
+                >
+                  {{ scannedQrContent() }}
+                </p>
+              </div>
+            }
+          </div>
+        </div>
+      } @else {
+        @if (
+          attendanceFlowPhase() === 'face-captured' || attendanceFlowPhase() === 'face-validated'
+        ) {
+          <div class="attendance-media-frame">
+            @if (capturedFaceImage(); as faceImage) {
+              <img [src]="faceImage" alt="Aperçu de la capture faciale" />
+            }
+          </div>
+
+          @if (attendanceFlowPhase() === 'face-validated') {
+            <div class="rounded-2xl border border-success/25 bg-success-soft px-4 py-3">
+              <p class="text-sm font-semibold text-success">
+                Capture validée localement. L’envoi backend sera branché plus tard.
+              </p>
+            </div>
+          }
+        } @else {
+          <div class="attendance-media-frame">
+            <video #attendanceVideo autoplay muted playsinline></video>
+
+            <div class="attendance-overlay">
+              <div class="face-guide" aria-hidden="true"></div>
+              <div
+                class="absolute left-1/2 top-3 flex h-10 min-w-10 -translate-x-1/2 items-center justify-center rounded-full bg-surface px-3 text-lg font-bold text-principalText shadow-card"
+              >
+                {{ faceCountdown() }}
+              </div>
+              <!-- <div class="media-caption">
+                <p class="text-xs font-semibold text-white">Regarde l’écran et reste immobile.</p>
+              </div> -->
+            </div>
+          </div>
+        }
+      }
+
+      @if (isStartingCamera()) {
+        <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-3">
+          <p class="text-sm text-secondaryText">Ouverture de la caméra...</p>
+        </div>
+      }
+
+      @if (cameraError()) {
+        <div class="rounded-2xl border border-danger/20 bg-danger-soft px-4 py-4">
+          <p class="text-sm font-medium text-danger">{{ cameraError() }}</p>
+        </div>
+      }
+    </div>
+
+    <div modal-footer class="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
+      <span class="hidden text-xs font-medium text-secondaryText sm:order-1 sm:mr-auto sm:inline">
+        {{ activeAttendanceCameraLabel() }}
+      </span>
+      @if (
+        activeAttendanceSession()?.sessionMethod === 'QR_CODE' &&
+        attendanceFlowPhase() === 'qr-detected'
+      ) {
+        <button
+          type="button"
+          class="order-1 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft sm:order-2 sm:w-auto"
+          (click)="restartQrScan()"
+        >
+          <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+          Scanner à nouveau
+        </button>
+      }
+      @if (
+        activeAttendanceSession()?.sessionMethod === 'FACE_ID' &&
+        attendanceFlowPhase() === 'face-captured'
+      ) {
+        <button
+          type="button"
+          class="order-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft sm:order-2 sm:w-auto"
+          (click)="retakeFaceCapture()"
+        >
+          <i class="fa-solid fa-camera-rotate" aria-hidden="true"></i>
+          Reprendre
+        </button>
+        <button
+          type="button"
+          class="order-1 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-primary-strong focus:outline-none focus:ring-2 focus:ring-primary-soft focus:ring-offset-2 sm:order-3 sm:w-auto"
+          (click)="validateFaceCapture()"
+        >
+          <i class="fa-solid fa-check" aria-hidden="true"></i>
+          Valider
+        </button>
+      }
+      <button
+        type="button"
+        class="order-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft sm:order-1 sm:w-auto"
+        (click)="closeAttendanceCamera()"
+      >
+        Fermer
+      </button>
+    </div>
+  </app-modal>
+</section>

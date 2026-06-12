@@ -48,6 +48,8 @@ public class AttendanceSession {
 
     @Column(nullable = false)
     private Long teacherId;
+    @Column
+    private String teacherFullName;
 
     @Column(nullable = false)
     @Builder.Default

@@ -16,8 +16,8 @@ Query params:
 - `groupId` optional
 - `method` optional
 - `status` optional
-- `dateFrom` optional ISO date-time
-- `dateTo` optional ISO date-time
+- `dateFrom` optional ISO date
+- `dateTo` optional ISO date
 - `page` optional, default `0`
 - `size` optional, default `20`
 - `sort` optional
@@ -26,9 +26,10 @@ Success response:
 
 ```json
 {
-  "content": [
+  "items": [
     {
       "sessionId": 5,
+      "teacherFullName": "Ayoub Elebbar",
       "courseLabel": "Distributed Systems",
       "roomLabel": "Room B12",
       "groupIds": [1, 2],
@@ -44,8 +45,7 @@ Success response:
   "page": 0,
   "size": 20,
   "totalElements": 1,
-  "totalPages": 1,
-  "last": true
+  "totalPages": 1
 }
 ```
 

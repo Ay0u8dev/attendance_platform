@@ -2,8 +2,9 @@ package ma.eniad.userservice.controller;
 
 import ma.eniad.userservice.annotation.RequireRole;
 import ma.eniad.userservice.dto.AuthUserRequest;
+import ma.eniad.userservice.dto.UserResponseDto;
+import ma.eniad.userservice.dto.InternalTeacherIdentityDto;
 import ma.eniad.userservice.dto.StudentRosterDto;
-import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,7 +22,7 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("auth-user")
-    public ResponseEntity<User> authUser(@RequestBody AuthUserRequest request) {
+    public ResponseEntity<UserResponseDto> authUser(@RequestBody AuthUserRequest request) {
 
         String email = request.getEmail();
         if (email == null || email.isBlank()) {
@@ -59,6 +60,18 @@ public class UserController {
         }
 
         return ResponseEntity.ok(userService.getStudentRosterByGroupIds(groupIds));
+    }
+
+    @GetMapping("internal/teachers/{id}/identity")
+    public ResponseEntity<InternalTeacherIdentityDto> getTeacherIdentity(
+            @PathVariable Long id,
+            @RequestHeader(name = "X-Request-Source", required = false) String requestSource
+    ) {
+        if (!"attendance-service".equals(requestSource)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Untrusted request source");
+        }
+
+        return ResponseEntity.ok(userService.getTeacherIdentityById(id));
     }
 
 //    @GetMapping

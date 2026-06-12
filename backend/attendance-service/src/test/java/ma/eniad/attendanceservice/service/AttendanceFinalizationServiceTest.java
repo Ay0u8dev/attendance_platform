@@ -75,7 +75,7 @@ class AttendanceFinalizationServiceTest {
         doNothing().when(attendanceRecordRepository).deleteBySessionId(100L);
         when(attendanceRecordRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
         AttendanceSessionDetailsResponse finalizedResponse = new AttendanceSessionDetailsResponse(
-                100L, 77L, List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
+                100L, 77L, "Ayoub Elebbar", List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
                 session.getStartedAt(), session.getEndsAt(), session.getEndsAt(), AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.FINALIZED,
                 1, 1, 0, List.of()
         );
@@ -149,7 +149,7 @@ class AttendanceFinalizationServiceTest {
         session.setMethod(AttendanceSessionMethod.FACE_ID);
         when(attendanceSessionRepository.findByIdAndTeacherId(100L, 77L)).thenReturn(Optional.of(session));
         when(liveAttendanceSessionStore.findSessionMeta(100L)).thenReturn(Optional.of(new LiveAttendanceSessionMeta(
-                100L, 77L, List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
+                100L, 77L, "Ayoub Elebbar", List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
                 LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30),
                 AttendanceSessionMethod.FACE_ID, AttendanceSessionStatus.ACTIVE
         )));
@@ -161,7 +161,7 @@ class AttendanceFinalizationServiceTest {
         doNothing().when(attendanceRecordRepository).deleteBySessionId(100L);
         when(attendanceRecordRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(attendanceSessionReadService.getSession(100L, 77L)).thenReturn(new AttendanceSessionDetailsResponse(
-                100L, 77L, List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
+                100L, 77L, "Ayoub Elebbar", List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
                 session.getStartedAt(), session.getEndsAt(), session.getEndsAt(), AttendanceSessionMethod.FACE_ID, AttendanceSessionStatus.FINALIZED,
                 1, 0, 0, List.of()
         ));
@@ -182,6 +182,7 @@ class AttendanceFinalizationServiceTest {
         return AttendanceSession.builder()
                 .id(100L)
                 .teacherId(77L)
+                .teacherFullName("Ayoub Elebbar")
                 .groupIds(List.of(1L))
                 .courseLabel("Distributed Systems")
                 .roomLabel("Room B12")
@@ -196,7 +197,7 @@ class AttendanceFinalizationServiceTest {
 
     private LiveAttendanceSessionMeta baseMeta(AttendanceSessionStatus status) {
         return new LiveAttendanceSessionMeta(
-                100L, 77L, List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
+                100L, 77L, "Ayoub Elebbar", List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
                 LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30),
                 AttendanceSessionMethod.QR_CODE, status
         );
