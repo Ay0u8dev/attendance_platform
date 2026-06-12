@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
+import { StudentAttendanceSessionSummaryDto } from '../../../core/attendance/models/student-attendance.model';
 import { QrAttendanceService } from '../../../core/attendance/services/qr-attendance.service';
 import { StudentAttendanceService } from '../../../core/attendance/services/student-attendance.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
@@ -111,6 +112,58 @@ describe('StudentDashboardPage QR attendance flow', () => {
     expect(component.qrScannerEnabled()).toBe(false);
   });
 
+  it('loads all dashboard session pages so page size changes can reveal every row', async () => {
+    const firstPage = [
+      makeSessionSummary(1),
+      makeSessionSummary(2),
+      makeSessionSummary(3),
+      makeSessionSummary(4),
+    ];
+    const secondPage = [makeSessionSummary(5), makeSessionSummary(6)];
+    attendanceService.getStudentSessions.mockImplementation((query: { page?: number }) =>
+      of({
+        items: query.page === 1 ? secondPage : firstPage,
+        page: query.page ?? 0,
+        size: 50,
+        totalElements: 6,
+        totalPages: 2,
+      }),
+    );
+    attendanceService.toSessionListItem.mockImplementation((item: StudentAttendanceSessionSummaryDto) => ({
+      id: item.sessionId,
+      teacherFullName: 'Teacher',
+      courseLabel: item.courseLabel,
+      roomLabel: item.roomLabel,
+      groupSummary: 'Groupe 1',
+      dateLabel: '03 juin 2026',
+      timeLabel: '10:00 - 11:00',
+      attendanceLabel: 'Présent',
+      attendanceVariant: 'success',
+      markMethodLabel: 'QR code',
+      startedAt: item.startedAt,
+      endedAt: item.endedAt,
+      markedAt: item.markedAt,
+      attendanceStatus: item.attendanceStatus,
+      markMethod: item.markMethod,
+    }));
+
+    attendanceService.getStudentSessions.mockClear();
+    (component as unknown as { loadDashboardData: () => void }).loadDashboardData();
+    await fixture.whenStable();
+
+    expect(attendanceService.getStudentSessions).toHaveBeenCalledWith({
+      page: 0,
+      size: 50,
+      sort: 'startedAt,desc',
+    });
+    expect(attendanceService.getStudentSessions).toHaveBeenCalledWith({
+      page: 1,
+      size: 50,
+      sort: 'startedAt,desc',
+    });
+    expect(component.recentSessions()).toHaveLength(6);
+  });
+
   it('requests GPS before enabling QR scanning', async () => {
     let resolveLocation: (position: GeolocationPosition) => void = () => undefined;
     getCurrentPosition.mockImplementation((success: PositionCallback) => {
@@ -197,5 +250,21 @@ function makePosition(latitude: number, longitude: number): GeolocationPosition 
     },
     timestamp: Date.now(),
     toJSON: () => ({}),
+  };
+}
+
+function makeSessionSummary(sessionId: number): StudentAttendanceSessionSummaryDto {
+  return {
+    sessionId,
+    teacherFullName: 'Teacher',
+    courseLabel: `Course ${sessionId}`,
+    roomLabel: 'B12',
+    groupIds: [1],
+    sessionStatus: 'FINALIZED',
+    startedAt: `2026-06-0${sessionId}T10:00:00`,
+    endedAt: `2026-06-0${sessionId}T11:00:00`,
+    attendanceStatus: 'PRESENT',
+    markMethod: 'QR_CODE',
+    markedAt: `2026-06-0${sessionId}T10:05:00`,
   };
 }

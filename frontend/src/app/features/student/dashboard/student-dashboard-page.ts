@@ -271,7 +271,9 @@ export class StudentDashboardPage {
       return '';
     }
 
-    return this.selectedAttendanceChoice() === 'FACE_ID' ? 'Vérification faciale' : 'Scanner le QR code';
+    return this.selectedAttendanceChoice() === 'FACE_ID'
+      ? 'Vérification faciale'
+      : 'Scanner le QR code';
   });
 
   readonly cameraModalDescription = computed(() => {
@@ -748,16 +750,31 @@ export class StudentDashboardPage {
         },
       });
 
+    const sessionsQuery = { page: 0, size: 50, sort: 'startedAt,desc' };
     this.attendanceService
-      .getStudentSessions({ page: 0, size: 4, sort: 'startedAt,desc' })
+      .getStudentSessions(sessionsQuery)
       .pipe(
+        expand((response) => {
+          const nextPage = response.page + 1;
+          if (nextPage >= response.totalPages) {
+            return EMPTY;
+          }
+
+          return this.attendanceService.getStudentSessions({
+            ...sessionsQuery,
+            page: nextPage,
+            size: response.size,
+          });
+        }),
+        map((response) => response.items),
+        reduce((all, items) => [...all, ...items], [] as StudentAttendanceSessionSummaryDto[]),
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isLoading.set(false)),
       )
       .subscribe({
-        next: (response) => {
+        next: (sessions) => {
           this.recentSessions.set(
-            response.items
+            sessions
               .map((item) => this.attendanceService.toSessionListItem(item))
               .map((row) => enrichSessionListItem(row)),
           );

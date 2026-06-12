@@ -4,6 +4,7 @@ import {
   Component,
   ElementRef,
   computed,
+  effect,
   inject,
   signal,
   viewChild,
@@ -209,9 +210,20 @@ type UtilityItem = {
                       aria-label="Open user menu"
                     >
                       <span
-                        class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary"
+                        class="flex h-7 w-7 overflow-hidden rounded-lg bg-primary-soft text-primary"
                       >
-                        <i class="fa-solid fa-user-graduate text-xs" aria-hidden="true"></i>
+                        @if (profileImageUrl(); as imageUrl) {
+                          <img
+                            [src]="imageUrl"
+                            alt=""
+                            class="h-full w-full object-cover"
+                            (error)="onProfileImageError()"
+                          />
+                        } @else {
+                          <span class="flex h-full w-full items-center justify-center">
+                            <i class="fa-solid fa-user-graduate text-xs" aria-hidden="true"></i>
+                          </span>
+                        }
                       </span>
                       <span class="hidden text-sm font-medium text-principalText md:inline">{{
                         currentUserName()
@@ -231,10 +243,33 @@ type UtilityItem = {
                         <div
                           class="rounded-xl border border-primary-soft bg-primary-soft px-3 py-2"
                         >
-                          <p class="truncate text-sm font-semibold text-principalText">
-                            {{ currentUserName() }}
-                          </p>
-                          <p class="truncate text-xs text-secondaryText">Portail étudiant</p>
+                          <div class="flex items-center gap-3">
+                            <span
+                              class="flex h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-surface text-primary"
+                            >
+                              @if (profileImageUrl(); as imageUrl) {
+                                <img
+                                  [src]="imageUrl"
+                                  alt=""
+                                  class="h-full w-full object-cover"
+                                  (error)="onProfileImageError()"
+                                />
+                              } @else {
+                                <span class="flex h-full w-full items-center justify-center">
+                                  <i
+                                    class="fa-solid fa-user-graduate text-sm"
+                                    aria-hidden="true"
+                                  ></i>
+                                </span>
+                              }
+                            </span>
+                            <div class="min-w-0">
+                              <p class="truncate text-sm font-semibold text-principalText">
+                                {{ currentUserName() }}
+                              </p>
+                              <p class="truncate text-xs text-secondaryText">Portail étudiant</p>
+                            </div>
+                          </div>
                         </div>
 
                         <button
@@ -303,6 +338,7 @@ export class StudentLayout {
   readonly isSidebarOpen = signal(false);
   readonly isSidebarCollapsed = signal(false);
   readonly isUserMenuOpen = signal(false);
+  readonly profileImageFailed = signal(false);
   readonly sidebarMotionClasses = computed(() =>
     this.isSidebarOpen() ? 'translate-x-0' : '-translate-x-full',
   );
@@ -331,9 +367,25 @@ export class StudentLayout {
 
     return 'Étudiant';
   });
+  readonly profileImageUrl = computed(() => {
+    if (this.profileImageFailed()) {
+      return null;
+    }
+
+    const value = this.studentProfileService.profile()?.pfpUrl?.trim();
+    return value && value.length > 0 ? value : null;
+  });
   readonly pageTitle = signal(this.resolvePageTitle(this.router.url));
 
   constructor() {
+    effect(
+      () => {
+        this.studentProfileService.profile()?.pfpUrl;
+        this.profileImageFailed.set(false);
+      },
+      { allowSignalWrites: true },
+    );
+
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event) => {
@@ -395,6 +447,10 @@ export class StudentLayout {
 
   openSettings(): void {
     this.isUserMenuOpen.set(false);
+  }
+
+  onProfileImageError(): void {
+    this.profileImageFailed.set(true);
   }
 
   logout(): void {

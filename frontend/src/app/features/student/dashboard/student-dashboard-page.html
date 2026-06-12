@@ -71,18 +71,28 @@
               <div class="grid gap-2 sm:grid-cols-2">
                 <button
                   type="button"
-                  class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-primary-strong focus:outline-none focus:ring-2 focus:ring-primary-soft focus:ring-offset-2"
+                  class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary-soft bg-surface px-5 py-2.5 text-sm font-semibold text-principalText transition-colors duration-200 hover:bg-primary-soft focus:outline-none focus:ring-2 focus:ring-primary-soft focus:ring-offset-2"
                   (click)="openAttendanceCamera('QR_CODE')"
                 >
-                  <i class="fa-solid fa-qrcode" aria-hidden="true"></i>
+                  <span
+                    class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100 text-purple-500"
+                    aria-hidden="true"
+                  >
+                    <i class="fa-solid fa-qrcode"></i>
+                  </span>
                   Scanner le QR code
                 </button>
                 <button
                   type="button"
-                  class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft focus:outline-none focus:ring-2 focus:ring-primary-soft focus:ring-offset-2"
+                  class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary-soft bg-surface px-5 py-2.5 text-sm font-semibold text-principalText transition-colors duration-200 hover:bg-primary-soft focus:outline-none focus:ring-2 focus:ring-primary-soft focus:ring-offset-2"
                   (click)="openAttendanceCamera('FACE_ID')"
                 >
-                  <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+                  <span
+                    class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-warning-soft text-warning"
+                    aria-hidden="true"
+                  >
+                    <i class="fa-solid fa-user-check"></i>
+                  </span>
                   Scanner mon visage
                 </button>
               </div>
@@ -128,8 +138,8 @@
   <section class="space-y-3 md:hidden">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-lg font-semibold text-principalText">Dernières séances</h2>
-        <p class="text-sm text-secondaryText">Les derniers pointages enregistrés</p>
+        <h2 class="text-lg font-semibold text-principalText">Séances marquées</h2>
+        <p class="text-sm text-secondaryText">Tous les pointages enregistrés</p>
       </div>
       <button
         type="button"
@@ -182,14 +192,14 @@
 
   <div class="hidden md:block">
     <app-data-table
-      title="Dernières séances marquées"
-      description="Consultez les dernières séances enregistrées dans votre dossier d’assiduité."
+      title="Séances marquées"
+      description="Consultez tous les pointages enregistrés dans votre dossier d’assiduité."
       [rows]="recentSessions()"
       [columns]="columns"
       [rowId]="sessionRowId"
       [rowClickable]="true"
       [showToolbar]="false"
-      [initialPageSize]="4"
+      [initialPageSize]="5"
       emptyStateTitle="Aucune séance récente à afficher"
       emptyStateDescription="Vos dernières séances marquées apparaîtront ici."
       (rowClicked)="openSessionDetails($event)"
@@ -365,7 +375,10 @@
           <div class="space-y-4">
             @if (qrLocationStatus() === 'requesting') {
               <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-6 text-center">
-                <i class="fa-solid fa-location-crosshairs text-xl text-primary" aria-hidden="true"></i>
+                <i
+                  class="fa-solid fa-location-crosshairs text-xl text-primary"
+                  aria-hidden="true"
+                ></i>
                 <p class="mt-3 text-sm font-semibold text-principalText">
                   Récupération de la position GPS...
                 </p>
@@ -377,10 +390,7 @@
 
             @if (qrLocationStatus() === 'ready') {
               <div class="attendance-media-frame qr-scanner-frame">
-                @if (
-                  qrScannerEnabled() &&
-                  attendanceFlowPhase() === 'qr-scanning'
-                ) {
+                @if (qrScannerEnabled() && attendanceFlowPhase() === 'qr-scanning') {
                   <zxing-scanner
                     [enable]="qrScannerEnabled()"
                     [device]="selectedQrDevice()"
@@ -409,7 +419,9 @@
                     </div>
                   </div>
                 } @else {
-                  <div class="flex min-h-80 flex-col items-center justify-center px-5 py-8 text-center">
+                  <div
+                    class="flex min-h-80 flex-col items-center justify-center px-5 py-8 text-center"
+                  >
                     <span
                       class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-success-soft text-success"
                       aria-hidden="true"
@@ -423,7 +435,9 @@
                       ></i>
                     </span>
                     @if (attendanceFlowPhase() === 'qr-submitting') {
-                      <p class="mt-4 text-base font-semibold text-white">Validation du QR code...</p>
+                      <p class="mt-4 text-base font-semibold text-white">
+                        Validation du QR code...
+                      </p>
                       <p class="mt-2 max-w-sm text-sm text-white/85">
                         La présence est en cours d’enregistrement.
                       </p>
@@ -509,8 +523,7 @@
           </button>
         }
         @if (
-          selectedAttendanceChoice() === 'FACE_ID' &&
-          attendanceFlowPhase() === 'face-captured'
+          selectedAttendanceChoice() === 'FACE_ID' && attendanceFlowPhase() === 'face-captured'
         ) {
           <button
             type="button"
