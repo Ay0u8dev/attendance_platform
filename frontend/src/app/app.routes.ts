@@ -33,7 +33,7 @@ export const routes: Routes = [
   },
   {
     path: '',
-    canActivate: [authGuard],
+    // canActivate: [authGuard],
     loadComponent: () =>
       import('./shared/layouts/admin-layout').then((module) => module.AdminLayout),
     children: [
@@ -79,7 +79,7 @@ export const routes: Routes = [
   },
   {
     path: 'teacher',
-    canActivate: [authGuard],
+    // canActivate: [authGuard],
     loadComponent: () =>
       import('./shared/layouts/teacher-layout').then((module) => module.TeacherLayout),
     children: [],
