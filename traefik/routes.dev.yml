@@ -33,6 +33,12 @@ http:
       middlewares: ["cors", "forward-auth", "strip-api-attendance"]
       service: attendance-service
 
+    qr:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/qr`)"
+      middlewares: ["forward-auth", "strip-api-qr"]
+      service: qr-service
+
     # # Face recognition routes — protected, JWT required
     # face:
     #   entryPoints: ["web"]
@@ -90,6 +96,10 @@ http:
       stripPrefix:
         prefixes: ["/api"]
 
+    strip-api-qr:
+      stripPrefix:
+        prefixes: ["/api"]
+
     strip-api-ws-attendance:
       stripPrefix:
         prefixes: ["/api/ws"]
@@ -140,6 +150,11 @@ http:
       loadBalancer:
         servers:
           - url: "http://host.docker.internal:8083"
+
+    qr-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8001"
 
     frontend-service:
       loadBalancer:

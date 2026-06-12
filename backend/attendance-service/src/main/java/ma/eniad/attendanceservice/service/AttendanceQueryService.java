@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -48,7 +49,6 @@ public class AttendanceQueryService {
 
     public PagedResponse<AttendanceSessionSummaryResponse> getAdminSessions(Long teacherId,
                                                                             Long groupId,
-                                                                            AttendanceSessionMethod method,
                                                                             AttendanceSessionStatus status,
                                                                             LocalDate dateFrom,
                                                                             LocalDate dateTo,
@@ -63,9 +63,6 @@ public class AttendanceQueryService {
                 query.distinct(true);
                 return cb.equal(root.join("groupIds", JoinType.LEFT), groupId);
             });
-        }
-        if (method != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("method"), method));
         }
         return mapSessionPage(attendanceSessionRepository.findAll(spec, pageable));
     }
@@ -93,18 +90,13 @@ public class AttendanceQueryService {
         long totalResolved = totalPresent + totalAbsent;
         double attendanceRate = totalResolved == 0 ? 0.0 : (double) totalPresent / totalResolved;
 
-        long qrCodeSessions = sessions.stream().filter(session -> session.getMethod() == AttendanceSessionMethod.QR_CODE).count();
-        long faceIdSessions = sessions.stream().filter(session -> session.getMethod() == AttendanceSessionMethod.FACE_ID).count();
-        long manualSessions = sessions.stream().filter(session -> session.getMethod() == AttendanceSessionMethod.MANUAL).count();
-
         return new AdminOverviewResponse(
                 totalSessions,
                 activeSessions,
                 finalizedSessions,
                 totalPresent,
                 totalAbsent,
-                attendanceRate,
-                new MethodBreakdownResponse(qrCodeSessions, faceIdSessions, manualSessions)
+                attendanceRate
         );
     }
 
@@ -143,10 +135,10 @@ public class AttendanceQueryService {
 
         return new StudentAttendanceSessionDetailResponse(
                 session.getId(),
+                session.getTeacherFullName(),
                 session.getCourseLabel(),
                 session.getRoomLabel(),
                 List.copyOf(session.getGroupIds()),
-                session.getMethod(),
                 session.getStatus(),
                 session.getStartedAt(),
                 session.getEndsAt(),
@@ -160,11 +152,26 @@ public class AttendanceQueryService {
                 record.getNumApogee(),
                 record.getStatus(),
                 record.getMarkMethod(),
-                record.getDeviceId(),
-                record.getMarkedGpsLat(),
-                record.getMarkedGpsLon(),
                 record.getMarkedAt()
         );
+    }
+
+    public StudentActiveAttendanceSessionResponse getActiveStudentSession(Long studentId) {
+        return attendanceSessionRepository.findAllByStatus(AttendanceSessionStatus.ACTIVE).stream()
+                .map(session -> liveAttendanceSessionStore.findStudentState(session.getId(), studentId)
+                        .map(student -> new StudentActiveAttendanceSessionResponse(
+                                session.getId(),
+                                session.getTeacherFullName(),
+                                session.getCourseLabel(),
+                                session.getRoomLabel(),
+                                List.copyOf(session.getGroupIds()),
+                                session.getStartedAt(),
+                                session.getEndsAt(),
+                                student.status()
+                        )))
+                .flatMap(Optional::stream)
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No active attendance session found"));
     }
 
     public StudentAttendanceOverviewResponse getStudentOverview(Long studentId) {
@@ -188,10 +195,10 @@ public class AttendanceQueryService {
                     AttendanceCounts counts = resolveCounts(session);
                     return new AttendanceSessionSummaryResponse(
                             session.getId(),
+                            session.getTeacherFullName(),
                             session.getCourseLabel(),
                             session.getRoomLabel(),
                             List.copyOf(session.getGroupIds()),
-                            session.getMethod(),
                             session.getStatus(),
                             session.getStartedAt(),
                             session.getEndsAt(),
@@ -217,10 +224,10 @@ public class AttendanceQueryService {
     private StudentAttendanceSessionSummaryResponse toStudentSummary(AttendanceRecord record, AttendanceSession session) {
         return new StudentAttendanceSessionSummaryResponse(
                 session.getId(),
+                session.getTeacherFullName(),
                 session.getCourseLabel(),
                 session.getRoomLabel(),
                 List.copyOf(session.getGroupIds()),
-                session.getMethod(),
                 session.getStatus(),
                 session.getStartedAt(),
                 session.getEndedAt(),
@@ -281,7 +288,6 @@ public class AttendanceQueryService {
             case "endedAt" -> "session.endedAt";
             case "courseLabel" -> "session.courseLabel";
             case "roomLabel" -> "session.roomLabel";
-            case "sessionMethod" -> "session.method";
             case "sessionStatus" -> "session.status";
             case "attendanceStatus" -> "status";
             case "markMethod" -> "markMethod";

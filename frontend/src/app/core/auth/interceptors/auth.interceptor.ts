@@ -24,9 +24,7 @@ export class AuthInterceptor implements HttpInterceptor {
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     // Ne pas ajouter le token pour les endpoints publics ou vraiment externes
     if (this.isPublicUrl(request.url) || this.isExternalUrl(request.url)) {
-      return next
-        .handle(request)
-        .pipe(catchError((error: HttpErrorResponse) => this.handleError(error)));
+      return next.handle(request);
     }
 
     // Récupérer le token du localStorage (backend JWT)
@@ -47,10 +45,7 @@ export class AuthInterceptor implements HttpInterceptor {
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {
-    if (error.status === 403) {
-      // Domaine non autorisé ou accès refusé
-      this.storage.removeItem(this.tokenKey);
-    } else if (error.status === 401) {
+    if (error.status === 401) {
       // Token expiré ou invalide
       this.storage.removeItem(this.tokenKey);
       this.router.navigateByUrl('/', { replaceUrl: true });

@@ -5,6 +5,7 @@ import ma.eniad.attendanceservice.client.UserServiceClient;
 import ma.eniad.attendanceservice.config.AttendanceSessionProperties;
 import ma.eniad.attendanceservice.dto.*;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
+import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
 import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
@@ -27,20 +28,27 @@ public class AttendanceSessionService {
 
     @Transactional
     public AttendanceSessionResponse createSession(Long teacherId, CreateAttendanceSessionRequest request) {
-        resolveActiveSessionConflict(teacherId);
+        if (attendanceSessionRepository.existsByTeacherIdAndStatus(teacherId, AttendanceSessionStatus.ACTIVE)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Teacher already has an active session");
+        }
 
+        InternalTeacherIdentityDto teacherIdentity = userServiceClient.getTeacherIdentity(teacherId);
         List<Long> normalizedGroupIds = request.groupIds().stream().distinct().toList();
         List<StudentRosterDto> roster = userServiceClient.getStudentRosterByGroupIds(normalizedGroupIds);
+        String teacherFullName = formatTeacherFullName(teacherIdentity);
 
         LocalDateTime startedAt = LocalDateTime.now();
         LocalDateTime endsAt = startedAt.plus(attendanceSessionProperties.autoEndDuration());
 
         AttendanceSession session = AttendanceSession.builder()
                 .teacherId(teacherId)
+                .teacherFullName(teacherFullName)
                 .courseLabel(request.courseLabel() != null ? request.courseLabel().trim() : null)
                 .roomLabel(request.roomLabel() != null ? request.roomLabel().trim() : null)
                 .gpsLat(request.gpsLat() != null ? request.gpsLat().trim() : null)
-                .gpsLon(request.gpsLon() != null ? request.gpsLon().trim() : null).method(request.method())
+                .gpsLon(request.gpsLon() != null ? request.gpsLon().trim() : null)
+                // Compatibility placeholder for existing schemas that still have a non-null session_method column.
+                .method(AttendanceSessionMethod.QR_CODE)
                 .startedAt(startedAt)
                 .endsAt(endsAt)
                 .status(AttendanceSessionStatus.ACTIVE)
@@ -57,6 +65,7 @@ public class AttendanceSessionService {
                     new LiveAttendanceSessionMeta(
                             savedSession.getId(),
                             savedSession.getTeacherId(),
+                            savedSession.getTeacherFullName(),
                             List.copyOf(savedSession.getGroupIds()),
                             savedSession.getCourseLabel(),
                             savedSession.getRoomLabel(),
@@ -64,7 +73,6 @@ public class AttendanceSessionService {
                             savedSession.getGpsLon(),
                             savedSession.getStartedAt(),
                             savedSession.getEndsAt(),
-                            savedSession.getMethod(),
                             savedSession.getStatus()
                     ),
                     roster.stream()
@@ -93,6 +101,7 @@ public class AttendanceSessionService {
         return new AttendanceSessionResponse(
                 savedSession.getId(),
                 savedSession.getTeacherId(),
+                savedSession.getTeacherFullName(),
                 List.copyOf(savedSession.getGroupIds()),
                 savedSession.getCourseLabel(),
                 savedSession.getRoomLabel(),
@@ -100,22 +109,19 @@ public class AttendanceSessionService {
                 savedSession.getGpsLon(),
                 savedSession.getStartedAt(),
                 savedSession.getEndsAt(),
-                savedSession.getMethod(),
                 savedSession.getStatus(),
                 roster.size()
         );
     }
 
-    private void resolveActiveSessionConflict(Long teacherId) {
-        attendanceSessionRepository.findByTeacherIdAndStatus(teacherId, AttendanceSessionStatus.ACTIVE)
-                .ifPresent(activeSession -> {
-                    if (liveAttendanceSessionStore.findSessionMeta(activeSession.getId()).isPresent()) {
-                        throw new ResponseStatusException(HttpStatus.CONFLICT, "Teacher already has an active session");
-                    }
+    private String formatTeacherFullName(InternalTeacherIdentityDto teacherIdentity) {
+        String firstName = teacherIdentity.firstName() != null ? teacherIdentity.firstName().trim() : "";
+        String lastName = teacherIdentity.lastName() != null ? teacherIdentity.lastName().trim() : "";
+        String fullName = (firstName + " " + lastName).trim();
+        if (fullName.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Teacher name is missing");
+        }
 
-                    activeSession.setStatus(AttendanceSessionStatus.FINALIZED);
-                    activeSession.setEndedAt(LocalDateTime.now());
-                    attendanceSessionRepository.save(activeSession);
-                });
+        return fullName;
     }
 }

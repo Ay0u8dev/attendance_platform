@@ -163,6 +163,32 @@ Failure responses:
 - `401`: untrusted or missing request source
 - `409`: zero or multiple active academic years
 
+### `GET /users/internal/teachers/{id}/identity`
+
+Purpose:
+
+- Internal endpoint used by `attendance-service`
+- Returns the minimal teacher identity needed to persist a session snapshot
+
+Required internal header:
+
+- `X-Request-Source: attendance-service`
+
+Success response:
+
+```json
+{
+  "teacherId": 77,
+  "firstName": "Ayoub",
+  "lastName": "Elebbar"
+}
+```
+
+Failure responses:
+
+- `401`: untrusted or missing request source
+- `404`: teacher not found
+
 ## 5) Attendance Service
 
 Base path: `/attendance`
@@ -207,6 +233,7 @@ Success response:
 {
   "sessionId": 5,
   "teacherId": 77,
+  "teacherFullName": "Ayoub Elebbar",
   "groupIds": [1, 2],
   "courseLabel": "Distributed Systems",
   "roomLabel": "Room B12",
@@ -250,6 +277,7 @@ Success response:
 {
   "sessionId": 5,
   "teacherId": 77,
+  "teacherFullName": "Ayoub Elebbar",
   "groupIds": [1, 2],
   "courseLabel": "Distributed Systems",
   "roomLabel": "Room B12",
@@ -258,7 +286,6 @@ Success response:
   "startedAt": "2026-04-28T12:00:00",
   "endsAt": "2026-04-28T12:30:00",
   "endedAt": null,
-  "method": "QR_CODE",
   "status": "ACTIVE",
   "presentCount": 11,
   "absentCount": 0,
@@ -274,9 +301,6 @@ Success response:
       "numApogee": "22012345",
       "status": "PRESENT",
       "markMethod": "QR_CODE",
-      "deviceId": "scanner-entrance-01",
-      "markedGpsLat": "34.6820",
-      "markedGpsLon": "-1.9091",
       "markedAt": "2026-04-28T12:01:00"
     }
   ]
@@ -307,8 +331,8 @@ Role requirement:
 Query params:
 
 - `status` optional
-- `dateFrom` optional ISO date-time
-- `dateTo` optional ISO date-time
+- `dateFrom` optional ISO date
+- `dateTo` optional ISO date
 - `page` optional
 - `size` optional
 - `sort` optional
@@ -317,13 +341,13 @@ Success response:
 
 ```json
 {
-  "content": [
+  "items": [
     {
       "sessionId": 5,
+      "teacherFullName": "Ayoub Elebbar",
       "courseLabel": "Distributed Systems",
       "roomLabel": "Room B12",
       "groupIds": [1, 2],
-      "method": "QR_CODE",
       "status": "FINALIZED",
       "startedAt": "2026-04-28T12:00:00",
       "endedAt": "2026-04-28T12:30:00",
@@ -335,10 +359,13 @@ Success response:
   "page": 0,
   "size": 20,
   "totalElements": 1,
-  "totalPages": 1,
-  "last": true
+  "totalPages": 1
 }
 ```
+
+Snapshot rule:
+
+- `teacherFullName` is resolved from `user-service` once at session creation and persisted as historical session metadata
 
 #### `GET /attendance/sessions/active`
 
@@ -390,9 +417,6 @@ Success response:
   "studentId": 12,
   "status": "PRESENT",
   "markMethod": "MANUAL",
-  "deviceId": null,
-  "markedGpsLat": null,
-  "markedGpsLon": null,
   "markedAt": "2026-04-28T12:00:00",
   "presentCount": 10,
   "absentCount": 1,
@@ -428,8 +452,8 @@ Success response:
 Finalization rules:
 
 - unresolved `UNKNOWN` students become `ABSENT`
-- final record GPS is persisted only for QR/FACE marks
-- manual marks persist `markMethod = MANUAL` and leave GPS fields `null`
+- QR/face validation data such as `deviceId` and GPS is transient and is not persisted to finalized records
+- manual marks persist `markMethod = MANUAL`
 - aggregate snapshot fields are written onto the session header:
   - `presentCount`
   - `absentCount`
@@ -451,7 +475,8 @@ Purpose:
 - Internal update endpoint for QR and face services
 - Updates live attendance state in Redis and broadcasts the teacher event
 - `QR_CODE` remains student-device based
-- `FACE_ID` is teacher-operated scanning via the teacher web client and `face-service`
+- `FACE_ID` is also student-device based; `face-service` validates face proof before reporting the mark
+- QR and face self-marking use the same device, GPS, and distance rules
 
 Required internal header:
 
@@ -462,10 +487,10 @@ Request body:
 ```json
 {
   "studentId": 12,
-  "method": "FACE_ID",
-  "deviceId": null,
-  "gpsLat": null,
-  "gpsLon": null
+  "method": "QR_CODE",
+  "deviceId": "student-phone-uuid",
+  "gpsLat": "34.6820",
+  "gpsLon": "-1.9091"
 }
 ```
 
@@ -473,21 +498,17 @@ Rules:
 
 - request source must be trusted
 - `method` must match the request source
-- `method` must match the session mode
+- session must be an active method-neutral session
 - internal service updates always set `status = PRESENT`
-- latest valid update wins across manual and internal service updates
-- `QR_CODE`:
+- student self-marking is rejected after the student is already resolved
+- `QR_CODE` and `FACE_ID`:
   - `deviceId` is required
   - `gpsLat` is required
   - `gpsLon` is required
+  - coordinates must be within `attendance.self-mark.max-distance-meters` of the teacher session GPS
   - one device may mark only one student within the same session
   - one student may use only one device within the same session
-- `FACE_ID`:
-  - `deviceId` may be `null`
-  - `gpsLat` may be `null`
-  - `gpsLon` may be `null`
-  - device-binding rules do not apply
-  - `face-service` validates the face match before calling `attendance-service`
+- For `FACE_ID`, `face-service` validates the face match before calling `attendance-service`
 
 Success response:
 
@@ -496,10 +517,7 @@ Success response:
   "sessionId": 5,
   "studentId": 12,
   "status": "PRESENT",
-  "markMethod": "FACE_ID",
-  "deviceId": null,
-  "markedGpsLat": null,
-  "markedGpsLon": null,
+  "markMethod": "QR_CODE",
   "markedAt": "2026-04-28T12:01:00",
   "presentCount": 11,
   "absentCount": 0,
@@ -510,15 +528,16 @@ Success response:
 Failure responses:
 
 - `400`: invalid request body
-- `400`: `QR_CODE` request is missing `deviceId`
-- `400`: `QR_CODE` request is missing GPS coordinates
+- `400`: QR/face request is missing `deviceId`
+- `400`: QR/face request is missing or has invalid GPS coordinates
+- `403`: QR/face request GPS is too far from the session location
 - `401`: missing or untrusted internal source
 - `404`: session or student not found in live state
 - `409`: session is not active
 - `409`: request source does not match attendance method
-- `409`: attendance method does not match session mode
-- `409`: `QR_CODE` device is already used by another student in this session
-- `409`: `QR_CODE` student is already bound to another device in this session
+- `409`: student attendance is already resolved
+- `409`: device is already used by another student in this session
+- `409`: student is already bound to another device in this session
 
 ### 5.3 Admin read APIs
 
@@ -632,24 +651,24 @@ Success response:
 
 ```json
 {
-  "content": [
+  "items": [
     {
       "sessionId": 5,
       "courseLabel": "Distributed Systems",
       "roomLabel": "Room B12",
-      "groupId": 1,
-      "method": "QR_CODE",
-      "status": "PRESENT",
+      "groupIds": [1],
+      "sessionStatus": "FINALIZED",
       "startedAt": "2026-04-28T12:00:00",
       "endedAt": "2026-04-28T12:30:00",
+      "attendanceStatus": "PRESENT",
+      "markMethod": "QR_CODE",
       "markedAt": "2026-04-28T12:01:00"
     }
   ],
   "page": 0,
   "size": 20,
   "totalElements": 1,
-  "totalPages": 1,
-  "last": true
+  "totalPages": 1
 }
 ```
 
@@ -670,21 +689,21 @@ Success response:
   "sessionId": 5,
   "courseLabel": "Distributed Systems",
   "roomLabel": "Room B12",
+  "groupIds": [1],
+  "sessionStatus": "FINALIZED",
+  "startedAt": "2026-04-28T12:00:00",
+  "endsAt": "2026-04-28T12:30:00",
+  "endedAt": "2026-04-28T12:30:00",
+  "studentId": 12,
   "groupId": 1,
   "firstName": "Aya",
   "lastName": "Bennani",
   "email": "aya.bennani@ump.ac.ma",
   "pfpUrl": "https://cdn.example.com/profiles/12.jpg",
   "numApogee": "22012345",
-  "method": "QR_CODE",
-  "status": "PRESENT",
-  "startedAt": "2026-04-28T12:00:00",
-  "endedAt": "2026-04-28T12:30:00",
-  "markedAt": "2026-04-28T12:01:00",
+  "attendanceStatus": "PRESENT",
   "markMethod": "QR_CODE",
-  "deviceId": "scanner-entrance-01",
-  "markedGpsLat": "34.6820",
-  "markedGpsLon": "-1.9091"
+  "markedAt": "2026-04-28T12:01:00"
 }
 ```
 
@@ -707,13 +726,100 @@ Success response:
 ```json
 {
   "totalSessions": 24,
-  "presentCount": 20,
-  "absentCount": 4,
+  "presents": 20,
+  "absences": 4,
   "attendanceRate": 83.33
 }
 ```
 
-## 6) Attendance WebSocket Contract
+## 6) QR Service
+
+Base path: `/qr`
+
+QR service is exposed through Traefik as `/api/qr/**` with forward-auth. It validates QR proof and calls attendance-service internally; browser clients must not call attendance internal routes directly.
+
+### `GET /qr/health`
+
+Success response:
+
+```json
+{
+  "status": "UP"
+}
+```
+
+### `POST /qr/teacher/sessions/{sessionId}/payload`
+
+Purpose:
+
+- Generate a signed QR payload for a teacher-owned active attendance session
+
+Role requirement:
+
+- `TEACHER`
+
+Success response:
+
+```json
+{
+  "sessionId": 5,
+  "payload": "<opaque-signed-qr-payload>",
+  "expiresAt": "2026-06-01T18:00:30Z",
+  "refreshAfterSeconds": 30
+}
+```
+
+Rules:
+
+- session must belong to the teacher
+- session must be active
+- payload is opaque, signed, and expires after 30 seconds by default
+
+### `POST /qr/student/scan`
+
+Purpose:
+
+- Validate a scanned QR payload and mark the authenticated student present
+
+Role requirement:
+
+- `STUDENT`
+
+Request body:
+
+```json
+{
+  "payload": "<opaque-signed-qr-payload>",
+  "deviceId": "browser-device-uuid",
+  "gpsLat": "34.6814",
+  "gpsLon": "-1.9086"
+}
+```
+
+Success response:
+
+```json
+{
+  "sessionId": 5,
+  "studentId": 12,
+  "status": "PRESENT",
+  "markMethod": "QR_CODE",
+  "markedAt": "2026-06-01T18:00:12",
+  "presentCount": 1,
+  "absentCount": 0,
+  "unknownCount": 41
+}
+```
+
+Failure responses:
+
+- `400`: invalid or tampered QR payload
+- `403`: caller is not a teacher/student for the requested operation
+- `403`: student GPS is too far from the session location
+- `410`: QR payload expired
+- `409`: attendance-service rejected the mark because the student/device/session state is already resolved or invalid
+
+## 7) Attendance WebSocket Contract
 
 Handshake endpoint:
 
@@ -745,9 +851,6 @@ Subscription rules:
   "studentId": 12,
   "status": "PRESENT",
   "markMethod": "QR_CODE",
-  "deviceId": "scanner-entrance-01",
-  "markedGpsLat": "34.6820",
-  "markedGpsLon": "-1.9091",
   "markedAt": "2026-04-28T12:01:00",
   "presentCount": 11,
   "absentCount": 0,
@@ -768,7 +871,7 @@ Subscription rules:
 }
 ```
 
-## 7) Notes on Error Shapes
+## 8) Notes on Error Shapes
 
 Current behavior is improved but not perfectly standardized across all services:
 

@@ -10,7 +10,7 @@ Purpose:
 
 - Start one active attendance session for the current teacher.
 - Initialize the live roster in Redis.
-- For `FACE_ID`, the teacher device is the scanner and the web client talks to `face-service`.
+- The session is method-neutral; students can self-mark by QR or face, and teachers can manually override rows.
 
 Request body:
 
@@ -20,8 +20,7 @@ Request body:
   "courseLabel": "Distributed Systems",
   "roomLabel": "Room B12",
   "gpsLat": "34.6814",
-  "gpsLon": "-1.9086",
-  "method": "QR_CODE"
+  "gpsLon": "-1.9086"
 }
 ```
 
@@ -31,6 +30,7 @@ Success response:
 {
   "sessionId": 5,
   "teacherId": 77,
+  "teacherFullName": "Ayoub Elebbar",
   "groupIds": [1, 2],
   "courseLabel": "Distributed Systems",
   "roomLabel": "Room B12",
@@ -38,7 +38,6 @@ Success response:
   "gpsLon": "-1.9086",
   "startedAt": "2026-04-28T12:00:00",
   "endsAt": "2026-04-28T12:30:00",
-  "method": "QR_CODE",
   "status": "ACTIVE",
   "studentCount": 42
 }
@@ -64,6 +63,7 @@ Success response:
 {
   "sessionId": 5,
   "teacherId": 77,
+  "teacherFullName": "Ayoub Elebbar",
   "groupIds": [1, 2],
   "courseLabel": "Distributed Systems",
   "roomLabel": "Room B12",
@@ -72,7 +72,6 @@ Success response:
   "startedAt": "2026-04-28T12:00:00",
   "endsAt": "2026-04-28T12:30:00",
   "endedAt": null,
-  "method": "QR_CODE",
   "status": "ACTIVE",
   "presentCount": 11,
   "absentCount": 0,
@@ -88,9 +87,6 @@ Success response:
       "numApogee": "22012345",
       "status": "PRESENT",
       "markMethod": "QR_CODE",
-      "deviceId": "scanner-entrance-01",
-      "markedGpsLat": "34.6820",
-      "markedGpsLon": "-1.9091",
       "markedAt": "2026-04-28T12:01:00"
     }
   ]
@@ -100,9 +96,6 @@ Success response:
 Nullable student fields:
 
 - `markMethod`
-- `deviceId`
-- `markedGpsLat`
-- `markedGpsLon`
 - `markedAt`
 
 Active vs finalized behavior:
@@ -124,8 +117,8 @@ Purpose:
 Query params:
 
 - `status` optional
-- `dateFrom` optional ISO date-time
-- `dateTo` optional ISO date-time
+- `dateFrom` optional ISO date
+- `dateTo` optional ISO date
 - `page` optional, default `0`
 - `size` optional, default `20`
 - `sort` optional, Spring format like `startedAt,desc`
@@ -134,13 +127,13 @@ Success response:
 
 ```json
 {
-  "content": [
+  "items": [
     {
       "sessionId": 5,
+      "teacherFullName": "Ayoub Elebbar",
       "courseLabel": "Distributed Systems",
       "roomLabel": "Room B12",
       "groupIds": [1, 2],
-      "method": "QR_CODE",
       "status": "FINALIZED",
       "startedAt": "2026-04-28T12:00:00",
       "endedAt": "2026-04-28T12:30:00",
@@ -152,8 +145,7 @@ Success response:
   "page": 0,
   "size": 20,
   "totalElements": 1,
-  "totalPages": 1,
-  "last": true
+  "totalPages": 1
 }
 ```
 
@@ -195,9 +187,6 @@ Success response:
   "studentId": 12,
   "status": "ABSENT",
   "markMethod": "MANUAL",
-  "deviceId": null,
-  "markedGpsLat": null,
-  "markedGpsLon": null,
   "markedAt": "2026-04-28T12:05:00",
   "presentCount": 10,
   "absentCount": 1,
@@ -207,9 +196,9 @@ Success response:
 
 Rules:
 
-- manual updates are allowed even if the session method is `QR_CODE` or `FACE_ID`
-- latest valid update wins during the active session
-- in `FACE_ID`, teacher-triggered face matches arrive from `face-service`; attendance rows may show `markMethod = FACE_ID` with `deviceId = null` and GPS fields `null`
+- manual updates are allowed for every active session
+- teacher manual updates are the correction path after student self-marking
+- QR/face validation data such as `deviceId` and GPS is transient and is not persisted or returned
 
 Common errors:
 
@@ -238,10 +227,8 @@ Common errors:
 - `404` session not found
 - `409` session already finalized
 
-## `FACE_ID` flow notes
+## Student self-mark flow notes
 
-- `FACE_ID` is no longer student-phone scanning.
-- The teacher starts a `FACE_ID` session from the web app and scans students using the teacher tablet or camera device.
-- The teacher web client communicates with `face-service`.
-- After `face-service` validates a student, it calls `attendance-service` internally to mark that student `PRESENT`.
-- Manual teacher overrides still work during the same active session.
+- QR and face are student-phone flows in a method-neutral active session.
+- `qr-service` and `face-service` validate method-specific proof, then call `attendance-service` internally.
+- Attendance-service is the final authority for roster membership, active session state, and device uniqueness.

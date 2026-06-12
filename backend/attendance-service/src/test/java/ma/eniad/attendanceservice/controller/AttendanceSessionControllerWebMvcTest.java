@@ -8,7 +8,6 @@ import ma.eniad.attendanceservice.dto.AttendanceSessionSummaryResponse;
 import ma.eniad.attendanceservice.dto.AttendanceStudentView;
 import ma.eniad.attendanceservice.dto.CreateAttendanceSessionRequest;
 import ma.eniad.attendanceservice.dto.PagedResponse;
-import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
 import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.exception.GlobalExceptionHandler;
@@ -66,10 +65,9 @@ class AttendanceSessionControllerWebMvcTest {
     void createSessionSucceedsForTeacher() throws Exception {
         when(attendanceSessionService.createSession(eq(77L), any(CreateAttendanceSessionRequest.class)))
                 .thenReturn(new AttendanceSessionResponse(
-                        100L, 77L, List.of(1L, 2L), "Distributed Systems", "Room B12",
+                        100L, 77L, "Ayoub Elebbar", List.of(1L, 2L), "Distributed Systems", "Room B12",
                         "34.6814", "-1.9086", LocalDateTime.of(2026, 4, 28, 12, 0),
-                        LocalDateTime.of(2026, 4, 28, 12, 30), AttendanceSessionMethod.QR_CODE,
-                        AttendanceSessionStatus.ACTIVE, 2
+                        LocalDateTime.of(2026, 4, 28, 12, 30), AttendanceSessionStatus.ACTIVE, 2
                 ));
 
         mockMvc.perform(post("/attendance/sessions")
@@ -81,15 +79,15 @@ class AttendanceSessionControllerWebMvcTest {
                                   "courseLabel": "Distributed Systems",
                                   "roomLabel": "Room B12",
                                   "gpsLat": "34.6814",
-                                  "gpsLon": "-1.9086",
-                                  "method": "QR_CODE"
+                                  "gpsLon": "-1.9086"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.teacherId").value(77))
+                .andExpect(jsonPath("$.teacherFullName").value("Ayoub Elebbar"))
                 .andExpect(jsonPath("$.groupIds[0]").value(1))
                 .andExpect(jsonPath("$.courseLabel").value("Distributed Systems"))
-                .andExpect(jsonPath("$.method").value("QR_CODE"))
+                .andExpect(jsonPath("$.method").doesNotExist())
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
                 .andExpect(jsonPath("$.studentCount").value(2));
     }
@@ -118,9 +116,8 @@ class AttendanceSessionControllerWebMvcTest {
                 eq(LocalDate.of(2026, 4, 1)), eq(LocalDate.of(2026, 4, 30)), any(Pageable.class)))
                 .thenReturn(new PagedResponse<>(
                         List.of(new AttendanceSessionSummaryResponse(
-                                100L, "Distributed Systems", "Room B12", List.of(1L),
-                                AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.ACTIVE,
-                                LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30),
+                                100L, "Ayoub Elebbar", "Distributed Systems", "Room B12", List.of(1L),
+                                AttendanceSessionStatus.ACTIVE, LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30),
                                 null, 1, 0, 1
                         )),
                         1, 5, 1, 1
@@ -148,43 +145,43 @@ class AttendanceSessionControllerWebMvcTest {
     @Test
     void getActiveSessionReturnsTeacherView() throws Exception {
         when(attendanceQueryService.getActiveTeacherSession(77L)).thenReturn(new AttendanceSessionDetailsResponse(
-                100L, 77L, List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
+                100L, 77L, "Ayoub Elebbar", List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
                 LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30), null,
-                AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.ACTIVE, 1, 0, 1, List.of()
+                AttendanceSessionStatus.ACTIVE, 1, 0, 1, List.of()
         ));
 
         mockMvc.perform(get("/attendance/sessions/active").with(teacherUser()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sessionId").value(100))
+                .andExpect(jsonPath("$.teacherFullName").value("Ayoub Elebbar"))
                 .andExpect(jsonPath("$.presentCount").value(1));
     }
 
     @Test
     void getSessionReturnsTeacherView() throws Exception {
         when(attendanceSessionReadService.getSession(100L, 77L)).thenReturn(new AttendanceSessionDetailsResponse(
-                100L, 77L, List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
+                100L, 77L, "Ayoub Elebbar", List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
                 LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30), null,
-                AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.ACTIVE, 1, 0, 1,
+                AttendanceSessionStatus.ACTIVE, 1, 0, 1,
                 List.of(new AttendanceStudentView(
                         10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001",
-                        AttendanceStudentStatus.PRESENT, AttendanceSessionMethod.QR_CODE, "phone-10",
-                        "34.6820", "-1.9091", LocalDateTime.of(2026, 4, 28, 12, 5)
+                        AttendanceStudentStatus.PRESENT, ma.eniad.attendanceservice.entity.AttendanceSessionMethod.QR_CODE,
+                        LocalDateTime.of(2026, 4, 28, 12, 5)
                 ))
         ));
 
         mockMvc.perform(get("/attendance/sessions/100").with(teacherUser()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sessionId").value(100))
-                .andExpect(jsonPath("$.students[0].markedGpsLat").value("34.6820"));
+                .andExpect(jsonPath("$.students[0].markedGpsLat").doesNotExist());
     }
 
     @Test
     void endSessionReturnsFinalizedTeacherView() throws Exception {
         when(attendanceFinalizationService.finalizeSession(100L, 77L)).thenReturn(new AttendanceSessionDetailsResponse(
-                100L, 77L, List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
+                100L, 77L, "Ayoub Elebbar", List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
                 LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30),
-                LocalDateTime.of(2026, 4, 28, 12, 30), AttendanceSessionMethod.QR_CODE,
-                AttendanceSessionStatus.FINALIZED, 1, 1, 0, List.of()
+                LocalDateTime.of(2026, 4, 28, 12, 30), AttendanceSessionStatus.FINALIZED, 1, 1, 0, List.of()
         ));
 
         mockMvc.perform(post("/attendance/sessions/100/end").with(teacherUser()))
@@ -210,8 +207,7 @@ class AttendanceSessionControllerWebMvcTest {
                           "courseLabel": "Distributed Systems",
                           "roomLabel": "Room B12",
                           "gpsLat": "34.6814",
-                          "gpsLon": "-1.9086",
-                          "method": "QR_CODE"
+                          "gpsLon": "-1.9086"
                         }
                         """, "At least one groupId is required"),
                 org.junit.jupiter.params.provider.Arguments.of("""
@@ -220,8 +216,7 @@ class AttendanceSessionControllerWebMvcTest {
                           "courseLabel": "   ",
                           "roomLabel": "Room B12",
                           "gpsLat": "34.6814",
-                          "gpsLon": "-1.9086",
-                          "method": "QR_CODE"
+                          "gpsLon": "-1.9086"
                         }
                         """, "courseLabel is required"),
                 org.junit.jupiter.params.provider.Arguments.of("""
@@ -230,8 +225,7 @@ class AttendanceSessionControllerWebMvcTest {
                           "courseLabel": "Distributed Systems",
                           "roomLabel": "   ",
                           "gpsLat": "34.6814",
-                          "gpsLon": "-1.9086",
-                          "method": "QR_CODE"
+                          "gpsLon": "-1.9086"
                         }
                         """, "roomLabel is required")
         );
@@ -244,8 +238,7 @@ class AttendanceSessionControllerWebMvcTest {
                   "courseLabel": "Distributed Systems",
                   "roomLabel": "Room B12",
                   "gpsLat": "34.6814",
-                  "gpsLon": "-1.9086",
-                  "method": "QR_CODE"
+                  "gpsLon": "-1.9086"
                 }
                 """;
     }

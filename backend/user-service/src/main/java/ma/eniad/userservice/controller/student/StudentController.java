@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import ma.eniad.userservice.annotation.RequireRole;
+import ma.eniad.userservice.dto.student.StudentProfileDto;
 import ma.eniad.userservice.dto.student.StudentRequestDTO;
 import ma.eniad.userservice.dto.student.StudentResponseDTO;
 import ma.eniad.userservice.service.student.StudentService;
@@ -55,23 +56,20 @@ public class StudentController {
                     content = @Content(mediaType = "application/json",
                             array = @io.swagger.v3.oas.annotations.media.ArraySchema(
                                     schema = @Schema(implementation = StudentResponseDTO.class))))
-    })    @GetMapping
+    })
+    @GetMapping
     public ResponseEntity<List<StudentResponseDTO>> getAll() {
         return ResponseEntity.ok(service.getAll());
     }
 
-    // GET /users/student/groupe/{groupeId}
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "List of students in the group retrieved successfully",
-                    content = @Content(mediaType = "application/json",
-                            array = @io.swagger.v3.oas.annotations.media.ArraySchema(
-                                    schema = @Schema(implementation = StudentResponseDTO.class)))),
-            @ApiResponse(responseCode = "404", description = "Groupe not found",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+            @ApiResponse(responseCode = "200", description = "Student profile retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = StudentProfileDto.class)))
     })
-    @GetMapping("/groupe/{groupeId}")
-    public ResponseEntity<List<StudentResponseDTO>> getByGroupeId(@PathVariable Long groupeId) {
-        return ResponseEntity.ok(service.getByGroupeId(groupeId));
+    @RequireRole({"STUDENT"})
+    @GetMapping("/profile")
+    public ResponseEntity<StudentProfileDto> getProfile() {
+        return ResponseEntity.ok(service.getCurrentProfile());
     }
 
     // GET /users/student/{id}

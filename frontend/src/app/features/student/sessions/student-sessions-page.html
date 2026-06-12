@@ -1,0 +1,341 @@
+<section class="space-y-8">
+  <app-page-header
+    eyebrow="Suivi d'assiduité"
+    title="Mes sessions"
+    description="Consultez vos séances finalisées et filtrez l'historique par statut, date ou recherche."
+  ></app-page-header>
+
+  <section class="rounded-[1.5rem] border border-line bg-surface p-4 shadow-card sm:p-5">
+    <div class="flex flex-col gap-4">
+      <div
+        class="flex flex-wrap items-start justify-between gap-3"
+        aria-label="Filtrer par présence"
+      >
+        <div class="flex flex-wrap gap-2">
+          @for (option of filterOptions(); track option.value) {
+            <button
+              type="button"
+              [class]="presetClasses(option.value)"
+              (click)="selectPreset(option.value)"
+            >
+              @switch (option.value) {
+                @case ('present-only') {
+                  <i class="fa-solid fa-check text-xs" aria-hidden="true"></i>
+                }
+                @case ('absent-only') {
+                  <i class="fa-solid fa-xmark text-xs" aria-hidden="true"></i>
+                }
+                @default {
+                  <i class="fa-solid fa-list-ul text-xs" aria-hidden="true"></i>
+                }
+              }
+              <span>{{ option.label }}</span>
+            </button>
+          }
+        </div>
+
+        <button
+          type="button"
+          class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
+          (click)="resetBackendFilters()"
+          aria-label="Réinitialiser les filtres"
+          title="Réinitialiser les filtres"
+        >
+          <i class="fa-solid fa-rotate-left text-xs" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="grid gap-3 xl:grid-cols-[minmax(16rem,1fr)_minmax(22rem,0.9fr)_auto]">
+        <label class="relative block">
+          <span class="sr-only">Recherche</span>
+          <i
+            class="fa-solid fa-magnifying-glass pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted"
+            aria-hidden="true"
+          ></i>
+          <input
+            type="text"
+            class="h-12 w-full rounded-xl border border-line bg-surface pl-11 pr-4 text-sm font-medium text-principalText outline-none transition-colors duration-200 placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary-soft"
+            placeholder="Module, salle, enseignant ou justification"
+            [value]="localSearchQuery()"
+            (input)="updateSearchQuery(($any($event.target).value ?? '').toString())"
+          />
+        </label>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class="relative block">
+            <span class="sr-only">Date de début</span>
+            <span
+              class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-[0.12em] text-muted"
+            >
+              Du
+            </span>
+            <input
+              type="date"
+              class="h-12 w-full rounded-xl border border-line bg-surface pl-14 pr-4 text-sm font-medium text-principalText outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary-soft"
+              [value]="dateFrom()"
+              (input)="updateDateFrom(($any($event.target).value ?? '').toString())"
+            />
+          </label>
+
+          <label class="relative block">
+            <span class="sr-only">Date de fin</span>
+            <span
+              class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-[0.12em] text-muted"
+            >
+              Au
+            </span>
+            <input
+              type="date"
+              class="h-12 w-full rounded-xl border border-line bg-surface pl-14 pr-4 text-sm font-medium text-principalText outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary-soft"
+              [value]="dateTo()"
+              (input)="updateDateTo(($any($event.target).value ?? '').toString())"
+            />
+          </label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  @if (errorMessage()) {
+    <section class="rounded-[1.5rem] border border-danger/20 bg-danger-soft px-4 py-4">
+      <p class="text-sm font-medium text-danger">{{ errorMessage() }}</p>
+    </section>
+  }
+
+  <section class="space-y-3 md:hidden">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-semibold text-principalText">Historique</h2>
+        <p class="text-sm text-secondaryText">{{ visibleSessions().length }} séance(s)</p>
+      </div>
+    </div>
+
+    @if (visibleSessions().length > 0) {
+      <div class="space-y-3">
+        @for (row of visibleSessions(); track row.id) {
+          <button
+            type="button"
+            class="block w-full rounded-2xl border border-line bg-surface px-4 py-4 text-left shadow-sm transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft/25"
+            (click)="openSessionDetails(row)"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-principalText">{{ row.courseLabel }}</p>
+                <p class="mt-1 truncate text-xs text-secondaryText">{{ row.teacherFullName }}</p>
+              </div>
+              <app-status-badge
+                [label]="row.attendanceLabel"
+                [variant]="row.attendanceVariant"
+              ></app-status-badge>
+            </div>
+
+            <div class="mt-4 grid gap-2 text-xs text-secondaryText">
+              <span class="inline-flex items-center gap-2">
+                <i class="fa-regular fa-calendar text-muted" aria-hidden="true"></i>
+                {{ row.dateLabel }} · {{ row.timeLabel }}
+              </span>
+              <span class="inline-flex items-center gap-2">
+                <i class="fa-solid fa-location-dot text-muted" aria-hidden="true"></i>
+                {{ row.roomLabel }} · {{ row.markMethodLabel }}
+              </span>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between gap-3">
+              <app-status-badge
+                [label]="row.justificationStatus ?? 'Aucune justification'"
+                [variant]="row.justificationVariant ?? 'neutral'"
+              ></app-status-badge>
+              <span class="text-xs font-semibold text-primary">Détails</span>
+            </div>
+          </button>
+        }
+      </div>
+    } @else {
+      <div class="rounded-2xl border border-dashed border-line bg-surface-subtle px-4 py-8 text-center">
+        <p class="text-sm font-semibold text-principalText">Aucune séance ne correspond aux critères</p>
+        <p class="mt-1 text-xs text-secondaryText">Ajustez les filtres ou chargez davantage d'historique.</p>
+      </div>
+    }
+  </section>
+
+  <div class="hidden md:block">
+    <app-data-table
+      title="Historique des séances"
+      description="Cliquez sur une ligne pour consulter le détail de la séance et, si elle existe, la justification liée à une absence."
+      [rows]="visibleSessions()"
+      [columns]="columns"
+      [rowId]="sessionRowId"
+      [rowClickable]="true"
+      [showToolbar]="false"
+      [pageSizeOptions]="[5, 10, 20]"
+      [initialPageSize]="10"
+      emptyStateTitle="Aucune séance ne correspond aux critères"
+      emptyStateDescription="Ajustez les filtres ou chargez davantage d'historique."
+      (rowClicked)="openSessionDetails($event)"
+    >
+      <ng-template [appDataTableCell]="'session'" let-row="row">
+        <div class="min-w-0">
+          <p class="font-medium text-principalText">{{ row.dateLabel }}</p>
+          <p class="truncate text-xs text-secondaryText">{{ row.timeLabel }}</p>
+        </div>
+      </ng-template>
+
+      <ng-template [appDataTableCell]="'courseLabel'" let-row="row">
+        <div class="min-w-0">
+          <p class="font-medium text-principalText">{{ row.courseLabel }}</p>
+          <p class="truncate text-xs text-secondaryText">{{ row.teacherFullName }}</p>
+        </div>
+      </ng-template>
+
+      <ng-template [appDataTableCell]="'roomLabel'" let-row="row">
+        <div class="min-w-0">
+          <p class="font-medium text-principalText">{{ row.roomLabel }}</p>
+          <p class="truncate text-xs text-secondaryText">{{ row.markMethodLabel }}</p>
+        </div>
+      </ng-template>
+
+      <ng-template [appDataTableCell]="'attendanceStatus'" let-row="row">
+        <div class="flex justify-end">
+          <app-status-badge
+            [label]="row.attendanceLabel"
+            [variant]="row.attendanceVariant"
+          ></app-status-badge>
+        </div>
+      </ng-template>
+
+      <ng-template [appDataTableCell]="'justificationStatus'" let-row="row">
+        <div class="flex justify-end">
+          <app-status-badge
+            [label]="row.justificationStatus ?? 'Aucune'"
+            [variant]="row.justificationVariant ?? 'neutral'"
+          ></app-status-badge>
+        </div>
+      </ng-template>
+    </app-data-table>
+  </div>
+
+  @if (canLoadMore()) {
+    <div class="flex justify-center pt-1">
+      <button
+        type="button"
+        class="inline-flex min-h-11 items-center justify-center rounded-xl border border-line bg-surface px-5 py-3 text-sm font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
+        (click)="loadMoreSessions()"
+      >
+        @if (!isLoadingMore()) {
+          <span>Charger plus de séances</span>
+        } @else {
+          <span>Chargement...</span>
+        }
+      </button>
+    </div>
+  }
+
+  <app-modal
+    title="Détail de la séance"
+    description="Consultez les informations enregistrées pour cette séance."
+    [open]="selectedSessionId() !== null"
+    size="md"
+    (closed)="closeSessionDetails()"
+  >
+    <div modal-body class="space-y-5">
+      @if (detailLoading()) {
+        <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-6 text-center">
+          <p class="text-sm text-secondaryText">Chargement du détail de la séance...</p>
+        </div>
+      } @else if (detailError()) {
+        <div class="rounded-2xl border border-danger/20 bg-danger-soft px-4 py-4">
+          <p class="text-sm font-medium text-danger">{{ detailError() }}</p>
+        </div>
+      } @else if (activeSessionDetail(); as detail) {
+        <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-lg font-semibold text-principalText">{{ detail.courseLabel }}</p>
+            </div>
+
+            <app-status-badge
+              [label]="detail.attendanceLabel"
+              [variant]="detail.attendanceVariant"
+            ></app-status-badge>
+          </div>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="rounded-2xl bg-surface-subtle px-4 py-3">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
+              Salle
+            </p>
+            <p class="mt-2 text-base font-semibold text-principalText">{{ detail.roomLabel }}</p>
+          </div>
+
+          <div class="rounded-2xl bg-surface-subtle px-4 py-3">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
+              Enseignant
+            </p>
+            <p class="mt-2 text-base font-semibold text-principalText">
+              {{ detail.teacherFullName }}
+            </p>
+          </div>
+
+          <div class="rounded-2xl bg-surface-subtle px-4 py-3">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
+              Horaire
+            </p>
+            <p class="mt-2 text-base font-semibold text-principalText">
+              {{ detail.sessionScheduleLabel }}
+            </p>
+          </div>
+
+          <div class="rounded-2xl bg-surface-subtle px-4 py-3">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
+              Mode de pointage
+            </p>
+            <p class="mt-2 text-base font-semibold text-principalText">
+              {{ detail.markMethodLabel }}
+            </p>
+          </div>
+        </div>
+
+        @if (shouldShowJustificationCard(detail)) {
+          <button
+            type="button"
+            class="block w-full rounded-2xl border border-line px-4 py-4 text-left transition-colors duration-200"
+            [class.cursor-pointer]="canOpenJustification(detail)"
+            [class.hover:border-primary-soft]="canOpenJustification(detail)"
+            [class.hover:bg-primary-soft/35]="canOpenJustification(detail)"
+            [class.cursor-default]="!canOpenJustification(detail)"
+            (click)="openJustificationFromCard(detail)"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-principalText">État de la justification</p>
+                <p class="mt-1 text-sm text-secondaryText">
+                  {{
+                    canOpenJustification(detail)
+                      ? 'Ouvrir le détail de la justification enregistrée pour cette absence.'
+                      : 'Aucune justification consultable pour cette séance.'
+                  }}
+                </p>
+              </div>
+
+              <app-status-badge
+                [label]="detail.justificationStatus ?? 'Aucune'"
+                [variant]="detail.justificationVariant ?? 'neutral'"
+              ></app-status-badge>
+            </div>
+          </button>
+        }
+      }
+    </div>
+
+    <div modal-footer class="flex items-center justify-end gap-3">
+      <button
+        type="button"
+        class="inline-flex min-h-10 items-center justify-center rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
+        (click)="closeSessionDetails()"
+      >
+        Fermer
+      </button>
+    </div>
+  </app-modal>
+</section>

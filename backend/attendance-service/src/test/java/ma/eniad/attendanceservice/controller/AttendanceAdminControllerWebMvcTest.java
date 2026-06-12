@@ -4,9 +4,7 @@ import ma.eniad.attendanceservice.config.RoleCheckInterceptor;
 import ma.eniad.attendanceservice.config.WebConfig;
 import ma.eniad.attendanceservice.dto.AdminOverviewResponse;
 import ma.eniad.attendanceservice.dto.AttendanceSessionSummaryResponse;
-import ma.eniad.attendanceservice.dto.MethodBreakdownResponse;
 import ma.eniad.attendanceservice.dto.PagedResponse;
-import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
 import ma.eniad.attendanceservice.exception.GlobalExceptionHandler;
 import ma.eniad.attendanceservice.service.AttendanceQueryService;
@@ -41,12 +39,12 @@ class AttendanceAdminControllerWebMvcTest {
     @Test
     void adminOverviewSucceedsForAdmin() throws Exception {
         when(attendanceQueryService.getAdminOverview(any(), any()))
-                .thenReturn(new AdminOverviewResponse(10, 1, 9, 90, 10, 0.9, new MethodBreakdownResponse(4, 3, 3)));
+                .thenReturn(new AdminOverviewResponse(10, 1, 9, 90, 10, 0.9));
 
         mockMvc.perform(get("/attendance/admin/overview").with(adminUser()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalSessions").value(10))
-                .andExpect(jsonPath("$.methodBreakdown.qrCodeSessions").value(4));
+                .andExpect(jsonPath("$.methodBreakdown").doesNotExist());
     }
 
     @Test
@@ -57,12 +55,11 @@ class AttendanceAdminControllerWebMvcTest {
 
     @Test
     void adminSessionsListSucceeds() throws Exception {
-        when(attendanceQueryService.getAdminSessions(any(), any(), any(), any(), any(), any(), any()))
+        when(attendanceQueryService.getAdminSessions(any(), any(), any(), any(), any(), any()))
                 .thenReturn(new PagedResponse<>(
                         List.of(new AttendanceSessionSummaryResponse(
-                                100L, "Distributed Systems", "Room B12", List.of(1L),
-                                AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.FINALIZED,
-                                LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30),
+                                100L, "Ayoub Elebbar", "Distributed Systems", "Room B12", List.of(1L),
+                                AttendanceSessionStatus.FINALIZED, LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30),
                                 LocalDateTime.of(2026, 4, 28, 12, 30), 10, 1, 0
                         )),
                         0, 20, 1, 1
@@ -71,6 +68,7 @@ class AttendanceAdminControllerWebMvcTest {
         mockMvc.perform(get("/attendance/admin/sessions").with(adminUser()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].sessionId").value(100))
+                .andExpect(jsonPath("$.items[0].teacherFullName").value("Ayoub Elebbar"))
                 .andExpect(jsonPath("$.items[0].presentCount").value(10));
     }
 }

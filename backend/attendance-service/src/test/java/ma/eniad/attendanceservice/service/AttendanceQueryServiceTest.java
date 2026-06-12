@@ -3,7 +3,9 @@ package ma.eniad.attendanceservice.service;
 import ma.eniad.attendanceservice.dto.AdminOverviewResponse;
 import ma.eniad.attendanceservice.dto.AttendanceCounts;
 import ma.eniad.attendanceservice.dto.AttendanceSessionDetailsResponse;
+import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 import ma.eniad.attendanceservice.dto.PagedResponse;
+import ma.eniad.attendanceservice.dto.StudentActiveAttendanceSessionResponse;
 import ma.eniad.attendanceservice.dto.StudentAttendanceSessionDetailResponse;
 import ma.eniad.attendanceservice.entity.AttendanceRecord;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
@@ -76,8 +78,8 @@ class AttendanceQueryServiceTest {
         PagedResponse<?> response = attendanceQueryService.getTeacherSessions(77L, null, null, null, PageRequest.of(0, 20));
 
         assertThat(response.items()).hasSize(2);
-        assertThat(response.items().getFirst().toString()).contains("presentCount=1", "unknownCount=1");
-        assertThat(response.items().getLast().toString()).contains("presentCount=1", "absentCount=1", "unknownCount=0");
+        assertThat(response.items().getFirst().toString()).contains("teacherFullName=Ayoub Elebbar", "presentCount=1", "unknownCount=1");
+        assertThat(response.items().getLast().toString()).contains("teacherFullName=Ayoub Elebbar", "presentCount=1", "absentCount=1", "unknownCount=0");
     }
 
     @Test
@@ -101,7 +103,7 @@ class AttendanceQueryServiceTest {
         assertThat(response.finalizedSessions()).isEqualTo(1);
         assertThat(response.totalPresentMarks()).isEqualTo(3);
         assertThat(response.totalAbsentMarks()).isEqualTo(1);
-        assertThat(response.methodBreakdown().manualSessions()).isEqualTo(1);
+        assertThat(response.attendanceRate()).isEqualTo(0.75);
     }
 
     @Test
@@ -116,9 +118,6 @@ class AttendanceQueryServiceTest {
                 .numApogee("A001")
                 .status(AttendanceStudentStatus.PRESENT)
                 .markMethod(AttendanceSessionMethod.QR_CODE)
-                .deviceId("phone-10")
-                .markedGpsLat("34.6820")
-                .markedGpsLon("-1.9091")
                 .markedAt(LocalDateTime.of(2026, 4, 28, 12, 5))
                 .build();
         AttendanceSession session = baseSession(100L, AttendanceSessionStatus.FINALIZED);
@@ -130,8 +129,9 @@ class AttendanceQueryServiceTest {
         StudentAttendanceSessionDetailResponse response = attendanceQueryService.getStudentSession(12L, 100L);
 
         assertThat(response.sessionId()).isEqualTo(100L);
+        assertThat(response.teacherFullName()).isEqualTo("Ayoub Elebbar");
         assertThat(response.studentId()).isEqualTo(12L);
-        assertThat(response.markedGpsLat()).isEqualTo("34.6820");
+        assertThat(response.markMethod()).isEqualTo(AttendanceSessionMethod.QR_CODE);
     }
 
     @Test
@@ -150,6 +150,53 @@ class AttendanceQueryServiceTest {
         when(attendanceSessionRepository.findById(100L)).thenReturn(Optional.of(baseSession(100L, AttendanceSessionStatus.ACTIVE)));
 
         assertThatThrownBy(() -> attendanceQueryService.getStudentSession(12L, 100L))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void activeStudentSessionReturnsAssignedMethodNeutralSession() {
+        AttendanceSession manualSession = baseSession(99L, AttendanceSessionStatus.ACTIVE);
+        manualSession.setMethod(AttendanceSessionMethod.MANUAL);
+        AttendanceSession qrSession = baseSession(100L, AttendanceSessionStatus.ACTIVE);
+
+        when(attendanceSessionRepository.findAllByStatus(AttendanceSessionStatus.ACTIVE))
+                .thenReturn(List.of(manualSession, qrSession));
+        when(liveAttendanceSessionStore.findStudentState(100L, 12L))
+                .thenReturn(Optional.of(new LiveAttendanceStudentState(
+                        12L,
+                        1L,
+                        "Aya",
+                        "Bennani",
+                        "aya@ump.ac.ma",
+                        null,
+                        "A001",
+                        AttendanceStudentStatus.UNKNOWN,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )));
+
+        StudentActiveAttendanceSessionResponse response = attendanceQueryService.getActiveStudentSession(12L);
+
+        assertThat(response.sessionId()).isEqualTo(100L);
+        assertThat(response.attendanceStatus()).isEqualTo(AttendanceStudentStatus.UNKNOWN);
+    }
+
+    @Test
+    void activeStudentSessionReturnsNotFoundForManualOnlyOrUnassignedSessions() {
+        AttendanceSession manualSession = baseSession(99L, AttendanceSessionStatus.ACTIVE);
+        manualSession.setMethod(AttendanceSessionMethod.MANUAL);
+        AttendanceSession qrSession = baseSession(100L, AttendanceSessionStatus.ACTIVE);
+
+        when(attendanceSessionRepository.findAllByStatus(AttendanceSessionStatus.ACTIVE))
+                .thenReturn(List.of(manualSession, qrSession));
+        when(liveAttendanceSessionStore.findStudentState(100L, 12L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> attendanceQueryService.getActiveStudentSession(12L))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
                 .isEqualTo(HttpStatus.NOT_FOUND);
@@ -208,6 +255,7 @@ class AttendanceQueryServiceTest {
         return AttendanceSession.builder()
                 .id(id)
                 .teacherId(77L)
+                .teacherFullName("Ayoub Elebbar")
                 .groupIds(List.of(1L))
                 .courseLabel("Distributed Systems")
                 .roomLabel("Room B12")

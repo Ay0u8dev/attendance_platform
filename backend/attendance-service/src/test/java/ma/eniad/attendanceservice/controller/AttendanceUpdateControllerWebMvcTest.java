@@ -43,7 +43,7 @@ class AttendanceUpdateControllerWebMvcTest {
         when(attendanceUpdateService.updateManualAttendance(anyLong(), anyLong(), any()))
                 .thenReturn(new AttendanceUpdateResponse(
                         100L, 10L, AttendanceStudentStatus.PRESENT, AttendanceSessionMethod.MANUAL,
-                        null, null, null, LocalDateTime.of(2026, 4, 28, 12, 0), 1, 0, 1
+                        LocalDateTime.of(2026, 4, 28, 12, 0), 1, 0, 1
                 ));
 
         mockMvc.perform(post("/attendance/sessions/100/attendance")
@@ -80,7 +80,7 @@ class AttendanceUpdateControllerWebMvcTest {
         when(attendanceUpdateService.updateInternalAttendance(anyString(), anyLong(), any()))
                 .thenReturn(new AttendanceUpdateResponse(
                         100L, 10L, AttendanceStudentStatus.PRESENT, AttendanceSessionMethod.QR_CODE,
-                        "phone-10", "34.6820", "-1.9091", LocalDateTime.of(2026, 4, 28, 12, 0), 1, 0, 1
+                        LocalDateTime.of(2026, 4, 28, 12, 0), 1, 0, 1
                 ));
 
         mockMvc.perform(post("/attendance/internal/sessions/100/attendance")
@@ -97,9 +97,9 @@ class AttendanceUpdateControllerWebMvcTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.markMethod").value("QR_CODE"))
-                .andExpect(jsonPath("$.deviceId").value("phone-10"))
-                .andExpect(jsonPath("$.markedGpsLat").value("34.6820"))
-                .andExpect(jsonPath("$.markedGpsLon").value("-1.9091"));
+                .andExpect(jsonPath("$.deviceId").doesNotExist())
+                .andExpect(jsonPath("$.markedGpsLat").doesNotExist())
+                .andExpect(jsonPath("$.markedGpsLon").doesNotExist());
     }
 
     @Test
@@ -120,11 +120,11 @@ class AttendanceUpdateControllerWebMvcTest {
     }
 
     @Test
-    void internalFaceUpdateRouteAcceptsNullDeviceAndGps() throws Exception {
+    void internalFaceUpdateRouteAcceptsDeviceAndGpsWithoutReturningThem() throws Exception {
         when(attendanceUpdateService.updateInternalAttendance(anyString(), anyLong(), any()))
                 .thenReturn(new AttendanceUpdateResponse(
                         100L, 10L, AttendanceStudentStatus.PRESENT, AttendanceSessionMethod.FACE_ID,
-                        null, null, null, LocalDateTime.of(2026, 4, 28, 12, 0), 1, 0, 1
+                        LocalDateTime.of(2026, 4, 28, 12, 0), 1, 0, 1
                 ));
 
         mockMvc.perform(post("/attendance/internal/sessions/100/attendance")
@@ -134,13 +134,15 @@ class AttendanceUpdateControllerWebMvcTest {
                                 {
                                   "studentId": 10,
                                   "method": "FACE_ID",
-                                  "deviceId": null,
-                                  "gpsLat": null,
-                                  "gpsLon": null
+                                  "deviceId": "phone-10",
+                                  "gpsLat": "34.6820",
+                                  "gpsLon": "-1.9091"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.markMethod").value("FACE_ID"))
-                .andExpect(jsonPath("$.deviceId").doesNotExist());
+                .andExpect(jsonPath("$.deviceId").doesNotExist())
+                .andExpect(jsonPath("$.markedGpsLat").doesNotExist())
+                .andExpect(jsonPath("$.markedGpsLon").doesNotExist());
     }
 }

@@ -71,7 +71,7 @@ attendance-web/
 │   │   └── app.config.ts                  # App providers: router, HTTP client, interceptors
 │   │
 │   ├── environments/
-│   │   ├── environment.ts                 # Dev config (apiUrl: http://localhost/api)
+│   │   ├── environment.ts                 # Dev config (relative /api, proxied by ng serve)
 │   │   └── environment.prod.ts            # Prod config
 │   │
 │   ├── styles.scss                        # Global styles + Tailwind import
@@ -146,7 +146,7 @@ Use `environment.ts` for any value that changes between dev and prod:
 // src/environments/environment.ts
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost/api',           // → Traefik gateway in dev
+  apiBaseUrl: '/api',                       // → same-origin in browser, proxied by ng serve in dev
   googleClientId: 'YOUR_CLIENT_ID.apps.googleusercontent.com',
 };
 ```
@@ -155,7 +155,7 @@ Import it in any service:
 ```ts
 import { environment } from '../../../environments/environment';
 
-this.http.post(`${environment.apiUrl}/auth/google/callback`, { code });
+this.http.post(`${environment.apiBaseUrl}/auth/google/callback`, { code });
 ```
 
 ---
