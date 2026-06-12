@@ -93,8 +93,13 @@ async def scan_student_qr(
     token_data = verify_payload(request.payload)
     session_id = token_data["sid"]
 
+    try:
+        student_id = int(x_user_id)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid user ID") from exc
+
     body = {
-        "studentId": int(x_user_id),
+        "studentId": student_id,
         "method": "QR_CODE",
         "deviceId": request.deviceId.strip(),
         "gpsLat": normalize_optional(request.gpsLat),

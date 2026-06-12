@@ -138,7 +138,7 @@ export class StudentDashboardPage {
       return 'Marie Dupont';
     }
 
-    const nameParts = [user.prenom, user.nom]
+    const nameParts = [user.firstName, user.lastName]
       .filter((value) => typeof value === 'string')
       .map((value) => value.trim())
       .filter((value) => value.length > 0);

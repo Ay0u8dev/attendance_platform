@@ -32,8 +32,8 @@ describe('StudentLayout profile avatar', () => {
           provide: AuthService,
           useValue: {
             currentUser: {
-              prenom: 'Marie',
-              nom: 'Dupont',
+              firstName: 'Marie',
+              lastName: 'Dupont',
               email: 'student@example.com',
               role: Role.STUDENT,
             },
