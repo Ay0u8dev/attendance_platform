@@ -5,7 +5,7 @@ services:
     container_name: traefik
     ports:
       - "80:80" # traffic
-      - "9000:8080" # dashboard
+      - "9090:8080" # dashboard
     volumes:
       # Docker socket — only needed in prod when using Docker provider
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -13,19 +13,12 @@ services:
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/routes.dev.yml:/etc/traefik/routes.dev.yml:ro
 
-  # ===================== Redis =======================
-  redis:
-    image: redis:alpine
-    container_name: redis
-    ports:
-      - "6379:6379"
-
   # ===================== Databases =======================
-  user-db:
-    image: postgres:15-alpine
-    container_name: user-db
+  auth-db:
+    image: postgres:alpine
+    # container_name: auth-db
     ports:
-      - 5433:5432
+      - 5432:5432
     environment:
       POSTGRES_DB: users_db
     env_file:
@@ -39,10 +32,10 @@ services:
       retries: 20
 
   attendance-db:
-    image: postgres:15-alpine
+    image: postgres:alpine
     container_name: attendance-db
     ports:
-      - 5434:5432
+      - 5433:5432
     environment:
       POSTGRES_DB: attendance_db
     env_file:
@@ -56,7 +49,7 @@ services:
       retries: 20
 
   # notification-db:
-  #   image: postgres:15-alpine
+  #   image: postgres:alpine
   #   container_name: notification-db
   #   ports:
   #     - 5433:5432
@@ -92,49 +85,49 @@ services:
   #     - ./frontend:/app
   #     - frontend_node_modules:/app/node_modules
 
-  # auth-service:
-  #   build:
-  #     context: ./backend/auth-service
-  #     dockerfile: Dockerfile
-  #   container_name: auth-service
-  #   ports:
-  #     - "8081:8080"
-  #   labels:
-  #     - "traefik.enable=true"
-  #     - "traefik.http.routers.auth.rule=PathPrefix(`/api/auth`)"
-  #     - "traefik.http.services.auth.loadbalancer.server.port=8081"
-  #   environment:
-  #     DATASOURCE_URL: jdbc:postgresql://auth-db:5432/auth_db
-  #   env_file:
-  #     - .env
-  #   volumes:
-  #     - ./backend/auth-service:/app
-  #     - maven_cache:/root/.m2
-  #   depends_on:
-  #     auth-db:
-  #       condition: service_healthy
+  auth-service:
+    build:
+      context: ./backend/auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    ports:
+      - "8081:8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth.rule=PathPrefix(`/api/auth`)"
+      - "traefik.http.services.auth.loadbalancer.server.port=8081"
+    environment:
+      DATASOURCE_URL: jdbc:postgresql://auth-db:5432/auth_db
+    env_file:
+      - .env
+    volumes:
+      - ./backend/auth-service:/app
+      - maven_cache:/root/.m2
+    depends_on:
+      auth-db:
+        condition: service_healthy
 
-  # attendance-service:
-  #   build:
-  #     context: ./backend/attendance-service
-  #     dockerfile: Dockerfile
-  #   container_name: attendance-service
-  #   ports:
-  #     - "8082:8080"
-  #   labels:
-  #     - "traefik.enable=true"
-  #     - "traefik.http.routers.attendance.rule=PathPrefix(`/api/attendance`)"
-  #     - "traefik.http.services.attendance.loadbalancer.server.port=8082"
-  #   environment:
-  #     DATASOURCE_URL: jdbc:postgresql://attendance-db:5432/attendance_db
-  #   env_file:
-  #     - .env
-  #   volumes:
-  #     - ./backend/attendance-service:/app
-  #     - maven_cache:/root/.m2
-  #   depends_on:
-  #     attendance-db:
-  #       condition: service_healthy
+  attendance-service:
+    build:
+      context: ./backend/attendance-service
+      dockerfile: Dockerfile
+    container_name: attendance-service
+    ports:
+      - "8082:8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.attendance.rule=PathPrefix(`/api/attendance`)"
+      - "traefik.http.services.attendance.loadbalancer.server.port=8082"
+    environment:
+      DATASOURCE_URL: jdbc:postgresql://attendance-db:5432/attendance_db
+    env_file:
+      - .env
+    volumes:
+      - ./backend/attendance-service:/app
+      - maven_cache:/root/.m2
+    depends_on:
+      attendance-db:
+        condition: service_healthy
 
   # notification-service:
   #   build:
@@ -178,7 +171,7 @@ services:
 
 volumes:
   # frontend_node_modules:
-  # maven_cache:
+  maven_cache:
   users_db_data:
   attendance_db_data:
   # notification_db_data:
