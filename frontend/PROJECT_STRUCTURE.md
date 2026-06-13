@@ -1,195 +1,170 @@
-# Angular Project Structure — Attendance Platform
+# Frontend Project Structure
 
-## Overview
+This document reflects the current Angular project layout in `frontend/`.
 
-This is a **standalone Angular 21** project using **Tailwind CSS** and **SCSS**.  
-It follows a **feature-based architecture** where code is grouped by role/domain, not by type.
+## Stack
 
----
+- Angular `21.x`
+- Standalone components
+- Angular application builder and SSR files
+- Tailwind CSS v4 through `src/styles.css`
+- Font Awesome
+- `angular-oauth2-oidc` for Google OAuth
+- `@zxing/ngx-scanner` for QR scanning support
+- Vitest through Angular CLI
 
-## Full Folder Structure
+## Top-Level Files
 
-```
-attendance-web/
+```text
+frontend/
+├── angular.json
+├── package.json
 ├── src/
 │   ├── app/
-│   │   │
-│   │   ├── core/                          # Singleton services, used globally
-│   │   │   ├── guards/
-│   │   │   │   └── auth.guard.ts          # Protects routes: checks login + role
-│   │   │   ├── interceptors/
-│   │   │   │   └── auth.interceptor.ts    # Attaches JWT token to every HTTP request
-│   │   │   ├── services/
-│   │   │   │   └── auth.service.ts        # Google SSO, session management, logout
-│   │   │   └── models/
-│   │   │       └── user.model.ts          # User interface (id, email, role, ...)
-│   │   │
-│   │   ├── features/                      # One folder per role/feature area
-│   │   │   │
-│   │   │   ├── auth/                      # Public pages (no login required)
-│   │   │   │   ├── auth.routes.ts         # Routes: /auth/login, /auth/callback
-│   │   │   │   ├── login/
-│   │   │   │   │   ├── login.component.ts
-│   │   │   │   │   └── login.component.html
-│   │   │   │   └── unauthorized/
-│   │   │   │       └── unauthorized.component.ts
-│   │   │   │
-│   │   │   ├── admin/                     # Admin role pages
-│   │   │   │   ├── admin.routes.ts        # Routes: /admin/dashboard, /admin/students, ...
-│   │   │   │   ├── dashboard/
-│   │   │   │   ├── students/
-│   │   │   │   ├── teachers/
-│   │   │   │   ├── sessions/
-│   │   │   │   └── justifications/
-│   │   │   │
-│   │   │   ├── teacher/                   # Teacher role pages
-│   │   │   │   ├── teacher.routes.ts      # Routes: /teacher/dashboard, /teacher/sessions, ...
-│   │   │   │   ├── dashboard/
-│   │   │   │   ├── sessions/
-│   │   │   │   │   ├── new-session/       # Start a session (choose method: QR / face / manual)
-│   │   │   │   │   └── session-detail/
-│   │   │   │   └── justifications/
-│   │   │   │
-│   │   │   └── student/                   # Student role pages
-│   │   │       ├── student.routes.ts      # Routes: /student/dashboard, /student/absences, ...
-│   │   │       ├── dashboard/
-│   │   │       ├── absences/
-│   │   │       └── justifications/
-│   │   │
-│   │   ├── layout/                        # Shell wrapping authenticated pages
-│   │   │   ├── shell/
-│   │   │   │   ├── shell.component.ts     # Root layout component with <router-outlet>
-│   │   │   │   └── shell.component.html
-│   │   │   ├── sidebar/
-│   │   │   │   └── sidebar.component.ts   # Side navigation (links change per role)
-│   │   │   └── topbar/
-│   │   │       └── topbar.component.ts    # Top bar (user avatar, logout button)
-│   │   │
-│   │   ├── app.ts                         # Root component
-│   │   ├── app.html                       # Root template — just <router-outlet>
-│   │   ├── app.routes.ts                  # Top-level routes with lazy loading
-│   │   └── app.config.ts                  # App providers: router, HTTP client, interceptors
-│   │
 │   ├── environments/
-│   │   ├── environment.ts                 # Dev config (relative /api, proxied by ng serve)
-│   │   └── environment.prod.ts            # Prod config
-│   │
-│   ├── styles.scss                        # Global styles + Tailwind import
-│   ├── main.ts                            # Entry point — bootstraps the app
-│   └── index.html                         # The single HTML file served
-│
-├── tailwind.config.js                     # Tailwind config (content paths, plugins)
-├── angular.json                           # Angular CLI config (build, serve, test)
-├── tsconfig.json                          # TypeScript config
-└── package.json
+│   ├── main.ts
+│   ├── main.server.ts
+│   ├── server.ts
+│   ├── index.html
+│   └── styles.css
+├── DESIGN_LANGUAGE.md
+├── PROJECT_STRUCTURE.md
+└── README.md
 ```
 
----
+## App Layout
 
-## Key Concepts
+```text
+src/app/
+├── app.config.ts
+├── app.routes.ts
+├── app.routes.server.ts
+├── app.ts
+├── core/
+├── features/
+└── shared/
+```
 
-### Standalone Components
-Every component has `standalone: true` and imports its own dependencies directly.  
-No NgModules. No `declarations` array. When you generate a component it looks like:
+### `core/`
+
+Singleton services, guards, interceptors, and models that are reused across feature areas.
+
+Important current areas:
+
+```text
+core/
+├── attendance/
+│   ├── models/
+│   └── services/
+│       ├── qr-attendance.service.ts
+│       └── student-attendance.service.ts
+├── auth/
+│   ├── guards/
+│   ├── interceptors/
+│   ├── models/
+│   └── services/
+└── student/
+    └── services/
+```
+
+### `features/`
+
+Feature screens grouped by product area and role.
+
+Important current areas:
+
+```text
+features/
+├── admin/
+│   ├── attendance/
+│   ├── dashboard/
+│   ├── justifications/
+│   ├── structure/
+│   ├── students/
+│   └── teachers/
+├── attendance/
+│   └── qr-display/
+├── auth/
+│   └── pages/
+└── student/
+    ├── attendance/
+    ├── dashboard/
+    └── justifications/
+```
+
+### `shared/`
+
+Reusable layout and UI components. Current examples include shared layouts, buttons, data table, toast, and utility UI primitives.
+
+## Current Route Shape
+
+Routes are configured in `src/app/app.routes.ts`.
+
+Public routes:
+
+- `/`
+- `/login`
+- `/auth/login`
+- `/popup-callback`
+- `/forbidden`
+- `/attendance/qr-display`
+
+Authenticated shell routes:
+
+- `/dashboard` for admin dashboard
+- `/students`
+- `/teachers`
+- `/structure/...`
+- `/attendance`
+- `/justifications`
+- `/statistics`
+- `/alerts`
+- `/my-attendance`
+
+There are also placeholder authenticated routes for teacher and student dashboards. Check `app.routes.ts` before adding navigation because route ownership is still evolving.
+
+## Backend Integration Points
+
+Environment:
 
 ```ts
-@Component({
-  selector: 'app-login',
-  standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],  // ← imported here, not in a module
-  templateUrl: './login.component.html',
-})
-export class LoginComponent {}
+environment.apiBaseUrl === '/api'
 ```
 
-### Lazy Loading
-Each feature folder has its own `*.routes.ts` file.  
-The router only loads a feature's code when the user actually navigates to it.  
-This keeps the initial bundle small.
+The browser calls Traefik gateway paths:
 
-```
-User navigates to /admin/dashboard
-  → Angular loads admin.routes.ts
-  → Angular loads DashboardComponent
-  → Nothing else is loaded
-```
+- `/api/auth/login`
+- `/api/users/**`
+- `/api/attendance/**`
+- `/api/qr/**`
+- `/api/ws/attendance/ws` for attendance WebSocket
 
-### Role-Based Guards
-Two guards protect all routes:
+Do not use service-local URLs in browser code.
 
-| Guard | What it does |
-|---|---|
-| `authGuard` | Redirects to `/auth/login` if the user is not logged in |
-| `roleGuard(['ADMIN'])` | Redirects to `/unauthorized` if the user's role doesn't match |
+## Auth Implementation
 
-Applied in `app.routes.ts` like this:
-```ts
-{
-  path: 'admin',
-  canActivate: [authGuard, roleGuard(['ADMIN'])],
-  loadChildren: () => import('./features/admin/admin.routes').then(m => m.ADMIN_ROUTES),
-}
-```
+- `core/auth/services/auth.service.ts` handles OAuth startup, callback completion, token exchange, token storage, role decoding, and logout.
+- `core/auth/interceptors/auth.interceptor.ts` attaches backend JWTs to protected API requests.
+- `core/auth/guards/auth.guard.ts` protects routes and handles role-aware navigation.
+- Backend JWT storage key: `backend_access_token`.
 
-### HTTP Interceptor
-The `auth.interceptor.ts` runs automatically on every outgoing HTTP request.  
-It reads the JWT from `localStorage` and attaches it as a header:
-```
-Authorization: Bearer <token>
-```
-You never call this manually — it's registered once in `app.config.ts`.
+## Attendance Implementation
 
-### Environments
-Use `environment.ts` for any value that changes between dev and prod:
+- `core/attendance/services/student-attendance.service.ts` calls student attendance endpoints and maps DTOs into student-facing view models.
+- `core/attendance/services/qr-attendance.service.ts` calls QR endpoints and the teacher active-session endpoint used by the QR display helper.
+- `features/attendance/qr-display/` contains the temporary QR display page.
 
-```ts
-// src/environments/environment.ts
-export const environment = {
-  production: false,
-  apiBaseUrl: '/api',                       // → same-origin in browser, proxied by ng serve in dev
-  googleClientId: 'YOUR_CLIENT_ID.apps.googleusercontent.com',
-};
-```
+Backend docs for the behavior:
 
-Import it in any service:
-```ts
-import { environment } from '../../../environments/environment';
+- `../backend/docs/student-attendance-flow.md`
+- `../backend/docs/qr-code-flow.md`
+- `../backend/docs/frontend-attendance-api/`
 
-this.http.post(`${environment.apiBaseUrl}/auth/google/callback`, { code });
-```
+## Adding New Frontend Work
 
----
-
-## How a New Page Is Added
-
-Example: adding a **Students list** page under Admin.
-
-**1. Generate the component**
-```bash
-ng g c features/admin/students
-```
-
-**2. Add the route in `admin.routes.ts`**
-```ts
-{ path: 'students', component: StudentsComponent }
-```
-
-**3. Link to it from the sidebar**
-```html
-<a routerLink="/admin/students">Students</a>
-```
-
-That's it. Three steps for every new page.
-
----
-
-## Generating Things with the CLI
-
-| What you want | Command |
-|---|---|
-| New component | `ng g c features/admin/students` |
-| New service | `ng g s core/services/attendance` |
-| New guard | `ng g g core/guards/role` |
-| New interface/model | `ng g interface core/models/session` |
-| Build for production | `ng build` |
-| Run tests | `ng test` |
+1. Check `app.routes.ts` and existing feature folders before creating a new route.
+2. Put cross-feature API clients in `core/<domain>/services/`.
+3. Put feature-specific presentational work under `features/<area>/`.
+4. Promote reused UI to `shared/components/`.
+5. Keep UI consistent with `DESIGN_LANGUAGE.md`.
+6. Update frontend docs when route shape, API integration, or feature ownership changes.
