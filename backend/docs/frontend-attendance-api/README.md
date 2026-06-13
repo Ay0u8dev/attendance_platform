@@ -8,7 +8,7 @@ Base HTTP path:
 
 WebSocket handshake path:
 
-- `/api/attendance/ws`
+- `/api/ws/attendance/ws`
 
 The frontend must not call internal service routes such as `/attendance/internal/**`.
 
@@ -31,5 +31,5 @@ All frontend HTTP calls go through Traefik:
 
 The same applies to WebSocket handshake:
 
-- correct: `/api/attendance/ws`
+- correct: `/api/ws/attendance/ws`
 - wrong: `/attendance/ws`

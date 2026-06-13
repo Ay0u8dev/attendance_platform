@@ -1,92 +1,54 @@
-# Backend Service Rules (Must Follow)
+# Backend Service Rules
 
-This document defines implementation rules for existing and future backend services so they remain compatible with the current platform contracts.
+These rules keep new backend work compatible with the current platform contracts.
 
-## 1) API Surface and Routing Rules
+## Routing
 
-1. Expose service endpoints under a clear service base path (for example `/users`, `/attendance`, `/sessions`).
-2. Expose services to clients through Traefik using `/api/<service-prefix>/...` routes.
-3. Keep auth endpoints separate (`/api/auth/...`) and unprotected by forward-auth when login is required.
+1. Browser-facing APIs must be exposed through Traefik under `/api/<service-prefix>/**`.
+2. Service-local controllers keep their real base path, such as `/auth`, `/users`, `/attendance`, or `/qr`.
+3. The frontend must use gateway paths, not direct local service URLs.
+4. The attendance WebSocket browser path is `/api/ws/attendance/ws`; attendance-service receives `/attendance/ws`.
 
-Example Traefik router pattern:
+## Authentication And Authorization
 
-```yaml
-routers:
-  attendance:
-    entryPoints: ["web"]
-    rule: "PathPrefix(`/api/attendance`)"
-    middlewares: ["forward-auth", "strip-api-attendance"]
-    service: attendance-service
-
-middlewares:
-  strip-api-attendance:
-    stripPrefix:
-      prefixes: ["/api"]
-```
-
-## 2) Authentication and Authorization Rules
-
-1. JWT parsing and signature validation belong to `auth-service` only.
-2. Downstream services must authorize using forwarded identity headers:
+1. `auth-service` owns JWT issuing and validation for normal HTTP traffic.
+2. Protected HTTP services read identity from:
    - `X-User-Id`
    - `X-User-Roles`
    - `X-User-Email`
-3. Protected endpoints must reject requests with missing/invalid role headers.
-4. Role checks must be explicit per endpoint (annotation/interceptor/filter based).
+3. Role checks must be explicit on protected endpoints.
+4. Service methods must still enforce ownership rules after role checks. Example: a teacher must own the attendance session they read or finalize.
+5. WebSocket/STOMP authentication is handled by attendance-service on `CONNECT`, using the STOMP native `Authorization` header.
 
-Example rule check logic:
+## Internal Calls
 
-```text
-if endpoint is protected:
-  require X-User-Id and X-User-Roles
-  parse roles from comma-separated string
-  verify at least one required role
-```
+1. Internal machine-to-machine endpoints must require `X-Request-Source`.
+2. Accepted source values must be narrow and documented.
+3. Current trusted sources:
+   - `auth-service`
+   - `attendance-service`
+   - `qr-service`
+   - `face-service`
+4. Do not expose internal routes through frontend code. `/attendance/internal/**` is not a browser API.
 
-## 3) Trusted Internal Call Rules
+## Service Ownership
 
-1. Internal trusted service-to-service calls must include `X-Request-Source`.
-2. Never trust arbitrary `X-Request-Source` from public traffic. Only accept it behind gateway/private network.
-3. Any bypass behavior (like `auth-service` bypass in `user-service`) must be narrow and documented.
-4. Prefer dedicated internal endpoints for machine-to-machine calls (for example `/users/auth-user`).
+1. `user-service` owns identity, role-bearing users, students, teachers, and academic structure.
+2. `attendance-service` owns attendance sessions, live attendance state, final records, and attendance read models.
+3. `qr-service` owns QR proof validation only; it does not own attendance state.
+4. Planned or scaffolded services must not be documented as implemented until they have real controllers and behavior.
 
-Example internal request:
+## Request And Response Contracts
 
-```http
-POST /users/auth-user
-X-Request-Source: auth-service
-Content-Type: application/json
+1. Controllers should return DTOs, not JPA entities.
+2. Validate request bodies with Jakarta validation where possible.
+3. Keep route and JSON field names stable once frontend code consumes them.
+4. Document every new or changed endpoint in `backend/docs/backend-service-contracts.md`.
+5. If frontend code consumes it, also update `backend/docs/frontend-attendance-api/`.
 
-{"email":"user@ump.ac.ma","pfpUrl":"https://example.com/pfp.jpg"}
-```
+## Error Contract Target
 
-## 4) Header Propagation Rules for Outbound Calls
-
-When service A calls service B on behalf of a user request, propagate user context headers.
-
-Required propagation headers:
-
-- `X-User-Id`
-- `X-User-Email`
-- `X-User-Roles`
-
-Example Feign interceptor behavior:
-
-```text
-read current user context from request thread
-copy X-User-* headers into outgoing Feign request
-```
-
-## 5) Request/Response Contract Rules
-
-1. Use DTOs for API responses; avoid returning JPA entities directly from controllers.
-2. Validate request bodies (`@Valid`, explicit required fields).
-3. Keep endpoint behavior stable and version-compatible.
-4. Document every new endpoint in `backend/docs/backend-service-contracts.md`.
-
-## 6) Error Contract Rules
-
-Target standard for all new/updated endpoints:
+The target shape for new/updated Spring endpoints is:
 
 ```json
 {
@@ -97,53 +59,26 @@ Target standard for all new/updated endpoints:
 }
 ```
 
-Rules:
+The current repo does not fully meet this target. Do not hide that. Improve new work without pretending old endpoints are already consistent.
 
-1. Return structured JSON for errors (do not mix plain text and JSON for the same API family).
-2. Use consistent HTTP status semantics:
-   - `400` bad input
-   - `401` unauthenticated
-   - `403` authenticated but forbidden
-   - `404` resource not found
-   - `500` unexpected server error
-3. Add global exception handling in each service.
+## Configuration
 
-## 7) Configuration Rules
+1. Keep service ports explicit in service config.
+2. Keep inter-service URLs externalized.
+3. Keep credentials and secrets in environment variables or profile config, not hardcoded production values.
+4. QR configuration is environment-driven:
+   - `ATTENDANCE_SERVICE_URL`
+   - `QR_TOKEN_SECRET`
+   - `QR_TOKEN_TTL_SECONDS`
 
-1. Keep `spring.application.name` unique and aligned with service identity.
-2. Keep service ports explicit in each service config.
-3. Use environment variables for credentials and secrets.
-4. Keep inter-service URLs externalized in config (for example `services.user-service.url`).
+## New Endpoint Checklist
 
-Minimum config template:
+Before treating a new endpoint as ready:
 
-```yaml
-server:
-  port: 808X
-
-spring:
-  application:
-    name: <service-name>
-
-services:
-  auth-service:
-    url: http://localhost:8081
-```
-
-## 8) Database Ownership Rules
-
-1. Each service should own its aggregate/domain boundaries.
-2. Avoid direct cross-service database access.
-3. Integrate via HTTP contracts, not shared entity classes.
-
-## 9) New Service Checklist
-
-Before considering a new service endpoint ready:
-
-1. Route added in Traefik with correct middleware.
-2. Endpoint contract documented with request/response examples.
-3. Protected endpoints enforce role checks from `X-User-Roles`.
-4. Outbound calls propagate `X-User-*` headers when needed.
-5. Errors follow the standard JSON shape.
-6. Service config uses env vars for credentials/secrets.
-7. At least one integration test validates auth/header contract behavior.
+1. Gateway route exists if it is browser-facing.
+2. Role and ownership checks are explicit.
+3. Internal calls use a documented `X-Request-Source`.
+4. Request/response examples are in docs.
+5. Frontend service code and docs agree on the route and JSON shape.
+6. Failure cases use coherent HTTP status codes.
+7. Tests cover at least the main auth/header behavior for risky endpoints.

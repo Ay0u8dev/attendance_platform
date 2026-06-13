@@ -52,7 +52,7 @@ Content-Type: application/json
     "gpsLon": "-1.9123"
 }
 ```
-*Response will contain `id` (e.g., `1`).*
+*Response will contain `sessionId` (e.g., `1`).*
 
 ---
 
@@ -93,7 +93,7 @@ Content-Type: application/json
 
 {
     "payload": "{{QR_PAYLOAD}}",
-    "deviceId": "device-uuid-123",
+    "deviceId": "face-device-uuid-456",
     "gpsLat": "34.6894",
     "gpsLon": "-1.9123"
 }
