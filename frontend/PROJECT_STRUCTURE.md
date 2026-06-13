@@ -128,7 +128,7 @@ There are also placeholder authenticated routes for teacher and student dashboar
 Environment:
 
 ```ts
-environment.apiBaseUrl === '/api'
+environment.apiBaseUrl === '/api';
 ```
 
 The browser calls Traefik gateway paths:
