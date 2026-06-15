@@ -2,6 +2,7 @@ package ma.eniad.userservice.controller;
 
 import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Student;
+import ma.eniad.userservice.entity.Teacher;
 import ma.eniad.userservice.entity.enums.CycleType;
 import ma.eniad.userservice.entity.enums.Role;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
@@ -66,6 +67,7 @@ class UserControllerRosterIntegrationTest {
 
     private Long activeGroupId;
     private Long emptyGroupId;
+    private Long teacherId;
 
     @BeforeEach
     void setUp() {
@@ -170,6 +172,15 @@ class UserControllerRosterIntegrationTest {
         inactiveInscription.setGroupe(activeGroup);
         inactiveInscription.setAnneeUniversitaire(inactiveYear);
         inscriptionRepository.save(inactiveInscription);
+
+        Teacher teacher = Teacher.builder()
+                .email("teacher@ump.ac.ma")
+                .firstName("Ayoub")
+                .lastName("Elebbar")
+                .roles(Set.of(Role.TEACHER))
+                .build();
+        teacher = userRepository.save(teacher);
+        teacherId = teacher.getId();
     }
 
     @Test
@@ -242,5 +253,31 @@ class UserControllerRosterIntegrationTest {
                         .queryParam("groupIds", String.valueOf(activeGroupId))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void teacherIdentityReturnsTeacherSnapshotForTrustedCaller() throws Exception {
+        mockMvc.perform(get("/users/internal/teachers/{id}/identity", teacherId)
+                        .header("X-Request-Source", "attendance-service")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.teacherId").value(teacherId))
+                .andExpect(jsonPath("$.firstName").value("Ayoub"))
+                .andExpect(jsonPath("$.lastName").value("Elebbar"));
+    }
+
+    @Test
+    void teacherIdentityRejectsUntrustedCaller() throws Exception {
+        mockMvc.perform(get("/users/internal/teachers/{id}/identity", teacherId)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void teacherIdentityReturnsNotFoundForUnknownTeacher() throws Exception {
+        mockMvc.perform(get("/users/internal/teachers/{id}/identity", teacherId + 999)
+                        .header("X-Request-Source", "attendance-service")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
     }
 }

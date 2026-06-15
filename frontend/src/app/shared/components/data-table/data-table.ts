@@ -51,9 +51,11 @@ export class DataTable<T extends object> {
   readonly showToolbar = input(true);
   readonly enableRowSelection = input(false);
   readonly rowId = input<((row: T, index: number) => string) | undefined>(undefined);
+  readonly rowClickable = input(false);
 
   readonly selectionChange = output<readonly T[]>();
   readonly bulkDeleteRequested = output<readonly T[]>();
+  readonly rowClicked = output<T>();
 
   private readonly cellDefinitions = contentChildren(DataTableCellDef);
 
@@ -384,6 +386,14 @@ export class DataTable<T extends object> {
     }
 
     this.bulkDeleteRequested.emit(selected);
+  }
+
+  handleRowClick(row: T): void {
+    if (!this.rowClickable()) {
+      return;
+    }
+
+    this.rowClicked.emit(row);
   }
 
   isRowSelected(rowId: string): boolean {

@@ -4,13 +4,16 @@ import {
   Component,
   ElementRef,
   computed,
+  effect,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs/operators';
 
 import { AuthService } from '../../core/auth/services/auth.service';
+import { StudentProfileService } from '../../core/student/services/student-profile.service';
 
 type NavItem = {
   label: string;
@@ -77,7 +80,7 @@ type UtilityItem = {
                   <p class="truncate text-sm font-semibold text-principalText">
                     Attendance Platform
                   </p>
-                  <p class="truncate text-xs text-secondaryText">Student dashboard</p>
+                  <p class="truncate text-xs text-secondaryText">Portail étudiant</p>
                 </div>
               }
             </div>
@@ -180,10 +183,10 @@ type UtilityItem = {
                     <p
                       class="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-primary"
                     >
-                      Student workspace
+                      Espace étudiant
                     </p>
                     <h1 class="truncate text-lg font-semibold tracking-tight text-principalText">
-                      Dashboard
+                      {{ pageTitle() }}
                     </h1>
                   </div>
                 </div>
@@ -207,13 +210,24 @@ type UtilityItem = {
                       aria-label="Open user menu"
                     >
                       <span
-                        class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary"
+                        class="flex h-7 w-7 overflow-hidden rounded-lg bg-primary-soft text-primary"
                       >
-                        <i class="fa-solid fa-user-shield text-xs" aria-hidden="true"></i>
+                        @if (profileImageUrl(); as imageUrl) {
+                          <img
+                            [src]="imageUrl"
+                            alt=""
+                            class="h-full w-full object-cover"
+                            (error)="onProfileImageError()"
+                          />
+                        } @else {
+                          <span class="flex h-full w-full items-center justify-center">
+                            <i class="fa-solid fa-user-graduate text-xs" aria-hidden="true"></i>
+                          </span>
+                        }
                       </span>
-                      <span class="hidden text-sm font-medium text-principalText md:inline"
-                        >Prof. Anderson</span
-                      >
+                      <span class="hidden text-sm font-medium text-principalText md:inline">{{
+                        currentUserName()
+                      }}</span>
                       <!-- <i
                       class="fa-solid text-[0.6rem] text-secondaryText"
                       [class.fa-chevron-up]="isUserMenuOpen()"
@@ -229,10 +243,33 @@ type UtilityItem = {
                         <div
                           class="rounded-xl border border-primary-soft bg-primary-soft px-3 py-2"
                         >
-                          <p class="truncate text-sm font-semibold text-principalText">
-                            Prof. Anderson
-                          </p>
-                          <p class="truncate text-xs text-secondaryText">Student</p>
+                          <div class="flex items-center gap-3">
+                            <span
+                              class="flex h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-surface text-primary"
+                            >
+                              @if (profileImageUrl(); as imageUrl) {
+                                <img
+                                  [src]="imageUrl"
+                                  alt=""
+                                  class="h-full w-full object-cover"
+                                  (error)="onProfileImageError()"
+                                />
+                              } @else {
+                                <span class="flex h-full w-full items-center justify-center">
+                                  <i
+                                    class="fa-solid fa-user-graduate text-sm"
+                                    aria-hidden="true"
+                                  ></i>
+                                </span>
+                              }
+                            </span>
+                            <div class="min-w-0">
+                              <p class="truncate text-sm font-semibold text-principalText">
+                                {{ currentUserName() }}
+                              </p>
+                              <p class="truncate text-xs text-secondaryText">Portail étudiant</p>
+                            </div>
+                          </div>
                         </div>
 
                         <button
@@ -241,7 +278,7 @@ type UtilityItem = {
                           (click)="openSettings()"
                         >
                           <i class="fa-solid fa-gear" aria-hidden="true"></i>
-                          <span>Settings</span>
+                          <span>Paramètres</span>
                         </button>
 
                         <button
@@ -250,7 +287,7 @@ type UtilityItem = {
                           (click)="logout()"
                         >
                           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-                          <span>Logout</span>
+                          <span>Déconnexion</span>
                         </button>
                       </div>
                     }
@@ -273,13 +310,22 @@ type UtilityItem = {
 })
 export class StudentLayout {
   private readonly authService = inject(AuthService);
+  private readonly studentProfileService = inject(StudentProfileService);
   private readonly router = inject(Router);
   private readonly userMenuRoot = viewChild<ElementRef<HTMLElement>>('userMenuRoot');
+  private readonly routeTitles: Record<string, string> = {
+    '/student/dashboard': 'Tableau de bord',
+    '/student/sessions': 'Mes sessions',
+    '/student/justifications': 'Justifications',
+  };
 
   readonly navItems: NavItem[] = [
-    { label: 'Dashboard', route: '/student/dashboard', icon: 'fa-solid fa-table-cells-large' },
-    { label: 'My sessions', route: '/student/sessions', icon: 'fa-regular fa-calendar' },
-    { label: 'My absences', route: '/student/absence', icon: 'fa-regular fa-circle-xmark' },
+    {
+      label: 'Tableau de bord',
+      route: '/student/dashboard',
+      icon: 'fa-solid fa-table-cells-large',
+    },
+    { label: 'Mes sessions', route: '/student/sessions', icon: 'fa-regular fa-calendar' },
     {
       label: 'Justifications',
       route: '/student/justifications',
@@ -287,11 +333,12 @@ export class StudentLayout {
     },
   ];
 
-  readonly utilityItems: UtilityItem[] = [{ label: 'Settings', icon: 'fa-solid fa-gear' }];
+  readonly utilityItems: UtilityItem[] = [{ label: 'Paramètres', icon: 'fa-solid fa-gear' }];
 
   readonly isSidebarOpen = signal(false);
   readonly isSidebarCollapsed = signal(false);
   readonly isUserMenuOpen = signal(false);
+  readonly profileImageFailed = signal(false);
   readonly sidebarMotionClasses = computed(() =>
     this.isSidebarOpen() ? 'translate-x-0' : '-translate-x-full',
   );
@@ -300,6 +347,54 @@ export class StudentLayout {
     const desktopWidth = this.isSidebarCollapsed() ? 'lg:w-19' : 'lg:w-68';
     return `${mobileState} w-68 ${desktopWidth}`;
   });
+  readonly currentUserName = computed(() => {
+    const user = this.authService.currentUser;
+    if (!user) {
+      return 'Étudiant';
+    }
+
+    const nameParts = [user.firstName, user.lastName]
+      .filter((value) => typeof value === 'string')
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+    if (nameParts.length > 0) {
+      return nameParts.join(' ');
+    }
+
+    if (typeof user.email === 'string' && user.email.trim().length > 0) {
+      return user.email.trim();
+    }
+
+    return 'Étudiant';
+  });
+  readonly profileImageUrl = computed(() => {
+    if (this.profileImageFailed()) {
+      return null;
+    }
+
+    const value = this.studentProfileService.profile()?.pfpUrl?.trim();
+    return value && value.length > 0 ? value : null;
+  });
+  readonly pageTitle = signal(this.resolvePageTitle(this.router.url));
+
+  constructor() {
+    effect(
+      () => {
+        this.studentProfileService.profile()?.pfpUrl;
+        this.profileImageFailed.set(false);
+      },
+      { allowSignalWrites: true },
+    );
+
+    this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe((event) => {
+        this.pageTitle.set(this.resolvePageTitle(event.urlAfterRedirects));
+        this.studentProfileService.ensureLoaded();
+      });
+
+    this.studentProfileService.ensureLoaded();
+  }
 
   toggleSidebar(): void {
     const nextState = !this.isSidebarOpen();
@@ -354,8 +449,20 @@ export class StudentLayout {
     this.isUserMenuOpen.set(false);
   }
 
+  onProfileImageError(): void {
+    this.profileImageFailed.set(true);
+  }
+
   logout(): void {
     this.isUserMenuOpen.set(false);
     this.authService.logout();
+  }
+
+  private resolvePageTitle(url: string): string {
+    if (url.startsWith('/student/justifications/')) {
+      return 'Détail de justification';
+    }
+
+    return this.routeTitles[url] ?? 'Espace étudiant';
   }
 }

@@ -6,7 +6,6 @@ public record AdminOverviewResponse(
         long finalizedSessions,
         long totalPresentMarks,
         long totalAbsentMarks,
-        double attendanceRate,
-        MethodBreakdownResponse methodBreakdown
+        double attendanceRate
 ) {
 }

@@ -3,7 +3,7 @@
 This document contains the sequence of requests to test the full attendance workflow.
 
 ## Pre-requisites
-- Services running: `traefik`, `auth-service`, `user-service`, `attendance-service`.
+- Services running: `traefik`, `auth-service`, `user-service`, `attendance-service`, `qr-service`.
 - Database seeded (Admin, Teacher, Student1, Student2).
 - Tokens obtained from `/api/auth/login` (simulated below).
 
@@ -48,14 +48,11 @@ Content-Type: application/json
     "groupIds": [1],
     "courseLabel": "Programmation Java",
     "roomLabel": "Amphi A",
-    "method": "QR_CODE",
     "gpsLat": "34.6894",
     "gpsLon": "-1.9123"
 }
 ```
-*Response will contain `id` (e.g., `1`).*
-
-For `FACE_ID`, use `"method": "FACE_ID"` and keep the same session creation payload. The teacher device becomes the scanner, and later marks come from `face-service`.
+*Response will contain `sessionId` (e.g., `1`).*
 
 ---
 
@@ -72,40 +69,53 @@ Connect to WebSocket to receive real-time updates.
 
 ---
 
-## 4. Student: Simulate QR Scan (Internal API)
-Since Postman can't scan a QR code, we simulate the `qr-service` calling the `attendance-service` internal endpoint.
+## 4. Teacher: Generate QR Payload
+The temporary frontend page at `/attendance/qr-display` does this automatically after you paste a teacher JWT. In Postman, call QR service directly through the gateway.
 
 ```http
-POST http://localhost/api/attendance/internal/sessions/1/attendance
-X-Request-Source: qr-service
+POST http://localhost/api/qr/teacher/sessions/1/payload
+Authorization: Bearer {{TEACHER_TOKEN}}
+Content-Type: application/json
+```
+
+Expected response contains `payload`, `expiresAt`, and `refreshAfterSeconds = 30`.
+
+---
+
+## 5. Student: Submit QR Scan
+Use the fresh payload from step 4 before it expires.
+GPS is required and must be close to the coordinates used by the teacher when the session was started.
+
+```http
+POST http://localhost/api/qr/student/scan
+Authorization: Bearer {{STUDENT_TOKEN}}
 Content-Type: application/json
 
 {
-    "studentId": 6,
-    "method": "QR_CODE",
-    "deviceId": "device-uuid-123",
+    "payload": "{{QR_PAYLOAD}}",
+    "deviceId": "face-device-uuid-456",
     "gpsLat": "34.6894",
     "gpsLon": "-1.9123"
 }
 ```
-*Note: Student1 ID is likely `6` based on the seeder order. Verify in `user-db`.*
 *After this request, the Teacher's WebSocket should receive an `ATTENDANCE_UPDATED` event.*
 
-### 4.b Face Session Internal Mark Simulation
+### 5.b Face Internal Mark Simulation
 
-`FACE_ID` is teacher-operated now. The teacher web client talks to `face-service`, then `face-service` calls `attendance-service` after a successful face match.
+Face is also a student-phone choice, but the real face service is not implemented here. For service-level testing only, simulate `face-service` calling attendance-service internally.
+Face uses the same `deviceId`, GPS presence, and distance validation as QR; the face service only adds face-proof validation before making this internal call.
 
 ```http
-POST http://localhost/api/attendance/internal/sessions/1/attendance
+POST http://localhost:8083/attendance/internal/sessions/1/attendance
 X-Request-Source: face-service
 Content-Type: application/json
 
 {
     "studentId": 6,
     "method": "FACE_ID",
-    "deviceId": null,
-    "gpsLat": null,
-    "gpsLon": null
+    "deviceId": "device-uuid-123",
+    "gpsLat": "34.6894",
+    "gpsLon": "-1.9123"
 }
 ```
 
@@ -113,12 +123,11 @@ Expected result:
 
 - student becomes `PRESENT`
 - `markMethod = FACE_ID`
-- `deviceId`, `markedGpsLat`, and `markedGpsLon` stay `null`
-- QR device-binding rules do not apply
+- `deviceId` and GPS are not persisted to finalized records
 
 ---
 
-## 5. Teacher: Manual Attendance Update
+## 6. Teacher: Manual Attendance Update
 The teacher manually marks a student as ABSENT or PRESENT.
 
 ```http
@@ -135,7 +144,7 @@ Content-Type: application/json
 
 ---
 
-## 6. Student: Check Status
+## 7. Student: Check Status
 The student verifies their attendance status for the session.
 
 ```http
@@ -144,11 +153,16 @@ Authorization: Bearer {{STUDENT_TOKEN}}
 ```
 *Note: This will return a 404 until the session is finalized (ended).*
 
-To check active session records (not yet finalized) if implemented, but currently the `AttendanceStudentController` only returns records for finalized sessions.
+To check active session status before finalization:
+
+```http
+GET http://localhost/api/attendance/student/sessions/active
+Authorization: Bearer {{STUDENT_TOKEN}}
+```
 
 ---
 
-## 7. Teacher: End Session
+## 8. Teacher: End Session
 Teacher finalizes the session.
 
 ```http
@@ -159,7 +173,7 @@ Authorization: Bearer {{TEACHER_TOKEN}}
 
 ---
 
-## 8. Admin: Overview
+## 9. Admin: Overview
 Admin checks the global attendance stats.
 
 ```http

@@ -1,0 +1,156 @@
+.attendance-media-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  max-height: min(62vh, 34rem);
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid var(--color-line);
+  background: #000;
+}
+
+.attendance-media-frame :is(zxing-scanner, video, canvas, img) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.attendance-media-frame :is(video, canvas, img) {
+  object-fit: cover;
+}
+
+.qr-scanner-frame zxing-scanner {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+:host ::ng-deep .qr-scanner-frame zxing-scanner video,
+:host ::ng-deep .qr-scanner-frame zxing-scanner canvas {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+
+.attendance-overlay {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, #000 12%, transparent);
+}
+
+.qr-target {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(74%, 18rem);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 1px solid color-mix(in srgb, #fff 22%, transparent);
+  border-radius: 1.2rem;
+}
+
+.qr-corner {
+  position: absolute;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-style: solid;
+  border-color: #fff;
+}
+
+.qr-corner-top-left {
+  top: -0.25rem;
+  left: -0.25rem;
+  border-top-width: 4px;
+  border-left-width: 4px;
+  border-top-left-radius: 1.2rem;
+}
+
+.qr-corner-top-right {
+  top: -0.25rem;
+  right: -0.25rem;
+  border-top-width: 4px;
+  border-right-width: 4px;
+  border-top-right-radius: 1.2rem;
+}
+
+.qr-corner-bottom-left {
+  bottom: -0.25rem;
+  left: -0.25rem;
+  border-bottom-width: 4px;
+  border-left-width: 4px;
+  border-bottom-left-radius: 1.2rem;
+}
+
+.qr-corner-bottom-right {
+  right: -0.25rem;
+  bottom: -0.25rem;
+  border-right-width: 4px;
+  border-bottom-width: 4px;
+  border-bottom-right-radius: 1.2rem;
+}
+
+.face-guide {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: min(58%, 15rem);
+  aspect-ratio: 3 / 4;
+  transform: translate(-50%, -50%);
+  border: 2px solid color-mix(in srgb, #fff 88%, transparent);
+  border-radius: 42% 42% 46% 46%;
+  box-shadow:
+    0 0 0 999px color-mix(in srgb, #000 12%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+.face-guide::before,
+.face-guide::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: 34%;
+  transform: translateX(-50%);
+  border-top: 1px solid color-mix(in srgb, #fff 55%, transparent);
+}
+
+.face-guide::before {
+  top: 34%;
+}
+
+.face-guide::after {
+  top: 58%;
+}
+
+.media-caption {
+  position: absolute;
+  inset-inline: 1rem;
+  bottom: 1rem;
+  border-radius: 0.875rem;
+  background: color-mix(in srgb, #000 68%, transparent);
+  padding: 0.55rem 0.75rem;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .attendance-media-frame {
+    aspect-ratio: 16 / 10;
+    max-height: min(64vh, 31rem);
+  }
+
+  .face-guide {
+    width: min(38%, 14rem);
+  }
+}
+
+@media (max-width: 420px) {
+  .media-caption {
+    inset-inline: 0.75rem;
+    bottom: 0.75rem;
+  }
+}

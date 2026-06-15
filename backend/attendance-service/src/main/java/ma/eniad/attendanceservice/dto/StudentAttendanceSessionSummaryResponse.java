@@ -9,10 +9,10 @@ import java.util.List;
 
 public record StudentAttendanceSessionSummaryResponse(
         Long sessionId,
+        String teacherFullName,
         String courseLabel,
         String roomLabel,
         List<Long> groupIds,
-        AttendanceSessionMethod sessionMethod,
         AttendanceSessionStatus sessionStatus,
         LocalDateTime startedAt,
         LocalDateTime endedAt,

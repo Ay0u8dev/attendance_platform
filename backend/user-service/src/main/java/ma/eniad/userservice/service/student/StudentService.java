@@ -8,17 +8,27 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
+import ma.eniad.userservice.dto.student.StudentProfileDto;
 import ma.eniad.userservice.dto.student.StudentRequestDTO;
 import ma.eniad.userservice.dto.student.StudentResponseDTO;
+import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Student;
 import ma.eniad.userservice.entity.enums.Role;
+import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
+import ma.eniad.userservice.entity.structure.Filiere;
+import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.exception.DuplicateResourceException;
 import ma.eniad.userservice.exception.InvalidDomainException;
 import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.mapper.student.StudentMapper;
+import ma.eniad.userservice.repository.inscription.InscriptionRepository;
 import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
+import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
+import ma.eniad.userservice.service.UserContext;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +36,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class StudentService {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
+    private final InscriptionRepository inscriptionRepository;
+    private final AnneeUniversitaireRepository anneeUniversitaireRepository;
     private final StudentMapper      studentMapper;
 
     @Value("${app.allowed-domain}")
@@ -75,6 +87,35 @@ public class StudentService {
         return studentRepository.findAll().stream()
                 .map(studentMapper::toResponse)
                 .toList();
+    }
+
+    public StudentProfileDto getCurrentProfile() {
+        UserContext.UserInfo context = UserContext.getCurrentUser();
+        if (context == null || context.getUserId() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing user context");
+        }
+
+        Long studentId;
+        try {
+            studentId = Long.parseLong(context.getUserId());
+        } catch (NumberFormatException ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid user id");
+        }
+
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+
+        StudentProfileDto.StudentProfileDtoBuilder builder = StudentProfileDto.builder()
+                .id(student.getId())
+                .email(student.getEmail())
+                .firstName(student.getFirstName())
+                .lastName(student.getLastName())
+                .pfpUrl(student.getPfpUrl())
+                .numApogee(student.getNumApogee());
+
+        applyEnrollmentDetails(builder, student);
+
+        return builder.build();
     }
 
     // -------------------------------------------------------------------------
@@ -129,6 +170,33 @@ public class StudentService {
     private Student findStudentById(Long id) {
         return studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+    }
+
+    private void applyEnrollmentDetails(StudentProfileDto.StudentProfileDtoBuilder builder, Student student) {
+        List<AnneeUniversitaire> activeYears = anneeUniversitaireRepository.findByActiveTrue();
+        if (activeYears.isEmpty()) {
+            return;
+        }
+
+        Long activeYearId = activeYears.get(0).getId();
+        Inscription inscription = inscriptionRepository
+                .findActiveByStudentIdAndYearId(student.getId(), activeYearId)
+                .orElse(null);
+        if (inscription == null) {
+            return;
+        }
+
+        Groupe groupe = inscription.getGroupe();
+        if (groupe != null) {
+            builder.groupe(groupe.getName());
+
+            if (groupe.getFormation() != null) {
+                Filiere filiere = groupe.getFormation().getFiliere();
+                if (filiere != null) {
+                    builder.filiere(filiere.getCode());
+                }
+            }
+        }
     }
 
     private void validateEmailDomain(String email) {

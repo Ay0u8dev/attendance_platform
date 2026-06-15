@@ -37,8 +37,8 @@ class AttendanceSessionReadServiceTest {
         AttendanceSession session = baseSession(AttendanceSessionStatus.ACTIVE);
         when(attendanceSessionRepository.findByIdAndTeacherId(100L, 77L)).thenReturn(Optional.of(session));
         when(liveAttendanceSessionStore.findSessionMeta(100L)).thenReturn(Optional.of(new LiveAttendanceSessionMeta(
-                100L, 77L, List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
-                session.getStartedAt(), session.getEndsAt(), AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.ACTIVE
+                100L, 77L, "Ayoub Elebbar", List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
+                session.getStartedAt(), session.getEndsAt(), AttendanceSessionStatus.ACTIVE
         )));
         when(liveAttendanceSessionStore.findAllStudentStates(100L)).thenReturn(List.of(
                 new LiveAttendanceStudentState(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001",
@@ -52,9 +52,10 @@ class AttendanceSessionReadServiceTest {
         AttendanceSessionDetailsResponse response = attendanceSessionReadService.getSession(100L, 77L);
 
         assertThat(response.status()).isEqualTo(AttendanceSessionStatus.ACTIVE);
+        assertThat(response.teacherFullName()).isEqualTo("Ayoub Elebbar");
         assertThat(response.presentCount()).isEqualTo(1);
         assertThat(response.students()).hasSize(2);
-        assertThat(response.students().getFirst().markedGpsLat()).isEqualTo("34.6820");
+        assertThat(response.students().getFirst().markMethod()).isEqualTo(AttendanceSessionMethod.QR_CODE);
         assertThat(response.students().getLast().status()).isEqualTo(AttendanceStudentStatus.UNKNOWN);
     }
 
@@ -75,9 +76,6 @@ class AttendanceSessionReadServiceTest {
                         .status(AttendanceStudentStatus.PRESENT)
                         .markMethod(AttendanceSessionMethod.QR_CODE)
                         .markedAt(LocalDateTime.of(2026, 4, 28, 12, 5))
-                        .deviceId("phone-10")
-                        .markedGpsLat("34.6820")
-                        .markedGpsLon("-1.9091")
                         .build(),
                 AttendanceRecord.builder()
                         .sessionId(100L)
@@ -95,11 +93,12 @@ class AttendanceSessionReadServiceTest {
         AttendanceSessionDetailsResponse response = attendanceSessionReadService.getSession(100L, 77L);
 
         assertThat(response.status()).isEqualTo(AttendanceSessionStatus.FINALIZED);
+        assertThat(response.teacherFullName()).isEqualTo("Ayoub Elebbar");
         assertThat(response.presentCount()).isEqualTo(1);
         assertThat(response.absentCount()).isEqualTo(1);
         assertThat(response.unknownCount()).isZero();
         assertThat(response.students().getFirst().firstName()).isEqualTo("Aya");
-        assertThat(response.students().getFirst().markedGpsLon()).isEqualTo("-1.9091");
+        assertThat(response.students().getFirst().markMethod()).isEqualTo(AttendanceSessionMethod.QR_CODE);
         assertThat(response.students().getLast().markMethod()).isNull();
     }
 
@@ -108,8 +107,8 @@ class AttendanceSessionReadServiceTest {
         AttendanceSession session = baseSession(AttendanceSessionStatus.ACTIVE);
         when(attendanceSessionRepository.findByIdAndTeacherId(100L, 77L)).thenReturn(Optional.of(session));
         when(liveAttendanceSessionStore.findSessionMeta(100L)).thenReturn(Optional.of(new LiveAttendanceSessionMeta(
-                100L, 88L, List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
-                session.getStartedAt(), session.getEndsAt(), AttendanceSessionMethod.QR_CODE, AttendanceSessionStatus.ACTIVE
+                100L, 88L, "Wrong Teacher", List.of(1L), "Distributed Systems", "Room B12", "34.6814", "-1.9086",
+                session.getStartedAt(), session.getEndsAt(), AttendanceSessionStatus.ACTIVE
         )));
 
         assertThatThrownBy(() -> attendanceSessionReadService.getSession(100L, 77L))
@@ -122,6 +121,7 @@ class AttendanceSessionReadServiceTest {
         return AttendanceSession.builder()
                 .id(100L)
                 .teacherId(77L)
+                .teacherFullName("Ayoub Elebbar")
                 .groupIds(List.of(1L))
                 .courseLabel("Distributed Systems")
                 .roomLabel("Room B12")

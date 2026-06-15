@@ -70,13 +70,4 @@ public class AttendanceRecord {
 
     @Column(nullable = true)
     private LocalDateTime markedAt;
-
-    @Column(nullable = true)
-    private String deviceId;
-
-    @Column(nullable = true)
-    private String markedGpsLat;
-
-    @Column(nullable = true)
-    private String markedGpsLon;
 }

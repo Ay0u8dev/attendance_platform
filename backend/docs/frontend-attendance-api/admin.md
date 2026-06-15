@@ -14,10 +14,9 @@ Query params:
 
 - `teacherId` optional
 - `groupId` optional
-- `method` optional
 - `status` optional
-- `dateFrom` optional ISO date-time
-- `dateTo` optional ISO date-time
+- `dateFrom` optional ISO date
+- `dateTo` optional ISO date
 - `page` optional, default `0`
 - `size` optional, default `20`
 - `sort` optional
@@ -26,13 +25,13 @@ Success response:
 
 ```json
 {
-  "content": [
+  "items": [
     {
       "sessionId": 5,
+      "teacherFullName": "Ayoub Elebbar",
       "courseLabel": "Distributed Systems",
       "roomLabel": "Room B12",
       "groupIds": [1, 2],
-      "method": "QR_CODE",
       "status": "FINALIZED",
       "startedAt": "2026-04-28T12:00:00",
       "endedAt": "2026-04-28T12:30:00",
@@ -44,8 +43,7 @@ Success response:
   "page": 0,
   "size": 20,
   "totalElements": 1,
-  "totalPages": 1,
-  "last": true
+  "totalPages": 1
 }
 ```
 
@@ -88,12 +86,7 @@ Success response:
   "finalizedSessions": 117,
   "totalPresentMarks": 3800,
   "totalAbsentMarks": 640,
-  "attendanceRate": 85.59,
-  "methodBreakdown": {
-    "qrCodeSessions": 80,
-    "faceIdSessions": 25,
-    "manualSessions": 15
-  }
+  "attendanceRate": 85.59
 }
 ```
 
