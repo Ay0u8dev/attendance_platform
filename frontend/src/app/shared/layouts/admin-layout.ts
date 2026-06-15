@@ -282,6 +282,7 @@ export class AdminLayout {
     { label: 'Justifications', route: '/justifications', icon: 'fa-regular fa-file-lines' },
     { label: 'Students', route: '/students', icon: 'fa-solid fa-user-graduate' },
     { label: 'Teachers', route: '/teachers', icon: 'fa-solid fa-chalkboard-user' },
+    { label: 'Inscription', route: '/inscription', icon: 'fa-solid fa-clipboard-list' },
     { label: 'Structure', route: '/structure', icon: 'fa-solid fa-sitemap' },
   ];
 
