@@ -32,7 +32,7 @@ import ma.eniad.userservice.entity.Inscription;
     name = "formations",
     uniqueConstraints = @UniqueConstraint(
         name = "uk_formations_year_filiere_cycle",
-        columnNames = {"annee_univ_id", "filiere_id", "cycle_id"}
+        columnNames = {"annee_univ_id", "cycle_id", "name"}
     ),
     indexes = {
         @Index(name = "idx_formations_annee_univ", columnList = "annee_univ_id"),
@@ -44,7 +44,7 @@ public class Formation extends BaseEntity {
 
     @NotBlank
     @Size(max = 60)
-    @Column(nullable = false, unique = true, length = 60)
+    @Column(nullable = false, length = 60)
     private String name;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

@@ -11,9 +11,11 @@ public class InscriptionResponseDTO {
     private Long id;
 
     private Long studentId;
-    private String studentName;
+    private String studentFirstName;
+    private String studentLastName;
 
     private Long formationId;
+    private String formationName;
 
     private Long groupeId;
     private String groupeName;

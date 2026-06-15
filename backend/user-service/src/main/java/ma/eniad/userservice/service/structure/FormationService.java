@@ -1,6 +1,7 @@
 package ma.eniad.userservice.service.structure;
 
 import java.util.List;
+import java.util.Objects;
 
 import lombok.RequiredArgsConstructor;
 import ma.eniad.userservice.dto.structure.FormationRequestDTO;
@@ -71,10 +72,9 @@ public class FormationService {
         Formation entity = getEntity(id);
 
         // Check for duplicate name (excluding the current entity)
-        if (!entity.getName().equals(request.getName()) && repository.existsByName(request.getName())) {
+        if (!Objects.equals(entity.getName(), request.getName()) && repository.existsByName(request.getName())) {
             throw new DuplicateResourceException("Formation already exists with name: " + request.getName());
         }
-
         boolean sameCombination = sameCombination(entity, request);
         if (!sameCombination && repository.existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(
                 request.getAnneeUniversitaireId(),

@@ -29,8 +29,10 @@ public interface InscriptionMapper {
     void updateEntity(InscriptionRequestDTO dto, @MappingTarget Inscription entity);
 
     @Mapping(target = "studentId", source = "student.id")
-    @Mapping(target = "studentName", source = "student.firstName")
+    @Mapping(target = "studentFirstName", source = "student.firstName")
+    @Mapping(target = "studentLastName", source = "student.lastName")
     @Mapping(target = "formationId", source = "formation.id")
+    @Mapping(target = "formationName", source = "formation.name")
     @Mapping(target = "groupeId", source = "groupe.id")
     @Mapping(target = "groupeName", source = "groupe.name")
     @Mapping(target = "academicYearId", source = "anneeUniversitaire.id")

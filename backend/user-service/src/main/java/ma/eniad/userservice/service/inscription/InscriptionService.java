@@ -113,9 +113,6 @@ public class InscriptionService {
         Inscription inscription = findInscription(id);
         inscriptionRepository.delete(inscription);
     }
-
-
-
     
     // HELPERS (clean separation)
     private Student findStudent(Long id) {

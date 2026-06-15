@@ -23,4 +23,10 @@ public class StudentExcelRowDTO {
     private String email;
 
     private String numApogee;
+
+    private String academicYear;
+
+    private String formationName;
+
+    private String groupeCode;
 }

@@ -55,6 +55,9 @@ public class StudentExcelParser {
                     .lastName(getCellValue(row.getCell(1)))
                     .email(getCellValue(row.getCell(2)))
                     .numApogee(getCellValue(row.getCell(3)))
+                    .academicYear(getCellValue(row.getCell(4)))
+                    .formationName(getCellValue(row.getCell(5)))
+                    .groupeCode(getCellValue(row.getCell(6)))
                     .build();
 
                 rows.add(excelRow);

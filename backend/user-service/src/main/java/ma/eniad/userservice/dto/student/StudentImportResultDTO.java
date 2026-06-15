@@ -20,9 +20,18 @@ public class StudentImportResultDTO {
     private LocalDateTime importedAt;
 
     private int totalRows;
+    private int successfulRows;
     private int createdStudents;
     private int updatedStudents;
+    private int createdInscriptions;
+    private int duplicateInscriptions;
     private int failedRows;
+
+    private int missingAcademicYears;
+    private int missingFormations;
+    private int missingGroups;
+
+    private long processingTimeMs;
 
 
     private String status; // SUCCESS | PARTIAL | FAILED
