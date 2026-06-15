@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
+import { DropdownFilter } from '../dropdown-filter/dropdown-filter';
 import { DataTableColumnVisibilityOption, DataTableToolbarFilter } from './data-table.types';
 
 @Component({
   selector: 'app-data-table-toolbar',
+  imports: [DropdownFilter],
   template: `
     <div class="flex flex-col gap-4 border-b border-line px-5 py-4 sm:px-6">
       <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -27,21 +29,19 @@ import { DataTableColumnVisibilityOption, DataTableToolbarFilter } from './data-
 
           @for (filter of filterControls(); track filter.columnId) {
             @if (filter.type === 'select') {
-              <label class="flex min-w-40 flex-col gap-1">
-                <span class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
-                  {{ filter.label }}
-                </span>
-                <select
-                  class="h-11 rounded-2xl border border-line bg-surface px-3 text-sm text-principalText outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary-soft"
+              <div class="min-w-56">
+                <app-dropdown-filter
+                  [label]="filter.label"
+                  [identifier]="'table-filter-' + filter.columnId"
+                  [allLabel]="filter.placeholder"
+                  [options]="filter.options"
                   [value]="filter.value"
-                  (change)="handleFilterChange(filter.columnId, $event)"
-                >
-                  <option value="">{{ filter.placeholder }}</option>
-                  @for (option of filter.options; track option.value) {
-                    <option [value]="option.value">{{ option.label }}</option>
-                  }
-                </select>
-              </label>
+                  [iconClass]="filterIcon(filter.columnId)"
+                  [iconBackgroundClass]="filterIconBackground(filter.columnId)"
+                  [iconColor]="filterIconColor(filter.columnId)"
+                  (filterChange)="handleDropdownFilterChange(filter.columnId, $event)"
+                ></app-dropdown-filter>
+              </div>
             } @else {
               <label class="flex min-w-40 flex-col gap-1">
                 <span class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
@@ -156,10 +156,46 @@ export class DataTableToolbar {
     }
   }
 
+  handleDropdownFilterChange(columnId: string, value: string | null): void {
+    this.filterValueChange.emit({ columnId, value: value ?? '' });
+  }
+
   handleColumnToggle(columnId: string, event: Event): void {
     const target = event.target;
     if (target instanceof HTMLInputElement) {
       this.columnVisibilityChange.emit({ columnId, visible: target.checked });
     }
+  }
+
+  filterIcon(columnId: string): string {
+    const normalized = columnId.toLowerCase();
+
+    if (normalized.includes('status')) return 'fa-solid fa-circle-check';
+    if (normalized.includes('group')) return 'fa-solid fa-users';
+    if (normalized.includes('cycle')) return 'fa-solid fa-graduation-cap';
+    if (normalized.includes('year')) return 'fa-regular fa-calendar';
+    if (normalized.includes('module')) return 'fa-solid fa-layer-group';
+    if (normalized.includes('teacher')) return 'fa-solid fa-chalkboard-user';
+    if (normalized.includes('student')) return 'fa-solid fa-user-graduate';
+
+    return 'fa-solid fa-filter';
+  }
+
+  filterIconBackground(columnId: string): string {
+    const normalized = columnId.toLowerCase();
+
+    if (normalized.includes('status') || normalized.includes('year')) return 'bg-warning-soft';
+    if (normalized.includes('module') || normalized.includes('group')) return 'bg-secondary-soft';
+
+    return 'bg-primary-soft';
+  }
+
+  filterIconColor(columnId: string): 'primary' | 'secondary' | 'warning' {
+    const normalized = columnId.toLowerCase();
+
+    if (normalized.includes('status') || normalized.includes('year')) return 'warning';
+    if (normalized.includes('module') || normalized.includes('group')) return 'secondary';
+
+    return 'primary';
   }
 }

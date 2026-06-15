@@ -1,6 +1,17 @@
-import { ChangeDetectionStrategy, Component, input, output, signal, computed, effect } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  HostListener,
+  computed,
+  effect,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgFor, NgIf } from '@angular/common';
+import { NgFor, NgIf, NgStyle } from '@angular/common';
 
 export interface DropdownOption {
   value: string;
@@ -10,7 +21,7 @@ export interface DropdownOption {
 @Component({
   selector: 'app-dropdown-filter',
   standalone: true,
-  imports: [FormsModule, NgFor, NgIf],
+  imports: [FormsModule, NgFor, NgIf, NgStyle],
   template: `
     <div class="w-full">
       <!-- Label Section -->
@@ -25,6 +36,7 @@ export interface DropdownOption {
       <div class="relative" [class.group]="isOpen()">
         <!-- Custom Dropdown Display Button -->
         <button
+          #triggerButton
           type="button"
           [id]="'filter-' + identifier"
           (click)="toggleDropdown()"
@@ -44,7 +56,8 @@ export interface DropdownOption {
         <!-- Options Dropdown Panel -->
         <div
           *ngIf="isOpen()"
-          class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border-2 border-line shadow-lg z-30 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-96 flex flex-col"
+          class="fixed bg-white rounded-xl border-2 border-line shadow-lg z-[70] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 flex flex-col"
+          [ngStyle]="panelStyle()"
         >
           <!-- Search Input -->
           <div class="sticky top-0 p-3 bg-white border-b border-line">
@@ -106,7 +119,7 @@ export interface DropdownOption {
         <div
           *ngIf="isOpen()"
           (click)="closeDropdown()"
-          class="fixed inset-0 z-20"
+          class="fixed inset-0 z-[60]"
         ></div>
       </div>
     </div>
@@ -154,10 +167,12 @@ export interface DropdownOption {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DropdownFilter {
+  private readonly triggerButton = viewChild<ElementRef<HTMLButtonElement>>('triggerButton');
+
   readonly identifier = input.required<string>();
   readonly label = input.required<string>();
   readonly allLabel = input('Tous les éléments');
-  readonly options = input.required<DropdownOption[]>();
+  readonly options = input.required<readonly DropdownOption[]>();
   readonly value = input<string | null>(null);
   readonly iconClass = input.required<string>();
   readonly iconBackgroundClass = input.required<string>();
@@ -167,6 +182,7 @@ export class DropdownFilter {
   readonly isOpen = signal<boolean>(false);
   readonly selectedValue = signal<string>('');
   readonly searchQuery = signal<string>('');
+  readonly panelStyle = signal<Record<string, string>>({});
 
   readonly selectedLabel = computed(() => {
     if (!this.selectedValue()) return null;
@@ -187,9 +203,27 @@ export class DropdownFilter {
     this.selectedValue.set(this.value() ?? '');
   });
 
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    if (this.isOpen()) {
+      this.updatePanelPosition();
+    }
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    if (this.isOpen()) {
+      this.updatePanelPosition();
+    }
+  }
+
   toggleDropdown(): void {
-    this.isOpen.set(!this.isOpen());
-    if (!this.isOpen()) {
+    const nextState = !this.isOpen();
+    this.isOpen.set(nextState);
+
+    if (nextState) {
+      window.setTimeout(() => this.updatePanelPosition());
+    } else {
       this.searchQuery.set('');
     }
   }
@@ -207,5 +241,35 @@ export class DropdownFilter {
     this.selectedValue.set(value);
     this.filterChange.emit(value || null);
     this.closeDropdown();
+  }
+
+  private updatePanelPosition(): void {
+    const trigger = this.triggerButton()?.nativeElement;
+    if (!trigger) {
+      return;
+    }
+
+    const rect = trigger.getBoundingClientRect();
+    const viewportPadding = 16;
+    const gap = 8;
+    const maximumPanelHeight = 384;
+    const minimumPanelHeight = 180;
+    const availableBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
+    const availableAbove = rect.top - viewportPadding - gap;
+    const openAbove = availableBelow < minimumPanelHeight && availableAbove > availableBelow;
+    const availableSpace = openAbove ? availableAbove : availableBelow;
+    const panelHeight = Math.min(maximumPanelHeight, Math.max(minimumPanelHeight, availableSpace));
+    const top = openAbove ? rect.top - panelHeight - gap : rect.bottom + gap;
+    const left = Math.min(
+      Math.max(viewportPadding, rect.left),
+      window.innerWidth - rect.width - viewportPadding,
+    );
+
+    this.panelStyle.set({
+      top: `${Math.max(viewportPadding, top)}px`,
+      left: `${left}px`,
+      width: `${rect.width}px`,
+      maxHeight: `${panelHeight}px`,
+    });
   }
 }
