@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 
+import { DropdownFilter } from '../../../shared/components/dropdown-filter/dropdown-filter';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
 
 type JustificationStatus = 'pending' | 'approved' | 'rejected';
 type ViewMode = 'grid' | 'list';
 type TabKey = 'all' | 'pending' | 'approved' | 'rejected';
-type DropdownKey = 'module' | 'filiere' | 'groupe' | 'periode' | null;
 
 type Justification = {
   readonly id: string;
@@ -28,10 +28,7 @@ type Option = { readonly value: string; readonly label: string };
 
 @Component({
   selector: 'app-justifications-page',
-  imports: [StatusBadge],
-  host: {
-    '(document:keydown.escape)': 'closeDropdown()',
-  },
+  imports: [DropdownFilter, StatusBadge],
   template: `
     <section class="space-y-5">
       <!-- Title row -->
@@ -117,138 +114,41 @@ type Option = { readonly value: string; readonly label: string };
       <div
         class="grid gap-3 rounded-2xl border border-line bg-surface p-4 shadow-card sm:grid-cols-2 lg:grid-cols-5"
       >
-        <!-- Module dropdown -->
-        <div class="relative">
-          <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-            Module
-          </span>
-          <button
-            type="button"
-            class="flex w-full items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
-            (click)="toggleDropdown('module', $event)"
-            [attr.aria-expanded]="openDropdown() === 'module'"
-          >
-            <span class="inline-flex items-center gap-2 truncate">
-              <i class="fa-regular fa-folder text-muted" aria-hidden="true"></i>
-              <span class="truncate">{{ labelOf(moduleOptions, moduleFilter()) }}</span>
-            </span>
-            <i class="fa-solid fa-chevron-down text-[0.65rem] text-muted" aria-hidden="true"></i>
-          </button>
-
-          @if (openDropdown() === 'module') {
-            <div
-              class="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-line bg-surface shadow-card-strong"
-              role="menu"
-            >
-              @for (opt of moduleOptions; track opt.value) {
-                <button
-                  type="button"
-                  role="menuitemradio"
-                  [attr.aria-checked]="moduleFilter() === opt.value"
-                  class="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm transition-colors duration-200 hover:bg-surface-subtle"
-                  [class.bg-primary-soft]="moduleFilter() === opt.value"
-                  [class.text-primary]="moduleFilter() === opt.value"
-                  [class.text-principalText]="moduleFilter() !== opt.value"
-                  (click)="selectFilter('module', opt.value)"
-                >
-                  <span class="truncate">{{ opt.label }}</span>
-                  @if (moduleFilter() === opt.value) {
-                    <i class="fa-solid fa-check text-xs" aria-hidden="true"></i>
-                  }
-                </button>
-              }
-            </div>
-          }
-        </div>
+        <app-dropdown-filter
+          label="Module"
+          identifier="justification-module"
+          allLabel="Tous les modules"
+          [options]="moduleDropdownOptions()"
+          [value]="dropdownValue(moduleFilter())"
+          iconClass="fa-regular fa-folder"
+          iconBackgroundClass="bg-primary-soft"
+          (filterChange)="selectFilter('module', $event)"
+        ></app-dropdown-filter>
 
         <!-- Filière dropdown -->
-        <div class="relative">
-          <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-            Filière
-          </span>
-          <button
-            type="button"
-            class="flex w-full items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
-            (click)="toggleDropdown('filiere', $event)"
-            [attr.aria-expanded]="openDropdown() === 'filiere'"
-          >
-            <span class="inline-flex items-center gap-2 truncate">
-              <i class="fa-solid fa-layer-group text-muted" aria-hidden="true"></i>
-              <span class="truncate">{{ labelOf(filiereOptions, filiereFilter()) }}</span>
-            </span>
-            <i class="fa-solid fa-chevron-down text-[0.65rem] text-muted" aria-hidden="true"></i>
-          </button>
+        <app-dropdown-filter
+          label="Filiere"
+          identifier="justification-filiere"
+          allLabel="Toutes filieres"
+          [options]="filiereDropdownOptions()"
+          [value]="dropdownValue(filiereFilter())"
+          iconClass="fa-solid fa-layer-group"
+          iconBackgroundClass="bg-secondary-soft"
+          iconColor="secondary"
+          (filterChange)="selectFilter('filiere', $event)"
+        ></app-dropdown-filter>
 
-          @if (openDropdown() === 'filiere') {
-            <div
-              class="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-line bg-surface shadow-card-strong"
-              role="menu"
-            >
-              @for (opt of filiereOptions; track opt.value) {
-                <button
-                  type="button"
-                  role="menuitemradio"
-                  [attr.aria-checked]="filiereFilter() === opt.value"
-                  class="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm transition-colors duration-200 hover:bg-surface-subtle"
-                  [class.bg-primary-soft]="filiereFilter() === opt.value"
-                  [class.text-primary]="filiereFilter() === opt.value"
-                  [class.text-principalText]="filiereFilter() !== opt.value"
-                  (click)="selectFilter('filiere', opt.value)"
-                >
-                  <span class="truncate">{{ opt.label }}</span>
-                  @if (filiereFilter() === opt.value) {
-                    <i class="fa-solid fa-check text-xs" aria-hidden="true"></i>
-                  }
-                </button>
-              }
-            </div>
-          }
-        </div>
-
-        <!-- Groupe dropdown -->
-        <div class="relative">
-          <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-            Groupe
-          </span>
-          <button
-            type="button"
-            class="flex w-full items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
-            (click)="toggleDropdown('groupe', $event)"
-            [attr.aria-expanded]="openDropdown() === 'groupe'"
-          >
-            <span class="inline-flex items-center gap-2 truncate">
-              <i class="fa-solid fa-users text-muted" aria-hidden="true"></i>
-              <span class="truncate">{{ labelOf(groupeOptions, groupeFilter()) }}</span>
-            </span>
-            <i class="fa-solid fa-chevron-down text-[0.65rem] text-muted" aria-hidden="true"></i>
-          </button>
-
-          @if (openDropdown() === 'groupe') {
-            <div
-              class="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-line bg-surface shadow-card-strong"
-              role="menu"
-            >
-              @for (opt of groupeOptions; track opt.value) {
-                <button
-                  type="button"
-                  role="menuitemradio"
-                  [attr.aria-checked]="groupeFilter() === opt.value"
-                  class="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm transition-colors duration-200 hover:bg-surface-subtle"
-                  [class.bg-primary-soft]="groupeFilter() === opt.value"
-                  [class.text-primary]="groupeFilter() === opt.value"
-                  [class.text-principalText]="groupeFilter() !== opt.value"
-                  (click)="selectFilter('groupe', opt.value)"
-                >
-                  <span class="truncate">{{ opt.label }}</span>
-                  @if (groupeFilter() === opt.value) {
-                    <i class="fa-solid fa-check text-xs" aria-hidden="true"></i>
-                  }
-                </button>
-              }
-            </div>
-          }
-        </div>
-
+        <app-dropdown-filter
+          label="Groupe"
+          identifier="justification-groupe"
+          allLabel="Tous les groupes"
+          [options]="groupeDropdownOptions()"
+          [value]="dropdownValue(groupeFilter())"
+          iconClass="fa-solid fa-users"
+          iconBackgroundClass="bg-warning-soft"
+          iconColor="warning"
+          (filterChange)="selectFilter('groupe', $event)"
+        ></app-dropdown-filter>
         <!-- Période (date range) -->
         <label class="block text-xs">
           <span class="mb-1 block font-semibold uppercase tracking-[0.14em] text-muted">
@@ -538,17 +438,6 @@ type Option = { readonly value: string; readonly label: string };
           </aside>
         }
       </div>
-
-      <!-- Click-away backdrop for dropdowns -->
-      @if (openDropdown() !== null) {
-        <button
-          type="button"
-          class="fixed inset-0 z-20 cursor-default bg-transparent"
-          (click)="closeDropdown()"
-          aria-label="Fermer le menu"
-          tabindex="-1"
-        ></button>
-      }
     </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -588,7 +477,6 @@ export class JustificationsPage {
 
   readonly activeTab = signal<TabKey>('all');
   readonly viewMode = signal<ViewMode>('list');
-  readonly openDropdown = signal<DropdownKey>(null);
 
   readonly moduleFilter = signal('all');
   readonly filiereFilter = signal('all');
@@ -597,6 +485,15 @@ export class JustificationsPage {
   readonly searchQuery = signal('');
 
   readonly selectedId = signal<string | null>('JST-2024-3');
+  readonly moduleDropdownOptions = computed(() =>
+    this.moduleOptions.filter((option) => option.value !== 'all'),
+  );
+  readonly filiereDropdownOptions = computed(() =>
+    this.filiereOptions.filter((option) => option.value !== 'all'),
+  );
+  readonly groupeDropdownOptions = computed(() =>
+    this.groupeOptions.filter((option) => option.value !== 'all'),
+  );
 
   private readonly justifications = signal<readonly Justification[]>([
     {
@@ -809,20 +706,11 @@ export class JustificationsPage {
 
   // -------- Dropdown actions --------
 
-  toggleDropdown(key: Exclude<DropdownKey, null>, event: Event): void {
-    event.stopPropagation();
-    this.openDropdown.update((current) => (current === key ? null : key));
-  }
-
-  closeDropdown(): void {
-    this.openDropdown.set(null);
-  }
-
-  selectFilter(key: 'module' | 'filiere' | 'groupe', value: string): void {
-    if (key === 'module') this.moduleFilter.set(value);
-    if (key === 'filiere') this.filiereFilter.set(value);
-    if (key === 'groupe') this.groupeFilter.set(value);
-    this.closeDropdown();
+  selectFilter(key: 'module' | 'filiere' | 'groupe', value: string | null): void {
+    const nextValue = value ?? 'all';
+    if (key === 'module') this.moduleFilter.set(nextValue);
+    if (key === 'filiere') this.filiereFilter.set(nextValue);
+    if (key === 'groupe') this.groupeFilter.set(nextValue);
   }
 
   clearFilter(key: 'module' | 'filiere' | 'groupe' | 'search'): void {
@@ -873,6 +761,10 @@ export class JustificationsPage {
 
   labelOf(options: readonly Option[], value: string): string {
     return options.find((opt) => opt.value === value)?.label ?? value;
+  }
+
+  dropdownValue(value: string): string | null {
+    return value === 'all' ? null : value;
   }
 
   statusLabel(status: JustificationStatus): string {
