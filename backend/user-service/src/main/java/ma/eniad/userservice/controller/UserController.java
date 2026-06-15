@@ -2,9 +2,9 @@ package ma.eniad.userservice.controller;
 
 import ma.eniad.userservice.annotation.RequireRole;
 import ma.eniad.userservice.dto.AuthUserRequest;
-import ma.eniad.userservice.dto.InternalTeacherIdentityDto;
 import ma.eniad.userservice.dto.UserResponseDto;
 import ma.eniad.userservice.dto.student.StudentRosterDto;
+import ma.eniad.userservice.dto.teacher.InternalTeacherIdentityDto;
 import ma.eniad.userservice.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

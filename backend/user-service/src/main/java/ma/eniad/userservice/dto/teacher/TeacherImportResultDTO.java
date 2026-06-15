@@ -18,15 +18,21 @@ import java.util.List;
 public class TeacherImportResultDTO {
     private String fileName;
     private LocalDateTime importedAt;
-
+    private long processingTimeMs;
     private int totalRows;
+    private int successfulRows;
+    private int failedRows;
     private int createdTeachers;
     private int updatedTeachers;
-    private int failedRows;
-
-
+    private int createdAssignments;
+    private int duplicateAssignments;
+    private int duplicateAssignmentsInsideFile;
+    private int missingAcademicYears;
+    private int missingFormations;
+    private int missingGroups;
+    private int missingModules;
+    private int nonTeacherEmailConflicts;
     private String status; // SUCCESS | PARTIAL | FAILED
-
     private List<TeacherChangeDTO> changes;
     private List<RowErrorDTO> errors;
     private List<String> warnings;

@@ -5,8 +5,8 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
-import ma.eniad.userservice.dto.inscription.InscriptionRequestDTO;
-import ma.eniad.userservice.dto.inscription.InscriptionResponseDTO;
+import ma.eniad.userservice.dto.inscription.StudentInscriptionRequestDTO;
+import ma.eniad.userservice.dto.inscription.StudentInscriptionResponseDTO;
 import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Student;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
@@ -14,8 +14,8 @@ import ma.eniad.userservice.entity.structure.Formation;
 import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.exception.DuplicateResourceException;
 import ma.eniad.userservice.exception.ResourceNotFoundException;
-import ma.eniad.userservice.mapper.inscription.InscriptionMapper;
-import ma.eniad.userservice.repository.inscription.InscriptionRepository;
+import ma.eniad.userservice.mapper.inscription.StudentInscriptionMapper;
+import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
 import ma.eniad.userservice.repository.structure.FormationRepository;
 import ma.eniad.userservice.repository.structure.GroupeRepository;
@@ -24,18 +24,18 @@ import ma.eniad.userservice.repository.student.StudentRepository;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true) 
-public class InscriptionService {
+public class StudentInscriptionService {
 
-    private final InscriptionRepository inscriptionRepository;
+    private final StudentInscriptionRepository inscriptionRepository;
     private final StudentRepository studentRepository;
     private final FormationRepository formationRepository;
     private final GroupeRepository groupeRepository;
     private final AnneeUniversitaireRepository anneeRepository;
-    private final InscriptionMapper inscriptionMapper;
+    private final StudentInscriptionMapper inscriptionMapper;
 
     // Create Inscription
     @Transactional
-    public InscriptionResponseDTO createInscription(InscriptionRequestDTO request) {
+    public StudentInscriptionResponseDTO createInscription(StudentInscriptionRequestDTO request) {
         Student student = findStudent(request.getStudentId());
         Formation formation = findFormation(request.getFormationId());  
         Groupe groupe = findGroupe(request.getGroupeId());
@@ -60,13 +60,13 @@ public class InscriptionService {
     }
     
     // Get Inscription by ID
-    public InscriptionResponseDTO getInscriptionById(Long id) {
+    public StudentInscriptionResponseDTO getInscriptionById(Long id) {
         Inscription inscription = findInscription(id);
         return inscriptionMapper.toResponse(inscription);
     }
 
     // Get all Inscriptions
-    public List<InscriptionResponseDTO> getAllInscriptions() {
+    public List<StudentInscriptionResponseDTO> getAllInscriptions() {
         return inscriptionRepository.findAll().stream()
                 .map(inscriptionMapper::toResponse)
                 .toList();
@@ -74,7 +74,7 @@ public class InscriptionService {
 
     // Update Inscription
     @Transactional
-    public InscriptionResponseDTO updateInscription(Long id, InscriptionRequestDTO request) {
+    public StudentInscriptionResponseDTO updateInscription(Long id, StudentInscriptionRequestDTO request) {
         Inscription inscription = findInscription(id);
 
         // Resolve related entities

@@ -7,7 +7,7 @@ import lombok.Builder;
 @Getter
 @Setter
 @Builder
-public class InscriptionResponseDTO {
+public class StudentInscriptionResponseDTO {
     private Long id;
 
     private Long studentId;

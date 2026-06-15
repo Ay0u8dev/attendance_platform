@@ -7,7 +7,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class InscriptionRequestDTO {
+public class StudentInscriptionRequestDTO {
     @NotNull
     private Long studentId;
 

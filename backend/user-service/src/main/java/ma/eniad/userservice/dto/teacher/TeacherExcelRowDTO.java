@@ -14,11 +14,12 @@ import jakarta.validation.constraints.Email;
 @AllArgsConstructor
 public class TeacherExcelRowDTO {
     private int rowNumber;
-
     private String firstName;
-
     private String lastName;
-
     @Email(message = "Email invalid format")
     private String email;
+    private String academicYear;
+    private String formationName;
+    private String groupeCode;
+    private String moduleCode;
 }

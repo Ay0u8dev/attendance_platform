@@ -28,6 +28,10 @@ public class TeacherExcelRowValidator {
         validateFirstName(row, errors);
         validateLastName(row, errors);
         validateEmail(row, errors);
+        validateRequired(row, "academicYear", row.getAcademicYear(), "Academic year is required", errors);
+        validateRequired(row, "formationName", row.getFormationName(), "Formation is required", errors);
+        validateRequired(row, "groupeCode", row.getGroupeCode(), "Groupe code is required", errors);
+        validateRequired(row, "moduleCode", row.getModuleCode(), "Module code is required", errors);
 
         return errors;
     }
@@ -111,7 +115,18 @@ public class TeacherExcelRowValidator {
                 "email",
                 "Email must be in the @" + normalizedDomain + " domain"
             ));
-        }    }
+        }
+    }
+
+    private void validateRequired(TeacherExcelRowDTO row,
+                                  String field,
+                                  String value,
+                                  String message,
+                                  List<RowErrorDTO> errors) {
+        if (isBlank(value)) {
+            errors.add(buildError(row, field, message));
+        }
+    }
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();

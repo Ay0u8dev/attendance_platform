@@ -54,6 +54,10 @@ public class TeacherExcelParser {
                     .firstName(getCellValue(row.getCell(0)))
                     .lastName(getCellValue(row.getCell(1)))
                     .email(getCellValue(row.getCell(2)))
+                    .academicYear(getCellValue(row.getCell(3)))
+                    .formationName(getCellValue(row.getCell(4)))
+                    .groupeCode(getCellValue(row.getCell(5)))
+                    .moduleCode(getCellValue(row.getCell(6)))
                     .build();
 
                 rows.add(excelRow);

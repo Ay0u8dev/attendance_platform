@@ -9,8 +9,8 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Optional;
 
-import ma.eniad.userservice.dto.inscription.InscriptionRequestDTO;
-import ma.eniad.userservice.dto.inscription.InscriptionResponseDTO;
+import ma.eniad.userservice.dto.inscription.StudentInscriptionRequestDTO;
+import ma.eniad.userservice.dto.inscription.StudentInscriptionResponseDTO;
 import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Student;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
@@ -18,13 +18,13 @@ import ma.eniad.userservice.entity.structure.Formation;
 import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.exception.DuplicateResourceException;
 import ma.eniad.userservice.exception.ResourceNotFoundException;
-import ma.eniad.userservice.mapper.inscription.InscriptionMapper;
-import ma.eniad.userservice.repository.inscription.InscriptionRepository;
+import ma.eniad.userservice.mapper.inscription.StudentInscriptionMapper;
+import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
 import ma.eniad.userservice.repository.structure.FormationRepository;
 import ma.eniad.userservice.repository.structure.GroupeRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
-import ma.eniad.userservice.service.inscription.InscriptionService;
+import ma.eniad.userservice.service.inscription.StudentInscriptionService;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,7 +36,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class InscriptionServiceTest {
 
     @Mock
-    private InscriptionRepository inscriptionRepository;
+    private StudentInscriptionRepository inscriptionRepository;
 
     @Mock
     private StudentRepository studentRepository;
@@ -51,20 +51,20 @@ class InscriptionServiceTest {
     private AnneeUniversitaireRepository anneeRepository;
 
     @Mock
-    private InscriptionMapper inscriptionMapper;
+    private StudentInscriptionMapper inscriptionMapper;
 
     @InjectMocks
-    private InscriptionService inscriptionService;
+    private StudentInscriptionService inscriptionService;
 
     @Test
     void createLinksEntitiesAndReturnsResponse() {
-        InscriptionRequestDTO request = request(1L, 2L, 3L, 4L);
+        StudentInscriptionRequestDTO request = request(1L, 2L, 3L, 4L);
         Student student = Student.builder().id(1L).build();
         Formation formation = Formation.builder().id(2L).build();
         Groupe groupe = Groupe.builder().id(3L).formation(formation).build();
         AnneeUniversitaire annee = AnneeUniversitaire.builder().id(4L).build();
         Inscription inscription = new Inscription();
-        InscriptionResponseDTO response = response(10L, 1L, 2L, 3L, 4L);
+        StudentInscriptionResponseDTO response = response(10L, 1L, 2L, 3L, 4L);
 
         when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
         when(formationRepository.findById(2L)).thenReturn(Optional.of(formation));
@@ -74,7 +74,7 @@ class InscriptionServiceTest {
         when(inscriptionRepository.save(inscription)).thenReturn(inscription);
         when(inscriptionMapper.toResponse(inscription)).thenReturn(response);
 
-        InscriptionResponseDTO result = inscriptionService.createInscription(request);
+        StudentInscriptionResponseDTO result = inscriptionService.createInscription(request);
 
         assertThat(result).isSameAs(response);
         assertThat(inscription.getStudent()).isSameAs(student);
@@ -86,7 +86,7 @@ class InscriptionServiceTest {
 
     @Test
     void createThrowsWhenStudentAlreadyEnrolled() {
-        InscriptionRequestDTO request = request(1L, 2L, 3L, 4L);
+        StudentInscriptionRequestDTO request = request(1L, 2L, 3L, 4L);
         Student student = Student.builder().id(1L).build();
         Formation formation = Formation.builder().id(2L).build();
         Groupe groupe = Groupe.builder().id(3L).formation(formation).build();
@@ -105,7 +105,7 @@ class InscriptionServiceTest {
 
     @Test
     void createThrowsWhenGroupeDoesNotBelongToFormation() {
-        InscriptionRequestDTO request = request(1L, 2L, 3L, 4L);
+        StudentInscriptionRequestDTO request = request(1L, 2L, 3L, 4L);
         Student student = Student.builder().id(1L).build();
         Formation formation = Formation.builder().id(2L).build();
         Formation otherFormation = Formation.builder().id(99L).build();
@@ -125,7 +125,7 @@ class InscriptionServiceTest {
     @Test
     void getInscriptionByIdReturnsResponse() {
         Inscription inscription = new Inscription();
-        InscriptionResponseDTO response = response(10L, 1L, 2L, 3L, 4L);
+        StudentInscriptionResponseDTO response = response(10L, 1L, 2L, 3L, 4L);
 
         when(inscriptionRepository.findById(10L)).thenReturn(Optional.of(inscription));
         when(inscriptionMapper.toResponse(inscription)).thenReturn(response);
@@ -146,8 +146,8 @@ class InscriptionServiceTest {
     void getAllInscriptionsMapsAllEntities() {
         Inscription first = new Inscription();
         Inscription second = new Inscription();
-        InscriptionResponseDTO firstResponse = response(10L, 1L, 2L, 3L, 4L);
-        InscriptionResponseDTO secondResponse = response(11L, 5L, 6L, 7L, 8L);
+        StudentInscriptionResponseDTO firstResponse = response(10L, 1L, 2L, 3L, 4L);
+        StudentInscriptionResponseDTO secondResponse = response(11L, 5L, 6L, 7L, 8L);
 
         when(inscriptionRepository.findAll()).thenReturn(List.of(first, second));
         when(inscriptionMapper.toResponse(first)).thenReturn(firstResponse);
@@ -158,7 +158,7 @@ class InscriptionServiceTest {
 
     @Test
     void updateUpdatesInscriptionWithoutDuplicateCheckWhenSameStudentAndYear() {
-        InscriptionRequestDTO request = request(1L, 2L, 3L, 4L);
+        StudentInscriptionRequestDTO request = request(1L, 2L, 3L, 4L);
         Student student = Student.builder().id(1L).build();
         Formation formation = Formation.builder().id(2L).build();
         Groupe groupe = Groupe.builder().id(3L).formation(formation).build();
@@ -171,7 +171,7 @@ class InscriptionServiceTest {
         inscription.setGroupe(groupe);
         inscription.setAnneeUniversitaire(annee);
 
-        InscriptionResponseDTO response = response(10L, 1L, 2L, 3L, 4L);
+        StudentInscriptionResponseDTO response = response(10L, 1L, 2L, 3L, 4L);
 
         when(inscriptionRepository.findById(10L)).thenReturn(Optional.of(inscription));
         when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
@@ -181,7 +181,7 @@ class InscriptionServiceTest {
         when(inscriptionRepository.save(inscription)).thenReturn(inscription);
         when(inscriptionMapper.toResponse(inscription)).thenReturn(response);
 
-        InscriptionResponseDTO result = inscriptionService.updateInscription(10L, request);
+        StudentInscriptionResponseDTO result = inscriptionService.updateInscription(10L, request);
 
         assertThat(result).isSameAs(response);
         verify(inscriptionMapper).updateEntity(request, inscription);
@@ -191,7 +191,7 @@ class InscriptionServiceTest {
 
     @Test
     void updateThrowsWhenStudentAlreadyEnrolledInYear() {
-        InscriptionRequestDTO request = request(2L, 2L, 3L, 4L);
+        StudentInscriptionRequestDTO request = request(2L, 2L, 3L, 4L);
         Student existingStudent = Student.builder().id(1L).build();
         Student newStudent = Student.builder().id(2L).build();
         Formation formation = Formation.builder().id(2L).build();
@@ -217,7 +217,7 @@ class InscriptionServiceTest {
 
     @Test
     void updateThrowsWhenGroupeDoesNotBelongToFormation() {
-        InscriptionRequestDTO request = request(1L, 2L, 3L, 4L);
+        StudentInscriptionRequestDTO request = request(1L, 2L, 3L, 4L);
         Student student = Student.builder().id(1L).build();
         Formation formation = Formation.builder().id(2L).build();
         Formation otherFormation = Formation.builder().id(99L).build();
@@ -269,8 +269,8 @@ class InscriptionServiceTest {
                 .hasMessage("Inscription not found");
     }
 
-    private static InscriptionRequestDTO request(Long studentId, Long formationId, Long groupeId, Long yearId) {
-        InscriptionRequestDTO request = new InscriptionRequestDTO();
+    private static StudentInscriptionRequestDTO request(Long studentId, Long formationId, Long groupeId, Long yearId) {
+        StudentInscriptionRequestDTO request = new StudentInscriptionRequestDTO();
         request.setStudentId(studentId);
         request.setFormationId(formationId);
         request.setGroupeId(groupeId);
@@ -278,8 +278,8 @@ class InscriptionServiceTest {
         return request;
     }
 
-    private static InscriptionResponseDTO response(Long id, Long studentId, Long formationId, Long groupeId, Long yearId) {
-        return InscriptionResponseDTO.builder()
+    private static StudentInscriptionResponseDTO response(Long id, Long studentId, Long formationId, Long groupeId, Long yearId) {
+        return StudentInscriptionResponseDTO.builder()
                 .id(id)
                 .studentId(studentId)
                 .formationId(formationId)

@@ -8,10 +8,10 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 
-import ma.eniad.userservice.controller.inscription.InscriptionController;
-import ma.eniad.userservice.dto.inscription.InscriptionRequestDTO;
-import ma.eniad.userservice.dto.inscription.InscriptionResponseDTO;
-import ma.eniad.userservice.service.inscription.InscriptionService;
+import ma.eniad.userservice.controller.inscription.StudentInscriptionController;
+import ma.eniad.userservice.dto.inscription.StudentInscriptionRequestDTO;
+import ma.eniad.userservice.dto.inscription.StudentInscriptionResponseDTO;
+import ma.eniad.userservice.service.inscription.StudentInscriptionService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,19 +23,19 @@ import org.springframework.http.ResponseEntity;
 @ExtendWith(MockitoExtension.class)
 class InscriptionControllerTest {
 
-    private InscriptionController controller;
+    private StudentInscriptionController controller;
 
     @Mock
-    private InscriptionService inscriptionService;
+    private StudentInscriptionService inscriptionService;
 
     @BeforeEach
     void setUp() {
-        controller = new InscriptionController(inscriptionService);
+        controller = new StudentInscriptionController(inscriptionService);
     }
 
     @Test
     void createReturnsCreated() {
-        InscriptionResponseDTO response = InscriptionResponseDTO.builder()
+        StudentInscriptionResponseDTO response = StudentInscriptionResponseDTO.builder()
                 .id(10L)
                 .studentId(1L)
                 .formationId(2L)
@@ -43,15 +43,15 @@ class InscriptionControllerTest {
                 .academicYearId(4L)
                 .build();
 
-        when(inscriptionService.createInscription(any(InscriptionRequestDTO.class))).thenReturn(response);
+        when(inscriptionService.createInscription(any(StudentInscriptionRequestDTO.class))).thenReturn(response);
 
-        InscriptionRequestDTO request = new InscriptionRequestDTO();
+        StudentInscriptionRequestDTO request = new StudentInscriptionRequestDTO();
         request.setStudentId(1L);
         request.setFormationId(2L);
         request.setGroupeId(3L);
         request.setAcademicYearId(4L);
 
-        ResponseEntity<InscriptionResponseDTO> result = controller.createInscription(request);
+        ResponseEntity<StudentInscriptionResponseDTO> result = controller.createInscription(request);
 
         assertThat(result.getStatusCode().value()).isEqualTo(201);
         assertThat(result.getBody()).isSameAs(response);
@@ -59,7 +59,7 @@ class InscriptionControllerTest {
 
     @Test
     void getInscriptionByIdReturnsOk() {
-        InscriptionResponseDTO response = InscriptionResponseDTO.builder()
+        StudentInscriptionResponseDTO response = StudentInscriptionResponseDTO.builder()
                 .id(10L)
                 .studentId(1L)
                 .formationId(2L)
@@ -69,7 +69,7 @@ class InscriptionControllerTest {
 
         when(inscriptionService.getInscriptionById(10L)).thenReturn(response);
 
-        ResponseEntity<InscriptionResponseDTO> result = controller.getInscriptionById(10L);
+        ResponseEntity<StudentInscriptionResponseDTO> result = controller.getInscriptionById(10L);
 
         assertThat(result.getStatusCode().value()).isEqualTo(200);
         assertThat(result.getBody()).isSameAs(response);
@@ -78,7 +78,7 @@ class InscriptionControllerTest {
 
     @Test
     void getAllInscriptionsReturnsOk() {
-        InscriptionResponseDTO response = InscriptionResponseDTO.builder()
+        StudentInscriptionResponseDTO response = StudentInscriptionResponseDTO.builder()
                 .id(10L)
                 .studentId(1L)
                 .formationId(2L)
@@ -88,7 +88,7 @@ class InscriptionControllerTest {
 
         when(inscriptionService.getAllInscriptions()).thenReturn(List.of(response));
 
-        ResponseEntity<List<InscriptionResponseDTO>> result = controller.getAllInscriptions();
+        ResponseEntity<List<StudentInscriptionResponseDTO>> result = controller.getAllInscriptions();
 
         assertThat(result.getStatusCode().value()).isEqualTo(200);
         assertThat(result.getBody()).containsExactly(response);
@@ -97,7 +97,7 @@ class InscriptionControllerTest {
 
     @Test
     void updateReturnsOk() {
-        InscriptionResponseDTO response = InscriptionResponseDTO.builder()
+        StudentInscriptionResponseDTO response = StudentInscriptionResponseDTO.builder()
                 .id(10L)
                 .studentId(1L)
                 .formationId(2L)
@@ -105,16 +105,16 @@ class InscriptionControllerTest {
                 .academicYearId(4L)
                 .build();
 
-        when(inscriptionService.updateInscription(any(Long.class), any(InscriptionRequestDTO.class)))
+        when(inscriptionService.updateInscription(any(Long.class), any(StudentInscriptionRequestDTO.class)))
                 .thenReturn(response);
 
-        InscriptionRequestDTO request = new InscriptionRequestDTO();
+        StudentInscriptionRequestDTO request = new StudentInscriptionRequestDTO();
         request.setStudentId(1L);
         request.setFormationId(2L);
         request.setGroupeId(3L);
         request.setAcademicYearId(4L);
 
-        ResponseEntity<InscriptionResponseDTO> result = controller.updateInscription(10L, request);
+        ResponseEntity<StudentInscriptionResponseDTO> result = controller.updateInscription(10L, request);
 
         assertThat(result.getStatusCode().value()).isEqualTo(200);
         assertThat(result.getBody()).isSameAs(response);

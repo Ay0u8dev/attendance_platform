@@ -15,11 +15,8 @@ import lombok.Setter;
 @AllArgsConstructor
 public class TeacherChangeDTO {
     private int rowNumber;
-
-    private String email;
-
-    private String action; 
-    // CREATED | UPDATED | SKIPPED
-
+    private String entityType;
+    private String identifier;
+    private String action;
     private List<String> changes;
 }

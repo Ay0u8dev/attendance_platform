@@ -21,7 +21,7 @@ import ma.eniad.userservice.exception.DuplicateResourceException;
 import ma.eniad.userservice.exception.InvalidDomainException;
 import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.mapper.student.StudentMapper;
-import ma.eniad.userservice.repository.inscription.InscriptionRepository;
+import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
@@ -36,7 +36,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class StudentService {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
-    private final InscriptionRepository inscriptionRepository;
+    private final StudentInscriptionRepository inscriptionRepository;
     private final AnneeUniversitaireRepository anneeUniversitaireRepository;
     private final StudentMapper      studentMapper;
 

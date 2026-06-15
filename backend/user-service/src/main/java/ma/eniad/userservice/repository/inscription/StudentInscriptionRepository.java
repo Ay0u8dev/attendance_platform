@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.Optional;
 
-public interface InscriptionRepository extends JpaRepository<Inscription, Long> {
+public interface StudentInscriptionRepository extends JpaRepository<Inscription, Long> {
     @Query("select i from Inscription i " +
             "where i.groupe.id in :groupIds and i.anneeUniversitaire.id = :anneeUniversitaireId")
     List<Inscription> findRosterByGroupIdsAndAnneeUniversitaireId(

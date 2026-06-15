@@ -25,7 +25,7 @@ import ma.eniad.userservice.entity.structure.Formation;
 import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.exception.InvalidExcelFileException;
 import ma.eniad.userservice.mapper.student.StudentMapper;
-import ma.eniad.userservice.repository.inscription.InscriptionRepository;
+import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
 import ma.eniad.userservice.repository.structure.FormationRepository;
@@ -47,7 +47,7 @@ public class StudentImportService {
     private final AnneeUniversitaireRepository anneeUniversitaireRepository;
     private final FormationRepository formationRepository;
     private final GroupeRepository groupeRepository;
-    private final InscriptionRepository inscriptionRepository;
+    private final StudentInscriptionRepository inscriptionRepository;
 
     @Transactional
     public StudentImportResultDTO importFromExcel(MultipartFile file) {

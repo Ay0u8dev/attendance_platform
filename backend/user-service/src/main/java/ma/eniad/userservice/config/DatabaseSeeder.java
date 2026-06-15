@@ -15,7 +15,7 @@ import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.entity.structure.Module;
 
 import ma.eniad.userservice.repository.UserRepository;
-import ma.eniad.userservice.repository.inscription.InscriptionRepository;
+import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.structure.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -38,7 +38,7 @@ public class DatabaseSeeder {
             FormationRepository formationRepository,
             GroupeRepository groupeRepository,
             ModuleRepository moduleRepository,
-            InscriptionRepository inscriptionRepository) {
+            StudentInscriptionRepository inscriptionRepository) {
         return args -> {
             // Check if the database is already seeded to prevent duplicates
             if (userRepository.count() == 0) {

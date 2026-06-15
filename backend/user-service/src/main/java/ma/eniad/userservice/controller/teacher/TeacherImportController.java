@@ -13,7 +13,7 @@ import ma.eniad.userservice.dto.teacher.TeacherImportResultDTO;
 import ma.eniad.userservice.service.teacher.TeacherImportService;
 
 @RestController
-@RequestMapping("users/teacher")
+@RequestMapping("/api/teachers")
 @RequiredArgsConstructor
 public class TeacherImportController {
     private final TeacherImportService teacherImportService;
@@ -26,15 +26,6 @@ public class TeacherImportController {
     public TeacherImportResultDTO importTeachers(
         @RequestPart("file") MultipartFile file
     ) {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("File is required and cannot be empty");
-        }
-        
-        String filename = file.getOriginalFilename();
-        if (filename == null || !filename.endsWith(".xlsx")) {
-            throw new IllegalArgumentException("Only Excel files (.xlsx) are supported");
-        }
-        
         return teacherImportService.importFromExcel(file);
     }
 }
