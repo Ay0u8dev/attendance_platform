@@ -1,276 +1,128 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 
+import {
+  AdminDirectoryStore,
+  DirectoryStatus,
+  StudentRecord,
+} from '../admin-directory.store';
+import { Button } from '../../../shared/components/button/button';
+import { DataTable } from '../../../shared/components/data-table/data-table';
+import { DataTableCellDef } from '../../../shared/components/data-table/data-table-cell-def';
+import { DataTableColumn } from '../../../shared/components/data-table/data-table.types';
+import { DeleteModal } from '../../../shared/components/delete-modal/delete-modal';
+import { DropdownFilter } from '../../../shared/components/dropdown-filter/dropdown-filter';
 import { IconButton } from '../../../shared/components/button/icon-button';
-import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
 import { Modal } from '../../../shared/components/modal/modal';
-import { DropdownFilter, type DropdownOption } from '../../../shared/components/dropdown-filter/dropdown-filter';
-import { StudentDetailsModal } from './components/student-details-modal';
-
-type StudentStatus = 'Active' | 'Pending' | 'Suspended';
-type StudentStatusVariant = 'success' | 'warning' | 'error';
-
-type Student = {
-  readonly id: string;
-  readonly name: string;
-  readonly email: string;
-  readonly cycle: string;
-  readonly department: string;
-  readonly group: string;
-  readonly status: StudentStatus;
-  readonly variant: StudentStatusVariant;
-  readonly avatar: string;
-};
+import { PageHeader } from '../../../shared/components/page-header/page-header';
+import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
 
 @Component({
   selector: 'app-students-page',
-  imports: [CommonModule, ReactiveFormsModule, IconButton, StatusBadge, StudentDetailsModal, Modal, DropdownFilter],
+  imports: [
+    ReactiveFormsModule,
+    Button,
+    DataTable,
+    DataTableCellDef,
+    DeleteModal,
+    DropdownFilter,
+    IconButton,
+    Modal,
+    PageHeader,
+    StatusBadge,
+  ],
   template: `
     <section class="space-y-5">
-      <!-- Filters card -->
-      <div
-        class="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 shadow-card md:flex-row md:items-center md:justify-between"
-      >
-        <div class="relative flex-1">
-          <i
-            class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-muted"
-            aria-hidden="true"
-          ></i>
-          <input
-            type="search"
-            [value]="searchQuery()"
-            (input)="onSearch($event)"
-            placeholder="Search students by name, email or ID..."
-            aria-label="Search students"
-            class="w-full rounded-xl border border-line bg-surface-subtle py-2.5 pl-11 pr-4 text-sm text-principalText placeholder:text-muted transition focus:border-primary focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
+      <app-page-header
+        title="Students"
+        description="Manage the core student identity used by the attendance platform."
+        [meta]="students().length + ' students'"
+      ></app-page-header>
 
-        <div class="flex flex-wrap items-center gap-2">
-          <app-dropdown-filter
-            label="Cycle"
-            identifier="cycle-filter"
-            [options]="cycleOptions()"
-            [value]="selectedCycle()"
-            iconClass="fa-solid fa-graduation-cap"
-            iconBackgroundClass="bg-blue-100"
-            (filterChange)="onCycleFilterChange($event)"
-          ></app-dropdown-filter>
-
-          <app-dropdown-filter
-            label="Group"
-            identifier="group-filter"
-            [options]="groupOptions()"
-            [value]="selectedGroup()"
-            iconClass="fa-solid fa-users"
-            iconBackgroundClass="bg-purple-100"
-            (filterChange)="onGroupFilterChange($event)"
-          ></app-dropdown-filter>
-
-          <app-dropdown-filter
-            label="Status"
-            identifier="status-filter"
-            [options]="statusOptions()"
-            [value]="selectedStatus()"
-            iconClass="fa-solid fa-circle-exclamation"
-            iconBackgroundClass="bg-yellow-100"
-            (filterChange)="onStatusFilterChange($event)"
-          ></app-dropdown-filter>
-        </div>
-      </div>
-
-      <!-- Counter + actions -->
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p class="text-sm text-secondaryText">Showing {{ filteredStudents().length }} students</p>
+        <p class="text-sm text-secondaryText">Showing {{ students().length }} students</p>
 
         <div class="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-medium text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
-          >
-            <i class="fa-regular fa-file-excel" aria-hidden="true"></i>
-            Import Excel
-          </button>
-          <button
-            type="button"
-            (click)="openAddStudentModal()"
-            class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-strong hover:shadow-card-strong"
-          >
-            <i class="fa-solid fa-plus" aria-hidden="true"></i>
-            Add Student
-          </button>
+          <app-button
+            label="Import Excel"
+            icon="fa-regular fa-file-excel"
+            variant="outline"
+            [fullWidth]="false"
+          ></app-button>
+          <app-button
+            label="Add Student"
+            icon="fa-solid fa-plus"
+            [fullWidth]="false"
+            (clicked)="openAddStudentModal()"
+          ></app-button>
         </div>
       </div>
 
-      <!-- Table card -->
-      <article class="rounded-2xl border border-line bg-surface shadow-card">
-        <div class="hidden overflow-hidden lg:block">
-          <div
-            class="grid grid-cols-[1.4fr_1.4fr_0.8fr_1fr_0.9fr_0.8fr_0.8fr] bg-surface-subtle px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-muted"
-          >
-            <span>Name</span>
-            <span>Email</span>
-            <span>Cycle</span>
-            <span>Department</span>
-            <span>Group</span>
-            <span>Status</span>
-            <span class="text-right">Actions</span>
+      <app-data-table
+        title="Student list"
+        description="Name, email, Code Apogee, and account status."
+        caption="Students"
+        searchPlaceholder="Search students by name, email or Code Apogee..."
+        emptyStateTitle="No students found"
+        emptyStateDescription="Try adjusting the search text or status filter."
+        [rows]="students()"
+        [columns]="columns"
+        [rowId]="rowId"
+        [initialPageSize]="5"
+      >
+        <ng-template [appDataTableCell]="'student'" let-row="row">
+          <div class="flex min-w-0 items-center gap-3">
+            <span
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary"
+              aria-hidden="true"
+            >
+              {{ initials(row.name) }}
+            </span>
+            <p class="truncate font-medium text-principalText">{{ row.name }}</p>
           </div>
+        </ng-template>
 
-          @for (student of pagedStudents(); track student.id) {
-            <div
-              class="grid grid-cols-[1.4fr_1.4fr_0.8fr_1fr_0.9fr_0.8fr_0.8fr] items-center border-t border-line px-6 py-4 text-sm"
-            >
-              <div class="flex min-w-0 items-center gap-3">
-                <span
-                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary"
-                  aria-hidden="true"
-                >
-                  {{ student.avatar }}
-                </span>
-                <span class="truncate font-medium text-principalText">{{ student.name }}</span>
-              </div>
-              <span class="truncate text-secondaryText">{{ student.email }}</span>
-              <span class="text-principalText">{{ student.cycle }}</span>
-              <span class="text-principalText">{{ student.department }}</span>
-              <span class="text-principalText">{{ student.group }}</span>
-              <div>
-                <app-status-badge
-                  [label]="student.status"
-                  [variant]="student.variant"
-                ></app-status-badge>
-              </div>
-              <div class="flex justify-end gap-1.5">
-                <app-icon-button
-                  icon="fa-regular fa-eye"
-                  [label]="'Voir ' + student.name"
-                  tone="secondary"
-                  size="sm"
-                  (click)="openDetails(student)"
-                ></app-icon-button>
-                <app-icon-button
-                  icon="fa-regular fa-pen-to-square"
-                  [label]="'Éditer ' + student.name"
-                  tone="primary"
-                  size="sm"
-                ></app-icon-button>
-                <app-icon-button
-                  icon="fa-regular fa-trash-can"
-                  [label]="'Supprimer ' + student.name"
-                  tone="danger"
-                  size="sm"
-                ></app-icon-button>
-              </div>
-            </div>
-          }
-        </div>
+        <ng-template [appDataTableCell]="'status'" let-row="row">
+          <app-status-badge
+            [label]="row.status"
+            [variant]="statusVariant(row.status)"
+          ></app-status-badge>
+        </ng-template>
 
-        <!-- Mobile / tablet stacked list -->
-        <div class="space-y-3 p-4 lg:hidden">
-          @for (student of pagedStudents(); track student.id) {
-            <div class="rounded-xl border border-line p-4">
-              <div class="flex items-start justify-between gap-3">
-                <div class="flex min-w-0 items-center gap-3">
-                  <span
-                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary"
-                  >
-                    {{ student.avatar }}
-                  </span>
-                  <div class="min-w-0">
-                    <p class="truncate text-sm font-semibold text-principalText">
-                      {{ student.name }}
-                    </p>
-                    <p class="truncate text-xs text-secondaryText">{{ student.email }}</p>
-                  </div>
-                </div>
-                <app-status-badge
-                  [label]="student.status"
-                  [variant]="student.variant"
-                ></app-status-badge>
-              </div>
-              <dl class="mt-3 grid grid-cols-3 gap-2 text-xs">
-                <div>
-                  <dt class="text-muted">Cycle</dt>
-                  <dd class="text-principalText">{{ student.cycle }}</dd>
-                </div>
-                <div>
-                  <dt class="text-muted">Dept.</dt>
-                  <dd class="text-principalText">{{ student.department }}</dd>
-                </div>
-                <div>
-                  <dt class="text-muted">Group</dt>
-                  <dd class="text-principalText">{{ student.group }}</dd>
-                </div>
-              </dl>
-            </div>
-          }
-        </div>
-
-        <!-- Pagination -->
-        <div
-          class="flex flex-col gap-3 border-t border-line bg-surface-subtle/50 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6"
-        >
-          <p class="text-sm text-secondaryText">
-            Showing {{ pageStart() }}-{{ pageEnd() }} of {{ filteredStudents().length }} students
-          </p>
-
-          <nav class="flex items-center gap-1" aria-label="Pagination">
-            <button
-              type="button"
-              class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface disabled:hover:text-secondaryText"
-              [disabled]="page() === 1"
-              (click)="prevPage()"
-              aria-label="Previous page"
-            >
-              <i class="fa-solid fa-chevron-left text-xs" aria-hidden="true"></i>
-            </button>
-
-            @for (p of pages(); track p) {
-              <button
-                type="button"
-                class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold transition-colors duration-200"
-                [class.bg-primary]="p === page()"
-                [class.text-white]="p === page()"
-                [class.shadow-card]="p === page()"
-                [class.text-secondaryText]="p !== page()"
-                [class.hover:bg-surface-subtle]="p !== page()"
-                [class.hover:text-principalText]="p !== page()"
-                (click)="goTo(p)"
-                [attr.aria-current]="p === page() ? 'page' : null"
-              >
-                {{ p }}
-              </button>
-            }
-
-            <button
-              type="button"
-              class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface disabled:hover:text-secondaryText"
-              [disabled]="page() === totalPages()"
-              (click)="nextPage()"
-              aria-label="Next page"
-            >
-              <i class="fa-solid fa-chevron-right text-xs" aria-hidden="true"></i>
-            </button>
-          </nav>
-        </div>
-      </article>
+        <ng-template [appDataTableCell]="'actions'" let-row="row">
+          <div class="flex justify-end gap-1.5">
+            <app-icon-button
+              icon="fa-regular fa-pen-to-square"
+              [label]="'Edit ' + row.name"
+              tone="primary"
+              size="sm"
+              (click)="openEditStudentModal(row)"
+            ></app-icon-button>
+            <app-icon-button
+              icon="fa-regular fa-trash-can"
+              [label]="'Delete ' + row.name"
+              tone="danger"
+              size="sm"
+              (click)="openDeleteStudentModal(row)"
+            ></app-icon-button>
+          </div>
+        </ng-template>
+      </app-data-table>
     </section>
 
-    <!-- Add Student Modal -->
     <app-modal
-      [open]="addStudentOpen()"
-      title="Add New Student"
-      description="Fill in the student information below"
+      [open]="studentFormOpen()"
+      [title]="formTitle()"
+      [description]="formDescription()"
       size="md"
-      (closed)="closeAddStudentModal()"
+      (closed)="closeStudentFormModal()"
     >
-      <div modal-body class="space-y-4">
-        <form [formGroup]="addStudentForm" class="space-y-4">
+      <div modal-body>
+        <form [formGroup]="studentForm" class="space-y-4">
           <div class="space-y-1">
-            <label for="name" class="text-sm font-medium text-principalText">Name *</label>
+            <label for="student-name" class="text-sm font-medium text-principalText">Name *</label>
             <input
-              id="name"
+              id="student-name"
               type="text"
               formControlName="name"
               placeholder="Enter student name"
@@ -279,9 +131,9 @@ type Student = {
           </div>
 
           <div class="space-y-1">
-            <label for="email" class="text-sm font-medium text-principalText">Email *</label>
+            <label for="student-email" class="text-sm font-medium text-principalText">Email *</label>
             <input
-              id="email"
+              id="student-email"
               type="email"
               formControlName="email"
               placeholder="Enter student email"
@@ -289,366 +141,231 @@ type Student = {
             />
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid gap-3 sm:grid-cols-2">
             <div class="space-y-1">
-              <label for="cycle" class="text-sm font-medium text-principalText">Cycle *</label>
-              <select
-                id="cycle"
-                formControlName="cycle"
-                class="w-full rounded-lg border border-line bg-surface-subtle px-4 py-2.5 text-sm text-principalText transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="">Select Cycle</option>
-                <option value="Bachelor">Bachelor</option>
-                <option value="Master">Master</option>
-                <option value="PhD">PhD</option>
-              </select>
-            </div>
-
-            <div class="space-y-1">
-              <label for="department" class="text-sm font-medium text-principalText">Department *</label>
-              <select
-                id="department"
-                formControlName="department"
-                class="w-full rounded-lg border border-line bg-surface-subtle px-4 py-2.5 text-sm text-principalText transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="">Select Department</option>
-                <option value="Comp. Science">Comp. Science</option>
-                <option value="Mathematics">Mathematics</option>
-                <option value="Physics">Physics</option>
-                <option value="Engineering">Engineering</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div class="space-y-1">
-              <label for="group" class="text-sm font-medium text-principalText">Group *</label>
+              <label for="student-code-apogee" class="text-sm font-medium text-principalText">
+                Code Apogee *
+              </label>
               <input
-                id="group"
+                id="student-code-apogee"
                 type="text"
-                formControlName="group"
-                placeholder="e.g., CS-2024-A"
+                formControlName="codeApogee"
+                placeholder="A10001"
                 class="w-full rounded-lg border border-line bg-surface-subtle px-4 py-2.5 text-sm text-principalText placeholder:text-muted transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
             <div class="space-y-1">
-              <label for="status" class="text-sm font-medium text-principalText">Status *</label>
-              <select
-                id="status"
-                formControlName="status"
-                class="w-full rounded-lg border border-line bg-surface-subtle px-4 py-2.5 text-sm text-principalText transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="">Select Status</option>
-                <option value="Active">Active</option>
-                <option value="Pending">Pending</option>
-                <option value="Suspended">Suspended</option>
-              </select>
+              <app-dropdown-filter
+                label="Status *"
+                identifier="student-status"
+                allLabel="Select status"
+                [options]="statusOptions()"
+                [value]="studentFormValue('status')"
+                iconClass="fa-solid fa-circle-check"
+                iconBackgroundClass="bg-warning-soft"
+                iconColor="warning"
+                (filterChange)="setStudentFormValue('status', $event)"
+              ></app-dropdown-filter>
             </div>
           </div>
         </form>
       </div>
 
       <div modal-footer class="flex gap-2">
-        <button
-          type="button"
-          (click)="closeAddStudentModal()"
-          class="flex-1 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-principalText transition hover:bg-surface-subtle"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          (click)="submitAddStudent()"
-          [disabled]="!addStudentForm.valid"
-          class="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-strong disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Add Student
-        </button>
+        <app-button
+          label="Cancel"
+          variant="outline"
+          [fullWidth]="true"
+          (clicked)="closeStudentFormModal()"
+        ></app-button>
+        <app-button
+          [label]="formSubmitLabel()"
+          [disabled]="!studentForm.valid"
+          [fullWidth]="true"
+          (clicked)="submitStudentForm()"
+        ></app-button>
       </div>
     </app-modal>
 
-    <app-student-details-modal
-      [open]="detailsOpen()"
-      [student]="selectedStudent()"
-      (closed)="closeDetails()"
-    ></app-student-details-modal>
+    <app-delete-modal
+      [open]="deleteOpen()"
+      title="Delete this student?"
+      [itemName]="selectedStudent()?.name || ''"
+      confirmMessage="You are about to delete:"
+      warningMessage="This removes the student identity and its current inscription assignment from this interface data."
+      deleteButtonLabel="Delete student"
+      (closeRequested)="closeDeleteStudentModal()"
+      (confirmDelete)="confirmDeleteStudent()"
+    ></app-delete-modal>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentsPage {
-  readonly searchQuery = signal('');
-  readonly page = signal(1);
-  readonly pageSize = 5;
+  private readonly fb = inject(FormBuilder);
+  private readonly directory = inject(AdminDirectoryStore);
 
-  readonly detailsOpen = signal(false);
-  readonly selectedStudent = signal<Student | null>(null);
+  readonly students = this.directory.students;
+  readonly statuses = this.directory.statuses;
+  readonly rowId = (row: StudentRecord) => row.id;
 
-  readonly addStudentOpen = signal(false);
-  readonly addStudentForm: FormGroup;
+  readonly studentFormOpen = signal(false);
+  readonly deleteOpen = signal(false);
+  readonly selectedStudent = signal<StudentRecord | null>(null);
+  readonly editingStudentId = signal<string | null>(null);
+  readonly studentForm: FormGroup;
 
-  // Filter signals
-  readonly selectedCycle = signal('');
-  readonly selectedGroup = signal('');
-  readonly selectedStatus = signal('');
-
-  // Data arrays
-  private students = signal<Student[]>(this.buildSampleStudents());
-  private allCycles = ['Bachelor', 'Master', 'PhD'];
-  private allDepartments = ['Comp. Science', 'Mathematics', 'Physics', 'Engineering'];
-  private allGroups = ['CS-2024-A', 'CS-2024-B', 'MATH-102', 'PHY-04', 'CS-PHD-1', 'ENG-001'];
-  private allStatuses = ['Active', 'Pending', 'Suspended'];
-
-  // Dropdown options
-  readonly cycleOptions = computed(() =>
-    this.allCycles.map((cycle) => ({ value: cycle, label: cycle })),
+  readonly formTitle = computed(() =>
+    this.editingStudentId() ? 'Edit Student' : 'Add New Student',
   );
-
-  readonly groupOptions = computed(() =>
-    this.allGroups.map((group) => ({ value: group, label: group })),
+  readonly formDescription = computed(() =>
+    this.editingStudentId()
+      ? 'Update name, email, Code Apogee, and status.'
+      : 'Fill in the core student information below.',
   );
-
+  readonly formSubmitLabel = computed(() =>
+    this.editingStudentId() ? 'Save Changes' : 'Add Student',
+  );
   readonly statusOptions = computed(() =>
-    this.allStatuses.map((status) => ({
-      value: status,
-      label: status,
-    })),
+    this.statuses.map((status) => ({ label: status, value: status })),
   );
 
-  readonly filteredStudents = computed(() => {
-    const query = this.searchQuery().trim().toLowerCase();
-    const cycle = this.selectedCycle();
-    const group = this.selectedGroup();
-    const status = this.selectedStatus();
+  readonly columns: readonly DataTableColumn<StudentRecord>[] = [
+    {
+      id: 'student',
+      header: 'Name',
+      accessor: (row) => row.name,
+      filterValue: (row) => [row.name, row.email, row.codeApogee],
+      width: '18rem',
+    },
+    {
+      id: 'email',
+      header: 'Email',
+      accessor: (row) => row.email,
+      cellClassName: 'whitespace-nowrap',
+    },
+    {
+      id: 'codeApogee',
+      header: 'Code Apogee',
+      accessor: (row) => row.codeApogee,
+      cellClassName: 'whitespace-nowrap',
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      accessor: (row) => row.status,
+      filter: {
+        type: 'select',
+        options: this.statuses.map((status) => ({ label: status, value: status })),
+      },
+      width: '11rem',
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      accessor: () => '',
+      searchable: false,
+      sortable: false,
+      hideable: false,
+      align: 'end',
+      width: '7rem',
+    },
+  ];
 
-    return this.students().filter((student) => {
-      // Text search filter
-      const matchesQuery =
-        !query ||
-        [student.name, student.email, student.id, student.group, student.department].some((field) =>
-          field.toLowerCase().includes(query),
-        );
-
-      // Cycle filter
-      const matchesCycle = !cycle || student.cycle === cycle;
-
-      // Group filter
-      const matchesGroup = !group || student.group === group;
-
-      // Status filter
-      const matchesStatus = !status || student.status === status;
-
-      return matchesQuery && matchesCycle && matchesGroup && matchesStatus;
-    });
-  });
-
-  readonly totalPages = computed(() =>
-    Math.max(1, Math.ceil(this.filteredStudents().length / this.pageSize)),
-  );
-
-  readonly pages = computed(() => {
-    const total = this.totalPages();
-    const limit = Math.min(total, 5);
-    return Array.from({ length: limit }, (_, index) => index + 1);
-  });
-
-  readonly pagedStudents = computed(() => {
-    const start = (this.page() - 1) * this.pageSize;
-    return this.filteredStudents().slice(start, start + this.pageSize);
-  });
-
-  readonly pageStart = computed(() => {
-    if (this.filteredStudents().length === 0) return 0;
-    return (this.page() - 1) * this.pageSize + 1;
-  });
-
-  readonly pageEnd = computed(() =>
-    Math.min(this.page() * this.pageSize, this.filteredStudents().length),
-  );
-
-  readonly filters = computed(() => [
-    { key: 'cycle', label: 'Cycle', value: this.selectedCycle() || 'All' },
-    { key: 'group', label: 'Group', value: this.selectedGroup() || 'All' },
-    { key: 'status', label: 'Status', value: this.selectedStatus() || 'All' },
-  ]);
-
-  constructor(private fb: FormBuilder) {
-    this.addStudentForm = this.fb.group({
+  constructor() {
+    this.studentForm = this.fb.group({
       name: ['', [Validators.required]],
       email: ['', [Validators.required, Validators.email]],
-      cycle: ['', [Validators.required]],
-      department: ['', [Validators.required]],
-      group: ['', [Validators.required]],
+      codeApogee: ['', [Validators.required]],
       status: ['Active', [Validators.required]],
     });
   }
 
-  onCycleFilterChange(value: string | null): void {
-    this.selectedCycle.set(value || '');
-    this.page.set(1);
-  }
-
-  onGroupFilterChange(value: string | null): void {
-    this.selectedGroup.set(value || '');
-    this.page.set(1);
-  }
-
-  onStatusFilterChange(value: string | null): void {
-    this.selectedStatus.set(value || '');
-    this.page.set(1);
-  }
-
-  onSearch(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    this.searchQuery.set(target.value);
-    this.page.set(1);
-  }
-
   openAddStudentModal(): void {
-    this.addStudentForm.reset({ status: 'Active' });
-    this.addStudentOpen.set(true);
+    this.editingStudentId.set(null);
+    this.studentForm.reset({
+      name: '',
+      email: '',
+      codeApogee: '',
+      status: 'Active',
+    });
+    this.studentFormOpen.set(true);
   }
 
-  closeAddStudentModal(): void {
-    this.addStudentOpen.set(false);
-    this.addStudentForm.reset();
+  openEditStudentModal(student: StudentRecord): void {
+    this.editingStudentId.set(student.id);
+    this.studentForm.reset({
+      name: student.name,
+      email: student.email,
+      codeApogee: student.codeApogee,
+      status: student.status,
+    });
+    this.studentFormOpen.set(true);
   }
 
-  submitAddStudent(): void {
-    if (this.addStudentForm.valid) {
-      const formValue = this.addStudentForm.value;
-      const newStudent: Student = {
-        id: `STD-${1000 + this.students().length}`,
-        name: formValue.name,
-        email: formValue.email,
-        cycle: formValue.cycle,
-        department: formValue.department,
-        group: formValue.group,
-        status: formValue.status as StudentStatus,
-        variant: this.getStatusVariant(formValue.status),
-        avatar: this.initials(formValue.name),
-      };
+  closeStudentFormModal(): void {
+    this.studentFormOpen.set(false);
+    this.editingStudentId.set(null);
+    this.studentForm.reset();
+  }
 
-      this.students.update((students) => [...students, newStudent]);
-      this.closeAddStudentModal();
-      this.page.set(1);
+  submitStudentForm(): void {
+    if (!this.studentForm.valid) {
+      return;
     }
+
+    const value = this.studentForm.value;
+    const payload = {
+      name: value.name,
+      email: value.email,
+      codeApogee: value.codeApogee,
+      status: value.status as DirectoryStatus,
+    };
+
+    const editingId = this.editingStudentId();
+    if (editingId) {
+      this.directory.updateStudent(editingId, payload);
+    } else {
+      this.directory.addStudent(payload);
+    }
+
+    this.closeStudentFormModal();
   }
 
-  goTo(page: number): void {
-    this.page.set(page);
-  }
-
-  prevPage(): void {
-    this.page.update((current) => Math.max(1, current - 1));
-  }
-
-  nextPage(): void {
-    this.page.update((current) => Math.min(this.totalPages(), current + 1));
-  }
-
-  openDetails(student: Student): void {
+  openDeleteStudentModal(student: StudentRecord): void {
     this.selectedStudent.set(student);
-    this.detailsOpen.set(true);
+    this.deleteOpen.set(true);
   }
 
-  closeDetails(): void {
-    this.detailsOpen.set(false);
+  closeDeleteStudentModal(): void {
+    this.deleteOpen.set(false);
   }
 
-  private getStatusVariant(status: string): StudentStatusVariant {
-    switch (status) {
-      case 'Active':
-        return 'success';
-      case 'Pending':
-        return 'warning';
-      case 'Suspended':
-        return 'error';
-      default:
-        return 'success';
+  confirmDeleteStudent(): void {
+    const student = this.selectedStudent();
+    if (!student) {
+      return;
     }
+
+    this.directory.deleteStudent(student.id);
+    this.deleteOpen.set(false);
+    this.selectedStudent.set(null);
   }
 
-  private buildSampleStudents(): Student[] {
-    const seeds: Array<Omit<Student, 'avatar' | 'id'>> = [
-      {
-        name: 'Alex Johnson',
-        email: 'alex.j@university.edu',
-        cycle: 'Bachelor',
-        department: 'Comp. Science',
-        group: 'CS-2024-A',
-        status: 'Active',
-        variant: 'success',
-      },
-      {
-        name: 'Maria Garcia',
-        email: 'm.garcia@university.edu',
-        cycle: 'Master',
-        department: 'Mathematics',
-        group: 'MATH-102',
-        status: 'Pending',
-        variant: 'warning',
-      },
-      {
-        name: 'Liam Wilson',
-        email: 'l.wilson@university.edu',
-        cycle: 'Bachelor',
-        department: 'Physics',
-        group: 'PHY-04',
-        status: 'Suspended',
-        variant: 'error',
-      },
-      {
-        name: 'Sarah Chen',
-        email: 's.chen@university.edu',
-        cycle: 'PhD',
-        department: 'Comp. Science',
-        group: 'CS-PHD-1',
-        status: 'Active',
-        variant: 'success',
-      },
-      {
-        name: 'James Smith',
-        email: 'j.smith@university.edu',
-        cycle: 'Bachelor',
-        department: 'Mathematics',
-        group: 'MATH-102',
-        status: 'Active',
-        variant: 'success',
-      },
-      {
-        name: 'Emma Davis',
-        email: 'e.davis@university.edu',
-        cycle: 'Master',
-        department: 'Engineering',
-        group: 'ENG-001',
-        status: 'Active',
-        variant: 'success',
-      },
-      {
-        name: 'Oliver Brown',
-        email: 'o.brown@university.edu',
-        cycle: 'Bachelor',
-        department: 'Comp. Science',
-        group: 'CS-2024-B',
-        status: 'Pending',
-        variant: 'warning',
-      },
-    ];
-
-    return seeds.map((seed, index) => ({
-      ...seed,
-      id: `STD-${1000 + index}`,
-      avatar: this.initials(seed.name),
-    }));
+  studentFormValue(controlName: 'status'): string {
+    return String(this.studentForm.get(controlName)?.value ?? '');
   }
 
-  private initials(name: string): string {
-    return name
-      .split(' ')
-      .map((part) => part.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+  setStudentFormValue(controlName: 'status', value: string | null): void {
+    this.studentForm.patchValue({ [controlName]: value ?? '' });
+    this.studentForm.get(controlName)?.markAsTouched();
+  }
+
+  statusVariant(status: DirectoryStatus): 'success' | 'warning' | 'error' {
+    return this.directory.statusVariant(status);
+  }
+
+  initials(name: string): string {
+    return this.directory.initials(name);
   }
 }
