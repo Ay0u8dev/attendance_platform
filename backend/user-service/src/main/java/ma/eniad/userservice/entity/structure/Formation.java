@@ -31,7 +31,7 @@ import ma.eniad.userservice.entity.Inscription;
 @Table(
     name = "formations",
     uniqueConstraints = @UniqueConstraint(
-        name = "uk_formations_year_filiere_cycle",
+        name = "uk_formations_year_cycle_name",
         columnNames = {"annee_univ_id", "cycle_id", "name"}
     ),
     indexes = {

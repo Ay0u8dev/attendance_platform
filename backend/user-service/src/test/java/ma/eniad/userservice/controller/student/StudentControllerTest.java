@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 
+import ma.eniad.userservice.dto.student.StudentProfileDto;
 import ma.eniad.userservice.dto.student.StudentRequestDTO;
 import ma.eniad.userservice.dto.student.StudentResponseDTO;
 import ma.eniad.userservice.entity.enums.Role;
@@ -71,6 +72,45 @@ class StudentControllerTest {
         assertThat(result.getStatusCode().value()).isEqualTo(200);
         assertThat(result.getBody()).containsExactly(response);
         verify(studentService).getAll();
+    }
+
+    @Test
+    void getProfile_returnsOk() {
+        StudentProfileDto profile = StudentProfileDto.builder()
+                .id(1L)
+                .email("student@example.com")
+                .firstName("Sara")
+                .lastName("Alaoui")
+                .numApogee("A123")
+                .filiere("GI")
+                .groupe("GI-1")
+                .build();
+
+        when(studentService.getCurrentProfile()).thenReturn(profile);
+
+        ResponseEntity<StudentProfileDto> result = controller.getProfile();
+
+        assertThat(result.getStatusCode().value()).isEqualTo(200);
+        assertThat(result.getBody()).isSameAs(profile);
+        verify(studentService).getCurrentProfile();
+    }
+
+    @Test
+    void getById_returnsOk() {
+        StudentResponseDTO response = StudentResponseDTO.builder()
+                .id(1L)
+                .email("student@example.com")
+                .numApogee("A123")
+                .roles(Set.of(Role.STUDENT))
+                .build();
+
+        when(studentService.getById(1L)).thenReturn(response);
+
+        ResponseEntity<StudentResponseDTO> result = controller.getById(1L);
+
+        assertThat(result.getStatusCode().value()).isEqualTo(200);
+        assertThat(result.getBody()).isSameAs(response);
+        verify(studentService).getById(1L);
     }
 
     @Test

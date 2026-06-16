@@ -1,4 +1,4 @@
-package ma.eniad.userservice.service;
+package ma.eniad.userservice.service.inscription;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -33,7 +33,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class InscriptionServiceTest {
+class StudentInscriptionServiceTest {
 
     @Mock
     private StudentInscriptionRepository inscriptionRepository;
@@ -101,6 +101,17 @@ class InscriptionServiceTest {
         assertThatThrownBy(() -> inscriptionService.createInscription(request))
                 .isInstanceOf(DuplicateResourceException.class)
                 .hasMessage("Student is already enrolled in an academic year");
+    }
+
+    @Test
+    void createThrowsWhenStudentMissing() {
+        StudentInscriptionRequestDTO request = request(1L, 2L, 3L, 4L);
+
+        when(studentRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> inscriptionService.createInscription(request))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Student not found");
     }
 
     @Test
@@ -187,6 +198,42 @@ class InscriptionServiceTest {
         verify(inscriptionMapper).updateEntity(request, inscription);
         verify(inscriptionRepository, never())
                 .existsByStudentIdAndAnneeUniversitaireId(1L, 4L);
+    }
+
+    @Test
+    void updateChecksDuplicatesAndRelinksEntitiesWhenStudentOrYearChanges() {
+        StudentInscriptionRequestDTO request = request(2L, 5L, 6L, 7L);
+        Student oldStudent = Student.builder().id(1L).build();
+        AnneeUniversitaire oldYear = AnneeUniversitaire.builder().id(4L).build();
+        Student newStudent = Student.builder().id(2L).build();
+        Formation newFormation = Formation.builder().id(5L).build();
+        Groupe newGroupe = Groupe.builder().id(6L).formation(newFormation).build();
+        AnneeUniversitaire newYear = AnneeUniversitaire.builder().id(7L).build();
+
+        Inscription inscription = new Inscription();
+        inscription.setId(10L);
+        inscription.setStudent(oldStudent);
+        inscription.setAnneeUniversitaire(oldYear);
+
+        StudentInscriptionResponseDTO response = response(10L, 2L, 5L, 6L, 7L);
+
+        when(inscriptionRepository.findById(10L)).thenReturn(Optional.of(inscription));
+        when(studentRepository.findById(2L)).thenReturn(Optional.of(newStudent));
+        when(formationRepository.findById(5L)).thenReturn(Optional.of(newFormation));
+        when(groupeRepository.findById(6L)).thenReturn(Optional.of(newGroupe));
+        when(anneeRepository.findById(7L)).thenReturn(Optional.of(newYear));
+        when(inscriptionRepository.existsByStudentIdAndAnneeUniversitaireId(2L, 7L)).thenReturn(false);
+        when(inscriptionRepository.save(inscription)).thenReturn(inscription);
+        when(inscriptionMapper.toResponse(inscription)).thenReturn(response);
+
+        StudentInscriptionResponseDTO result = inscriptionService.updateInscription(10L, request);
+
+        assertThat(result).isSameAs(response);
+        assertThat(inscription.getStudent()).isSameAs(newStudent);
+        assertThat(inscription.getFormation()).isSameAs(newFormation);
+        assertThat(inscription.getGroupe()).isSameAs(newGroupe);
+        assertThat(inscription.getAnneeUniversitaire()).isSameAs(newYear);
+        verify(inscriptionRepository).existsByStudentIdAndAnneeUniversitaireId(2L, 7L);
     }
 
     @Test

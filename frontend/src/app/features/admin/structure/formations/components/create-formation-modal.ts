@@ -85,7 +85,7 @@ import { normalizeLabel, structureInputClass } from '../../../../../shared/struc
               [options]="fieldOptions()"
               [value]="selectedField()"
               [required]="fieldRequired()"
-              [disabled]="fieldDisabled()" 
+              [disabled]="fieldDisabled()"
               [searchable]="true"
               [error]="submitted() && fieldRequired() && !selectedField() ? 'La filière est obligatoire pour ce cycle.' : ''"
               iconClass="fa-solid fa-graduation-cap"
@@ -180,7 +180,7 @@ export class CreateFormationModal {
       return 'Indiquez le nom de la formation.';
     }
 
-    return name.length <= 60 ? '' : 'Le nom ne doit pas depasser 60 caracteres.';
+    return name.length <= 60 ? '' : 'Le nom ne doit pas dépasser 60 caractères.';
   }
 
   close(): void {

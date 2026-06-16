@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,7 @@ import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.entity.structure.Module;
 import ma.eniad.userservice.exception.DuplicateResourceException;
 import ma.eniad.userservice.exception.InvalidInputException;
+import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.mapper.inscription.TeacherAssignmentMapper;
 import ma.eniad.userservice.repository.inscription.TeacherAssignmentRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
@@ -130,6 +132,41 @@ class TeacherAssignmentServiceTest {
     }
 
     @Test
+    void rejectsGroupeFromDifferentFormation() {
+        Formation otherFormation = org.mockito.Mockito.mock(Formation.class);
+        when(otherFormation.getId()).thenReturn(99L);
+        when(groupe.getFormation()).thenReturn(otherFormation);
+
+        assertThatThrownBy(() -> service.create(request))
+            .isInstanceOf(InvalidInputException.class)
+            .hasMessage("Groupe does not belong to the selected formation");
+
+        verify(assignmentRepository, never()).save(any());
+    }
+
+    @Test
+    void rejectsModuleFromDifferentFormation() {
+        Formation otherFormation = org.mockito.Mockito.mock(Formation.class);
+        when(otherFormation.getId()).thenReturn(99L);
+        when(module.getFormation()).thenReturn(otherFormation);
+
+        assertThatThrownBy(() -> service.create(request))
+            .isInstanceOf(InvalidInputException.class)
+            .hasMessage("Module does not belong to the selected formation");
+
+        verify(assignmentRepository, never()).save(any());
+    }
+
+    @Test
+    void createThrowsWhenTeacherMissing() {
+        when(teacherRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.create(request))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessage("Teacher not found with id: 1");
+    }
+
+    @Test
     void updateExcludesCurrentAssignmentFromDuplicateCheck() {
         TeacherAssignment assignment = new TeacherAssignment();
         assignment.setId(10L);
@@ -145,5 +182,57 @@ class TeacherAssignmentServiceTest {
             .existsByTeacherIdAndAcademicYearIdAndFormationIdAndGroupeIdAndModuleIdAndIdNot(
                 1L, 2L, 3L, 4L, 5L, 10L
             );
+    }
+
+    @Test
+    void updateRejectsDuplicateAssignment() {
+        TeacherAssignment assignment = new TeacherAssignment();
+        assignment.setId(10L);
+        when(assignmentRepository.findById(10L)).thenReturn(Optional.of(assignment));
+        when(assignmentRepository.existsByTeacherIdAndAcademicYearIdAndFormationIdAndGroupeIdAndModuleIdAndIdNot(
+            1L, 2L, 3L, 4L, 5L, 10L
+        )).thenReturn(true);
+
+        assertThatThrownBy(() -> service.update(10L, request))
+            .isInstanceOf(DuplicateResourceException.class)
+            .hasMessage("Teacher assignment already exists for the selected teacher, academic year, formation, groupe and module");
+
+        verify(assignmentRepository, never()).save(any());
+    }
+
+    @Test
+    void getByIdReturnsMappedAssignment() {
+        TeacherAssignment assignment = new TeacherAssignment();
+        TeacherAssignmentResponseDTO response = TeacherAssignmentResponseDTO.builder().id(10L).build();
+
+        when(assignmentRepository.findById(10L)).thenReturn(Optional.of(assignment));
+        when(mapper.toResponse(assignment)).thenReturn(response);
+
+        assertThat(service.getById(10L)).isSameAs(response);
+    }
+
+    @Test
+    void getAllReturnsMappedAssignments() {
+        TeacherAssignment first = new TeacherAssignment();
+        TeacherAssignment second = new TeacherAssignment();
+        TeacherAssignmentResponseDTO firstResponse = TeacherAssignmentResponseDTO.builder().id(10L).build();
+        TeacherAssignmentResponseDTO secondResponse = TeacherAssignmentResponseDTO.builder().id(11L).build();
+
+        when(assignmentRepository.findAll()).thenReturn(List.of(first, second));
+        when(mapper.toResponse(first)).thenReturn(firstResponse);
+        when(mapper.toResponse(second)).thenReturn(secondResponse);
+
+        assertThat(service.getAll()).containsExactly(firstResponse, secondResponse);
+    }
+
+    @Test
+    void deleteRemovesAssignment() {
+        TeacherAssignment assignment = new TeacherAssignment();
+
+        when(assignmentRepository.findById(10L)).thenReturn(Optional.of(assignment));
+
+        service.delete(10L);
+
+        verify(assignmentRepository).delete(assignment);
     }
 }

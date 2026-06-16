@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -123,11 +124,10 @@ public class StudentImportService {
             }
         }
 
-        Map<String, Formation> formationsByName = new HashMap<>();
+        Map<String, List<Formation>> formationsByName = new HashMap<>();
         if (!formationNames.isEmpty()) {
-            for (Formation formation : formationRepository.findByNameIn(formationNames)) {
-                formationsByName.put(formation.getName(), formation);
-            }
+            formationsByName = formationRepository.findByNameIn(formationNames).stream()
+                .collect(Collectors.groupingBy(Formation::getName));
         }
 
         Map<String, Groupe> groupesByCode = new HashMap<>();
@@ -198,10 +198,10 @@ public class StudentImportService {
                     continue;
                 }
             } else if (student != null) {
-                addRowError(row, "email", "Email already belongs to another student.", errors, rowErrors);
+                addRowError(row, "email", "Email matches existing student, but NumApogee does not match that student's NumApogee.", errors, rowErrors);
                 continue;
             } else {
-                addRowError(row, "numApogee", "NumApogee already belongs to another student.", errors, rowErrors);
+                addRowError(row, "numApogee", "NumApogee matches existing student, but email does not match that student's email.", errors, rowErrors);
                 continue;
             }
 
@@ -212,10 +212,21 @@ public class StudentImportService {
                 continue;
             }
 
-            Formation formation = formationsByName.get(row.getFormationName());
+            List<Formation> formationCandidates = formationsByName.get(row.getFormationName());
+            Formation formation = resolveFormation(formationCandidates, year);
             if (formation == null) {
-                addRowError(row, "formationName", "Formation not found.", errors, rowErrors);
-                missingFormations++;
+                if (formationCandidates == null || formationCandidates.isEmpty()) {
+                    addRowError(row, "formationName", "Formation not found.", errors, rowErrors);
+                    missingFormations++;
+                } else {
+                    addRowError(
+                        row,
+                        "formationName",
+                        "Formation does not belong to specified academic year.",
+                        errors,
+                        rowErrors
+                    );
+                }
                 continue;
             }
 
@@ -223,17 +234,6 @@ public class StudentImportService {
             if (groupe == null) {
                 addRowError(row, "groupeCode", "Groupe not found.", errors, rowErrors);
                 missingGroups++;
-                continue;
-            }
-
-            if (!formation.getAnneeUniversitaire().getId().equals(year.getId())) {
-                addRowError(
-                    row,
-                    "formationName",
-                    "Formation does not belong to specified academic year.",
-                    errors,
-                    rowErrors
-                );
                 continue;
             }
 
@@ -306,6 +306,18 @@ public class StudentImportService {
         student.setEnabled(true);
         student.setFirstLogin(true);
         return student;
+    }
+
+    private Formation resolveFormation(List<Formation> candidates, AnneeUniversitaire year) {
+        if (candidates == null || candidates.isEmpty()) {
+            return null;
+        }
+
+        return candidates.stream()
+            .filter(candidate -> candidate.getAnneeUniversitaire() != null)
+            .filter(candidate -> candidate.getAnneeUniversitaire().getId().equals(year.getId()))
+            .findFirst()
+            .orElse(null);
     }
 
     private void normalizeRow(StudentExcelRowDTO row) {

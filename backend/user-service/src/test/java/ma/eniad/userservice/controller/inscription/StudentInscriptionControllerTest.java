@@ -1,4 +1,4 @@
-package ma.eniad.userservice.controller;
+package ma.eniad.userservice.controller.inscription;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -21,7 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 
 @ExtendWith(MockitoExtension.class)
-class InscriptionControllerTest {
+class StudentInscriptionControllerTest {
 
     private StudentInscriptionController controller;
 

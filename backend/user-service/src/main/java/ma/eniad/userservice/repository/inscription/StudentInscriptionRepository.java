@@ -27,6 +27,7 @@ public interface StudentInscriptionRepository extends JpaRepository<Inscription,
         );
 
     @Query("select i from Inscription i " +
+            "join fetch i.formation " +
             "join fetch i.groupe g " +
             "join fetch g.formation f " +
             "left join fetch f.filiere fi " +

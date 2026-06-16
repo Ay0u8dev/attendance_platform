@@ -340,7 +340,6 @@ export class ModulesPage {
     return [
       formation.name,
       cycle ? `${cycle.code}` : `Cycle #${formation.cycleId}`,
-      field ? `${field.code}` : formation.filiereId ? `Filière #${formation.filiereId}` : 'Préparatoire ',
-    ].join(' • ');
+      field ? `${field.code}` : formation.filiereId ? `Filière #${formation.filiereId}` : 'Préparatoire',    ].join(' • ');
   }
 }
