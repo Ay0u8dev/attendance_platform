@@ -13,7 +13,7 @@ import ma.eniad.userservice.dto.teacher.TeacherImportResultDTO;
 import ma.eniad.userservice.service.teacher.TeacherImportService;
 
 @RestController
-@RequestMapping("/api/teachers")
+@RequestMapping("users/teacher")
 @RequiredArgsConstructor
 public class TeacherImportController {
     private final TeacherImportService teacherImportService;

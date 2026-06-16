@@ -14,12 +14,14 @@ import ma.eniad.userservice.dto.student.StudentExcelRowDTO;
 import ma.eniad.userservice.dto.student.StudentImportResultDTO;
 import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Student;
+import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.entity.enums.Role;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
 import ma.eniad.userservice.entity.structure.Formation;
 import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.exception.InvalidExcelFileException;
 import ma.eniad.userservice.mapper.student.StudentMapper;
+import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
@@ -52,6 +54,9 @@ class StudentImportServiceTest {
     private StudentRepository studentRepository;
 
     @Mock
+    private UserRepository userRepository;
+
+    @Mock
     private AnneeUniversitaireRepository anneeUniversitaireRepository;
 
     @Mock
@@ -78,6 +83,7 @@ class StudentImportServiceTest {
         when(parser.parse(file)).thenReturn(List.of(row));
         when(validator.validate(row)).thenReturn(List.of());
         when(studentRepository.findByEmailIn(anySet())).thenReturn(List.of());
+        when(userRepository.findByNormalizedEmailIn(anySet())).thenReturn(List.of());
         when(studentRepository.findByNumApogeeIn(anySet())).thenReturn(List.of());
         when(anneeUniversitaireRepository.findByNameIn(anySet())).thenReturn(List.of(year));
         when(formationRepository.findByNameIn(anySet())).thenReturn(List.of(formation));
@@ -148,6 +154,7 @@ class StudentImportServiceTest {
         Groupe groupe = Groupe.builder().id(3L).name("GI-1").formation(formation).build();
         Student mappedStudent = new Student();
         when(studentRepository.findByEmailIn(anySet())).thenReturn(List.of());
+        when(userRepository.findByNormalizedEmailIn(anySet())).thenReturn(List.of());
         when(studentRepository.findByNumApogeeIn(anySet())).thenReturn(List.of());
         when(anneeUniversitaireRepository.findByNameIn(anySet())).thenReturn(List.of(year));
         when(formationRepository.findByNameIn(anySet())).thenReturn(List.of(formation));
@@ -185,6 +192,7 @@ class StudentImportServiceTest {
         when(parser.parse(file)).thenReturn(List.of(row));
         when(validator.validate(row)).thenReturn(List.of());
         when(studentRepository.findByEmailIn(anySet())).thenReturn(List.of(existingStudent));
+        when(userRepository.findByNormalizedEmailIn(anySet())).thenReturn(List.of(existingStudent));
         when(studentRepository.findByNumApogeeIn(anySet())).thenReturn(List.of(existingStudent));
         when(anneeUniversitaireRepository.findByNameIn(anySet())).thenReturn(List.of(year));
         when(formationRepository.findByNameIn(anySet())).thenReturn(List.of(formation));
@@ -204,6 +212,38 @@ class StudentImportServiceTest {
                 "Row 2 -> Student already enrolled for this academic year."
         );
         verify(studentRepository).saveAll(List.of(existingStudent));
+        verify(inscriptionRepository, never()).saveAll(org.mockito.ArgumentMatchers.anyList());
+    }
+
+    @Test
+    void importFromExcel_rejectsEmailOwnedByNonStudentUser() {
+        MockMultipartFile file = excelFile();
+        StudentExcelRowDTO row = row(2, "Sara", "Alaoui", "admin@ump.ac.ma", "A123", "2025/2026", "GI", "GI-1");
+        User existingUser = new User();
+        existingUser.setEmail("admin@ump.ac.ma");
+
+        when(parser.parse(file)).thenReturn(List.of(row));
+        when(validator.validate(row)).thenReturn(List.of());
+        when(studentRepository.findByEmailIn(anySet())).thenReturn(List.of());
+        when(userRepository.findByNormalizedEmailIn(anySet())).thenReturn(List.of(existingUser));
+        when(studentRepository.findByNumApogeeIn(anySet())).thenReturn(List.of());
+        when(anneeUniversitaireRepository.findByNameIn(anySet())).thenReturn(List.of());
+        when(formationRepository.findByNameIn(anySet())).thenReturn(List.of());
+        when(groupeRepository.findByNameIn(anySet())).thenReturn(List.of());
+
+        StudentImportResultDTO result = importService.importFromExcel(file);
+
+        assertThat(result.getStatus()).isEqualTo("FAILED");
+        assertThat(result.getFailedRows()).isEqualTo(1);
+        assertThat(result.getErrors())
+            .singleElement()
+            .satisfies(error -> {
+                assertThat(error.getRowNumber()).isEqualTo(2);
+                assertThat(error.getField()).isEqualTo("email");
+                assertThat(error.getMessage()).isEqualTo("Email belongs to a non-student user.");
+            });
+        verify(mapper, never()).toEntity(row);
+        verify(studentRepository, never()).saveAll(org.mockito.ArgumentMatchers.anyList());
         verify(inscriptionRepository, never()).saveAll(org.mockito.ArgumentMatchers.anyList());
     }
 

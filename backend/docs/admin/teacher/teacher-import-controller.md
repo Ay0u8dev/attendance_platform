@@ -9,12 +9,12 @@ It allows an admin to upload an `.xlsx` file containing teacher identity data an
 Base URL:
 
 ```text
-/api/teachers/import
+/users/teachers/import
 ```
 
 This endpoint requires `ADMIN`.
 
-Important path note: teacher CRUD uses `/users/teacher`, but teacher import uses `/api/teachers/import`.
+Important path note: teacher CRUD uses `/users/teacher`, but teacher import uses `/users/teachers/import`.
 
 ---
 
@@ -62,14 +62,14 @@ The service:
 
 | Method | URL | Role | Description |
 | --- | --- | --- | --- |
-| `POST` | `/api/teachers/import` | `ADMIN` | Import teachers and assignments from Excel |
+| `POST` | `/users/teachers/import` | `ADMIN` | Import teachers and assignments from Excel |
 
 ### Import Teachers
 
 | Item | Value |
 | --- | --- |
 | Method | `POST` |
-| URL | `/api/teachers/import` |
+| URL | `/users/teachers/import` |
 | Content type | `multipart/form-data` |
 | Request part | `file` |
 | Response body | `TeacherImportResultDTO` |
@@ -81,7 +81,7 @@ Angular example:
 const formData = new FormData();
 formData.append('file', selectedFile);
 
-this.http.post<TeacherImportResultDTO>('/api/teachers/import', formData);
+this.http.post<TeacherImportResultDTO>('/users/teachers/import', formData);
 ```
 
 Expected Excel columns:
@@ -232,7 +232,7 @@ File-level errors return HTTP `400` with the global error body:
   "status": 400,
   "message": "Only .xlsx files are allowed",
   "timestamp": "2026-06-16T12:34:56.789",
-  "path": "/api/teachers/import"
+  "path": "/users/teachers/import"
 }
 ```
 

@@ -20,12 +20,14 @@ import ma.eniad.userservice.dto.student.StudentExcelRowDTO;
 import ma.eniad.userservice.dto.student.StudentImportResultDTO;
 import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Student;
+import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.entity.enums.Role;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
 import ma.eniad.userservice.entity.structure.Formation;
 import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.exception.InvalidExcelFileException;
 import ma.eniad.userservice.mapper.student.StudentMapper;
+import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
@@ -45,6 +47,7 @@ public class StudentImportService {
     private final StudentMapper mapper;
 
     private final StudentRepository studentRepository;
+    private final UserRepository userRepository;
     private final AnneeUniversitaireRepository anneeUniversitaireRepository;
     private final FormationRepository formationRepository;
     private final GroupeRepository groupeRepository;
@@ -110,6 +113,17 @@ public class StudentImportService {
             }
         }
 
+        Map<String, User> usersByEmail = new HashMap<>();
+        if (!emails.isEmpty()) {
+            for (User user : userRepository.findByNormalizedEmailIn(emails)) {
+                usersByEmail.put(normalizeEmail(user.getEmail()), user);
+            }
+        }
+
+        Set<String> nonStudentEmails = usersByEmail.keySet().stream()
+            .filter(email -> !studentsByEmail.containsKey(email))
+            .collect(Collectors.toSet());
+
         Map<String, Student> studentsByApogee = new HashMap<>();
         if (!apogees.isEmpty()) {
             for (Student student : studentRepository.findByNumApogeeIn(apogees)) {
@@ -173,6 +187,11 @@ public class StudentImportService {
         int missingGroups = 0;
 
         for (StudentExcelRowDTO row : validRows) {
+            if (nonStudentEmails.contains(row.getEmail())) {
+                addRowError(row, "email", "Email belongs to a non-student user.", errors, rowErrors);
+                continue;
+            }
+
             Student student = studentsByEmail.get(row.getEmail());
             Student studentByApogee = studentsByApogee.get(row.getNumApogee());
 

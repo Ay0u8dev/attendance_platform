@@ -21,7 +21,7 @@ import ma.eniad.userservice.dto.inscription.TeacherAssignmentResponseDTO;
 import ma.eniad.userservice.service.inscription.TeacherAssignmentService;
 
 @RestController
-@RequestMapping("/api/teacher-assignments")
+@RequestMapping("users/teacher/assignments")
 @RequiredArgsConstructor
 public class TeacherAssignmentController {
     private final TeacherAssignmentService service;

@@ -14,7 +14,7 @@ It allows admins to assign a teacher to:
 Base URL:
 
 ```text
-/api/teacher-assignments
+users/teacher/assignments
 ```
 
 Create, update, and delete require `ADMIN`.
@@ -50,18 +50,18 @@ The controller receives IDs from the frontend. The service loads each referenced
 
 | Method | URL | Role | Description |
 | --- | --- | --- | --- |
-| `POST` | `/api/teacher-assignments` | `ADMIN` | Create teacher assignment |
-| `GET` | `/api/teacher-assignments` | Not annotated | Get all teacher assignments |
-| `GET` | `/api/teacher-assignments/{id}` | Not annotated | Get assignment by ID |
-| `PUT` | `/api/teacher-assignments/{id}` | `ADMIN` | Update assignment |
-| `DELETE` | `/api/teacher-assignments/{id}` | `ADMIN` | Delete assignment |
+| `POST` | `/users/teacher/assignments` | `ADMIN` | Create teacher assignment |
+| `GET` | `/users/teacher/assignments` | Not annotated | Get all teacher assignments |
+| `GET` | `/users/teacher/assignments/{id}` | Not annotated | Get assignment by ID |
+| `PUT` | `/users/teacher/assignments/{id}` | `ADMIN` | Update assignment |
+| `DELETE` | `/users/teacher/assignments/{id}` | `ADMIN` | Delete assignment |
 
 ### Create Assignment
 
 | Item | Value |
 | --- | --- |
 | Method | `POST` |
-| URL | `/api/teacher-assignments` |
+| URL | `/users/teacher/assignments` |
 | Request body | `TeacherAssignmentRequestDTO` |
 | Response body | `TeacherAssignmentResponseDTO` |
 | Success status | `201 Created` |
@@ -83,7 +83,7 @@ Example request:
 | Item | Value |
 | --- | --- |
 | Method | `GET` |
-| URL | `/api/teacher-assignments` |
+| URL | `/users/teacher/assignments` |
 | Response body | Array of `TeacherAssignmentResponseDTO` |
 | Success status | `200 OK` |
 
@@ -92,7 +92,7 @@ Example request:
 | Item | Value |
 | --- | --- |
 | Method | `GET` |
-| URL | `/api/teacher-assignments/{id}` |
+| URL | `/users/teacher/assignments/{id}` |
 | Response body | `TeacherAssignmentResponseDTO` |
 | Success status | `200 OK` |
 
@@ -101,7 +101,7 @@ Example request:
 | Item | Value |
 | --- | --- |
 | Method | `PUT` |
-| URL | `/api/teacher-assignments/{id}` |
+| URL | `/users/teacher/assignments/{id}` |
 | Request body | `TeacherAssignmentRequestDTO` |
 | Response body | `TeacherAssignmentResponseDTO` |
 | Success status | `200 OK` |
@@ -116,7 +116,7 @@ Frontend notes:
 | Item | Value |
 | --- | --- |
 | Method | `DELETE` |
-| URL | `/api/teacher-assignments/{id}` |
+| URL | `/users/teacher/assignments/{id}` |
 | Response body | Empty |
 | Success status | `204 No Content` |
 
@@ -204,7 +204,7 @@ Error body shape:
   "status": 409,
   "message": "Teacher assignment already exists for the selected teacher, academic year, formation, groupe and module",
   "timestamp": "2026-06-16T12:34:56.789",
-  "path": "/api/teacher-assignments"
+  "path": "/users/teacher/assignments"
 }
 ```
 
@@ -254,7 +254,7 @@ Error body shape:
   "status": 409,
   "message": "Teacher assignment already exists for the selected teacher, academic year, formation, groupe and module",
   "timestamp": "2026-06-16T12:34:56.789",
-  "path": "/api/teacher-assignments"
+  "path": "/users/teacher/assignments"
 }
 ```
 
@@ -265,7 +265,7 @@ Error body shape:
   "status": 400,
   "message": "Module does not belong to the selected formation",
   "timestamp": "2026-06-16T12:34:56.789",
-  "path": "/api/teacher-assignments"
+  "path": "/users/teacher/assignments"
 }
 ```
 
