@@ -18,7 +18,7 @@ import { SearchInput } from '../../../../../shared/components/search-input/searc
           <app-search-input
             identifier="formation"
             label="Rechercher une formation"
-            placeholder="Cycle ou filière..."
+            placeholder="Nom, cycle ou filière..."
             [value]="searchValue()"
             (searchChange)="searchChange.emit($event)"
           ></app-search-input>

@@ -11,6 +11,7 @@ import { DropdownOption } from '../../../../../shared/components/dropdown-filter
 
 export interface FormationItem {
   id: number;
+  name: string;
   cycleId: number;
   fieldId: number | null;
   yearId: number;
@@ -125,6 +126,7 @@ export class FormationsList {
 
     if (query) {
       result = result.filter(f =>
+        f.name.toLowerCase().includes(query) ||
         f.cycleName.toLowerCase().includes(query) ||
         f.fieldName.toLowerCase().includes(query) ||
         f.academicYear.toLowerCase().includes(query)
@@ -153,6 +155,12 @@ export class FormationsList {
   readonly formationRowId = (formation: FormationItem) => String(formation.id);
 
   readonly columns: readonly DataTableColumn<FormationItem>[] = [
+    {
+      id: 'name',
+      header: 'Nom',
+      accessor: (formation) => formation.name,
+      width: '16rem',
+    },
     {
       id: 'academicYear',
       header: 'Année',
