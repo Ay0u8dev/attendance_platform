@@ -1,122 +1,82 @@
 # Attendance Platform Backend
 
-This backend currently has two implemented service APIs (`auth-service` and `user-service`) and multiple scaffolded services.
+The backend is a set of Spring Boot services plus two FastAPI services. The implemented runtime today is auth, users, attendance, and QR attendance. Face, justification, and notification are not ready product services.
 
-This README is the quick entry point. Detailed documentation is split into dedicated files:
+## Service Map
 
-- Architecture: `docs/backend-architecture.md`
-- HTTP + header contracts: `docs/backend-service-contracts.md`
-- Rules all other services must follow: `docs/backend-service-rules.md`
+| Service | Tech | Local port | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `auth-service` | Spring Boot | `8081` | Implemented | Google token validation, internal JWT issuing, `GET /auth/validate` for Traefik forward-auth |
+| `user-service` | Spring Boot + JPA | `8082` | Implemented | Users, teachers, students, academic structure, Excel import, internal roster endpoints |
+| `attendance-service` | Spring Boot + JPA + Redis | `8083` | Implemented | Session lifecycle, live Redis state, final records, student/admin/teacher reads, STOMP updates |
+| `qr-service` | FastAPI | `8001` dev / `8000` container | Implemented | Signed rotating QR payloads and student scan forwarding |
+| `face-service` | FastAPI | `8000` sample container port | Placeholder | Not a real face-recognition service yet |
+| `justification-service` | Spring Boot | `8085` | Skeleton | Bootstrap/config only |
+| `notification-service` | Spring Boot | `9000` | Skeleton | Bootstrap/config only |
 
-## 1) Current Service Map
+## Gateway Contract
 
-| Service                 | Port   | Status      | Notes                                                                     |
-| ----------------------- | ------ | ----------- | ------------------------------------------------------------------------- |
-| `auth-service`          | `8081` | Implemented | Google token validation, internal JWT issuance, token validation endpoint |
-| `user-service`          | `8082` | Implemented | User lookup, role-protected user read, JPA user model                     |
-| `attendance-service`    | `8084` | Skeleton    | Spring app + config only, no REST controllers                             |
-| `session-service`       | `8083` | Skeleton    | Spring app + config only, no REST controllers                             |
-| `justification-service` | `8085` | Skeleton    | Spring app + config only, no REST controllers                             |
-| `notification-service`  | `9000` | Skeleton    | Spring app + config only, no REST controllers                             |
-| `face-service`          | n/a    | Placeholder | Minimal FastAPI sample endpoints                                          |
-| `qr-service`            | n/a    | Placeholder | `main.py` currently empty                                                 |
+Local browser calls go through Traefik at `http://localhost`:
 
-## 2) How Services Communicate
+| Gateway path | Service-local path after stripping | Upstream |
+| --- | --- | --- |
+| `/api/auth/**` | `/auth/**` | `auth-service:8081` |
+| `/api/users/**` | `/users/**` | `user-service:8082` |
+| `/api/attendance/**` | `/attendance/**` | `attendance-service:8083` |
+| `/api/qr/**` | `/qr/**` | `qr-service:8001` |
+| `/api/ws/attendance/ws` | `/attendance/ws` | `attendance-service:8083` WebSocket |
 
-Current communication model:
+`/api/users/**`, `/api/attendance/**`, and `/api/qr/**` are protected by Traefik forward-auth. `/api/ws/attendance/ws` is not forward-auth protected because STOMP authentication is handled inside `attendance-service` during `CONNECT`.
 
-1. Client calls through Traefik on `http://localhost`.
-2. Auth endpoints (`/api/auth/**`) are routed to `auth-service` without forward-auth.
-3. Protected endpoints (`/api/users/**`) use Traefik `forward-auth` to call `GET /auth/validate`.
-4. On valid token, auth returns:
-   - `X-User-Id`
-   - `X-User-Roles`
-   - `X-User-Email`
-5. Traefik forwards those headers to downstream services.
-6. `user-service` enforces role checks using forwarded headers.
-7. For internal login flow, `auth-service` calls `user-service` with:
-   - `X-Request-Source: auth-service`
+## Implemented Contract Docs
 
-## 3) Current Implemented Contracts
+- `docs/backend-architecture.md`: runtime topology and ownership boundaries
+- `docs/backend-service-contracts.md`: HTTP, WebSocket, DTO, and header contracts
+- `docs/backend-service-rules.md`: rules for future backend changes
+- `docs/student-attendance-flow.md`: student attendance lifecycle from session creation to finalization
+- `docs/qr-code-flow.md`: QR payload and scan validation flow
+- `docs/frontend-attendance-api/`: frontend-facing attendance and QR API slices
 
-## Auth contracts
-
-- `POST /auth/login`
-  - request: `{ "idToken": "<google-id-token>" }`
-  - success: `{ "accessToken": "<internal-jwt>" }`
-
-- `GET /auth/validate`
-  - request header: `Authorization: Bearer <internal-jwt>`
-  - success: `200` + `X-User-*` headers
-
-## User contracts
-
-- `POST /users/auth-user` (internal, called by auth-service)
-  - requires `X-Request-Source: auth-service`
-  - request: `{ "email": "...", "pfpUrl": "..." }`
-  - returns existing user record
-
-- `GET /users/{id}`
-  - requires forwarded auth headers (`X-User-*`)
-  - role required: `ADMIN`
-  - returns DTO with user profile fields and roles
-
-## Header contract summary
-
-```text
-X-Request-Source: auth-service
-X-User-Id: <id>
-X-User-Roles: <comma-separated-roles>
-X-User-Email: <email>
-```
-
-## 4) Rules Other Services Must Follow
-
-Any new backend service must follow these rules:
-
-1. Keep JWT validation centralized in `auth-service`.
-2. Trust and validate forwarded identity headers (`X-User-*`) for protected endpoints.
-3. Use explicit role checks per protected endpoint.
-4. Use `X-Request-Source` only for narrow internal trust paths.
-5. Document every new endpoint contract with request/response examples.
-6. Standardize error responses as structured JSON (`status`, `message`, `timestamp`, `path`).
-7. Keep URLs, secrets, and credentials in config/env vars (not hardcoded).
-
-See full implementation guidance in `docs/backend-service-rules.md`.
-
-## 5) Examples
-
-### Example A: Login
-
-```bash
-curl -X POST http://localhost/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"idToken":"<google-id-token>"}'
-```
-
-### Example B: Access protected user endpoint
-
-```bash
-curl http://localhost/api/users/1 \
-  -H "Authorization: Bearer <internal-jwt>"
-```
-
-### Example C: Internal auth-service -> user-service call
-
-```bash
-curl -X POST http://localhost:8082/users/auth-user \
-  -H "Content-Type: application/json" \
-  -H "X-Request-Source: auth-service" \
-  -d '{"email":"user@ump.ac.ma","pfpUrl":"https://example.com/avatar.jpg"}'
-```
-
-## 6) Build and Runtime Requirements
+## Local Runtime Requirements
 
 - Java `21`
-- Maven Wrapper (`mvnw` / `mvnw.cmd`)
-- PostgreSQL (`users_db`, and `attendance_db` for scaffolded services)
-- Docker Compose + Traefik for local routing/gateway setup
+- Maven Wrapper in each Spring service
+- Python `3.11+` for FastAPI services
+- Node/npm for the Angular frontend
+- Docker Compose for Traefik, Redis, and PostgreSQL
 
-## 7) Scope Note
+Infrastructure:
 
-This README reflects the currently checked-in code behavior, not the full planned platform target.
+```powershell
+docker compose up -d traefik redis user-db attendance-db
+```
+
+Run QR service locally:
+
+```powershell
+cd backend/qr-service
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+$env:ATTENDANCE_SERVICE_URL = "http://localhost:8083"
+$env:QR_TOKEN_SECRET = "dev-only-change-me"
+$env:QR_TOKEN_TTL_SECONDS = "30"
+uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+```
+
+## Auth And Header Model
+
+- `auth-service` validates Google `idToken` values at login and issues the platform JWT.
+- Traefik validates that JWT with `GET /auth/validate` before protected HTTP routes.
+- On success, Traefik injects:
+  - `X-User-Id`
+  - `X-User-Roles`
+  - `X-User-Email`
+- Internal machine-to-machine calls use `X-Request-Source` with a narrow trusted value such as `auth-service`, `attendance-service`, `qr-service`, or `face-service`.
+
+## Parallel Work Guidance
+
+- If you touch a public endpoint, update `docs/backend-service-contracts.md`.
+- If the frontend consumes the endpoint, update `docs/frontend-attendance-api/`.
+- If you add a service-to-service call, document the trusted source, headers, request body, and owning service.
+- If a service is still only scaffolded, do not write docs as if it works. That is how teams waste time debugging fiction.

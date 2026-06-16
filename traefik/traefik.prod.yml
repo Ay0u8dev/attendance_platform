@@ -1,0 +1,24 @@
+entryPoints:
+  web:
+    address: ":80" # all your API and frontend traffic comes through here
+  traefik:
+    address: ":8080" # dashboard only, never expose this in prod
+
+api:
+  dashboard: true
+  insecure: true
+
+providers:
+  docker:
+    exposedByDefault: false
+
+log:
+  level: DEBUG # change to INFO or WARNING in prod
+
+accessLog:
+  fields:
+    headers:
+      defaultMode: keep
+      names:
+        Authorization: drop
+        Cookie: drop

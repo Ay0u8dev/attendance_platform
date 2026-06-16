@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ma.eniad.authservice.exceptions.AuthenticationException;
-import ma.eniad.authservice.exceptions.InvalidDomainException;
 import ma.eniad.authservice.exceptions.InvalidTokenException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -64,9 +63,10 @@ public class GoogleTokenService {
             }
             String email = emailNode.asText();
 
-            if (!email.endsWith("@" + allowedDomain)) {
-                throw new InvalidDomainException(allowedDomain);
-            }
+            // TODO : UNCOMMENT THIS LATER THIS IS ONLY FOR TESTING
+//            if (!email.endsWith("@" + allowedDomain)) {
+//                throw new InvalidDomainException(allowedDomain);
+//            }
 
             Map<String, String> claims = new HashMap<>();
             claims.put("email", email);

@@ -6,20 +6,27 @@ import { FormsModule } from '@angular/forms';
   standalone: true,
   imports: [FormsModule],
   template: `
-    <div class="flex-1">
-      <label [for]="'search-' + identifier()" class="text-sm font-semibold text-principalText mb-3 flex items-center gap-2">
-        <i class="fa-solid fa-magnifying-glass text-primary"></i>
+    <div class="min-w-0 flex-1">
+      <label
+        [for]="'search-' + identifier()"
+        class="mb-2 flex items-center gap-2 text-sm font-semibold text-principalText"
+      >
+        <i class="fa-solid fa-magnifying-glass text-sm text-primary" aria-hidden="true"></i>
         {{ label() }}
       </label>
-      <div class="relative group">
+      <div class="group relative">
         <input
-          [id]="'search-' + identifier()"          type="text"
+          [id]="'search-' + identifier()"
+          type="text"
           [value]="value()"
           [placeholder]="placeholder()"
           (input)="searchChange.emit($any($event.target).value)"
-          class="w-full pl-4 pr-4 py-3 rounded-xl border border-line bg-surface text-sm text-principalText placeholder:text-muted transition duration-200 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20 hover:border-primary-soft"
+          class="w-full rounded-xl border border-line bg-surface py-3 pl-3.5 pr-10 text-sm text-principalText placeholder:text-muted shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 hover:border-line-strong"
         />
-        <i class="fa-solid fa-magnifying-glass absolute right-3.5 top-3.5 text-secondaryText pointer-events-none"></i>
+        <i
+          class="fa-solid fa-magnifying-glass pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-sm text-secondaryText"
+          aria-hidden="true"
+        ></i>
       </div>
     </div>
   `,

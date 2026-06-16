@@ -1,22 +1,39 @@
 package ma.eniad.userservice.entity.structure;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
+import ma.eniad.userservice.entity.BaseEntity;
 
+@Entity
 @Getter
 @Setter
-@Entity
-@Table(name = "groupes")
-public class Groupe {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false, unique = true)
+@SuperBuilder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(
+    name = "groupes",
+    indexes = {
+        @Index(name = "idx_groupes_formation", columnList = "formation_id")
+    }
+)
+public class Groupe extends BaseEntity {
+    @NotBlank
+    @Size(max = 60)
+    @Column(nullable = false, unique = true, length = 60)
     private String name;
 
-    @ManyToOne(cascade = CascadeType.DETACH)
-    @JoinColumn(name = "formation_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "formation_id", nullable = false)
     private Formation formation;
 }

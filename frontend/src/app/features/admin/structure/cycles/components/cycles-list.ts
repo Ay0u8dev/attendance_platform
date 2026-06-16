@@ -1,95 +1,160 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 
+import { type Cycle } from '../../../../../core/structure/models/cycle.model';
 import { IconButton } from '../../../../../shared/components/button/icon-button';
-
-export interface CycleItem {
-  id: string;
-  code: string;
-  name: string;
-  description: string;
-  tracks: number;
-  students: number;
-  badgeClass: string;
-  barClass: string;
-  lastUpdated: Date | string;
-}
+import { Button } from '../../../../../shared/components/button/button';
+import { DataTable } from '../../../../../shared/components/data-table/data-table';
+import { DataTableCellDef } from '../../../../../shared/components/data-table/data-table-cell-def';
+import { DataTableColumn } from '../../../../../shared/components/data-table/data-table.types';
+import { StatusBadge } from '../../../../../shared/components/status-badge/status-badge';
+import { CyclesFilters } from './cycles-filters';
 
 @Component({
   selector: 'app-cycles-list',
   standalone: true,
-  imports: [IconButton, DatePipe],
+  imports: [Button, DataTable, DataTableCellDef, IconButton, StatusBadge, CyclesFilters],
   template: `
-    <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 mt-6">
-      @for (cycle of cycles(); track cycle.id) {
-        <article class="group overflow-hidden rounded-2xl border border-line/40 bg-surface shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(0,0,0,0.12)] hover:border-line/60">
-          <div class="h-1.5 w-full" [class]="cycle.barClass"></div>
-          <div class="space-y-4 p-6">
-            <div class="flex items-start justify-between gap-3">
-              <span class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide" [class]="cycle.badgeClass + ' bg-opacity-10'">
-                {{ cycle.code }}
-              </span>
-              <div class="flex items-center gap-1.5">
-                <app-icon-button
-                  icon="fa-regular fa-pen-to-square"
-                  label="Editer le cycle"
-                  tone="primary"
-                  size="sm"
-                  (click)="editClicked.emit(cycle)"
-                ></app-icon-button>
-                <app-icon-button
-                  icon="fa-regular fa-trash-can"
-                  label="Supprimer le cycle"
-                  tone="danger"
-                  size="sm"
-                  (click)="deleteClicked.emit(cycle)"
-                ></app-icon-button>
-              </div>
-            </div>
-
-            <div class="space-y-2">
-              <p class="text-lg font-bold text-principalText line-clamp-2">{{ cycle.name }}</p>
-              <p class="text-sm text-secondaryText line-clamp-2">{{ cycle.description }}</p>
-            </div>
-
-            <div class="grid gap-3 sm:grid-cols-2 pt-2">
-              <div class="rounded-xl border border-line/30 bg-gradient-to-br from-surface-subtle to-surface px-4 py-3 transition-colors duration-300 group-hover:border-line/50">
-                <p class="text-xs font-semibold uppercase tracking-wider text-secondaryText/70">Filières</p>
-                <p class="mt-1.5 text-2xl font-bold text-principalText">{{ cycle.tracks }}</p>
-              </div>
-              <div class="rounded-xl border border-line/30 bg-gradient-to-br from-surface-subtle to-surface px-4 py-3 transition-colors duration-300 group-hover:border-line/50">
-                <p class="text-xs font-semibold uppercase tracking-wider text-secondaryText/70">Étudiants</p>
-                <p class="mt-1.5 text-2xl font-bold text-principalText">{{ cycle.students }}</p>
-              </div>
-            </div>
-            <div class="flex items-center justify-between rounded-xl border border-line/30 bg-gradient-to-br from-surface-subtle/50 to-surface px-4 py-3 text-xs text-secondaryText/70 transition-colors duration-300 group-hover:border-line/50">
-              <span class="font-medium">Dernière mise à jour</span>
-              <span class="font-semibold text-principalText">{{ cycle.lastUpdated | date: 'dd MMM' }}</span>
-            </div>
-          </div>
-        </article>
-      }
-
-      <button
-        type="button"
-        class="group flex min-h-[280px] flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-line/40 bg-gradient-to-br from-surface/50 to-surface-subtle p-6 text-center transition-all duration-300 hover:border-primary/50 hover:from-primary/5 hover:to-primary/5"
-        (click)="createClicked.emit()"
-      >
-        <span class="flex h-14 w-14 items-center justify-center rounded-xl border border-line/30 bg-surface text-secondaryText transition-all duration-300 group-hover:border-primary group-hover:text-primary group-hover:bg-primary/5">
-          <i class="fa-solid fa-plus text-base font-semibold" aria-hidden="true"></i>
-        </span>
-        <div>
-          <p class="text-base font-bold text-principalText transition-colors duration-300 group-hover:text-primary">Ajouter un nouveau cycle</p>
-          <p class="mt-1 text-xs text-secondaryText/60">Créer une nouvelle période académique</p>
-        </div>
-      </button>
+    <div class="mt-4 flex justify-end mb-4">
+      <app-button
+        label="Ajouter un cycle"
+        icon="fa-solid fa-plus"
+        variant="primary"
+        [fullWidth]="false"
+        (clicked)="createClicked.emit()"
+      ></app-button>
     </div>
+
+    <app-cycles-filters
+      [searchValue]="searchQuery()"
+      [typeValue]="selectedType()"
+      (searchChange)="searchQuery.set($event)"
+      (typeFilterChange)="selectedType.set($event)"
+      (resetFilters)="resetFilters()"
+    ></app-cycles-filters>
+
+    <app-data-table
+      title="Cycles"
+      description="Socle académique des formations et filières."
+      [caption]="filteredCycles().length + ' cycle(s)'"
+      [rows]="filteredCycles()"
+      [columns]="columns"
+      [rowId]="cycleRowId"
+      [enableRowSelection]="true"
+      (bulkDeleteRequested)="bulkDeleteRequested.emit($event)"
+      emptyStateTitle="Aucun cycle trouvé"
+      emptyStateDescription="Ajustez la recherche ou ajoutez un nouveau cycle."
+      [initialPageSize]="5"
+      [showToolbar]="false"
+    >
+      <ng-template [appDataTableCell]="'code'" let-row="row">
+        <span class="inline-flex rounded-lg bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary">
+          {{ row.code }}
+        </span>
+      </ng-template>
+
+      <ng-template [appDataTableCell]="'name'" let-row="row">
+        <p class="font-semibold text-principalText">{{ row.name }}</p>
+      </ng-template>
+
+      <ng-template [appDataTableCell]="'type'" let-row="row">
+        <app-status-badge
+          [label]="typeLabel(row.type)"
+          [variant]="row.type === 'PREPA' ? 'info' : 'success'"
+        ></app-status-badge>
+      </ng-template>
+
+      <ng-template [appDataTableCell]="'actions'" let-row="row">
+        <div class="flex justify-end gap-2">
+          <app-icon-button
+            icon="fa-regular fa-pen-to-square"
+            label="Modifier le cycle"
+            tone="primary"
+            size="sm"
+            (click)="editClicked.emit(row)"
+          ></app-icon-button>
+          <app-icon-button
+            icon="fa-regular fa-trash-can"
+            label="Supprimer le cycle"
+            tone="danger"
+            size="sm"
+            (click)="deleteClicked.emit(row)"
+          ></app-icon-button>
+        </div>
+      </ng-template>
+    </app-data-table>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CyclesList {
-  readonly cycles = input.required<CycleItem[]>();
+  readonly cycles = input.required<Cycle[]>();
   readonly createClicked = output<void>();
-  readonly editClicked = output<CycleItem>();
-  readonly deleteClicked = output<CycleItem>();
+  readonly editClicked = output<Cycle>();
+  readonly deleteClicked = output<Cycle>();
+  readonly bulkDeleteRequested = output<readonly Cycle[]>();
+
+  // Signaux pour gérer l'état des filtres
+  readonly searchQuery = signal('');
+  readonly selectedType = signal<string | null>(null);
+
+  // Logique de filtrage réactive
+  readonly filteredCycles = computed(() => {
+    let result = this.cycles();
+    const query = this.searchQuery().toLowerCase();
+    const type = this.selectedType();
+
+    if (query) {
+      result = result.filter(c => 
+        c.name.toLowerCase().includes(query) || 
+        c.code.toLowerCase().includes(query)
+      );
+    }
+
+    if (type) {
+      result = result.filter(c => c.type === type);
+    }
+
+    return result;
+  });
+
+  resetFilters(): void {
+    this.searchQuery.set('');
+    this.selectedType.set(null);
+  }
+
+  readonly cycleRowId = (cycle: Cycle) => String(cycle.id);
+
+  readonly columns: readonly DataTableColumn<Cycle>[] = [
+    {
+      id: 'code',
+      header: 'Code',
+      accessor: (cycle) => cycle.code,
+      width: '8rem',
+    },
+    {
+      id: 'name',
+      header: 'Libellé',
+      accessor: (cycle) => cycle.name,
+      width: '18rem',
+    },
+    {
+      id: 'type',
+      header: 'Type',
+      accessor: (cycle) => this.typeLabel(cycle.type),
+      width: '12rem',
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      accessor: () => '',
+      sortable: false,
+      searchable: false,
+      hideable: false,
+      align: 'end',
+      width: '8rem',
+    },
+  ];
+
+  typeLabel(type: Cycle['type']): string {
+    return type === 'PREPA' ? 'Préparatoire' : 'Ingénieur';
+  }
 }

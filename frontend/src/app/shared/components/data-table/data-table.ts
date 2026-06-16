@@ -48,10 +48,14 @@ export class DataTable<T extends object> {
   readonly columns = input.required<readonly DataTableColumn<T>[]>();
   readonly pageSizeOptions = input<readonly number[]>([5, 10, 20, 50]);
   readonly initialPageSize = input(10);
+  readonly showToolbar = input(true);
   readonly enableRowSelection = input(false);
   readonly rowId = input<((row: T, index: number) => string) | undefined>(undefined);
+  readonly rowClickable = input(false);
 
   readonly selectionChange = output<readonly T[]>();
+  readonly bulkDeleteRequested = output<readonly T[]>();
+  readonly rowClicked = output<T>();
 
   private readonly cellDefinitions = contentChildren(DataTableCellDef);
 
@@ -63,6 +67,12 @@ export class DataTable<T extends object> {
   readonly columnVisibilityOverrides = signal<Record<string, boolean>>({});
   readonly selectedRowIds = signal<readonly string[]>([]);
   readonly selectedRowIdsSet = computed(() => new Set(this.selectedRowIds()));
+  readonly selectedRows = computed<readonly T[]>(() => {
+    const selectedIds = this.selectedRowIdsSet();
+    return this.allRows()
+      .filter((rowEntry) => selectedIds.has(rowEntry.id))
+      .map((rowEntry) => rowEntry.row);
+  });
 
   readonly pageSize = computed(() => this.pageSizeOverride() ?? this.initialPageSize());
   readonly selectionColumnCount = computed(() => (this.enableRowSelection() ? 1 : 0));
@@ -367,6 +377,23 @@ export class DataTable<T extends object> {
     const nextSelectionList = [...nextSelection];
     this.selectedRowIds.set(nextSelectionList);
     this.emitSelectionChange(nextSelectionList);
+  }
+
+  requestBulkDelete(): void {
+    const selected = this.selectedRows();
+    if (selected.length === 0) {
+      return;
+    }
+
+    this.bulkDeleteRequested.emit(selected);
+  }
+
+  handleRowClick(row: T): void {
+    if (!this.rowClickable()) {
+      return;
+    }
+
+    this.rowClicked.emit(row);
   }
 
   isRowSelected(rowId: string): boolean {

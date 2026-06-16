@@ -18,12 +18,26 @@ http:
       middlewares: ["forward-auth", "strip-api-user"]
       service: user-service
 
+    # Attendance WebSocket handshake route — no forward-auth here.
+    # WebSocket/STOMP auth is handled inside attendance-service on CONNECT.
+    attendance-ws:
+      entryPoints: ["web"]
+      rule: "Path(`/api/ws/attendance/ws`)"
+      middlewares: ["strip-api-ws-attendance"]
+      service: attendance-service
+
     # Attendance routes — protected, JWT required
-    # attendance:
-    #   entryPoints: ["web"]
-    #   rule: "PathPrefix(`/api/attendance`)"
-    #   middlewares: ["forward-auth", "strip-api-attendance"]
-    #   service: attendance-service
+    attendance:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/attendance`)"
+      middlewares: ["forward-auth", "strip-api-attendance"]
+      service: attendance-service
+
+    qr:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/qr`)"
+      middlewares: ["forward-auth", "strip-api-qr"]
+      service: qr-service
 
     # # Face recognition routes — protected, JWT required
     # face:
@@ -52,9 +66,17 @@ http:
       stripPrefix:
         prefixes: ["/api"]
 
-    # strip-api-attendance:
-    #   stripPrefix:
-    #     prefixes: ["/api/attendance"]
+    strip-api-attendance:
+      stripPrefix:
+        prefixes: ["/api"]
+
+    strip-api-qr:
+      stripPrefix:
+        prefixes: ["/api"]
+
+    strip-api-ws-attendance:
+      stripPrefix:
+        prefixes: ["/api/ws"]
 
     # strip-api-face:
     #   stripPrefix:
@@ -70,7 +92,6 @@ http:
     # If it returns 200, the request goes through + headers are injected.
     # If it returns 401, the request is blocked and the client gets 401.
 
-    # ======== WARNING : turn on when endpoint is ready ========
     forward-auth:
       forwardAuth:
         address: "http://host.docker.internal:8081/auth/validate"
@@ -99,15 +120,15 @@ http:
         servers:
           - url: "http://host.docker.internal:8082"
 
-    # attendance-service:
-    #   loadBalancer:
-    #     servers:
-    #       - url: "http://host.docker.internal:8082"
+    attendance-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8083"
 
-    # face-service:
-    #   loadBalancer:
-    #     servers:
-    #       - url: "http://host.docker.internal:8000"
+    qr-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8001"
 
     frontend-service:
       loadBalancer:

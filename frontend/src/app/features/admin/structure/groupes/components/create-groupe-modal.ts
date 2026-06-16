@@ -1,96 +1,75 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { Button } from '../../../../../shared/components/button/button';
 import { Modal } from '../../../../../shared/components/modal/modal';
-import { DropdownFilter, type DropdownOption } from '../../../../../shared/components/dropdown-filter/dropdown-filter';
+import { ModalFieldGroup } from '../../../../../shared/components/modal-field-group/modal-field-group';
+import {
+  DropdownFilter,
+  type DropdownOption,
+} from '../../../../../shared/components/dropdown-filter/dropdown-filter';
+import { GroupeRequest } from '../../../../../core/structure/models/groupe.model';
+import { normalizeLabel, structureInputClass } from '../../../../../shared/structure-form-ui';
 
 @Component({
   selector: 'app-create-groupe-modal',
   standalone: true,
-  imports: [Modal, Button, FormsModule, DropdownFilter],
+  imports: [Modal, Button, ModalFieldGroup, DropdownFilter, FormsModule],
   template: `
     <app-modal
       title="Ajouter un groupe"
-      description="Créez un nouveau groupe en renseignant les informations ci-dessous."
+      description="Créez un groupe et rattachez-le à une formation existante."
       [open]="open()"
-      (closed)="closeRequested.emit()"
+      size="md"
+      (closed)="close()"
     >
-      <form modal-body class="space-y-6">
-        <!-- Code Field -->
-        <fieldset class="space-y-3">
-          <div class="flex items-center gap-2">
-            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary flex-shrink-0">
-              <i class="fa-solid fa-hashtag text-sm"></i>
-            </div>
-            <label for="create-code" class="block text-sm font-bold text-principalText uppercase tracking-wide">Code du groupe</label>
-          </div>
+      <form modal-body class="space-y-5">
+        <app-modal-field-group
+          label="Nom du groupe"
+          iconClass="fa-solid fa-users"
+          iconBackgroundClass="bg-primary-soft text-primary"
+          fieldId="create-groupe-name"
+          [required]="true"
+          [error]="nameError()"
+        >
           <input
-            id="create-code"
+            id="create-groupe-name"
             type="text"
-            placeholder="Ex: GI-A"
-            class="w-full rounded-xl border border-line bg-gradient-to-r from-surface to-surface-subtle px-4 py-3 text-sm text-principalText placeholder:text-muted transition focus:border-primary focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30 shadow-sm"
+            placeholder="Ex: Groupe A"
+            [(ngModel)]="groupName"
+            name="name"
+            [class]="inputClass(!!nameError())"
           />
-        </fieldset>
+        </app-modal-field-group>
 
-        <!-- Formation Dropdown -->
-        <fieldset class="space-y-3">
-          <app-dropdown-filter
-            identifier="create-formation"
-            label="Formation"
-            allLabel="Sélectionnez une formation"
-            [options]="formationOptions"
-            iconClass="fa-solid fa-book-open"
-            iconBackgroundClass="bg-primary-soft text-primary"
-            iconColor="primary"
-          ></app-dropdown-filter>
-        </fieldset>
-
-        <!-- Type/Filière Dropdown -->
-        <fieldset class="space-y-3">
-          <app-dropdown-filter
-            identifier="create-type"
-            label="Filière"
-            allLabel="Sélectionnez une filière"
-            [options]="typeOptions"
-            iconClass="fa-solid fa-bookmark"
-            iconBackgroundClass="bg-secondary-soft text-secondary"
-            iconColor="secondary"
-          ></app-dropdown-filter>
-        </fieldset>
-
-        <!-- Semester Dropdown -->
-        <fieldset class="space-y-3">
-          <app-dropdown-filter
-            identifier="create-semester"
-            label="Semestre"
-            allLabel="Sélectionnez un semestre"
-            [options]="semesterOptions"
-            iconClass="fa-solid fa-calendar"
-            iconBackgroundClass="bg-warning-soft text-warning"
-            iconColor="warning"
-          ></app-dropdown-filter>
-        </fieldset>
-
-        <!-- Students Field -->
-        <fieldset class="space-y-3">
-          <div class="flex items-center gap-2">
-            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/10 text-secondary flex-shrink-0">
-              <i class="fa-solid fa-users text-sm"></i>
-            </div>
-            <label for="create-students" class="block text-sm font-bold text-principalText uppercase tracking-wide">Nombre d'étudiants</label>
-          </div>
-          <input
-            id="create-students"
-            type="number"
-            placeholder="Ex: 32"
-            class="w-full rounded-xl border border-line bg-gradient-to-r from-surface to-surface-subtle px-4 py-3 text-sm text-principalText placeholder:text-muted transition focus:border-secondary focus:bg-surface focus:outline-none focus:ring-2 focus:ring-secondary/30 shadow-sm"
-          />
-        </fieldset>
+        <app-dropdown-filter
+          identifier="create-groupe-formation"
+          label="Formation"
+          allLabel="Sélectionnez une formation"
+          helper="Le groupe hérite du cycle, de la filière et de l'année de la formation choisie."
+          [options]="formationOptions()"
+          [value]="selectedFormation()"
+          [required]="true"
+          [error]="submitted() && !selectedFormation() ? 'Sélectionnez une formation.' : ''"
+          iconClass="fa-solid fa-book-open"
+          iconBackgroundClass="bg-secondary-soft text-secondary"
+          iconColor="secondary"
+          (filterChange)="selectedFormation.set($event)"
+        ></app-dropdown-filter>
       </form>
-      <div modal-footer class="flex w-full items-center gap-3 justify-end border-t border-line pt-6">
-        <app-button label="Annuler" variant="outline" [fullWidth]="false" (clicked)="closeRequested.emit()"></app-button>
-        <app-button label="Créer le groupe" icon="fa-solid fa-plus" variant="primary" [fullWidth]="false"></app-button>
+      <div modal-footer class="flex w-full items-center justify-end gap-3">
+        <app-button
+          label="Annuler"
+          variant="outline"
+          [fullWidth]="false"
+          (clicked)="close()"
+        ></app-button>
+        <app-button
+          label="Créer le groupe"
+          variant="primary"
+          [fullWidth]="false"
+          (clicked)="submit()"
+        ></app-button>
       </div>
     </app-modal>
   `,
@@ -99,25 +78,50 @@ import { DropdownFilter, type DropdownOption } from '../../../../../shared/compo
 export class CreateGroupeModal {
   readonly open = input(false);
   readonly closeRequested = output<void>();
+  readonly createRequested = output<GroupeRequest>();
+  readonly formationOptions = input.required<DropdownOption[]>();
 
-  readonly formationOptions: DropdownOption[] = [
-    { value: 'GI', label: 'Génie Informatique' },
-    { value: 'MGT', label: 'Management & Économie' },
-    { value: 'IA', label: 'Intelligence Artificielle' },
-    { value: 'ROC', label: 'Robotique et Objets Connectés' }
-  ];
+  groupName = '';
+  readonly selectedFormation = signal<string | null>(null);
+  readonly submitted = signal(false);
 
-  readonly typeOptions: DropdownOption[] = [
-    { value: 'TC', label: 'Tronc Commun' },
-    { value: 'SP', label: 'Spécialité' }
-  ];
+  close(): void {
+    this.submitted.set(false);
+    this.resetForm();
+    this.closeRequested.emit();
+  }
 
-  readonly semesterOptions: DropdownOption[] = [
-    { value: 'S1', label: 'Semestre 1' },
-    { value: 'S2', label: 'Semestre 2' },
-    { value: 'S3', label: 'Semestre 3' },
-    { value: 'S4', label: 'Semestre 4' },
-    { value: 'S5', label: 'Semestre 5' },
-    { value: 'S6', label: 'Semestre 6' }
-  ];
+  inputClass(invalid: boolean): string {
+    return structureInputClass(invalid);
+  }
+
+  nameError(): string {
+    if (!this.submitted()) {
+      return '';
+    }
+
+    return normalizeLabel(this.groupName).length >= 2
+      ? ''
+      : 'Indiquez un nom de groupe de 2 caractères minimum.';
+  }
+
+  submit(): void {
+    this.submitted.set(true);
+    if (this.nameError() || !this.selectedFormation()) {
+      return;
+    }
+
+    this.createRequested.emit({
+      name: normalizeLabel(this.groupName),
+      formationId: Number(this.selectedFormation()),
+    });
+
+    this.submitted.set(false);
+    this.resetForm();
+  }
+
+  private resetForm(): void {
+    this.groupName = '';
+    this.selectedFormation.set(null);
+  }
 }

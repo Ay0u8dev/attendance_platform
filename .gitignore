@@ -1,5 +1,16 @@
 .env
+.env.prod
 stuff
 stuff/*
 .vscode
 .vscode/*
+.agents
+.agents/*
+.agent
+.agent/*
+.claude
+.claude/*
+.idea/
+.idea/*
+devops-learning-notes/*
+devops-learning-notes/

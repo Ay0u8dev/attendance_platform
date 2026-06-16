@@ -1,10 +1,5 @@
 import { ChangeDetectionStrategy, Component, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Router } from '@angular/router';
-import { OAuthService } from 'angular-oauth2-oidc';
-import { filter, take } from 'rxjs/operators';
-
-import { getGoogleAuthConfig } from '../../../core/auth/google-auth.config';
 import { AuthService } from '../../../core/auth/services/auth.service';
 
 @Component({
@@ -26,8 +21,7 @@ import { AuthService } from '../../../core/auth/services/auth.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OAuthCallback {
-  private readonly oauthService = inject(OAuthService);
-  private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
 
@@ -36,32 +30,6 @@ export class OAuthCallback {
       return;
     }
 
-    this.oauthService.configure(getGoogleAuthConfig());
-
-    this.oauthService.events
-      .pipe(
-        filter((event) => event.type === 'token_received'),
-        take(1),
-      )
-      .subscribe(() => {
-        this.redirectToLogin();
-      });
-
-    this.oauthService
-      .loadDiscoveryDocumentAndTryLogin()
-      .then(() => {
-        this.redirectToLogin();
-      })
-      .catch(() => {
-        this.redirectToLogin();
-      });
-  }
-
-  private redirectToLogin(): void {
-    if (!this.isBrowser) {
-      return;
-    }
-
-    this.router.navigateByUrl('/', { replaceUrl: true });
+    this.authService.completeOAuthCallback();
   }
 }

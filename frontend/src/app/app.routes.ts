@@ -1,7 +1,15 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard } from './core/auth/guards/auth.guard';
+import { authChildGuard, authGuard, guestGuard } from './core/auth/guards/auth.guard';
+import { Role } from './core/auth/models/auth.model';
 
 export const routes: Routes = [
+  {
+    path: 'attendance/qr-display',
+    loadComponent: () =>
+      import('./features/attendance/qr-display/qr-display-page').then(
+        (module) => module.QrDisplayPage,
+      ),
+  },
   {
     path: '',
     loadComponent: () => import('./shared/layouts/auth-layout').then((module) => module.AuthLayout),
@@ -33,7 +41,9 @@ export const routes: Routes = [
   },
   {
     path: '',
-    // canActivate: [authGuard],
+    canActivate: [authGuard],
+    canActivateChild: [authChildGuard],
+    data: { allowedRoles: [Role.ADMIN] },
     loadComponent: () =>
       import('./shared/layouts/admin-layout').then((module) => module.AdminLayout),
     children: [
@@ -86,7 +96,8 @@ export const routes: Routes = [
   },
   {
     path: 'teacher',
-    // canActivate: [authGuard],
+    canActivate: [authGuard],
+    data: { allowedRoles: [Role.TEACHER] },
     loadComponent: () =>
       import('./shared/layouts/teacher-layout').then((module) => module.TeacherLayout),
     children: [],
@@ -94,9 +105,44 @@ export const routes: Routes = [
   {
     path: 'student',
     canActivate: [authGuard],
+    data: { allowedRoles: [Role.STUDENT] },
     loadComponent: () =>
       import('./shared/layouts/student-layout').then((module) => module.StudentLayout),
-    children: [],
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'dashboard',
+      },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./features/student/dashboard/student-dashboard-page').then(
+            (module) => module.StudentDashboardPage,
+          ),
+      },
+      {
+        path: 'sessions',
+        loadComponent: () =>
+          import('./features/student/sessions/student-sessions-page').then(
+            (module) => module.StudentSessionsPage,
+          ),
+      },
+      {
+        path: 'justifications',
+        loadComponent: () =>
+          import('./features/student/justifications/student-justifications-page').then(
+            (module) => module.StudentJustificationsPage,
+          ),
+      },
+      {
+        path: 'justifications/:id',
+        loadComponent: () =>
+          import('./features/student/justifications/student-justification-detail-page').then(
+            (module) => module.StudentJustificationDetailPage,
+          ),
+      },
+    ],
   },
   { path: '**', redirectTo: '' },
 ];

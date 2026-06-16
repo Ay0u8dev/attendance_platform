@@ -1,0 +1,14 @@
+target
+.git
+.idea
+.vscode
+*.iml
+Dockerfile*
+docker-compose*
+README.md
+.env
+.env.*
+*.log
+*.pem
+*.key
+*.p12
