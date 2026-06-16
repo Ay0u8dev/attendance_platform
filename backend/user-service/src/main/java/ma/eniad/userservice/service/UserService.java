@@ -2,15 +2,15 @@ package ma.eniad.userservice.service;
 
 import lombok.RequiredArgsConstructor;
 import ma.eniad.userservice.dto.AuthUserRequest;
-import ma.eniad.userservice.dto.InternalTeacherIdentityDto;
-import ma.eniad.userservice.dto.StudentRosterDto;
 import ma.eniad.userservice.dto.UserResponseDto;
+import ma.eniad.userservice.dto.student.StudentRosterDto;
+import ma.eniad.userservice.dto.teacher.InternalTeacherIdentityDto;
 import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Teacher;
 import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
-import ma.eniad.userservice.repository.InscriptionRepository;
 import ma.eniad.userservice.repository.UserRepository;
+import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.teacher.TeacherRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
 import org.springframework.http.HttpStatus;
@@ -25,7 +25,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final TeacherRepository teacherRepository;
-    private final InscriptionRepository inscriptionRepository;
+    private final StudentInscriptionRepository inscriptionRepository;
     private final AnneeUniversitaireRepository anneeUniversitaireRepository;
 
     public UserResponseDto findUser(AuthUserRequest request) {

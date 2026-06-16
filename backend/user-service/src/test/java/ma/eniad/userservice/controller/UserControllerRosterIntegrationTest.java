@@ -10,8 +10,8 @@ import ma.eniad.userservice.entity.structure.Cycle;
 import ma.eniad.userservice.entity.structure.Filiere;
 import ma.eniad.userservice.entity.structure.Formation;
 import ma.eniad.userservice.entity.structure.Groupe;
-import ma.eniad.userservice.repository.InscriptionRepository;
 import ma.eniad.userservice.repository.UserRepository;
+import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
 import ma.eniad.userservice.repository.structure.CycleRepository;
 import ma.eniad.userservice.repository.structure.FiliereRepository;
@@ -51,7 +51,7 @@ class UserControllerRosterIntegrationTest {
     private AnneeUniversitaireRepository anneeUniversitaireRepository;
 
     @Autowired
-    private InscriptionRepository inscriptionRepository;
+    private StudentInscriptionRepository inscriptionRepository;
 
     @Autowired
     private CycleRepository cycleRepository;
@@ -116,6 +116,7 @@ class UserControllerRosterIntegrationTest {
         filiere = filiereRepository.save(filiere);
 
         Formation formation = Formation.builder()
+                .name("Formation GI")
                 .anneeUniversitaire(activeYear)
                 .cycle(cycle)
                 .filiere(filiere)
@@ -160,12 +161,14 @@ class UserControllerRosterIntegrationTest {
 
         Inscription activeInscription = new Inscription();
         activeInscription.setStudent(activeStudent);
+        activeInscription.setFormation(formation);
         activeInscription.setGroupe(activeGroup);
         activeInscription.setAnneeUniversitaire(activeYear);
         inscriptionRepository.save(activeInscription);
 
         Inscription inactiveInscription = new Inscription();
         inactiveInscription.setStudent(inactiveStudent);
+        inactiveInscription.setFormation(formation);
         inactiveInscription.setGroupe(activeGroup);
         inactiveInscription.setAnneeUniversitaire(inactiveYear);
         inscriptionRepository.save(inactiveInscription);

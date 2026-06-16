@@ -1,5 +1,6 @@
 package ma.eniad.userservice.service.teacher;
 
+import java.util.HashSet;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -41,8 +42,10 @@ public class TeacherService {
         validateEmailDomain(normalizedEmail);
 
         Teacher teacher = teacherMapper.toEntity(request);
-        teacher.getRoles().add(Role.TEACHER);
-        teacher.setEnabled(true);
+        if (teacher.getRoles() == null) {
+            teacher.setRoles(new HashSet<>());
+        }
+        teacher.getRoles().add(Role.TEACHER);        teacher.setEnabled(true);
         teacher.setFirstLogin(true);
 
         try {

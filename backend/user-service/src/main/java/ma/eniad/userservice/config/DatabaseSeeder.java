@@ -13,8 +13,9 @@ import ma.eniad.userservice.entity.structure.Filiere;
 import ma.eniad.userservice.entity.structure.Formation;
 import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.entity.structure.Module;
-import ma.eniad.userservice.repository.InscriptionRepository;
+
 import ma.eniad.userservice.repository.UserRepository;
+import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.structure.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -37,7 +38,7 @@ public class DatabaseSeeder {
             FormationRepository formationRepository,
             GroupeRepository groupeRepository,
             ModuleRepository moduleRepository,
-            InscriptionRepository inscriptionRepository) {
+            StudentInscriptionRepository inscriptionRepository) {
         return args -> {
             // Check if the database is already seeded to prevent duplicates
             if (userRepository.count() == 0) {
@@ -178,6 +179,7 @@ public class DatabaseSeeder {
                 filiereRepository.save(filiere);
 
                 Formation formation = Formation.builder()
+                        .name("GI-1A")
                         .anneeUniversitaire(annee)
                         .cycle(cycle)
                         .filiere(filiere)
@@ -208,6 +210,7 @@ public class DatabaseSeeder {
                     Inscription inscription = new Inscription();
                     inscription.setStudent(students.get(index));
                     inscription.setGroupe(index < 5 ? groupe1 : groupe2);
+                    inscription.setFormation(formation);
                     inscription.setAnneeUniversitaire(annee);
                     inscriptions.add(inscription);
                 }

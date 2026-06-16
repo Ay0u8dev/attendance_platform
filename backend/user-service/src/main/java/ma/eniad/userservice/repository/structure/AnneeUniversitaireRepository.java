@@ -8,11 +8,13 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface AnneeUniversitaireRepository extends JpaRepository<AnneeUniversitaire, Long> {
     boolean existsByName(String name);
     List<AnneeUniversitaire> findByActiveTrue();
+    List<AnneeUniversitaire> findByNameIn(Set<String> names);
 
     @Modifying
     @Query("update AnneeUniversitaire a set a.active = false " +

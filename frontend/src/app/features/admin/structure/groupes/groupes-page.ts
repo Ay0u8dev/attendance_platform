@@ -285,7 +285,10 @@ export class GroupesPage {
     const field = formation.filiereId != null ? fieldMap.get(formation.filiereId) : null;
     // const year = yearMap.get(formation.anneeUniversitaireId);
 
-    const parts = [cycle ? `${cycle.code}` : `Cycle #${formation.cycleId}`];
+    const parts = [
+      formation.name,
+      cycle ? `${cycle.code}` : `Cycle #${formation.cycleId}`,
+    ];
 
     if (field) {
       parts.push(`${field.code}`);

@@ -1,11 +1,11 @@
 package ma.eniad.userservice.service;
 
-import ma.eniad.userservice.dto.InternalTeacherIdentityDto;
+import ma.eniad.userservice.dto.teacher.InternalTeacherIdentityDto;
 import ma.eniad.userservice.entity.Teacher;
-import ma.eniad.userservice.repository.InscriptionRepository;
 import ma.eniad.userservice.repository.UserRepository;
-import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
+import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.teacher.TeacherRepository;
+import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -22,7 +22,7 @@ class UserServiceTest {
 
     private UserRepository userRepository;
     private TeacherRepository teacherRepository;
-    private InscriptionRepository inscriptionRepository;
+    private StudentInscriptionRepository inscriptionRepository;
     private AnneeUniversitaireRepository anneeUniversitaireRepository;
     private UserService userService;
 
@@ -30,7 +30,7 @@ class UserServiceTest {
     void setUp() {
         userRepository = mock(UserRepository.class);
         teacherRepository = mock(TeacherRepository.class);
-        inscriptionRepository = mock(InscriptionRepository.class);
+        inscriptionRepository = mock(StudentInscriptionRepository.class);
         anneeUniversitaireRepository = mock(AnneeUniversitaireRepository.class);
         userService = new UserService(userRepository, teacherRepository, inscriptionRepository, anneeUniversitaireRepository);
     }

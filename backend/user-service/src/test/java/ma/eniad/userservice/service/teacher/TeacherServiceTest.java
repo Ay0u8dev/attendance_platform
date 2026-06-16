@@ -7,9 +7,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -19,8 +24,10 @@ import java.util.List;
 import java.util.Optional;
 
 import ma.eniad.userservice.entity.Teacher;
+import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.entity.enums.Role;
 import ma.eniad.userservice.exception.DuplicateResourceException;
+import ma.eniad.userservice.exception.InvalidDomainException;
 import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.repository.teacher.TeacherRepository;
 import ma.eniad.userservice.repository.UserRepository;
@@ -76,6 +83,35 @@ class TeacherServiceTest {
     }
 
     @Test
+    void create_normalizesEmailBeforeSaving() {
+        TeacherRequestDTO request = new TeacherRequestDTO();
+        request.setEmail("  TEACHER@UMP.AC.MA ");
+
+        Teacher teacher = new Teacher();
+
+        when(teacherMapper.toEntity(request)).thenReturn(teacher);
+        when(teacherRepository.save(teacher)).thenReturn(teacher);
+        when(teacherMapper.toResponse(teacher)).thenReturn(TeacherResponseDTO.builder().build());
+
+        teacherService.create(request);
+
+        assertThat(request.getEmail()).isEqualTo("teacher@ump.ac.ma");
+        assertThat(teacher.getRoles()).containsExactly(Role.TEACHER);
+        assertThat(teacher.isEnabled()).isTrue();
+        assertThat(teacher.isFirstLogin()).isTrue();
+    }
+
+    @Test
+    void create_throwsWhenEmailDomainIsNotAllowed() {
+        TeacherRequestDTO request = new TeacherRequestDTO();
+        request.setEmail("teacher@example.com");
+
+        assertThatThrownBy(() -> teacherService.create(request))
+                .isInstanceOf(InvalidDomainException.class)
+                .hasMessage("Email must be in the @ump.ac.ma domain");
+    }
+
+    @Test
     void create_throwsWhenEmailExists() {
         TeacherRequestDTO request = new TeacherRequestDTO();
         request.setEmail("teacher@ump.ac.ma");
@@ -106,6 +142,40 @@ class TeacherServiceTest {
 
         assertThatThrownBy(() -> teacherService.create(request))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void getById_returnsMappedTeacher() {
+        Teacher teacher = new Teacher();
+        TeacherResponseDTO response = TeacherResponseDTO.builder().id(1L).build();
+
+        when(teacherRepository.findById(1L)).thenReturn(Optional.of(teacher));
+        when(teacherMapper.toResponse(teacher)).thenReturn(response);
+
+        assertThat(teacherService.getById(1L)).isSameAs(response);
+    }
+
+    @Test
+    void getById_throwsWhenTeacherNotFound() {
+        when(teacherRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> teacherService.getById(1L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Teacher not found");
+    }
+
+    @Test
+    void getAll_returnsMappedTeachers() {
+        Teacher first = new Teacher();
+        Teacher second = new Teacher();
+        TeacherResponseDTO firstResponse = TeacherResponseDTO.builder().id(1L).build();
+        TeacherResponseDTO secondResponse = TeacherResponseDTO.builder().id(2L).build();
+
+        when(teacherRepository.findAll()).thenReturn(List.of(first, second));
+        when(teacherMapper.toResponse(first)).thenReturn(firstResponse);
+        when(teacherMapper.toResponse(second)).thenReturn(secondResponse);
+
+        assertThat(teacherService.getAll()).containsExactly(firstResponse, secondResponse);
     }
 
     @Test
@@ -164,6 +234,27 @@ class TeacherServiceTest {
 
         assertThatThrownBy(() -> teacherService.update(1L, new TeacherRequestDTO()))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void update_throwsWhenEmailExistsForAnotherUser() {
+        TeacherRequestDTO request = new TeacherRequestDTO();
+        request.setEmail("teacher@ump.ac.ma");
+
+        Teacher teacher = new Teacher();
+        teacher.setId(1L);
+
+        User existingUser = new User();
+        existingUser.setId(2L);
+
+        when(teacherRepository.findById(1L)).thenReturn(Optional.of(teacher));
+        doNothing().when(teacherMapper).updateEntity(request, teacher);
+        when(teacherRepository.save(teacher)).thenThrow(new DataIntegrityViolationException("constraint"));
+        when(userRepository.findByEmail("teacher@ump.ac.ma")).thenReturn(Optional.of(existingUser));
+
+        assertThatThrownBy(() -> teacherService.update(1L, request))
+                .isInstanceOf(DuplicateResourceException.class)
+                .hasMessage("Email already exists");
     }
 
     @Test

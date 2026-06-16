@@ -6,6 +6,7 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Set;
 
 import ma.eniad.userservice.entity.enums.Role;
@@ -21,7 +22,7 @@ import ma.eniad.userservice.dto.teacher.TeacherResponseDTO;
 import ma.eniad.userservice.service.teacher.TeacherService;
 
 @ExtendWith(MockitoExtension.class)
-public class TeacherControllerTest {
+class TeacherControllerTest {
     private TeacherController controller;
 
     @Mock
@@ -49,6 +50,40 @@ public class TeacherControllerTest {
 
         assertThat(result.getStatusCode().value()).isEqualTo(201);
         assertThat(result.getBody()).isEqualTo(response);
+    }
+
+    @Test
+    void getAll_returnsOk() {
+        TeacherResponseDTO response = TeacherResponseDTO.builder()
+                .id(1L)
+                .email("teacher@example.com")
+                .roles(Set.of(Role.TEACHER))
+                .build();
+
+        when(teacherService.getAll()).thenReturn(List.of(response));
+
+        ResponseEntity<List<TeacherResponseDTO>> result = controller.getAll();
+
+        assertThat(result.getStatusCode().value()).isEqualTo(200);
+        assertThat(result.getBody()).containsExactly(response);
+        verify(teacherService).getAll();
+    }
+
+    @Test
+    void getById_returnsOk() {
+        TeacherResponseDTO response = TeacherResponseDTO.builder()
+                .id(1L)
+                .email("teacher@example.com")
+                .roles(Set.of(Role.TEACHER))
+                .build();
+
+        when(teacherService.getById(1L)).thenReturn(response);
+
+        ResponseEntity<TeacherResponseDTO> result = controller.getById(1L);
+
+        assertThat(result.getStatusCode().value()).isEqualTo(200);
+        assertThat(result.getBody()).isSameAs(response);
+        verify(teacherService).getById(1L);
     }
 
     @Test

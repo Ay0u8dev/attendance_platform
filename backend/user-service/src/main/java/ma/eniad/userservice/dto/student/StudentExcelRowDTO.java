@@ -1,4 +1,4 @@
-package ma.eniad.userservice.dto.student.excel;
+package ma.eniad.userservice.dto.student;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,4 +23,10 @@ public class StudentExcelRowDTO {
     private String email;
 
     private String numApogee;
+
+    private String academicYear;
+
+    private String formationName;
+
+    private String groupeCode;
 }
