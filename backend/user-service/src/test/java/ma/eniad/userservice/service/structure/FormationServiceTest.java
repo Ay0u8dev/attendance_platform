@@ -55,18 +55,18 @@ class FormationServiceTest {
 
     @Test
     void createLinksParentsAndSavesFormationWhenCombinationIsUnique() {
-        FormationRequestDTO request = request(1L, 2L, 3L);
+        FormationRequestDTO request = request("Formation X", 1L, 2L, 3L);
         Formation entity = Formation.builder().build();
         AnneeUniversitaire annee = annee(1L);
         Filiere filiere = filiere(2L);
         Cycle cycle = cycle(3L);
-        FormationResponseDTO response = response(10L, 1L, 2L, 3L);
+        FormationResponseDTO response = response(10L, "Formation X", 1L, 2L, 3L);
 
-        when(repository.existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(1L, 2L, 3L)).thenReturn(false);
-        when(mapper.toEntity(request)).thenReturn(entity);
         when(anneeRepository.findById(1L)).thenReturn(Optional.of(annee));
-        when(filiereRepository.findById(2L)).thenReturn(Optional.of(filiere));
         when(cycleRepository.findById(3L)).thenReturn(Optional.of(cycle));
+        when(repository.existsByAnneeUniversitaireIdAndCycleIdAndName(1L, 3L, "Formation X")).thenReturn(false);
+        when(filiereRepository.findById(2L)).thenReturn(Optional.of(filiere));
+        when(mapper.toEntity(request)).thenReturn(entity);
         when(repository.save(entity)).thenReturn(entity);
         when(mapper.toResponse(entity)).thenReturn(response);
 
@@ -80,21 +80,22 @@ class FormationServiceTest {
     }
 
     @Test
-    void createThrowsWhenFormationCombinationAlreadyExists() {
-        FormationRequestDTO request = request(1L, 2L, 3L);
-        when(repository.existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(1L, 2L, 3L)).thenReturn(true);
+    void createThrowsWhenFormationYearCycleNameAlreadyExists() {
+        FormationRequestDTO request = request("Formation X", 1L, 2L, 3L);
+        when(anneeRepository.findById(1L)).thenReturn(Optional.of(annee(1L)));
+        when(cycleRepository.findById(3L)).thenReturn(Optional.of(cycle(3L)));
+        when(repository.existsByAnneeUniversitaireIdAndCycleIdAndName(1L, 3L, "Formation X")).thenReturn(true);
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(DuplicateResourceException.class)
-                .hasMessage("Formation already exists for the given year, filiere, and cycle");
+                .hasMessage("Formation already exists for the given year, cycle, and name: Formation X");
 
         verify(repository, never()).save(any());
     }
 
     @Test
     void createThrowsWhenAcademicYearDoesNotExist() {
-        FormationRequestDTO request = request(1L, 2L, 3L);
-        when(repository.existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(1L, 2L, 3L)).thenReturn(false);
+        FormationRequestDTO request = request("Formation X", 1L, 2L, 3L);
         when(anneeRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.create(request))
@@ -103,18 +104,69 @@ class FormationServiceTest {
     }
 
     @Test
-    void updateAllowsSameExistingCombinationEvenIfRepositoryReportsItExists() {
-        FormationRequestDTO request = request(1L, 2L, 3L);
+    void createAllowsPrepaFormationWithoutFiliere() {
+        FormationRequestDTO request = request("CP1", 1L, null, 3L);
+        Formation entity = Formation.builder().build();
+        AnneeUniversitaire annee = annee(1L);
+        Cycle cycle = prepaCycle(3L);
+        FormationResponseDTO response = response(10L, "CP1", 1L, null, 3L);
+
+        when(anneeRepository.findById(1L)).thenReturn(Optional.of(annee));
+        when(cycleRepository.findById(3L)).thenReturn(Optional.of(cycle));
+        when(repository.existsByAnneeUniversitaireIdAndCycleIdAndName(1L, 3L, "CP1")).thenReturn(false);
+        when(mapper.toEntity(request)).thenReturn(entity);
+        when(repository.save(entity)).thenReturn(entity);
+        when(mapper.toResponse(entity)).thenReturn(response);
+
+        assertThat(service.create(request)).isSameAs(response);
+
+        verify(filiereRepository, never()).findById(any());
+        assertThat(entity.getFiliere()).isNull();
+    }
+
+    @Test
+    void createRejectsFiliereForPrepaCycle() {
+        FormationRequestDTO request = request("CP1", 1L, 2L, 3L);
+
+        when(anneeRepository.findById(1L)).thenReturn(Optional.of(annee(1L)));
+        when(cycleRepository.findById(3L)).thenReturn(Optional.of(prepaCycle(3L)));
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("PREPA cycle must not have filiere");
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void createRejectsMissingFiliereForNonPrepaCycle() {
+        FormationRequestDTO request = request("Formation X", 1L, null, 3L);
+
+        when(anneeRepository.findById(1L)).thenReturn(Optional.of(annee(1L)));
+        when(cycleRepository.findById(3L)).thenReturn(Optional.of(cycle(3L)));
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Filiere is required for non-PREPA cycle");
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void updateAllowsSameFormationWhenYearCycleNameBelongsToCurrentEntity() {
+        FormationRequestDTO request = request("Formation X", 1L, 2L, 3L);
         AnneeUniversitaire annee = annee(1L);
         Filiere filiere = filiere(2L);
         Cycle cycle = cycle(3L);
         Formation entity = formation(10L, annee, filiere, cycle);
-        FormationResponseDTO response = response(10L, 1L, 2L, 3L);
+        FormationResponseDTO response = response(10L, "Formation X", 1L, 2L, 3L);
 
         when(repository.findById(10L)).thenReturn(Optional.of(entity));
         when(anneeRepository.findById(1L)).thenReturn(Optional.of(annee));
-        when(filiereRepository.findById(2L)).thenReturn(Optional.of(filiere));
         when(cycleRepository.findById(3L)).thenReturn(Optional.of(cycle));
+        when(repository.existsByAnneeUniversitaireIdAndCycleIdAndNameAndIdNot(1L, 3L, "Formation X", 10L))
+                .thenReturn(false);
+        when(filiereRepository.findById(2L)).thenReturn(Optional.of(filiere));
         when(repository.save(entity)).thenReturn(entity);
         when(mapper.toResponse(entity)).thenReturn(response);
 
@@ -123,16 +175,19 @@ class FormationServiceTest {
     }
 
     @Test
-    void updateThrowsWhenNewCombinationBelongsToAnotherFormation() {
-        FormationRequestDTO request = request(4L, 5L, 6L);
+    void updateThrowsWhenNewYearCycleNameBelongsToAnotherFormation() {
+        FormationRequestDTO request = request("Formation Y", 4L, 5L, 6L);
         Formation entity = formation(10L, annee(1L), filiere(2L), cycle(3L));
 
         when(repository.findById(10L)).thenReturn(Optional.of(entity));
-        when(repository.existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(4L, 5L, 6L)).thenReturn(true);
+        when(anneeRepository.findById(4L)).thenReturn(Optional.of(annee(4L)));
+        when(cycleRepository.findById(6L)).thenReturn(Optional.of(cycle(6L)));
+        when(repository.existsByAnneeUniversitaireIdAndCycleIdAndNameAndIdNot(4L, 6L, "Formation Y", 10L))
+                .thenReturn(true);
 
         assertThatThrownBy(() -> service.update(10L, request))
                 .isInstanceOf(DuplicateResourceException.class)
-                .hasMessage("Formation already exists for the given year, filiere, and cycle");
+                .hasMessage("Formation already exists for the given year, cycle, and name: Formation Y");
 
         verify(repository, never()).save(any());
     }
@@ -141,8 +196,8 @@ class FormationServiceTest {
     void getAllMapsEveryFormation() {
         Formation first = formation(10L, annee(1L), filiere(2L), cycle(3L));
         Formation second = formation(11L, annee(4L), filiere(5L), cycle(6L));
-        FormationResponseDTO firstResponse = response(10L, 1L, 2L, 3L);
-        FormationResponseDTO secondResponse = response(11L, 4L, 5L, 6L);
+        FormationResponseDTO firstResponse = response(10L, "Formation 1", 1L, 2L, 3L);
+        FormationResponseDTO secondResponse = response(11L, "Formation 2", 4L, 5L, 6L);
 
         when(repository.findAll()).thenReturn(List.of(first, second));
         when(mapper.toResponse(first)).thenReturn(firstResponse);
@@ -160,8 +215,9 @@ class FormationServiceTest {
                 .hasMessage("Formation not found with id: 99");
     }
 
-    private static FormationRequestDTO request(Long anneeId, Long filiereId, Long cycleId) {
+    private static FormationRequestDTO request(String name, Long anneeId, Long filiereId, Long cycleId) {
         FormationRequestDTO request = new FormationRequestDTO();
+        request.setName(name);
         request.setAnneeUniversitaireId(anneeId);
         request.setFiliereId(filiereId);
         request.setCycleId(cycleId);
@@ -171,6 +227,7 @@ class FormationServiceTest {
     private static Formation formation(Long id, AnneeUniversitaire annee, Filiere filiere, Cycle cycle) {
         return Formation.builder()
                 .id(id)
+                .name("Formation X")
                 .anneeUniversitaire(annee)
                 .filiere(filiere)
                 .cycle(cycle)
@@ -203,9 +260,19 @@ class FormationServiceTest {
                 .build();
     }
 
-    private static FormationResponseDTO response(Long id, Long anneeId, Long filiereId, Long cycleId) {
+    private static Cycle prepaCycle(Long id) {
+        return Cycle.builder()
+                .id(id)
+                .code("PREPA")
+                .name("Classes preparatoires")
+                .type(CycleType.PREPA)
+                .build();
+    }
+
+    private static FormationResponseDTO response(Long id, String name, Long anneeId, Long filiereId, Long cycleId) {
         return FormationResponseDTO.builder()
                 .id(id)
+                .name(name)
                 .anneeUniversitaireId(anneeId)
                 .filiereId(filiereId)
                 .cycleId(cycleId)

@@ -1,6 +1,6 @@
 package ma.eniad.userservice.utils.excel.student;
 
-import ma.eniad.userservice.dto.student.excel.StudentExcelRowDTO;
+import ma.eniad.userservice.dto.student.StudentExcelRowDTO;
 import ma.eniad.userservice.exception.InvalidExcelFileException;
 
 import org.apache.poi.ss.usermodel.Cell;
@@ -55,6 +55,9 @@ public class StudentExcelParser {
                     .lastName(getCellValue(row.getCell(1)))
                     .email(getCellValue(row.getCell(2)))
                     .numApogee(getCellValue(row.getCell(3)))
+                    .academicYear(getCellValue(row.getCell(4)))
+                    .formationName(getCellValue(row.getCell(5)))
+                    .groupeCode(getCellValue(row.getCell(6)))
                     .build();
 
                 rows.add(excelRow);

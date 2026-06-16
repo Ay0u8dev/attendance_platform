@@ -11,7 +11,9 @@ import static org.mockito.Mockito.when;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,14 +25,23 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import ma.eniad.userservice.dto.student.StudentRequestDTO;
 import ma.eniad.userservice.dto.student.StudentResponseDTO;
+import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Student;
 import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.entity.enums.Role;
+import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
+import ma.eniad.userservice.entity.structure.Filiere;
+import ma.eniad.userservice.entity.structure.Formation;
+import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.exception.DuplicateResourceException;
+import ma.eniad.userservice.exception.InvalidDomainException;
 import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.mapper.student.StudentMapper;
 import ma.eniad.userservice.repository.UserRepository;
+import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
+import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
+import ma.eniad.userservice.service.UserContext;
 
 @ExtendWith(MockitoExtension.class)
 class StudentServiceTest {
@@ -42,6 +53,12 @@ class StudentServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private StudentInscriptionRepository inscriptionRepository;
+
+    @Mock
+    private AnneeUniversitaireRepository anneeUniversitaireRepository;
+
+    @Mock
     private StudentMapper studentMapper;
 
     @InjectMocks
@@ -50,6 +67,11 @@ class StudentServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(studentService, "allowedDomain", "ump.ac.ma");
+    }
+
+    @AfterEach
+    void tearDown() {
+        UserContext.clear();
     }
 
     @Test
@@ -78,6 +100,35 @@ class StudentServiceTest {
         assertThat(student.getRoles()).contains(Role.STUDENT);
         assertThat(student.isEnabled()).isTrue();
         assertThat(student.isFirstLogin()).isTrue();
+    }
+
+    @Test
+    void create_normalizesEmailAndApogeeBeforeSaving() {
+        StudentRequestDTO request = new StudentRequestDTO();
+        request.setEmail("  STUDENT@UMP.AC.MA ");
+        request.setNumApogee(" A123 ");
+
+        Student student = new Student();
+
+        when(studentMapper.toEntity(request)).thenReturn(student);
+        when(studentRepository.save(student)).thenReturn(student);
+        when(studentMapper.toResponse(student)).thenReturn(StudentResponseDTO.builder().build());
+
+        studentService.create(request);
+
+        assertThat(request.getEmail()).isEqualTo("student@ump.ac.ma");
+        assertThat(request.getNumApogee()).isEqualTo("A123");
+        assertThat(student.getRoles()).containsExactly(Role.STUDENT);
+    }
+
+    @Test
+    void create_throwsWhenEmailDomainIsNotAllowed() {
+        StudentRequestDTO request = new StudentRequestDTO();
+        request.setEmail("student@example.com");
+
+        assertThatThrownBy(() -> studentService.create(request))
+            .isInstanceOf(InvalidDomainException.class)
+            .hasMessage("Email must be in the @ump.ac.ma domain");
     }
 
     @Test
@@ -202,6 +253,75 @@ class StudentServiceTest {
         assertThatThrownBy(() -> studentService.update(1L, request))
             .isInstanceOf(ResourceNotFoundException.class)
             .hasMessage("Student not found");
+    }
+
+    @Test
+    void getById_returnsMappedStudent() {
+        Student student = new Student();
+        StudentResponseDTO response = StudentResponseDTO.builder().id(1L).build();
+
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(studentMapper.toResponse(student)).thenReturn(response);
+
+        assertThat(studentService.getById(1L)).isSameAs(response);
+    }
+
+    @Test
+    void getById_throwsWhenStudentNotFound() {
+        when(studentRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> studentService.getById(1L))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessage("Student not found");
+    }
+
+    @Test
+    void getAll_returnsMappedStudents() {
+        Student first = new Student();
+        Student second = new Student();
+        StudentResponseDTO firstResponse = StudentResponseDTO.builder().id(1L).build();
+        StudentResponseDTO secondResponse = StudentResponseDTO.builder().id(2L).build();
+
+        when(studentRepository.findAll()).thenReturn(List.of(first, second));
+        when(studentMapper.toResponse(first)).thenReturn(firstResponse);
+        when(studentMapper.toResponse(second)).thenReturn(secondResponse);
+
+        assertThat(studentService.getAll()).containsExactly(firstResponse, secondResponse);
+    }
+
+    @Test
+    void getCurrentProfile_includesActiveEnrollmentDetails() {
+        UserContext.setCurrentUser("1", "student@ump.ac.ma", Set.of("STUDENT"));
+
+        Student student = new Student();
+        student.setId(1L);
+        student.setEmail("student@ump.ac.ma");
+        student.setFirstName("Sara");
+        student.setLastName("Alaoui");
+        student.setPfpUrl("https://example.com/pfp.png");
+        student.setNumApogee("A123");
+
+        AnneeUniversitaire activeYear = AnneeUniversitaire.builder().id(4L).build();
+        Filiere filiere = Filiere.builder().code("GI").build();
+        Formation formation = Formation.builder().id(2L).filiere(filiere).build();
+        Groupe groupe = Groupe.builder().id(3L).name("GI-1").formation(formation).build();
+        Inscription inscription = new Inscription();
+        inscription.setGroupe(groupe);
+
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(anneeUniversitaireRepository.findByActiveTrue()).thenReturn(List.of(activeYear));
+        when(inscriptionRepository.findActiveByStudentIdAndYearId(1L, 4L)).thenReturn(Optional.of(inscription));
+
+        assertThat(studentService.getCurrentProfile())
+            .extracting("id", "email", "firstName", "lastName", "pfpUrl", "numApogee", "groupe", "filiere")
+            .containsExactly(1L, "student@ump.ac.ma", "Sara", "Alaoui", "https://example.com/pfp.png", "A123", "GI-1", "GI");
+    }
+
+    @Test
+    void getCurrentProfile_throwsWhenUserContextIsMissing() {
+        assertThatThrownBy(() -> studentService.getCurrentProfile())
+            .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+            .hasMessageContaining("Missing user context");
     }
 
     @Test

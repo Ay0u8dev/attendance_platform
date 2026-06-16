@@ -3,7 +3,7 @@ package ma.eniad.userservice.entity.structure;
 import java.time.LocalDate;
 import java.util.List;
 import ma.eniad.userservice.entity.BaseEntity;
-
+import ma.eniad.userservice.entity.Inscription;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
@@ -49,6 +49,9 @@ public class AnneeUniversitaire extends BaseEntity {
 
         @OneToMany(mappedBy = "anneeUniversitaire", cascade = CascadeType.REMOVE)
         private List<Formation> formations;
+
+        @OneToMany(mappedBy = "anneeUniversitaire", cascade = CascadeType.REMOVE)
+        private List<Inscription> inscriptions;
 
         @AssertTrue
         public boolean isValidAcademicYear() {

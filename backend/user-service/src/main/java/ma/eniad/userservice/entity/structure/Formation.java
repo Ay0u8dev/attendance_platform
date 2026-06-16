@@ -4,6 +4,7 @@ package ma.eniad.userservice.entity.structure;
 import java.util.List;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
@@ -12,12 +13,15 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import ma.eniad.userservice.entity.BaseEntity;
+import ma.eniad.userservice.entity.Inscription;
 
 @Getter
 @Setter
@@ -27,8 +31,8 @@ import ma.eniad.userservice.entity.BaseEntity;
 @Table(
     name = "formations",
     uniqueConstraints = @UniqueConstraint(
-        name = "uk_formations_year_filiere_cycle",
-        columnNames = {"annee_univ_id", "filiere_id", "cycle_id"}
+        name = "uk_formations_year_cycle_name",
+        columnNames = {"annee_univ_id", "cycle_id", "name"}
     ),
     indexes = {
         @Index(name = "idx_formations_annee_univ", columnList = "annee_univ_id"),
@@ -37,6 +41,11 @@ import ma.eniad.userservice.entity.BaseEntity;
     }
 )
 public class Formation extends BaseEntity {
+
+    @NotBlank
+    @Size(max = 60)
+    @Column(nullable = false, length = 60)
+    private String name;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "annee_univ_id", nullable = false)
@@ -55,4 +64,7 @@ public class Formation extends BaseEntity {
 
     @OneToMany(mappedBy = "formation", cascade = CascadeType.REMOVE)
     private List<Module> modules;
+
+    @OneToMany(mappedBy = "formation", cascade = CascadeType.REMOVE)
+    private List<Inscription> inscriptions;
 }

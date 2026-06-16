@@ -7,8 +7,8 @@ import jakarta.validation.Validator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import ma.eniad.userservice.dto.RowErrorDTO;
-import ma.eniad.userservice.dto.teacher.excel.TeacherExcelRowDTO;
+import ma.eniad.userservice.dto.excel.RowErrorDTO;
+import ma.eniad.userservice.dto.teacher.TeacherExcelRowDTO;
 
 @Component
 public class TeacherExcelRowValidator {
@@ -28,6 +28,10 @@ public class TeacherExcelRowValidator {
         validateFirstName(row, errors);
         validateLastName(row, errors);
         validateEmail(row, errors);
+        validateRequired(row, "academicYear", row.getAcademicYear(), "Academic year is required", errors);
+        validateRequired(row, "formationName", row.getFormationName(), "Formation is required", errors);
+        validateRequired(row, "groupeCode", row.getGroupeCode(), "Groupe code is required", errors);
+        validateRequired(row, "moduleCode", row.getModuleCode(), "Module code is required", errors);
 
         return errors;
     }
@@ -99,7 +103,11 @@ public class TeacherExcelRowValidator {
             ));
         }
 
-        String normalizedEmail = row.getEmail().trim().toLowerCase();
+        String email = row.getEmail();
+        if (email == null) {
+            return; // Should not happen, but defensive guard
+        }
+        String normalizedEmail = email.trim().toLowerCase();
         String normalizedDomain = normalizeDomain(allowedDomain);
         if (!normalizedDomain.isEmpty() && !normalizedEmail.endsWith("@" + normalizedDomain)) {
             errors.add(buildError(
@@ -107,6 +115,16 @@ public class TeacherExcelRowValidator {
                 "email",
                 "Email must be in the @" + normalizedDomain + " domain"
             ));
+        }
+    }
+
+    private void validateRequired(TeacherExcelRowDTO row,
+                                  String field,
+                                  String value,
+                                  String message,
+                                  List<RowErrorDTO> errors) {
+        if (isBlank(value)) {
+            errors.add(buildError(row, field, message));
         }
     }
 

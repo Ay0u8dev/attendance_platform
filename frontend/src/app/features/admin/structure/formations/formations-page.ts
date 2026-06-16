@@ -111,6 +111,7 @@ export class FormationsPage {
 
         return {
           id: formation.id,
+          name: formation.name,
           cycleId: formation.cycleId,
           fieldId: formation.filiereId ?? null,
           yearId: formation.anneeUniversitaireId,
@@ -130,6 +131,7 @@ export class FormationsPage {
     return this.formationViews().filter((formation) => {
       const matchesSearch =
         !query ||
+        formation.name.toLowerCase().includes(query) ||
         formation.cycleName.toLowerCase().includes(query) ||
         formation.fieldName.toLowerCase().includes(query) ||
         formation.academicYear.toLowerCase().includes(query);

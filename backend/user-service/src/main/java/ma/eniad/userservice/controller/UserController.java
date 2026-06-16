@@ -3,10 +3,9 @@ package ma.eniad.userservice.controller;
 import ma.eniad.userservice.annotation.RequireRole;
 import ma.eniad.userservice.dto.AuthUserRequest;
 import ma.eniad.userservice.dto.UserResponseDto;
-import ma.eniad.userservice.dto.InternalTeacherIdentityDto;
-import ma.eniad.userservice.dto.StudentRosterDto;
+import ma.eniad.userservice.dto.student.StudentRosterDto;
+import ma.eniad.userservice.dto.teacher.InternalTeacherIdentityDto;
 import ma.eniad.userservice.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,8 +17,12 @@ import java.util.List;
 @RequestMapping("/users")
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+
+    // Constructor injection (replaces @Autowired field)
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
     @PostMapping("auth-user")
     public ResponseEntity<UserResponseDto> authUser(@RequestBody AuthUserRequest request) {

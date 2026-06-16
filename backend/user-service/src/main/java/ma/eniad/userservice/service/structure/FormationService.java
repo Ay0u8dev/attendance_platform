@@ -5,6 +5,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import ma.eniad.userservice.dto.structure.FormationRequestDTO;
 import ma.eniad.userservice.dto.structure.FormationResponseDTO;
+import ma.eniad.userservice.entity.enums.CycleType;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
 import ma.eniad.userservice.entity.structure.Cycle;
 import ma.eniad.userservice.entity.structure.Filiere;
@@ -28,35 +29,18 @@ public class FormationService {
     private final FormationMapper mapper;
 
     public FormationResponseDTO create(FormationRequestDTO request) {
-        if (repository.existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(
-                request.getAnneeUniversitaireId(),
-                request.getFiliereId(),
-                request.getCycleId()
-        )) {
-            throw new DuplicateResourceException("Formation already exists for the given year, filiere, and cycle");
-        }
-
         AnneeUniversitaire annee = getAnnee(request.getAnneeUniversitaireId());
         Cycle cycle = getCycle(request.getCycleId());
+        validateFiliereRequirement(cycle, request.getFiliereId());
+        validateUniqueYearCycleName(request);
 
-        if (cycle.getType().name().equals("PREPA") && request.getFiliereId() != null) {
-            throw new IllegalArgumentException("PREPA cycle must not have filiere");
-        }
-
-        if (!cycle.getType().name().equals("PREPA") && request.getFiliereId() == null) {
-            throw new IllegalArgumentException("Filiere is required for non-PREPA cycle");
-        }
+        Filiere filiere = resolveFiliere(request.getFiliereId());
 
         Formation entity = mapper.toEntity(request);
 
         entity.setAnneeUniversitaire(annee);
         entity.setCycle(cycle);
-        
-        if (request.getFiliereId() != null) {
-            entity.setFiliere(getFiliere(request.getFiliereId()));
-        } else {
-            entity.setFiliere(null);
-        }
+        entity.setFiliere(filiere);
 
         return mapper.toResponse(repository.save(entity));
     }
@@ -65,36 +49,17 @@ public class FormationService {
 
         Formation entity = getEntity(id);
 
-        boolean sameCombination = sameCombination(entity, request);
-        if (!sameCombination && repository.existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(
-                request.getAnneeUniversitaireId(),
-                request.getFiliereId(),
-                request.getCycleId()
-        )) {
-            throw new DuplicateResourceException("Formation already exists for the given year, filiere, and cycle");
-        }
-
         AnneeUniversitaire annee = getAnnee(request.getAnneeUniversitaireId());
         Cycle cycle = getCycle(request.getCycleId());
-
-        if (cycle.getType().name().equals("PREPA") && request.getFiliereId() != null) {
-            throw new IllegalArgumentException("PREPA cycle must not have filiere");
-        }
-
-        if (!cycle.getType().name().equals("PREPA") && request.getFiliereId() == null) {
-            throw new IllegalArgumentException("Filiere is required");
-        }
+        validateFiliereRequirement(cycle, request.getFiliereId());
+        validateUniqueYearCycleName(request, id);
+        Filiere filiere = resolveFiliere(request.getFiliereId());
 
         mapper.updateEntity(request, entity);
 
         entity.setAnneeUniversitaire(annee);
         entity.setCycle(cycle);
-
-        if (request.getFiliereId() != null) {
-            entity.setFiliere(getFiliere(request.getFiliereId()));
-        } else {
-            entity.setFiliere(null);
-        }
+        entity.setFiliere(filiere);
 
         return mapper.toResponse(repository.save(entity));
     }
@@ -133,19 +98,44 @@ public class FormationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Cycle not found with id: " + id));
     }
 
-    private boolean sameCombination(Formation entity, FormationRequestDTO request) {
-        return entity.getAnneeUniversitaire() != null
-                && entity.getCycle() != null
-                && safeEquals(entity.getAnneeUniversitaire().getId(), request.getAnneeUniversitaireId())
-                && safeEquals(entity.getCycle().getId(), request.getCycleId())
-                && safeEquals(getFiliereId(entity), request.getFiliereId());
+    private Filiere resolveFiliere(Long filiereId) {
+        return filiereId == null ? null : getFiliere(filiereId);
     }
 
-    private Long getFiliereId(Formation entity) {
-        return entity.getFiliere() == null ? null : entity.getFiliere().getId();
+    private void validateFiliereRequirement(Cycle cycle, Long filiereId) {
+        if (cycle.getType() == CycleType.PREPA && filiereId != null) {
+            throw new IllegalArgumentException("PREPA cycle must not have filiere");
+        }
+
+        if (cycle.getType() != CycleType.PREPA && filiereId == null) {
+            throw new IllegalArgumentException("Filiere is required for non-PREPA cycle");
+        }
     }
 
-    private boolean safeEquals(Long left, Long right) {
-        return left == null ? right == null : left.equals(right);
+    private void validateUniqueYearCycleName(FormationRequestDTO request) {
+        if (repository.existsByAnneeUniversitaireIdAndCycleIdAndName(
+                request.getAnneeUniversitaireId(),
+                request.getCycleId(),
+                request.getName()
+        )) {
+            throw duplicateFormation(request.getName());
+        }
+    }
+
+    private void validateUniqueYearCycleName(FormationRequestDTO request, Long id) {
+        if (repository.existsByAnneeUniversitaireIdAndCycleIdAndNameAndIdNot(
+                request.getAnneeUniversitaireId(),
+                request.getCycleId(),
+                request.getName(),
+                id
+        )) {
+            throw duplicateFormation(request.getName());
+        }
+    }
+
+    private DuplicateResourceException duplicateFormation(String name) {
+        return new DuplicateResourceException(
+                "Formation already exists for the given year, cycle, and name: " + name
+        );
     }
 }

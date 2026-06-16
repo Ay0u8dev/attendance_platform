@@ -1,24 +1,27 @@
-package ma.eniad.userservice.dto.teacher.excel;
+package ma.eniad.userservice.dto.student;
+
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.Email;
 
 @Builder
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class TeacherExcelRowDTO {
+public class StudentChangeDTO {
     private int rowNumber;
 
-    private String firstName;
+    private String apogee;
 
-    private String lastName;
-
-    @Email(message = "Email invalid format")
     private String email;
+
+    private String action; 
+    // CREATED | UPDATED | SKIPPED
+
+    private List<String> changes;
 }

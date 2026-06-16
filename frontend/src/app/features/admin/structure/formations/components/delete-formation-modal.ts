@@ -10,7 +10,7 @@ import { type Formation } from '../../../../../core/structure/models/formation.m
   template: `
     <app-delete-modal
       title="Supprimer la formation ?"
-      [itemName]="formation()?.id ? 'Formation #' + formation()?.id : ''"
+      [itemName]="formation()?.name ?? ''"
       confirmMessage="Vous êtes sur le point de supprimer la formation :"
       warningMessage="Tous les groupes et modules associés seront affectés. Assurez-vous que cette formation ne contient aucune donnée critique avant de continuer."
       deleteButtonLabel="Supprimer la formation"
