@@ -11,6 +11,7 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
+import ma.eniad.userservice.entity.structure.Formation;
 import ma.eniad.userservice.entity.structure.Groupe;
 
 @Getter
@@ -41,6 +42,14 @@ public class Inscription extends BaseEntity {
             foreignKey = @ForeignKey(name = "fk_inscription_groupe")
     )
     private Groupe groupe;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(
+            name = "formation_id",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_inscription_formation")
+    )
+    private Formation formation;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(

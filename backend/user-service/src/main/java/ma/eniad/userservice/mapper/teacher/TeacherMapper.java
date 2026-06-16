@@ -4,9 +4,9 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
+import ma.eniad.userservice.dto.teacher.TeacherExcelRowDTO;
 import ma.eniad.userservice.dto.teacher.TeacherRequestDTO;
 import ma.eniad.userservice.dto.teacher.TeacherResponseDTO;
-import ma.eniad.userservice.dto.teacher.excel.TeacherExcelRowDTO;
 import ma.eniad.userservice.entity.Teacher;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.NullValuePropertyMappingStrategy;

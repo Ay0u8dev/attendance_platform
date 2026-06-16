@@ -7,7 +7,7 @@ import ma.eniad.userservice.entity.enums.CycleType;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
 import ma.eniad.userservice.entity.structure.Cycle;
 import ma.eniad.userservice.entity.structure.Filiere;
-import ma.eniad.userservice.repository.InscriptionRepository;
+import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.structure.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,7 +51,7 @@ class FormationControllerTest {
     private ModuleRepository moduleRepository;
 
     @Autowired
-    private InscriptionRepository inscriptionRepository;
+    private StudentInscriptionRepository inscriptionRepository;
 
 
     @BeforeEach
@@ -82,6 +82,7 @@ class FormationControllerTest {
         cycle = cycleRepository.save(cycle);
 
         FormationRequestDTO request = new FormationRequestDTO();
+        request.setName("Formation X");
         request.setAnneeUniversitaireId(annee.getId());
         request.setFiliereId(filiere.getId());
         request.setCycleId(cycle.getId());
