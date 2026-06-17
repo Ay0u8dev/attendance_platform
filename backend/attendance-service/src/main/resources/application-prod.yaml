@@ -34,3 +34,15 @@ attendance:
     max-distance-meters: ${ATTENDANCE_SELF_MARK_MAX_DISTANCE_METERS:100}
   websocket:
     allowed-origin-patterns: http://*
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+      discovery:
+        enabled: false
+  endpoint:
+    health:
+      probes:
+        enabled: true
