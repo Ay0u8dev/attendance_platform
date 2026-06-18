@@ -1,14 +1,14 @@
 export type AttendanceSessionMethod = 'QR_CODE' | 'FACE_ID' | 'MANUAL';
 export type AttendanceSessionStatus = 'ACTIVE' | 'FINALIZED';
-export type AttendanceStudentStatus = 'UNKNOWN' | 'PRESENT' | 'ABSENT';
+export type AttendanceStudentStatus = 'UNKNOWN' | 'PRESENT' | 'ABSENT' | 'JUSTIFIED';
 
 export interface CreateAttendanceSessionRequest {
   groupIds: number[];
   courseLabel: string;
-  roomLabel?: string | null;
-  gpsLat?: string | null;
-  gpsLon?: string | null;
-  method: AttendanceSessionMethod;
+  roomLabel: string;
+  gpsLat: string;
+  gpsLon: string;
+  method?: AttendanceSessionMethod;
 }
 
 export interface AttendanceStudentView {
@@ -28,6 +28,7 @@ export interface AttendanceStudentView {
 }
 
 export interface AttendanceSessionResponse {
+  id?: number;
   sessionId: number;
   teacherId: number;
   groupIds: number[];
@@ -81,7 +82,7 @@ export interface TeacherSessionsQuery {
 
 export interface ManualAttendanceUpdateRequest {
   studentId: number;
-  status: Exclude<AttendanceStudentStatus, 'UNKNOWN'>;
+  status: Exclude<AttendanceStudentStatus, 'UNKNOWN' | 'JUSTIFIED'>;
 }
 
 export interface AttendanceUpdateResponse {

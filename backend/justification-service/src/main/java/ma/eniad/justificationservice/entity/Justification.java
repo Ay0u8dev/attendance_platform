@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -27,11 +29,17 @@ public class Justification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column
+    private Long sessionId;
+
     @Column(nullable = false)
     private Long studentId;
 
     @Column(nullable = false)
     private String studentName;
+
+    @Column(length = 64)
+    private String studentCode;
 
     @Column(nullable = false)
     private String module;
@@ -40,7 +48,8 @@ public class Justification {
     private LocalDateTime sessionDate;
 
     @Column(nullable = false)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private JustificationStatus status;
 
     @Column(length = 1024)
     private String reason;
@@ -53,4 +62,12 @@ public class Justification {
 
     @Column(length = 512)
     private String teacherComment;
+
+    @Column(length = 128)
+    private String reviewedBy;
+
+    @Column(length = 32)
+    private String reviewerRole;
+
+    private LocalDateTime reviewedAt;
 }

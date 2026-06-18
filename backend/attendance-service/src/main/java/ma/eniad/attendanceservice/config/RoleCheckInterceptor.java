@@ -19,7 +19,12 @@ import java.util.stream.Collectors;
 @Component
 public class RoleCheckInterceptor implements HandlerInterceptor {
 
-    private static final Set<String> TRUSTED_INTERNAL_SOURCES = Set.of("auth-service", "qr-service", "face-service");
+    private static final Set<String> TRUSTED_INTERNAL_SOURCES = Set.of(
+            "auth-service",
+            "qr-service",
+            "face-service",
+            "justification-service"
+    );
 
     @Override
     public boolean preHandle(HttpServletRequest request,

@@ -11,7 +11,7 @@ import {
 } from '../../../../core/attendance/models/attendance.model';
 import { AttendanceService } from '../../../../core/attendance/services/attendance.service';
 
-export type AttendanceStatus = 'present' | 'absent' | null;
+export type AttendanceStatus = 'present' | 'absent';
 
 export interface Student {
   id: number;
@@ -73,9 +73,7 @@ export class ManualMarking implements OnInit {
   readonly absentCount = computed(
     () => this.allStudents().filter((s) => s.status === 'absent').length,
   );
-  readonly unmarkedCount = computed(
-    () => this.allStudents().filter((s) => s.status === null).length,
-  );
+  readonly unmarkedCount = computed(() => 0);
 
   readonly currentPage = signal(1);
   readonly pageSize = 10;
@@ -116,7 +114,7 @@ export class ManualMarking implements OnInit {
 
   setStatus(studentId: number, status: AttendanceStatus): void {
     const sessionId = this.session()?.sessionId;
-    if (!sessionId || !status) return;
+    if (!sessionId) return;
 
     const previous = this.allStudents();
     this.savingStudentId.set(studentId);
@@ -191,11 +189,10 @@ export class ManualMarking implements OnInit {
 
   private fromApiStatus(status: AttendanceStudentStatus): AttendanceStatus {
     if (status === 'PRESENT') return 'present';
-    if (status === 'ABSENT') return 'absent';
-    return null;
+    return 'absent';
   }
 
-  private toApiStatus(status: Exclude<AttendanceStatus, null>): 'PRESENT' | 'ABSENT' {
+  private toApiStatus(status: AttendanceStatus): 'PRESENT' | 'ABSENT' {
     return status === 'present' ? 'PRESENT' : 'ABSENT';
   }
 }

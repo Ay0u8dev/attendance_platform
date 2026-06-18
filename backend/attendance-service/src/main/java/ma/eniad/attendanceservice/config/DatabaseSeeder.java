@@ -1,6 +1,7 @@
 package ma.eniad.attendanceservice.config;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.boot.CommandLineRunner;
@@ -18,216 +19,160 @@ import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 @Configuration
 public class DatabaseSeeder {
 
-    private static final Long SEEDED_TEACHER_ID = 2L;
-    private static final String DEFAULT_GPS_LAT = "34.6814";
-    private static final String DEFAULT_GPS_LON = "-1.9086";
+    private static final Long TEACHER_ID = 5L;
+    private static final String TEACHER_FULL_NAME = "Ayoub Elebbar";
+    private static final String GPS_LAT = "34.6894";
+    private static final String GPS_LON = "-1.9123";
 
     @Bean
-    public CommandLineRunner seedAttendanceData(
-            AttendanceSessionRepository sessionRepository,
-            AttendanceRecordRepository recordRepository) {
+    public CommandLineRunner seedAttendanceDatabase(
+            AttendanceSessionRepository attendanceSessionRepository,
+            AttendanceRecordRepository attendanceRecordRepository
+    ) {
         return args -> {
-            if (sessionRepository.count() > 0) {
-                System.out.println("Attendance seed data already exists. Skipping...");
+            if (attendanceSessionRepository.count() > 0) {
+                System.out.println("Attendance database already seeded. Skipping...");
                 return;
             }
 
-            List<SeedStudent> giStudents = List.of(
-                    new SeedStudent(7L, 1L, "Sofiane", "Meziane", "sofiane.meziane@ump.ac.ma", "250001"),
-                    new SeedStudent(8L, 1L, "Leila", "Bensalem", "leila.bensalem@ump.ac.ma", "250002"),
-                    new SeedStudent(9L, 1L, "Yassine", "El Idrissi", "yassine.elidrissi@ump.ac.ma", "250003"),
-                    new SeedStudent(10L, 2L, "Meryem", "Toumi", "meryem.toumi@ump.ac.ma", "250004"),
-                    new SeedStudent(11L, 2L, "Bilal", "Ait Hamou", "bilal.aithamou@ump.ac.ma", "250005"),
-                    new SeedStudent(12L, 2L, "Imane", "Kabbaj", "imane.kabbaj@ump.ac.ma", "250006")
+            List<SeedStudent> groupOneStudents = List.of(
+                    new SeedStudent(6L, 1L, "Ayoub", "Elebbar", "ayoubelebbar15@gmail.com", "24000001"),
+                    new SeedStudent(7L, 1L, "Yassine", "Bennani", "student.g1.02@gmail.com", "24000002"),
+                    new SeedStudent(8L, 1L, "Salma", "Naciri", "student.g1.03@gmail.com", "24000003"),
+                    new SeedStudent(9L, 1L, "Omar", "Ait Lahcen", "student.g1.04@gmail.com", "24000004"),
+                    new SeedStudent(10L, 1L, "Imane", "El Amrani", "student.g1.05@gmail.com", "24000005")
             );
 
-            List<SeedStudent> idsStudents = List.of(
-                    new SeedStudent(13L, 3L, "Nour Eddine", "Salmi", "nour.salmi@ump.ac.ma", "250007"),
-                    new SeedStudent(14L, 3L, "Salma", "Alaoui", "salma.alaoui@ump.ac.ma", "250008"),
-                    new SeedStudent(15L, 3L, "Hamza", "Rafik", "hamza.rafik@ump.ac.ma", "250009"),
-                    new SeedStudent(16L, 3L, "Asmae", "Bennani", "asmae.bennani@ump.ac.ma", "250010")
+            List<SeedStudent> groupTwoStudents = List.of(
+                    new SeedStudent(11L, 2L, "Mehdi", "Tazi", "student.g2.01@gmail.com", "24000006"),
+                    new SeedStudent(12L, 2L, "Noura", "Fassi", "student.g2.02@gmail.com", "24000007"),
+                    new SeedStudent(13L, 2L, "Hamza", "Raji", "student.g2.03@gmail.com", "24000008"),
+                    new SeedStudent(14L, 2L, "Aya", "Mansouri", "student.g2.04@gmail.com", "24000009"),
+                    new SeedStudent(15L, 2L, "Anas", "Berrada", "student.g2.05@gmail.com", "24000010")
             );
 
-            createFinalizedSession(
-                    sessionRepository,
-                    recordRepository,
-                    "Advanced Web Development",
-                    "Amphi A",
-                    AttendanceSessionMethod.MANUAL,
-                    List.of(1L, 2L),
-                    LocalDateTime.now().minusDays(1).withHour(9).withMinute(0).withSecond(0).withNano(0),
-                    giStudents,
-                    List.of(9L)
-            );
-
-            createFinalizedSession(
-                    sessionRepository,
-                    recordRepository,
-                    "Database Architecture",
+            seedFinalizedSession(
+                    attendanceSessionRepository,
+                    attendanceRecordRepository,
+                    groupOneStudents,
+                    "Programmation Java",
                     "Salle B12",
                     AttendanceSessionMethod.QR_CODE,
-                    List.of(1L, 2L),
-                    LocalDateTime.now().minusDays(3).withHour(10).withMinute(30).withSecond(0).withNano(0),
-                    giStudents,
-                    List.of(8L, 12L)
+                    LocalDateTime.now().minusDays(18),
+                    List.of(6L, 7L, 8L, 10L)
             );
-
-            createFinalizedSession(
-                    sessionRepository,
-                    recordRepository,
-                    "Machine Learning Basics",
-                    "Lab IA",
+            seedFinalizedSession(
+                    attendanceSessionRepository,
+                    attendanceRecordRepository,
+                    groupOneStudents,
+                    "Bases de donnees",
+                    "Lab 2",
                     AttendanceSessionMethod.FACE_ID,
-                    List.of(3L),
-                    LocalDateTime.now().minusDays(5).withHour(14).withMinute(0).withSecond(0).withNano(0),
-                    idsStudents,
-                    List.of(15L)
+                    LocalDateTime.now().minusDays(12),
+                    List.of(6L, 8L, 9L)
+            );
+            seedFinalizedSession(
+                    attendanceSessionRepository,
+                    attendanceRecordRepository,
+                    groupOneStudents,
+                    "Reseaux",
+                    "Amphi A",
+                    AttendanceSessionMethod.MANUAL,
+                    LocalDateTime.now().minusDays(7),
+                    List.of(7L, 8L, 9L, 10L)
+            );
+            seedFinalizedSession(
+                    attendanceSessionRepository,
+                    attendanceRecordRepository,
+                    groupTwoStudents,
+                    "Programmation Java",
+                    "Salle B12",
+                    AttendanceSessionMethod.QR_CODE,
+                    LocalDateTime.now().minusDays(16),
+                    List.of(11L, 12L, 14L, 15L)
+            );
+            seedFinalizedSession(
+                    attendanceSessionRepository,
+                    attendanceRecordRepository,
+                    groupTwoStudents,
+                    "Bases de donnees",
+                    "Lab 2",
+                    AttendanceSessionMethod.FACE_ID,
+                    LocalDateTime.now().minusDays(10),
+                    List.of(11L, 13L, 14L)
+            );
+            seedFinalizedSession(
+                    attendanceSessionRepository,
+                    attendanceRecordRepository,
+                    groupTwoStudents,
+                    "Reseaux",
+                    "Amphi A",
+                    AttendanceSessionMethod.MANUAL,
+                    LocalDateTime.now().minusDays(5),
+                    List.of(12L, 13L, 15L)
             );
 
-            createActiveManualSession(
-                    sessionRepository,
-                    recordRepository,
-                    "Manual Attendance Review",
-                    "Salle C01",
-                    List.of(1L, 2L),
-                    LocalDateTime.now().minusMinutes(30).withSecond(0).withNano(0),
-                    giStudents,
-                    List.of(11L),
-                    List.of(12L)
-            );
-
-            System.out.println("Attendance seed data is ready.");
+            System.out.println("Attendance history seeded successfully!");
         };
     }
 
-    private void createFinalizedSession(
-            AttendanceSessionRepository sessionRepository,
-            AttendanceRecordRepository recordRepository,
+    private void seedFinalizedSession(
+            AttendanceSessionRepository attendanceSessionRepository,
+            AttendanceRecordRepository attendanceRecordRepository,
+            List<SeedStudent> students,
             String courseLabel,
             String roomLabel,
             AttendanceSessionMethod method,
-            List<Long> groupIds,
             LocalDateTime startedAt,
-            List<SeedStudent> students,
-            List<Long> absentStudentIds) {
-        int absentCount = absentStudentIds.size();
-        int presentCount = students.size() - absentCount;
+            List<Long> presentStudentIds
+    ) {
         LocalDateTime endedAt = startedAt.plusMinutes(90);
+        int presentCount = presentStudentIds.size();
+        int absentCount = students.size() - presentCount;
 
-        AttendanceSession session = sessionRepository.saveAndFlush(AttendanceSession.builder()
-                .teacherId(SEEDED_TEACHER_ID)
+        AttendanceSession session = AttendanceSession.builder()
+                .teacherId(TEACHER_ID)
+                .teacherFullName(TEACHER_FULL_NAME)
                 .courseLabel(courseLabel)
                 .roomLabel(roomLabel)
-                .gpsLat(DEFAULT_GPS_LAT)
-                .gpsLon(DEFAULT_GPS_LON)
+                .gpsLat(GPS_LAT)
+                .gpsLon(GPS_LON)
                 .startedAt(startedAt)
                 .endsAt(endedAt)
                 .endedAt(endedAt)
-                .method(method)
                 .status(AttendanceSessionStatus.FINALIZED)
+                .method(method)
                 .presentCount(presentCount)
                 .absentCount(absentCount)
                 .unknownCount(0)
-                .groupIds(groupIds)
-                .build());
-
-        recordRepository.saveAll(students.stream()
-                .map(student -> toRecord(session.getId(), method, endedAt, student, absentStudentIds.contains(student.id())))
-                .toList());
-    }
-
-    private void createActiveManualSession(
-            AttendanceSessionRepository sessionRepository,
-            AttendanceRecordRepository recordRepository,
-            String courseLabel,
-            String roomLabel,
-            List<Long> groupIds,
-            LocalDateTime startedAt,
-            List<SeedStudent> students,
-            List<Long> absentStudentIds,
-            List<Long> unknownStudentIds) {
-        int absentCount = absentStudentIds.size();
-        int unknownCount = unknownStudentIds.size();
-        int presentCount = students.size() - absentCount - unknownCount;
-        LocalDateTime endedAt = startedAt.plusMinutes(90);
-
-        AttendanceSession session = sessionRepository.saveAndFlush(AttendanceSession.builder()
-                .teacherId(SEEDED_TEACHER_ID)
-                .courseLabel(courseLabel)
-                .roomLabel(roomLabel)
-                .gpsLat(DEFAULT_GPS_LAT)
-                .gpsLon(DEFAULT_GPS_LON)
-                .startedAt(startedAt)
-                .endsAt(endedAt)
-                .endedAt(endedAt)
-                .method(AttendanceSessionMethod.MANUAL)
-                .status(AttendanceSessionStatus.ACTIVE)
-                .presentCount(presentCount)
-                .absentCount(absentCount)
-                .unknownCount(unknownCount)
-                .groupIds(groupIds)
-                .build());
-
-        recordRepository.saveAll(students.stream()
-                .map(student -> toActiveRecord(session.getId(), endedAt, student,
-                        absentStudentIds.contains(student.id()), unknownStudentIds.contains(student.id())))
-                .toList());
-    }
-
-    private AttendanceRecord toActiveRecord(
-            Long sessionId,
-            LocalDateTime endedAt,
-            SeedStudent student,
-            boolean absent,
-            boolean unknown) {
-        AttendanceStudentStatus status = unknown
-                ? AttendanceStudentStatus.UNKNOWN
-                : absent
-                ? AttendanceStudentStatus.ABSENT
-                : AttendanceStudentStatus.PRESENT;
-
-        return AttendanceRecord.builder()
-                .sessionId(sessionId)
-                .studentId(student.id())
-                .groupId(student.groupId())
-                .firstName(student.firstName())
-                .lastName(student.lastName())
-                .email(student.email())
-                .numApogee(student.numApogee())
-                .status(status)
-                .markMethod(status == AttendanceStudentStatus.PRESENT ? AttendanceSessionMethod.MANUAL : null)
-                .markedAt(status == AttendanceStudentStatus.PRESENT ? endedAt.minusMinutes(20 + Math.floorMod(student.id(), 10)) : null)
-                .deviceId(null)
-                .markedGpsLat(null)
-                .markedGpsLon(null)
+                .groupIds(List.of(students.get(0).groupId()))
                 .build();
-    }
+        AttendanceSession savedSession = attendanceSessionRepository.save(session);
 
-    private AttendanceRecord toRecord(
-            Long sessionId,
-            AttendanceSessionMethod method,
-            LocalDateTime endedAt,
-            SeedStudent student,
-            boolean absent) {
-        return AttendanceRecord.builder()
-                .sessionId(sessionId)
-                .studentId(student.id())
-                .groupId(student.groupId())
-                .firstName(student.firstName())
-                .lastName(student.lastName())
-                .email(student.email())
-                .numApogee(student.numApogee())
-                .status(absent ? AttendanceStudentStatus.ABSENT : AttendanceStudentStatus.PRESENT)
-                .markMethod(absent ? null : method)
-                .markedAt(absent ? null : endedAt.minusMinutes(70 + Math.floorMod(student.id(), 12)))
-                .deviceId(method == AttendanceSessionMethod.QR_CODE && !absent ? "seed-device-" + student.id() : null)
-                .markedGpsLat(method == AttendanceSessionMethod.QR_CODE && !absent ? DEFAULT_GPS_LAT : null)
-                .markedGpsLon(method == AttendanceSessionMethod.QR_CODE && !absent ? DEFAULT_GPS_LON : null)
-                .build();
+        List<AttendanceRecord> records = new ArrayList<>();
+        for (SeedStudent student : students) {
+            boolean present = presentStudentIds.contains(student.studentId());
+            LocalDateTime markedAt = present ? startedAt.plusMinutes(5 + student.studentId() % 12) : null;
+            records.add(AttendanceRecord.builder()
+                    .sessionId(savedSession.getId())
+                    .studentId(student.studentId())
+                    .groupId(student.groupId())
+                    .firstName(student.firstName())
+                    .lastName(student.lastName())
+                    .email(student.email())
+                    .pfpUrl(null)
+                    .numApogee(student.numApogee())
+                    .status(present ? AttendanceStudentStatus.PRESENT : AttendanceStudentStatus.ABSENT)
+                    .markMethod(present ? method : null)
+                    .markedAt(markedAt)
+                    .build());
+        }
+
+        attendanceRecordRepository.saveAll(records);
     }
 
     private record SeedStudent(
-            Long id,
+            Long studentId,
             Long groupId,
             String firstName,
             String lastName,

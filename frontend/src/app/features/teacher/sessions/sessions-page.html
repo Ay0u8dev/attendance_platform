@@ -34,12 +34,12 @@
   }
 
   <div class="overflow-hidden rounded-2xl border border-line bg-surface">
-    <div class="grid grid-cols-[1.4fr_1fr_0.8fr_0.8fr_0.8fr] gap-4 border-b border-line bg-surface-subtle px-5 py-3 text-xs font-bold uppercase text-secondaryText">
+    <div class="sessions-grid border-b border-line bg-surface-subtle px-5 py-3 text-xs font-bold uppercase text-secondaryText">
       <span>Cours</span>
       <span>Date</span>
-      <span>Methode</span>
       <span>Presence</span>
-      <span class="text-right">Statut</span>
+      <span>Statut</span>
+      <span>Actions</span>
     </div>
 
     @if (loading()) {
@@ -54,7 +54,7 @@
       </div>
     } @else {
       @for (session of sessions(); track session.sessionId) {
-        <div class="grid grid-cols-[1.4fr_1fr_0.8fr_0.8fr_0.8fr] items-center gap-4 border-b border-line px-5 py-4 last:border-b-0">
+        <div class="sessions-grid items-center border-b border-line px-5 py-4 last:border-b-0">
           <div class="min-w-0">
             <p class="truncate font-semibold text-principalText">{{ session.courseLabel }}</p>
             <p class="truncate text-xs text-secondaryText">
@@ -62,19 +62,116 @@
             </p>
           </div>
           <span class="text-sm text-secondaryText">{{ session.startedAt | date: 'dd/MM/yyyy HH:mm' }}</span>
-          <span class="text-sm font-semibold text-principalText">{{ session.method }}</span>
           <div class="text-sm text-secondaryText">
             <span class="font-bold text-principalText">{{ attendanceRate(session) }}%</span>
             <span> ({{ session.presentCount }} presents)</span>
           </div>
-          <div class="flex justify-end">
+          <div class="status-cell">
             <app-status-badge
               [label]="session.status"
               [variant]="statusVariant(session)"
             ></app-status-badge>
+          </div>
+          <div class="actions-cell flex justify-end">
+            <button
+              type="button"
+              class="action-btn action-btn-neutral"
+              [disabled]="loadingDetails()"
+              (click)="openDetails(session)"
+            >
+              <i class="fa-regular fa-eye" aria-hidden="true"></i>
+              Voir details
+            </button>
           </div>
         </div>
       }
     }
   </div>
 </section>
+
+@if (selectedSession(); as session) {
+  <div class="modal-backdrop" (click)="closeDetails()">
+    <div class="details-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="min-w-0">
+          <p class="modal-eyebrow">Session</p>
+          <h2 class="modal-title">{{ session.courseLabel }}</h2>
+          <p class="modal-subtitle">
+            {{ session.roomLabel || 'Salle non renseignee' }} -
+            {{ session.startedAt | date: 'dd/MM/yyyy HH:mm' }}
+          </p>
+        </div>
+        <button type="button" class="icon-btn" aria-label="Fermer" (click)="closeDetails()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="details-summary">
+        <span><strong>{{ session.presentCount ?? 0 }}</strong> presents</span>
+        <span><strong>{{ session.absentCount ?? 0 }}</strong> absents</span>
+        <span><strong>{{ session.unknownCount ?? 0 }}</strong> inconnus</span>
+      </div>
+
+      @if (session.status !== 'FINALIZED') {
+        <a
+          class="resume-session-btn"
+          [routerLink]="resumeSessionRoute(session)"
+          [queryParams]="{ sessionId: session.sessionId }"
+        >
+          <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+          Continuer et terminer la session
+        </a>
+      }
+
+      @if (detailError()) {
+        <div class="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm font-semibold text-danger">
+          {{ detailError() }}
+        </div>
+      }
+
+      <div class="students-list">
+        @for (student of session.students ?? []; track student.studentId) {
+          <div class="student-row">
+            <div class="student-main">
+              <div class="avatar">
+                {{ student.firstName.charAt(0) }}{{ student.lastName.charAt(0) }}
+              </div>
+              <div class="min-w-0">
+                <p class="student-name">{{ student.firstName }} {{ student.lastName }}</p>
+                <p class="student-meta">Apogee {{ student.numApogee }} - Groupe {{ student.groupId }}</p>
+              </div>
+            </div>
+
+            <app-status-badge
+              [label]="studentStatusLabel(student.status)"
+              [variant]="studentStatusVariant(student.status)"
+            ></app-status-badge>
+
+            <div class="student-actions">
+              <button
+                type="button"
+                class="status-btn present"
+                [class.active]="student.status === 'PRESENT'"
+                [disabled]="updatingStudentId() === student.studentId"
+                (click)="updateStudentStatus(student, 'PRESENT')"
+              >
+                Present
+              </button>
+              <button
+                type="button"
+                class="status-btn absent"
+                [class.active]="student.status === 'ABSENT'"
+                [disabled]="updatingStudentId() === student.studentId"
+                (click)="updateStudentStatus(student, 'ABSENT')"
+              >
+                Absent
+              </button>
+            </div>
+          </div>
+        } @empty {
+          <div class="empty-students">Aucun etudiant dans cette session.</div>
+        }
+      </div>
+    </div>
+  </div>
+}

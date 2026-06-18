@@ -1,18 +1,17 @@
 package ma.eniad.userservice.controller.student;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.util.List;
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 
@@ -71,24 +70,6 @@ class StudentControllerTest {
         assertThat(result.getStatusCode().value()).isEqualTo(200);
         assertThat(result.getBody()).containsExactly(response);
         verify(studentService).getAll();
-    }
-
-    @Test
-    void getByGroupeId_returnsFilteredList() {
-        StudentResponseDTO response = StudentResponseDTO.builder()
-                .id(1L)
-                .email("student@example.com")
-                .numApogee("A123")
-                .roles(Set.of(Role.STUDENT))
-                .build();
-
-        when(studentService.getByGroupeId(10L)).thenReturn(List.of(response));
-
-        ResponseEntity<List<StudentResponseDTO>> result = controller.getByGroupeId(10L);
-
-        assertThat(result.getStatusCode().value()).isEqualTo(200);
-        assertThat(result.getBody()).containsExactly(response);
-        verify(studentService).getByGroupeId(10L);
     }
 
     @Test

@@ -11,7 +11,6 @@
   padding: 1.75rem 1.5rem;
 }
 
-/* Session Header */
 .session-header {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
@@ -118,7 +117,6 @@
   gap: 0.35rem;
 }
 
-/* QR Code Section */
 .qr-section {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
@@ -159,6 +157,29 @@
   gap: 0.75rem;
 }
 
+.qr-placeholder.has-code {
+  width: min(100%, 280px);
+  height: auto;
+  aspect-ratio: 1;
+  background: var(--color-surface);
+  border-style: solid;
+  padding: 0.75rem;
+}
+
+.qr-output {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-output svg {
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+}
+
 .qr-icon {
   font-size: 3.5rem;
   color: var(--color-muted);
@@ -169,6 +190,11 @@
   font-weight: 600;
   color: var(--color-secondaryText);
   margin: 0;
+  max-width: 100%;
+  padding: 0 0.75rem;
+  text-align: center;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
 }
 
 .qr-info {
@@ -272,6 +298,12 @@
   transform: translateY(-1px);
 }
 
+.btn-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
 .btn-regenerate {
   border-color: #fecaca;
   background: #fff1f2;
@@ -294,7 +326,6 @@
   background: #f0f9ff;
 }
 
-/* Section Header */
 .section-header {
   display: flex;
   align-items: center;
@@ -326,7 +357,6 @@
   color: #16a34a;
 }
 
-/* Students Section */
 .students-section {
   background: #fff;
   border: 1px solid #e2e8f0;
@@ -431,6 +461,122 @@
   font-size: 0.7rem;
 }
 
+.manual-counters {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.manual-counter {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.7rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.manual-counter.present {
+  color: #16a34a;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.manual-counter.absent {
+  color: #dc2626;
+  background: #fff1f2;
+  border: 1px solid #fecaca;
+}
+
+.manual-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.btn-all-present {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1rem;
+  border: none;
+  border-radius: 0.75rem;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+
+.btn-all-present:hover:not(:disabled) {
+  background: var(--color-primary-strong);
+}
+
+.btn-all-present:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.manual-item.row-present {
+  background: rgba(240, 253, 244, 0.5);
+}
+
+.manual-item.row-absent {
+  background: rgba(255, 241, 242, 0.5);
+}
+
+.manual-avatar {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.manual-student-id {
+  color: var(--color-secondaryText);
+  font-family: 'Courier New', monospace;
+}
+
+.status-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-left: auto;
+}
+
+.btn-status {
+  min-width: 5rem;
+  padding: 0.35rem 0.7rem;
+  border: 1.5px solid var(--color-line);
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  color: var(--color-secondaryText);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.btn-status.present.active {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: #fff;
+}
+
+.btn-status.absent.active {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: #fff;
+}
+
+.btn-status:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 @media (max-width: 640px) {
   .qr-marking-page {
     padding: 1.25rem 1rem;
@@ -449,7 +595,8 @@
     flex-wrap: wrap;
   }
 
-  .student-count {
+  .student-count,
+  .manual-counters {
     margin-left: 0;
   }
 
@@ -461,5 +608,14 @@
   .scanned-time {
     width: 100%;
     justify-content: center;
+  }
+
+  .status-buttons {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .btn-status {
+    flex: 1;
   }
 }

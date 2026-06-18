@@ -9,8 +9,10 @@ import {
   viewChild,
 } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 import { AuthService } from '../../core/auth/services/auth.service';
+import { User } from '../../core/auth/models/auth.model';
 
 type NavItem = {
   label: string;
@@ -145,6 +147,7 @@ type UtilityItem = {
                   [class.justify-center]="isSidebarCollapsed()"
                   [attr.aria-label]="isSidebarCollapsed() ? item.label : null"
                   [attr.title]="isSidebarCollapsed() ? item.label : null"
+                  (click)="openSettings()"
                 >
                   <span class="flex h-8 w-8 shrink-0 items-center justify-center text-base">
                     <i [class]="item.icon" aria-hidden="true"></i>
@@ -212,7 +215,7 @@ type UtilityItem = {
                         <i class="fa-solid fa-user-shield text-xs" aria-hidden="true"></i>
                       </span>
                       <span class="hidden text-sm font-medium text-principalText md:inline"
-                        >Prof. Anderson</span
+                        >{{ userDisplayName() }}</span
                       >
                       <!-- <i
                       class="fa-solid text-[0.6rem] text-secondaryText"
@@ -230,9 +233,9 @@ type UtilityItem = {
                           class="rounded-xl border border-primary-soft bg-primary-soft px-3 py-2"
                         >
                           <p class="truncate text-sm font-semibold text-principalText">
-                            Prof. Anderson
+                            {{ userDisplayName() }}
                           </p>
-                          <p class="truncate text-xs text-secondaryText">Teacher</p>
+                          <p class="truncate text-xs text-secondaryText">{{ userEmail() }}</p>
                         </div>
 
                         <button
@@ -267,6 +270,42 @@ type UtilityItem = {
           </div>
         </div>
       </div>
+
+      @if (isSettingsPopupOpen()) {
+        <div
+          class="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm"
+          (click)="closeSettings()"
+        >
+          <div
+            class="w-full max-w-sm rounded-2xl border border-line bg-surface p-4 shadow-shell"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settings-title"
+            (click)="$event.stopPropagation()"
+          >
+            <div class="flex items-center gap-3 rounded-xl bg-primary-soft p-3">
+              <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-surface text-primary">
+                <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+              </span>
+              <div class="min-w-0">
+                <h2 id="settings-title" class="truncate text-sm font-semibold text-principalText">
+                  {{ userDisplayName() }}
+                </h2>
+                <p class="truncate text-xs text-secondaryText">{{ userEmail() }}</p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-danger px-4 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-danger/90"
+              (click)="logout()"
+            >
+              <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      }
     </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -290,6 +329,12 @@ export class TeacherLayout {
   readonly isSidebarOpen = signal(false);
   readonly isSidebarCollapsed = signal(false);
   readonly isUserMenuOpen = signal(false);
+  readonly isSettingsPopupOpen = signal(false);
+  readonly currentUser = toSignal(this.authService.currentUser$, {
+    initialValue: this.authService.currentUser,
+  });
+  readonly userDisplayName = computed(() => this.formatUserName(this.currentUser()));
+  readonly userEmail = computed(() => this.currentUser()?.email ?? 'teacher@ump.ac.ma');
   readonly sidebarMotionClasses = computed(() =>
     this.isSidebarOpen() ? 'translate-x-0' : '-translate-x-full',
   );
@@ -320,6 +365,7 @@ export class TeacherLayout {
   handleEscape(): void {
     this.isSidebarOpen.set(false);
     this.isUserMenuOpen.set(false);
+    this.isSettingsPopupOpen.set(false);
   }
 
   handleDocumentClick(event: Event): void {
@@ -350,10 +396,29 @@ export class TeacherLayout {
 
   openSettings(): void {
     this.isUserMenuOpen.set(false);
+    this.isSettingsPopupOpen.set(true);
+  }
+
+  closeSettings(): void {
+    this.isSettingsPopupOpen.set(false);
   }
 
   logout(): void {
     this.isUserMenuOpen.set(false);
+    this.isSettingsPopupOpen.set(false);
     this.authService.logout();
+  }
+
+  private formatUserName(user: User | null): string {
+    if (!user) {
+      return 'Teacher';
+    }
+
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+    if (fullName) {
+      return fullName;
+    }
+
+    return user.email.split('@')[0] || user.email;
   }
 }

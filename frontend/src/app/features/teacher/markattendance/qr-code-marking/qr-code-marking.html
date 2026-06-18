@@ -1,5 +1,4 @@
 <div class="qr-marking-page">
-  <!-- Session Header -->
   <header class="session-header">
     <div class="session-info">
       <div class="session-badge">
@@ -36,13 +35,28 @@
     </div>
   </header>
 
-  <!-- QR Code Section -->
+  @if (error()) {
+    <div class="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm font-semibold text-danger">
+      {{ error() }}
+    </div>
+  }
+
   <section class="qr-section">
     <div class="qr-container">
       <div class="qr-code-box">
-        <div class="qr-placeholder">
-          <i class="fa-solid fa-qrcode qr-icon" aria-hidden="true"></i>
-          <p class="qr-label">Code QR</p>
+        <div class="qr-placeholder" [class.has-code]="activePayload()">
+          @if (qrLoading() && !activePayload()) {
+            <p class="qr-label">Generation du QR...</p>
+          } @else if (qrError()) {
+            <i class="fa-solid fa-triangle-exclamation qr-icon" aria-hidden="true"></i>
+            <p class="qr-label">{{ qrError() }}</p>
+          } @else {
+            <div #qrContainer class="qr-output" aria-live="polite"></div>
+            @if (!activePayload()) {
+              <i class="fa-solid fa-qrcode qr-icon" aria-hidden="true"></i>
+              <p class="qr-label">Code QR</p>
+            }
+          }
         </div>
       </div>
 
@@ -57,7 +71,7 @@
                 r="55"
                 class="progress-fill"
                 [style.strokeDasharray]="'345.575px'"
-                [style.strokeDashoffset]="'345.575px'"
+                [style.strokeDashoffset]="progressOffset"
               />
             </svg>
             <div class="countdown-text">
@@ -68,24 +82,33 @@
         </div>
 
         <div class="qr-actions">
-          <button type="button" class="btn-action btn-regenerate" (click)="regenerateQr()">
+          <button
+            type="button"
+            class="btn-action btn-regenerate"
+            [disabled]="qrLoading()"
+            (click)="regenerateQr()"
+          >
             <i class="fa-solid fa-rotate" aria-hidden="true"></i>
-            Régénérer QR
+            Regenerer QR
           </button>
-          <button type="button" class="btn-action btn-extend" (click)="extendTime()">
+          <button
+            type="button"
+            class="btn-action btn-extend"
+            [disabled]="qrLoading()"
+            (click)="extendTime()"
+          >
             <i class="fa-solid fa-hourglass-end" aria-hidden="true"></i>
-            +5 min
+            Nouveau payload
           </button>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Scanned Students Section -->
   <section class="students-section">
     <div class="section-header">
       <i class="fa-solid fa-check-circle text-success" aria-hidden="true"></i>
-      <h2 class="section-title">Étudiants scannés</h2>
+      <h2 class="section-title">Etudiants scannes</h2>
       <span class="student-count">{{ scannedStudents().length }}/{{ totalStudents() }}</span>
     </div>
 
@@ -93,7 +116,7 @@
       @if (scannedStudents().length === 0) {
         <div class="empty-state">
           <i class="fa-solid fa-inbox empty-icon" aria-hidden="true"></i>
-          <p class="empty-text">Aucun étudiant scanné pour le moment</p>
+          <p class="empty-text">Aucun etudiant scanne pour le moment</p>
         </div>
       } @else {
         @for (student of scannedStudents(); track student.id) {
@@ -107,6 +130,73 @@
               <i class="fa-solid fa-clock" aria-hidden="true"></i>
               {{ student.scannedAt }}
             </span>
+          </div>
+        }
+      }
+    </div>
+  </section>
+
+  <section class="students-section">
+    <div class="section-header">
+      <i class="fa-solid fa-hand-pointer text-primary" aria-hidden="true"></i>
+      <h2 class="section-title">Marquage manuel</h2>
+      <div class="manual-counters">
+        <span class="manual-counter present">{{ presentCount() }} presents</span>
+        <span class="manual-counter absent">{{ absentCount() }} absents</span>
+      </div>
+    </div>
+
+    <div class="manual-actions">
+      <button
+        type="button"
+        class="btn-all-present"
+        [disabled]="manualStudents().length === 0 || savingStudentId() !== null"
+        (click)="markAllPresent()"
+      >
+        <i class="fa-solid fa-check-double" aria-hidden="true"></i>
+        Tous presents
+      </button>
+    </div>
+
+    <div class="students-list">
+      @if (manualStudents().length === 0) {
+        <div class="empty-state">
+          <i class="fa-solid fa-inbox empty-icon" aria-hidden="true"></i>
+          <p class="empty-text">Aucun etudiant dans cette session.</p>
+        </div>
+      } @else {
+        @for (student of manualStudents(); track student.id) {
+          <div
+            class="student-item manual-item"
+            [class.row-present]="student.status === 'present'"
+            [class.row-absent]="student.status === 'absent'"
+          >
+            <div class="student-avatar manual-avatar">{{ student.initials }}</div>
+            <div class="student-details">
+              <p class="student-name">{{ student.name }}</p>
+              <span class="student-id manual-student-id">{{ student.studentId }}</span>
+            </div>
+
+            <div class="status-buttons">
+              <button
+                type="button"
+                class="btn-status present"
+                [class.active]="student.status === 'present'"
+                [disabled]="savingStudentId() === student.id"
+                (click)="setManualStatus(student.id, 'present')"
+              >
+                PRESENT
+              </button>
+              <button
+                type="button"
+                class="btn-status absent"
+                [class.active]="student.status === 'absent'"
+                [disabled]="savingStudentId() === student.id"
+                (click)="setManualStatus(student.id, 'absent')"
+              >
+                ABSENT
+              </button>
+            </div>
           </div>
         }
       }

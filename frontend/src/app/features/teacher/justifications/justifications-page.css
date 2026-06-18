@@ -1,69 +1,112 @@
-/* Justifications page specific styles */
-
-/* Container card matching design system */
-.justifications-card {
-  border: 1px solid var(--color-line);
-  background: var(--color-surface);
-  border-radius: 1.5rem;
-  /* equivalent to rounded-3xl */
-  padding: 3rem;
-  /* approx p-12 */
-  text-align: center;
-}
-
-/* Icon wrapper – uses warning token soft background */
-.justifications-card .icon-wrapper {
-  display: flex;
+.action-btn {
+  display: inline-flex;
+  min-height: 2.25rem;
   align-items: center;
   justify-content: center;
-  height: 4rem;
-  /* h-16 */
-  width: 4rem;
-  /* w-16 */
-  margin: 0 auto;
+  gap: 0.45rem;
   border-radius: 0.75rem;
-  /* rounded-2xl */
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
+  border: 1px solid var(--color-line);
+  padding: 0.5rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
 }
 
-/* Header and description text */
-.justifications-card h3 {
-  margin-top: 1.5rem;
-  /* mt-6 */
-  font-size: 1.25rem;
-  /* text-xl */
-  font-weight: 700;
-  /* font-bold */
+.action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.action-btn-success {
+  border-color: color-mix(in srgb, var(--color-success) 35%, var(--color-line));
+  background: var(--color-success-soft);
+  color: var(--color-secondary);
+}
+
+.action-btn-success:not(:disabled):hover {
+  border-color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success-soft) 70%, white);
+}
+
+.action-btn-danger {
+  border-color: color-mix(in srgb, var(--color-danger) 35%, var(--color-line));
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.action-btn-danger:not(:disabled):hover {
+  border-color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger-soft) 70%, white);
+}
+
+.action-btn-neutral {
+  background: var(--color-surface);
   color: var(--color-principalText);
 }
 
-.justifications-card p {
-  margin-top: 0.5rem;
-  /* mt-2 */
-  font-size: 0.875rem;
-  /* text-sm */
+.action-btn-neutral:not(:disabled):hover {
+  border-color: var(--color-primary-soft);
+  background: var(--color-primary-soft);
+}
+
+.details-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+
+.detail-box {
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  background: var(--color-surface);
+  padding: 1rem;
+}
+
+.detail-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--color-secondaryText);
 }
 
-/* Primary action button */
-.justifications-card .primary-action {
-  margin-top: 2rem;
-  /* mt-8 */
-  display: inline-flex;
-  border-radius: 0.75rem;
-  /* rounded-xl */
-  background: var(--color-primary);
-  color: var(--color-surface);
-  padding: 0.625rem 2rem;
-  /* px-8 py-2.5 */
-  font-size: 0.875rem;
-  /* text-sm */
-  font-weight: 600;
-  /* font-semibold */
-  transition: background 0.2s ease-in-out;
+.detail-value {
+  margin-top: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-principalText);
 }
 
-.justifications-card .primary-action:hover {
-  background: var(--color-primary-soft);
+.justification-preview {
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: 1.15rem;
+  background: var(--color-surface);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.justification-preview img {
+  display: block;
+  width: 100%;
+  max-height: 28rem;
+  object-fit: contain;
+  background: var(--color-surface-subtle);
+}
+
+.justification-preview figcaption {
+  border-top: 1px solid var(--color-line);
+  padding: 0.9rem 1rem;
+}
+
+.justification-preview figcaption p {
+  margin-top: 0.3rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--color-principalText);
 }

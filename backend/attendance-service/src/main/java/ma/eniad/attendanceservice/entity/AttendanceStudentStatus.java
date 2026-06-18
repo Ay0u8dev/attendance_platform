@@ -3,5 +3,6 @@ package ma.eniad.attendanceservice.entity;
 public enum AttendanceStudentStatus {
     UNKNOWN,
     PRESENT,
-    ABSENT
+    ABSENT,
+    JUSTIFIED
 }

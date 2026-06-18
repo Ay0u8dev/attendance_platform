@@ -1,22 +1,21 @@
 package ma.eniad.userservice.service.student;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -31,7 +30,6 @@ import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.mapper.student.StudentMapper;
 import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
-import ma.eniad.userservice.repository.structure.GroupeRepository;
 
 @ExtendWith(MockitoExtension.class)
 class StudentServiceTest {
@@ -41,9 +39,6 @@ class StudentServiceTest {
 
     @Mock
     private UserRepository userRepository;
-
-    @Mock
-    private GroupeRepository groupeRepository;
 
     @Mock
     private StudentMapper studentMapper;
@@ -175,39 +170,6 @@ class StudentServiceTest {
         verify(studentRepository).findById(1L);
         verify(studentMapper).updateEntity(request, student);
         verify(studentRepository).save(student);
-    }
-
-    @Test
-    void getByGroupeId_returnsStudentsInGroupe() {
-        Student student = new Student();
-        student.setId(1L);
-        student.setEmail("student@ump.ac.ma");
-        student.setNumApogee("A123");
-
-        StudentResponseDTO response = StudentResponseDTO.builder()
-                .id(1L)
-                .email("student@ump.ac.ma")
-                .numApogee("A123")
-                .build();
-
-        when(groupeRepository.existsById(10L)).thenReturn(true);
-        when(studentRepository.findByGroupeId(10L)).thenReturn(List.of(student));
-        when(studentMapper.toResponse(student)).thenReturn(response);
-
-        List<StudentResponseDTO> result = studentService.getByGroupeId(10L);
-
-        assertThat(result).containsExactly(response);
-        verify(groupeRepository).existsById(10L);
-        verify(studentRepository).findByGroupeId(10L);
-    }
-
-    @Test
-    void getByGroupeId_throwsWhenGroupeNotFound() {
-        when(groupeRepository.existsById(10L)).thenReturn(false);
-
-        assertThatThrownBy(() -> studentService.getByGroupeId(10L))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Groupe not found");
     }
 
     @Test
