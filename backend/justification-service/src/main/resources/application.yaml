@@ -31,4 +31,4 @@ spring:
 
 services:
   attendance-service:
-    url: http://localhost:8083
+    url: http://localhost

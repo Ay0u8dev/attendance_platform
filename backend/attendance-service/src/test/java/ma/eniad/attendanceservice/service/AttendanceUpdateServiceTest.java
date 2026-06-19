@@ -139,7 +139,7 @@ class AttendanceUpdateServiceTest {
 
         assertThat(record.getStatus()).isEqualTo(AttendanceStudentStatus.JUSTIFIED);
         assertThat(session.getAbsentCount()).isEqualTo(1);
-        verify(attendanceRecordRepository).save(record);
+        verify(attendanceRecordRepository).saveAndFlush(record);
         verify(attendanceSessionRepository).save(session);
     }
 

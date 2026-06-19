@@ -7,12 +7,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
-@FeignClient(name = "attendance-service", url = "${services.attendance-service.url:http://localhost:8083}")
+@FeignClient(name = "attendance-service", url = "${services.attendance-service.url:http://localhost}")
 public interface AttendanceServiceClient {
 
-    @PatchMapping("/attendance/internal/sessions/{sessionId}/students/{studentId}/justify")
-    void justifyAbsence(@PathVariable Long sessionId,
-                        @PathVariable Long studentId,
-                        @RequestHeader("X-Request-Source") String requestSource,
+    @PatchMapping("/api/attendance/internal/sessions/{sessionId}/students/{studentId}/justify")
+    void justifyAbsence(@PathVariable("sessionId") Long sessionId,
+                        @PathVariable("studentId") Long studentId,
+                        @RequestHeader(value = "X-Request-Source") String requestSource,
                         @RequestBody AttendanceJustificationRequest request);
 }

@@ -1,6 +1,9 @@
 package ma.eniad.justificationservice.service;
 
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
+import ma.eniad.justificationservice.client.AttendanceServiceClient;
+import ma.eniad.justificationservice.dto.AttendanceJustificationRequest;
 import ma.eniad.justificationservice.dto.ReviewJustificationRequest;
 import ma.eniad.justificationservice.dto.SubmitJustificationRequest;
 import ma.eniad.justificationservice.entity.Justification;
@@ -21,9 +24,10 @@ import java.util.Set;
 public class JustificationService {
 
     private static final Set<String> REVIEWER_ROLES = Set.of("ADMIN", "TEACHER");
+    private static final String JUSTIFICATION_SOURCE = "justification-service";
 
     private final JustificationRepository repository;
-    private final AttendanceRecordJustifier attendanceRecordJustifier;
+    private final AttendanceServiceClient attendanceServiceClient;
 
     @Transactional
     public Justification submit(SubmitJustificationRequest request) {
@@ -82,9 +86,21 @@ public class JustificationService {
         Justification justification = requirePendingJustification(id);
         String reviewerRole = requireReviewerRole(request.reviewerRole());
 
-        // Meme transaction: absence ABSENT -> JUSTIFIED, puis justification PENDING -> APPROVED.
-        Long resolvedSessionId = attendanceRecordJustifier.justifyAbsence(justification);
-        justification.setSessionId(resolvedSessionId);
+        try {
+            attendanceServiceClient.justifyAbsence(
+                    justification.getSessionId(),
+                    justification.getStudentId(),
+                    JUSTIFICATION_SOURCE,
+                    new AttendanceJustificationRequest(justification.getId(), buildReviewerLabel(request))
+            );
+        } catch (FeignException ex) {
+            HttpStatus status = HttpStatus.resolve(ex.status());
+            throw new ResponseStatusException(
+                    status != null ? status : HttpStatus.BAD_GATEWAY,
+                    ex.getMessage(),
+                    ex
+            );
+        }
 
         justification.setStatus(JustificationStatus.APPROVED);
         applyReviewData(justification, request, reviewerRole);

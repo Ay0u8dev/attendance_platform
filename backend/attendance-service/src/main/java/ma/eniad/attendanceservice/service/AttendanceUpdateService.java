@@ -17,6 +17,7 @@ import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.repository.AttendanceRecordRepository;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -179,7 +180,15 @@ public class AttendanceUpdateService {
         }
 
         record.setStatus(AttendanceStudentStatus.JUSTIFIED);
-        attendanceRecordRepository.save(record);
+        try {
+            attendanceRecordRepository.saveAndFlush(record);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Attendance record status JUSTIFIED is not accepted by the current database schema",
+                    ex
+            );
+        }
 
         attendanceSessionRepository.findById(sessionId).ifPresent(session -> {
             // La justification retire l'etudiant du compteur des absences non justifiees.

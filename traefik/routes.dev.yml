@@ -27,6 +27,13 @@ http:
       service: attendance-service
 
     # Attendance routes — protected, JWT required
+    attendance-internal:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/attendance/internal`)"
+      priority: 100
+      middlewares: ["cors", "strip-api-attendance"]
+      service: attendance-service
+
     attendance:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/attendance`)"
