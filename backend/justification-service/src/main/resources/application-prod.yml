@@ -21,4 +21,4 @@ spring:
 
 services:
   attendance-service:
-    url: ${SERVICES_ATTENDANCE_SERVICE_URL:http://traefik}
+    url: http://attendance-service:8080
