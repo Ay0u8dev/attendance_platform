@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Lob;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrimaryKeyJoinColumn;
@@ -32,7 +33,8 @@ public class Student extends User {
     @Column(nullable = false, unique = true, length = 30)
     private String numApogee;
 
-    @Column(columnDefinition = "bytea")
+    @Lob
+    @Basic(fetch = FetchType.LAZY)
     private byte[] embeddings;
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
