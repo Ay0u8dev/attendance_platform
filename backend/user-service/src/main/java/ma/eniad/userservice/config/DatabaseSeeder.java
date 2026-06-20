@@ -104,6 +104,7 @@ private SeedUsers seedUsers(UserRepository userRepository) {
     
     // Ajouter le nouvel étudiant
     students.add(ensureStudent(userRepository, "abdoelfadili695@gmail.com", "elfadili", "abdo", "250021"));
+    students.add(ensureStudent(userRepository, "ayoubelebbar15@gmail.com", "Elebbar", "Ayoub", "250022"));
 
     return new SeedUsers(admin1, teacherAbdel, students);
 }
@@ -295,7 +296,7 @@ private SeedUsers seedUsers(UserRepository userRepository) {
         Groupe group;
         
         // Mettre abdoelfadili695@gmail.com dans GI-1
-        if ("abdoelfadili695@gmail.com".equals(student.getEmail())) {
+        if ("abdoelfadili695@gmail.com".equals(student.getEmail()) || "ayoubelebbar15@gmail.com".equals(student.getEmail())) {
             group = gi1Group;
         } else {
             // Distribution cyclique pour les autres
