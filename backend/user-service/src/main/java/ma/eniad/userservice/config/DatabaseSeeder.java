@@ -235,8 +235,10 @@ public class DatabaseSeeder {
             Filiere filiere,
             Cycle cycle) {
         Long filiereId = filiere != null ? filiere.getId() : null;
+        String name = filiere != null ? filiere.getCode() : cycle.getCode();
         return repository.findSeedFormation(year.getId(), filiereId, cycle.getId())
                 .orElseGet(() -> repository.save(Formation.builder()
+                        .name(name)
                         .anneeUniversitaire(year)
                         .filiere(filiere)
                         .cycle(cycle)
@@ -314,6 +316,7 @@ public class DatabaseSeeder {
         Inscription inscription = new Inscription();
         inscription.setStudent(student);
         inscription.setGroupe(group);
+        inscription.setFormation(group.getFormation());
         inscription.setAnneeUniversitaire(year);
         repository.save(inscription);
     }
