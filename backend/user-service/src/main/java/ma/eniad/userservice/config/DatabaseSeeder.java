@@ -1,34 +1,24 @@
 package ma.eniad.userservice.config;
 
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
 import ma.eniad.userservice.entity.Admin;
 import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Student;
 import ma.eniad.userservice.entity.Teacher;
 import ma.eniad.userservice.entity.enums.CycleType;
 import ma.eniad.userservice.entity.enums.Role;
-import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
-import ma.eniad.userservice.entity.structure.Cycle;
-import ma.eniad.userservice.entity.structure.Filiere;
-import ma.eniad.userservice.entity.structure.Formation;
-import ma.eniad.userservice.entity.structure.Groupe;
+import ma.eniad.userservice.entity.structure.*;
 import ma.eniad.userservice.entity.structure.Module;
-
 import ma.eniad.userservice.repository.UserRepository;
-import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
-import ma.eniad.userservice.repository.structure.CycleRepository;
-import ma.eniad.userservice.repository.structure.FiliereRepository;
-import ma.eniad.userservice.repository.structure.FormationRepository;
-import ma.eniad.userservice.repository.structure.GroupeRepository;
-import ma.eniad.userservice.repository.structure.ModuleRepository;
+import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
+import ma.eniad.userservice.repository.structure.*;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 @Configuration
 public class DatabaseSeeder {
@@ -59,55 +49,55 @@ public class DatabaseSeeder {
         };
     }
 
-private SeedUsers seedUsers(UserRepository userRepository) {
-    Admin admin1 = ensureAdmin(
-            userRepository,
-            "ayoubelebbar@ump.ac.ma",
-            "Ayoub",
-            "Elebbar"
-    );
+    private SeedUsers seedUsers(UserRepository userRepository) {
+        Admin admin1 = ensureAdmin(
+                userRepository,
+                "ayoubelebbar@ump.ac.ma",
+                "Ayoub",
+                "Elebbar"
+        );
 
-    Teacher teacherAbdel = ensureTeacher(
-            userRepository,
-            "abdelkoddousselfadili@ump.ac.ma",
-            "Abdelkoddouss",
-            "Elfadili"
-    );
+        Teacher teacherAbdel = ensureTeacher(
+                userRepository,
+                "abdelkoddousselfadili@ump.ac.ma",
+                "Abdelkoddouss",
+                "Elfadili"
+        );
 
-    ensureAdmin(userRepository, "mariamfahim@ump.ac.ma", "Mariam", "Fahim");
-    ensureAdmin(userRepository, "abdelaliferhan@ump.ac.ma", "Abdelali", "Ferhan");
-    ensureAdmin(userRepository, "abdelkodouselfadili@ump.ac.ma", "Abdelkodous", "Elfadili");
-    ensureTeacher(userRepository, "ayoubelebbar03@gmail.com", "Ayoub", "Elebbar");
+        ensureAdmin(userRepository, "mariamfahim@ump.ac.ma", "Mariam", "Fahim");
+        ensureAdmin(userRepository, "abdelaliferhan@ump.ac.ma", "Abdelali", "Ferhan");
+        ensureAdmin(userRepository, "abdelkodouselfadili@ump.ac.ma", "Abdelkodous", "Elfadili");
+        ensureTeacher(userRepository, "ayoubelebbar03@gmail.com", "Ayoub", "Elebbar");
 
-    List<Student> students = new ArrayList<>(List.of(
-            ensureStudent(userRepository, "sofiane.meziane@ump.ac.ma", "Sofiane", "Meziane", "250001"),
-            ensureStudent(userRepository, "leila.bensalem@ump.ac.ma", "Leila", "Bensalem", "250002"),
-            ensureStudent(userRepository, "yassine.elidrissi@ump.ac.ma", "Yassine", "El Idrissi", "250003"),
-            ensureStudent(userRepository, "meryem.toumi@ump.ac.ma", "Meryem", "Toumi", "250004"),
-            ensureStudent(userRepository, "bilal.aithamou@ump.ac.ma", "Bilal", "Ait Hamou", "250005"),
-            ensureStudent(userRepository, "imane.kabbaj@ump.ac.ma", "Imane", "Kabbaj", "250006"),
-            ensureStudent(userRepository, "nour.salmi@ump.ac.ma", "Nour Eddine", "Salmi", "250007"),
-            ensureStudent(userRepository, "salma.alaoui@ump.ac.ma", "Salma", "Alaoui", "250008"),
-            ensureStudent(userRepository, "hamza.rafik@ump.ac.ma", "Hamza", "Rafik", "250009"),
-            ensureStudent(userRepository, "asmae.bennani@ump.ac.ma", "Asmae", "Bennani", "250010"),
-            ensureStudent(userRepository, "karim.elmalki@ump.ac.ma", "Karim", "El Malki", "250011"),
-            ensureStudent(userRepository, "hiba.ouazzani@ump.ac.ma", "Hiba", "Ouazzani", "250012"),
-            ensureStudent(userRepository, "youssef.boulifa@ump.ac.ma", "Youssef", "Boulifa", "250013"),
-            ensureStudent(userRepository, "sara.achraf@ump.ac.ma", "Sara", "Achraf", "250014"),
-            ensureStudent(userRepository, "amine.rabaa@ump.ac.ma", "Amine", "Rabaa", "250015"),
-            ensureStudent(userRepository, "nada.elhaj@ump.ac.ma", "Nada", "El Haj", "250016"),
-            ensureStudent(userRepository, "anas.berrak@ump.ac.ma", "Anas", "Berrak", "250017"),
-            ensureStudent(userRepository, "lina.haddou@ump.ac.ma", "Lina", "Haddou", "250018"),
-            ensureStudent(userRepository, "ismail.khoury@ump.ac.ma", "Ismail", "Khoury", "250019"),
-            ensureStudent(userRepository, "leila.kenza@ump.ac.ma", "Leila", "Kenza", "250020")
-    ));
-    
-    // Ajouter le nouvel étudiant
-    students.add(ensureStudent(userRepository, "abdoelfadili695@gmail.com", "elfadili", "abdo", "250021"));
-    students.add(ensureStudent(userRepository, "ayoubelebbar15@gmail.com", "Elebbar", "Ayoub", "250022"));
+        List<Student> students = new ArrayList<>(List.of(
+                ensureStudent(userRepository, "sofiane.meziane@ump.ac.ma", "Sofiane", "Meziane", "250001"),
+                ensureStudent(userRepository, "leila.bensalem@ump.ac.ma", "Leila", "Bensalem", "250002"),
+                ensureStudent(userRepository, "yassine.elidrissi@ump.ac.ma", "Yassine", "El Idrissi", "250003"),
+                ensureStudent(userRepository, "meryem.toumi@ump.ac.ma", "Meryem", "Toumi", "250004"),
+                ensureStudent(userRepository, "bilal.aithamou@ump.ac.ma", "Bilal", "Ait Hamou", "250005"),
+                ensureStudent(userRepository, "imane.kabbaj@ump.ac.ma", "Imane", "Kabbaj", "250006"),
+                ensureStudent(userRepository, "nour.salmi@ump.ac.ma", "Nour Eddine", "Salmi", "250007"),
+                ensureStudent(userRepository, "salma.alaoui@ump.ac.ma", "Salma", "Alaoui", "250008"),
+                ensureStudent(userRepository, "hamza.rafik@ump.ac.ma", "Hamza", "Rafik", "250009"),
+                ensureStudent(userRepository, "asmae.bennani@ump.ac.ma", "Asmae", "Bennani", "250010"),
+                ensureStudent(userRepository, "karim.elmalki@ump.ac.ma", "Karim", "El Malki", "250011"),
+                ensureStudent(userRepository, "hiba.ouazzani@ump.ac.ma", "Hiba", "Ouazzani", "250012"),
+                ensureStudent(userRepository, "youssef.boulifa@ump.ac.ma", "Youssef", "Boulifa", "250013"),
+                ensureStudent(userRepository, "sara.achraf@ump.ac.ma", "Sara", "Achraf", "250014"),
+                ensureStudent(userRepository, "amine.rabaa@ump.ac.ma", "Amine", "Rabaa", "250015"),
+                ensureStudent(userRepository, "nada.elhaj@ump.ac.ma", "Nada", "El Haj", "250016"),
+                ensureStudent(userRepository, "anas.berrak@ump.ac.ma", "Anas", "Berrak", "250017"),
+                ensureStudent(userRepository, "lina.haddou@ump.ac.ma", "Lina", "Haddou", "250018"),
+                ensureStudent(userRepository, "ismail.khoury@ump.ac.ma", "Ismail", "Khoury", "250019"),
+                ensureStudent(userRepository, "leila.kenza@ump.ac.ma", "Leila", "Kenza", "250020")
+        ));
 
-    return new SeedUsers(admin1, teacherAbdel, students);
-}
+        // Ajouter le nouvel étudiant
+        students.add(ensureStudent(userRepository, "abdoelfadili695@gmail.com", "elfadili", "abdo", "250021"));
+        students.add(ensureStudent(userRepository, "ayoubelebbar15@gmail.com", "Elebbar", "Ayoub", "250022"));
+
+        return new SeedUsers(admin1, teacherAbdel, students);
+    }
 
 
     private SeedStructure seedStructure(
@@ -279,38 +269,38 @@ private SeedUsers seedUsers(UserRepository userRepository) {
     }
 
     private void seedInscriptions(
-        InscriptionRepository inscriptionRepository,
-        SeedUsers seedUsers,
-        SeedStructure seedStructure) {
-    List<Groupe> groups = seedStructure.groups();
-    List<Student> students = seedUsers.students();
-    
-    // Trouver le groupe GI-1
-    Groupe gi1Group = groups.stream()
-            .filter(g -> "GI-1".equals(g.getName()))
-            .findFirst()
-            .orElse(null);
+            StudentInscriptionRepository inscriptionRepository,
+            SeedUsers seedUsers,
+            SeedStructure seedStructure) {
+        List<Groupe> groups = seedStructure.groups();
+        List<Student> students = seedUsers.students();
 
-    for (int i = 0; i < students.size(); i++) {
-        Student student = students.get(i);
-        Groupe group;
-        
-        // Mettre abdoelfadili695@gmail.com dans GI-1
-        if ("abdoelfadili695@gmail.com".equals(student.getEmail()) || "ayoubelebbar15@gmail.com".equals(student.getEmail())) {
-            group = gi1Group;
-        } else {
-            // Distribution cyclique pour les autres
-            group = groups.get(i % groups.size());
-        }
-        
-        if (group != null) {
-            ensureInscription(inscriptionRepository, student, group, seedStructure.activeYear());
+        // Trouver le groupe GI-1
+        Groupe gi1Group = groups.stream()
+                .filter(g -> "GI-1".equals(g.getName()))
+                .findFirst()
+                .orElse(null);
+
+        for (int i = 0; i < students.size(); i++) {
+            Student student = students.get(i);
+            Groupe group;
+
+            // Mettre abdoelfadili695@gmail.com dans GI-1
+            if ("abdoelfadili695@gmail.com".equals(student.getEmail()) || "ayoubelebbar15@gmail.com".equals(student.getEmail())) {
+                group = gi1Group;
+            } else {
+                // Distribution cyclique pour les autres
+                group = groups.get(i % groups.size());
+            }
+
+            if (group != null) {
+                ensureInscription(inscriptionRepository, student, group, seedStructure.activeYear());
+            }
         }
     }
-}
 
     private void ensureInscription(
-            InscriptionRepository repository,
+            StudentInscriptionRepository repository,
             Student student,
             Groupe group,
             AnneeUniversitaire year) {
