@@ -176,19 +176,19 @@ services:
   #   volumes:
   #     - ./backend/face-service:/app
 
-  # qr-service:
-  #   build:
-  #     context: ./backend/qr-service
-  #     dockerfile: Dockerfile.prod.example
-  #   container_name: qr-service
-  #   ports:
-  #     - "8001:8000"
-  #   environment:
-  #     ATTENDANCE_SERVICE_URL: http://host.docker.internal:8083
-  #     QR_TOKEN_SECRET: dev-only-change-me
-  #     QR_TOKEN_TTL_SECONDS: 30
-  #   volumes:
-  #     - ./backend/qr-service:/app
+  qr-service:
+    build:
+      context: ./backend/qr-service
+      dockerfile: Dockerfile.prod.example
+    container_name: qr-service
+    ports:
+      - "8001:8000"
+    environment:
+      ATTENDANCE_SERVICE_URL: http://host.docker.internal:8083
+      QR_TOKEN_SECRET: dev-only-change-me
+      QR_TOKEN_TTL_SECONDS: 30
+    volumes:
+      - ./backend/qr-service:/app
 
 volumes:
   # frontend_node_modules:

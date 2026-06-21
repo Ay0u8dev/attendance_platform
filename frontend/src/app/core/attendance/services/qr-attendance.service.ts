@@ -87,6 +87,13 @@ export class QrAttendanceService {
     );
   }
 
+  createTeacherPayload(sessionId: number): Observable<QrPayloadResponse> {
+    return this.http.post<QrPayloadResponse>(
+      `${this.qrBaseUrl}/teacher/sessions/${sessionId}/payload`,
+      {},
+    );
+  }
+
   submitStudentQrScan(request: QrStudentScanRequest): Observable<QrAttendanceUpdateResponse> {
     return this.http.post<QrAttendanceUpdateResponse>(`${this.qrBaseUrl}/student/scan`, request);
   }
@@ -94,6 +101,11 @@ export class QrAttendanceService {
   toUserMessage(error: unknown): string {
     if (!(error instanceof HttpErrorResponse)) {
       return 'Une erreur inattendue est survenue.';
+    }
+
+    const statusMessage = this.statusMessage(error.status);
+    if (statusMessage) {
+      return statusMessage;
     }
 
     const body = error.error;
@@ -107,19 +119,27 @@ export class QrAttendanceService {
       }
     }
 
-    switch (error.status) {
+    return 'Impossible de valider le QR code.';
+  }
+
+  private statusMessage(statusCode: number): string | null {
+    switch (statusCode) {
       case 400:
         return 'QR code invalide.';
       case 401:
-        return 'Session non authentifiée.';
+        return 'Session non authentifiee.';
       case 403:
-        return 'Accès refusé pour ce rôle.';
+        return 'Acces refuse pour ce role.';
       case 409:
-        return 'Ce pointage ne peut plus être enregistré.';
+        return 'Ce pointage ne peut plus etre enregistre.';
       case 410:
-        return 'QR code expiré. Scanne le nouveau code affiché.';
+        return 'QR code expire. Scanne le nouveau code affiche.';
+      case 502:
+        return 'Service QR indisponible. Verifiez que qr-service est demarre sur le port 8001.';
+      case 504:
+        return 'Service QR trop lent ou indisponible. Reessayez dans quelques secondes.';
       default:
-        return 'Impossible de valider le QR code.';
+        return null;
     }
   }
 

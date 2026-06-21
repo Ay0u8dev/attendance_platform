@@ -103,13 +103,13 @@ export class AuthService {
           this.authInProgressSignal.set(false);
 
           // Handle specific error responses from backend
-          if (error.status === 401) {
+          if (error.status === 401 || error.status === 403) {
             const message =
               this.normalizeAuthMessage(error.error?.message) ||
               'Domaine non autorisé. Utilisez votre adresse @ump.ac.ma';
             this.authErrorSignal.set(message);
             this.toastService.error('Accès refusé', message);
-            console.warn('Domain validation failed:', error);
+            console.warn('Authentication refused:', error);
           } else if (error.status === 400) {
             const message = error.error?.message || 'Requête invalide. Vérifiez vos informations.';
             this.authErrorSignal.set(message);

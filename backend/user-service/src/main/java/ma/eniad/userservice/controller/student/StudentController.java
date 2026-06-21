@@ -10,12 +10,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.springframework.web.bind.annotation.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
@@ -70,6 +70,19 @@ public class StudentController {
     @GetMapping("/profile")
     public ResponseEntity<StudentProfileDto> getProfile() {
         return ResponseEntity.ok(service.getCurrentProfile());
+    }
+
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Students in group retrieved successfully",
+                    content = @Content(mediaType = "application/json",
+                            array = @io.swagger.v3.oas.annotations.media.ArraySchema(
+                                    schema = @Schema(implementation = StudentResponseDTO.class)))),
+            @ApiResponse(responseCode = "404", description = "Group not found",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @GetMapping("/groupe/{groupeId}")
+    public ResponseEntity<List<StudentResponseDTO>> getByGroupeId(@PathVariable Long groupeId) {
+        return ResponseEntity.ok(service.getByGroupeId(groupeId));
     }
 
     // GET /users/student/{id}

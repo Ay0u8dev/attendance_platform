@@ -6,8 +6,11 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Set;
 
+import java.util.Optional;
+
 @Repository
 public interface ModuleRepository extends JpaRepository<Module, Long> {
     boolean existsByFormationIdAndCode(Long formationId, String code);
+    Optional<Module> findByFormationIdAndCode(Long formationId, String code);
     List<Module> findByCodeIn(Set<String> codes);
 }

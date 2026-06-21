@@ -1,0 +1,319 @@
+<div class="start-session-page">
+  <h1 class="page-title">Nouvelle Session d'Appel</h1>
+
+  @if (error()) {
+    <div class="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm font-semibold text-danger">
+      {{ error() }}
+    </div>
+  }
+
+  <section class="card">
+    <div class="section-header">
+      <i class="fa-solid fa-sliders text-primary" aria-hidden="true"></i>
+      <h2 class="section-title">Configuration du cours</h2>
+    </div>
+
+    <div class="config-grid">
+      <div class="config-field group-field">
+        <label class="field-label">GROUPES</label>
+        <div class="group-tags">
+          @if (loading()) {
+            <span class="text-sm text-secondaryText">Chargement...</span>
+          } @else {
+            @for (group of groups(); track group.id) {
+              <label
+                class="group-tag cursor-pointer"
+                [class.selected]="selectedGroupIds().includes(group.id)"
+              >
+                <input
+                  type="checkbox"
+                  class="sr-only"
+                  [checked]="selectedGroupIds().includes(group.id)"
+                  (change)="toggleGroup(group.id, $any($event.target).checked)"
+                />
+                {{ group.name }}
+              </label>
+            }
+          }
+        </div>
+      </div>
+
+      <div class="config-field module-field">
+        <label class="field-label" id="module-label">MODULE</label>
+        <div class="dropdown-shell" [class.open]="openDropdown() === 'module'">
+          <i class="fa-solid fa-book-open select-icon" aria-hidden="true"></i>
+          <button
+            type="button"
+            id="module"
+            class="dropdown-trigger field-value"
+            aria-labelledby="module-label module"
+            [attr.aria-expanded]="openDropdown() === 'module'"
+            (click)="toggleDropdown('module')"
+          >
+            <span>{{ selectedModule()?.name ?? 'Choisir un module' }}</span>
+          </button>
+          <i class="fa-solid fa-chevron-down select-chevron" aria-hidden="true"></i>
+
+          @if (openDropdown() === 'module') {
+            <div class="dropdown-menu" role="listbox" aria-labelledby="module-label">
+              <button
+                type="button"
+                class="dropdown-option muted-option"
+                [class.selected]="selectedModuleId() === null"
+                role="option"
+                [attr.aria-selected]="selectedModuleId() === null"
+                (click)="updateModule('')"
+              >
+                <span class="option-icon"><i class="fa-solid fa-list-check" aria-hidden="true"></i></span>
+                <span class="option-content">
+                  <span class="option-label">Choisir un module</span>
+                  <span class="option-meta">Selection obligatoire</span>
+                </span>
+              </button>
+              @for (module of modules(); track module.id) {
+                <button
+                  type="button"
+                  class="dropdown-option"
+                  [class.selected]="selectedModuleId() === module.id"
+                  role="option"
+                  [attr.aria-selected]="selectedModuleId() === module.id"
+                  (click)="updateModule(module.id)"
+                >
+                  <span class="option-icon"><i class="fa-solid fa-book" aria-hidden="true"></i></span>
+                  <span class="option-content">
+                    <span class="option-label">{{ module.name }}</span>
+                    <span class="option-meta">Module disponible</span>
+                  </span>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="config-field location-type-field">
+        <label class="field-label" id="location-type-label">TYPE LIEU</label>
+        <div class="dropdown-shell" [class.open]="openDropdown() === 'locationType'">
+          <i class="fa-solid fa-building-columns select-icon" aria-hidden="true"></i>
+          <button
+            type="button"
+            id="location-type"
+            class="dropdown-trigger field-value"
+            aria-labelledby="location-type-label location-type"
+            [attr.aria-expanded]="openDropdown() === 'locationType'"
+            (click)="toggleDropdown('locationType')"
+          >
+            <span>{{ selectedLocationType() }}</span>
+          </button>
+          <i class="fa-solid fa-chevron-down select-chevron" aria-hidden="true"></i>
+
+          @if (openDropdown() === 'locationType') {
+            <div class="dropdown-menu" role="listbox" aria-labelledby="location-type-label">
+              @for (type of locationTypes; track type) {
+                <button
+                  type="button"
+                  class="dropdown-option"
+                  [class.selected]="selectedLocationType() === type"
+                  role="option"
+                  [attr.aria-selected]="selectedLocationType() === type"
+                  (click)="updateLocationType(type)"
+                >
+                  <span class="option-icon"><i class="fa-solid fa-location-dot" aria-hidden="true"></i></span>
+                  <span class="option-content">
+                    <span class="option-label">{{ type }}</span>
+                    <span class="option-meta">Filtre les salles disponibles</span>
+                  </span>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="config-field room-field">
+        <label class="field-label" id="room-label">LIEU</label>
+        <div class="dropdown-shell" [class.open]="openDropdown() === 'room'">
+          <i class="fa-solid fa-door-open select-icon" aria-hidden="true"></i>
+          <button
+            type="button"
+            id="room"
+            class="dropdown-trigger field-value"
+            aria-labelledby="room-label room"
+            [attr.aria-expanded]="openDropdown() === 'room'"
+            (click)="toggleDropdown('room')"
+          >
+            <span>{{ roomLabel() }}</span>
+          </button>
+          <i class="fa-solid fa-chevron-down select-chevron" aria-hidden="true"></i>
+
+          @if (openDropdown() === 'room') {
+            <div class="dropdown-menu" role="listbox" aria-labelledby="room-label">
+              @for (location of availableLocations(); track location.label) {
+                <button
+                  type="button"
+                  class="dropdown-option"
+                  [class.selected]="roomLabel() === location.label"
+                  role="option"
+                  [attr.aria-selected]="roomLabel() === location.label"
+                  (click)="updateRoom(location.label)"
+                >
+                  <span class="option-icon"><i class="fa-solid fa-door-open" aria-hidden="true"></i></span>
+                  <span class="option-content">
+                    <span class="option-label">{{ location.label }}</span>
+                    <span class="option-meta">{{ location.type }}</span>
+                  </span>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="config-field gps-config-field">
+        <div class="map-header">
+          <label class="field-label">CARTE GPS</label>
+          <button
+            type="button"
+            class="btn-location"
+            [disabled]="locating() || starting()"
+            (click)="refreshLocation()"
+            aria-label="Actualiser la position GPS"
+          >
+            <i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="gps-map" [class.ready]="gpsPosition()" [class.loading]="locating()">
+          @if (gpsMapUrl()) {
+            <iframe
+              title="Position GPS de la session"
+              [src]="gpsMapUrl()"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+            <div class="map-chip">
+              <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+              {{ gpsPosition()?.lat }}, {{ gpsPosition()?.lon }}
+            </div>
+          } @else {
+            <div class="map-placeholder">
+              <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
+              <span>{{ locating() ? 'Localisation...' : 'Position requise' }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="start-footer">
+    <button
+      type="button"
+      class="btn-start"
+      [disabled]="!canStart() || starting()"
+      (click)="openConfirmModal()"
+    >
+      <i class="fa-solid fa-circle-play" aria-hidden="true"></i>
+      {{ starting() ? 'Demarrage...' : 'Demarrer la session' }}
+    </button>
+    <p class="start-notice">
+      En demarrant la session, les donnees seront synchronisees avec le serveur academique.
+    </p>
+  </div>
+</div>
+
+@if (showConfirmModal()) {
+  <div class="modal-backdrop" (click)="cancelModal()">
+    <div class="modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <i class="fa-regular fa-circle-question modal-icon" aria-hidden="true"></i>
+        <h3 class="modal-title">Confirmer le demarrage</h3>
+      </div>
+
+      <p class="modal-body">
+        Voulez-vous demarrer cette session d'appel avec la configuration suivante ?
+      </p>
+
+      <div class="modal-details">
+        <div class="detail-row">
+          <span class="detail-key">Module</span>
+          <span class="detail-val">{{ selectedModule()?.name }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">Groupes</span>
+          <span class="detail-val">{{ selectedGroups().length }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">Methode</span>
+          <span class="detail-val">{{ methodLabel() }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">Type lieu</span>
+          <span class="detail-val">{{ selectedLocationType() }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">Lieu</span>
+          <span class="detail-val">{{ roomLabel() }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">GPS</span>
+          <span class="detail-val">
+            @if (gpsPosition()) {
+              {{ gpsPosition()?.lat }}, {{ gpsPosition()?.lon }}
+            } @else {
+              A recuperer
+            }
+          </span>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" (click)="cancelModal()">Annuler</button>
+        <button type="button" class="btn-confirm" [disabled]="starting()" (click)="confirmAndStart()">
+          Confirmer et demarrer
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showActiveSessionModal()) {
+  <div class="modal-backdrop" (click)="cancelActiveSession()">
+    <div class="modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <i class="fa-solid fa-triangle-exclamation modal-icon" style="color: #dc2626;" aria-hidden="true"></i>
+        <h3 class="modal-title">Session active détectée</h3>
+      </div>
+
+      <p class="modal-body">
+        Vous avez déjà une session active. Que souhaitez-vous faire ?
+      </p>
+
+      <div class="modal-details">
+        <div class="detail-row">
+          <span class="detail-key">Cours</span>
+          <span class="detail-val">{{ activeSessionInfo()?.courseLabel }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">Salle</span>
+          <span class="detail-val">{{ activeSessionInfo()?.roomLabel }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">Présents</span>
+          <span class="detail-val">{{ activeSessionInfo()?.presentCount }}/{{ activeSessionInfo()?.studentCount }}</span>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="gap: 0.75rem;">
+        <button type="button" class="btn-cancel" (click)="cancelActiveSession()">
+          Annuler
+        </button>
+        <button type="button" class="btn-cancel" style="background: #fef3c7; border-color: #f59e0b; color: #d97706;" (click)="endActiveAndCreateNew()">
+          Terminer et créer
+        </button>
+        <button type="button" class="btn-confirm" (click)="goToActiveSession()">
+          Continuer la session
+        </button>
+      </div>
+    </div>
+  </div>
+}
