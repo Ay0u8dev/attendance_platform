@@ -49,7 +49,9 @@ public class SecurityConfig {
                 "http://localhost:4200",
                 "http://localhost",
                 "http://attendance-platform.ma",
-                "http://192.168.100.73:18080"
+                "http://192.168.100.73:18080",
+                "https://yunoserver.tail8ea16a.ts.net",
+                "https://yunoserver.tail8ea16a.ts.net/*"
         ));
         config.setAllowedMethods(List.of(
                 "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"

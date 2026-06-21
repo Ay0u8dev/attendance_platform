@@ -36,7 +36,9 @@
                 "localhost",
                 "host.docker.internal",
                 "attendance-platform.ma",
-                "192.168.100.73"
+                "192.168.100.73",
+                "yunoserver.tail8ea16a.ts.net/*",
+                "yunoserver.tail8ea16a.ts.net"
               ]
             },
             "ssr": {
@@ -82,7 +84,9 @@
               "host.docker.internal",
               "localhost",
               "attendance-platform.ma",
-              "192.168.100.73"
+              "192.168.100.73",
+              "yunoserver.tail8ea16a.ts.net/*",
+              "yunoserver.tail8ea16a.ts.net"
             ]
           },
           "configurations": {
@@ -91,7 +95,9 @@
                 "host.docker.internal",
                 "localhost",
                 "attendance-platform.ma",
-                "192.168.100.73"
+                "192.168.100.73",
+                "yunoserver.tail8ea16a.ts.net/*",
+                "yunoserver.tail8ea16a.ts.net"
               ]
             },
             "production": {
