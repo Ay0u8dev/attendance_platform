@@ -3,7 +3,7 @@ package ma.eniad.userservice.controller.structure;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ma.eniad.userservice.dto.structure.FiliereRequestDTO;
-import ma.eniad.userservice.repository.InscriptionRepository;
+import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.structure.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,7 +45,7 @@ class FiliereControllerTest {
     private ModuleRepository moduleRepository;
 
     @Autowired
-    private InscriptionRepository inscriptionRepository;
+    private StudentInscriptionRepository inscriptionRepository;
 
 
     @BeforeEach

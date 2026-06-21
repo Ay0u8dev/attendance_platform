@@ -16,7 +16,7 @@ import ma.eniad.userservice.entity.enums.Role;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(exclude = {"roles"})
-@ToString
+@ToString(exclude = {"email"})
 public class TeacherResponseDTO {
     private Long id;
     private String email;

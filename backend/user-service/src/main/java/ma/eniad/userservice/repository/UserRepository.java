@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import java.util.List;
 import java.util.Set;
 
 @Repository
@@ -15,6 +16,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
     boolean existsByEmail(String email);
+
+    @Query("select u from User u where lower(u.email) in :emails")
+    List<User> findByNormalizedEmailIn(@Param("emails") Set<String> emails);
 
     /**
      * Finds existing emails from the provided set.

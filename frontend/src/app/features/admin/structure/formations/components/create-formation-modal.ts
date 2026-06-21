@@ -1,18 +1,21 @@
 import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Button } from '../../../../../shared/components/button/button';
 import { Modal } from '../../../../../shared/components/modal/modal';
+import { ModalFieldGroup } from '../../../../../shared/components/modal-field-group/modal-field-group';
 import {
   DropdownFilter,
   type DropdownOption,
 } from '../../../../../shared/components/dropdown-filter/dropdown-filter';
 import { Cycle } from '../../../../../core/structure/models/cycle.model';
 import { FormationRequest } from '../../../../../core/structure/models/formation.model';
+import { normalizeLabel, structureInputClass } from '../../../../../shared/structure-form-ui';
 
 @Component({
   selector: 'app-create-formation-modal',
   standalone: true,
-  imports: [Modal, Button, DropdownFilter, CommonModule],
+  imports: [Modal, Button, DropdownFilter, ModalFieldGroup, FormsModule, CommonModule],
   template: `
     <app-modal
       title="Créer une formation"
@@ -23,6 +26,27 @@ import { FormationRequest } from '../../../../../core/structure/models/formation
     >
       <form modal-body class="space-y-6 py-2">
         <div class="grid gap-6 md:grid-cols-2">
+          <div class="md:col-span-2">
+            <app-modal-field-group
+              label="Nom de la formation"
+              iconClass="fa-solid fa-book-open"
+              iconBackgroundClass="bg-primary-soft text-primary"
+              fieldId="create-formation-name"
+              [required]="true"
+              [error]="nameError()"
+            >
+              <input
+                id="create-formation-name"
+                type="text"
+                maxlength="60"
+                placeholder="Ex: GI 1ere annee"
+                [(ngModel)]="formationName"
+                name="name"
+                [class]="inputClass(!!nameError())"
+              />
+            </app-modal-field-group>
+          </div>
+
           <!-- Année Académique (Lecture seule) -->
           <app-dropdown-filter
             identifier="create-academic-year"
@@ -61,7 +85,7 @@ import { FormationRequest } from '../../../../../core/structure/models/formation
               [options]="fieldOptions()"
               [value]="selectedField()"
               [required]="fieldRequired()"
-              [disabled]="fieldDisabled()" 
+              [disabled]="fieldDisabled()"
               [searchable]="true"
               [error]="submitted() && fieldRequired() && !selectedField() ? 'La filière est obligatoire pour ce cycle.' : ''"
               iconClass="fa-solid fa-graduation-cap"
@@ -106,6 +130,7 @@ export class CreateFormationModal {
   readonly selectedCycle = signal<string | null>(null);
   readonly selectedField = signal<string | null>(null);
   readonly submitted = signal(false);
+  formationName = '';
 
   // Logic Signals
   readonly fieldRequired = computed(() => this.isIngenieurCycle(this.selectedCycle()));
@@ -133,10 +158,29 @@ export class CreateFormationModal {
   );
 
   isFormValid(): boolean {
+    const nameLength = normalizeLabel(this.formationName).length;
+    const hasValidName = nameLength > 0 && nameLength <= 60;
     const hasYear = !!this.selectedAcademicYear();
     const hasCycle = !!this.selectedCycle();
     const hasFieldIfRequired = !this.fieldRequired() || !!this.selectedField();
-    return hasYear && hasCycle && hasFieldIfRequired;
+    return hasValidName && hasYear && hasCycle && hasFieldIfRequired;
+  }
+
+  inputClass(invalid: boolean): string {
+    return structureInputClass(invalid);
+  }
+
+  nameError(): string {
+    if (!this.submitted()) {
+      return '';
+    }
+
+    const name = normalizeLabel(this.formationName);
+    if (!name) {
+      return 'Indiquez le nom de la formation.';
+    }
+
+    return name.length <= 60 ? '' : 'Le nom ne doit pas dépasser 60 caractères.';
   }
 
   close(): void {
@@ -158,6 +202,7 @@ export class CreateFormationModal {
     if (!this.isFormValid()) return;
 
     this.createRequested.emit({
+      name: normalizeLabel(this.formationName),
       anneeUniversitaireId: Number(this.selectedAcademicYear()),
       cycleId: Number(this.selectedCycle()),
       filiereId: this.fieldRequired() ? Number(this.selectedField()) : null,
@@ -168,6 +213,7 @@ export class CreateFormationModal {
   }
 
   private resetForm(): void {
+    this.formationName = '';
     this.selectedAcademicYear.set(null);
     this.selectedCycle.set(null);
     this.selectedField.set(null);

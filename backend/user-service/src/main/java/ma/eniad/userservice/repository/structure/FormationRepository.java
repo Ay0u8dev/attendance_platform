@@ -6,11 +6,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+import java.util.Set;
+
 import java.util.Optional;
 
 @Repository
 public interface FormationRepository extends JpaRepository<Formation, Long> {
-    boolean existsByAnneeUniversitaireIdAndFiliereIdAndCycleId(Long anneeUniversitaireId, Long filiereId, Long cycleId);
+    boolean existsByAnneeUniversitaireIdAndCycleIdAndName(Long anneeUniversitaireId, Long cycleId, String name);
+    boolean existsByAnneeUniversitaireIdAndCycleIdAndNameAndIdNot(
+            Long anneeUniversitaireId,
+            Long cycleId,
+            String name,
+            Long id
+    );
+    List<Formation> findByNameIn(Set<String> names);
 
     @Query("""
             select f from Formation f

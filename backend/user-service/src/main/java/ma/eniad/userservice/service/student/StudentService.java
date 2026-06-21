@@ -1,5 +1,6 @@
 package ma.eniad.userservice.service.student;
 
+import java.util.HashSet;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -20,7 +21,7 @@ import ma.eniad.userservice.exception.DuplicateResourceException;
 import ma.eniad.userservice.exception.InvalidDomainException;
 import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.mapper.student.StudentMapper;
-import ma.eniad.userservice.repository.InscriptionRepository;
+import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
@@ -36,7 +37,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class StudentService {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
-    private final InscriptionRepository inscriptionRepository;
+    private final StudentInscriptionRepository inscriptionRepository;
     private final AnneeUniversitaireRepository anneeUniversitaireRepository;
     private final GroupeRepository groupeRepository;
     private final StudentMapper      studentMapper;
@@ -58,10 +59,12 @@ public class StudentService {
 
 
         Student student = studentMapper.toEntity(request);
+        if (student.getRoles() == null) {
+            student.setRoles(new HashSet<>());
+        }
         student.getRoles().add(Role.STUDENT);
         student.setEnabled(true);
         student.setFirstLogin(true);
-
         try {
             return studentMapper.toResponse(studentRepository.save(student));
         } catch (DataIntegrityViolationException ex) {

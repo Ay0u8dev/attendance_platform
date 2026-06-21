@@ -21,7 +21,7 @@ import ma.eniad.userservice.entity.structure.Filiere;
 import ma.eniad.userservice.entity.structure.Formation;
 import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.entity.structure.Module;
-import ma.eniad.userservice.repository.InscriptionRepository;
+
 import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
 import ma.eniad.userservice.repository.structure.CycleRepository;
@@ -42,7 +42,7 @@ public class DatabaseSeeder {
             FormationRepository formationRepository,
             GroupeRepository groupeRepository,
             ModuleRepository moduleRepository,
-            InscriptionRepository inscriptionRepository) {
+            StudentInscriptionRepository inscriptionRepository) {
         return args -> {
             SeedUsers seedUsers = seedUsers(userRepository);
             SeedStructure seedStructure = seedStructure(
