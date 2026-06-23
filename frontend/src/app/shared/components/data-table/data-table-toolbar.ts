@@ -7,20 +7,20 @@ import { DataTableColumnVisibilityOption, DataTableToolbarFilter } from './data-
   selector: 'app-data-table-toolbar',
   imports: [DropdownFilter],
   template: `
-    <div class="flex flex-col gap-4 border-b border-line px-5 py-4 sm:px-6">
+    <div class="flex flex-col gap-4 border-b border-line bg-surface px-5 py-5 sm:px-6">
       <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div class="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <label class="relative block min-w-0 flex-1 sm:max-w-sm">
+          <label class="relative block min-w-0 flex-1 sm:max-w-md">
             <span class="sr-only">Search rows</span>
             <span
-              class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-secondaryText"
+              class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-secondaryText"
               aria-hidden="true"
             >
               <i class="fa-solid fa-magnifying-glass text-xs"></i>
             </span>
             <input
               type="search"
-              class="h-11 w-full rounded-2xl border border-line bg-surface px-10 text-sm text-principalText outline-none transition-colors duration-200 placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary-soft"
+              class="h-12 w-full rounded-2xl border border-line bg-surface px-11 text-sm font-medium text-principalText shadow-sm outline-none transition duration-200 placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary/10"
               [value]="searchValue()"
               [placeholder]="searchPlaceholder()"
               (input)="handleSearchInput($event)"
@@ -29,7 +29,7 @@ import { DataTableColumnVisibilityOption, DataTableToolbarFilter } from './data-
 
           @for (filter of filterControls(); track filter.columnId) {
             @if (filter.type === 'select') {
-              <div class="min-w-56">
+              <div class="min-w-60">
                 <app-dropdown-filter
                   [label]="filter.label"
                   [identifier]="'table-filter-' + filter.columnId"
@@ -49,7 +49,7 @@ import { DataTableColumnVisibilityOption, DataTableToolbarFilter } from './data-
                 </span>
                 <input
                   type="search"
-                  class="h-11 rounded-2xl border border-line bg-surface px-3 text-sm text-principalText outline-none transition-colors duration-200 placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary-soft"
+                  class="h-12 rounded-2xl border border-line bg-surface px-3 text-sm font-medium text-principalText shadow-sm outline-none transition duration-200 placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary/10"
                   [value]="filter.value"
                   [placeholder]="filter.placeholder"
                   (input)="handleFilterInput(filter.columnId, $event)"
@@ -62,7 +62,7 @@ import { DataTableColumnVisibilityOption, DataTableToolbarFilter } from './data-
         @if (columnVisibilityOptions().length > 0) {
           <details class="data-table-menu relative shrink-0">
             <summary
-              class="flex h-11 cursor-pointer list-none items-center gap-2 rounded-2xl border border-line bg-surface px-4 text-sm font-medium text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
+              class="flex h-12 cursor-pointer list-none items-center gap-2 rounded-2xl border border-line bg-surface px-4 text-sm font-semibold text-principalText shadow-sm transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
             >
               <i class="fa-solid fa-table-columns text-xs text-primary" aria-hidden="true"></i>
               Columns
@@ -103,7 +103,7 @@ import { DataTableColumnVisibilityOption, DataTableToolbarFilter } from './data-
       </div>
 
       <div
-        class="flex flex-col gap-2 text-sm text-secondaryText sm:flex-row sm:items-center sm:justify-between"
+        class="flex flex-col gap-2 rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-secondaryText shadow-sm sm:flex-row sm:items-center sm:justify-between"
       >
         <p>
           Showing <span class="font-semibold text-principalText">{{ filteredCount() }}</span> of

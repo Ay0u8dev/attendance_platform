@@ -49,6 +49,8 @@ export class DataTable<T extends object> {
   readonly pageSizeOptions = input<readonly number[]>([5, 10, 20, 50]);
   readonly initialPageSize = input(10);
   readonly showToolbar = input(true);
+  readonly showColumnFilters = input(true);
+  readonly showColumnVisibility = input(true);
   readonly enableRowSelection = input(false);
   readonly rowId = input<((row: T, index: number) => string) | undefined>(undefined);
   readonly rowClickable = input(false);
@@ -93,8 +95,12 @@ export class DataTable<T extends object> {
     this.columns().filter((column) => this.isColumnVisible(column)),
   );
 
-  readonly toolbarFilters = computed<readonly DataTableToolbarFilter[]>(() =>
-    this.columns()
+  readonly toolbarFilters = computed<readonly DataTableToolbarFilter[]>(() => {
+    if (!this.showColumnFilters()) {
+      return [];
+    }
+
+    return this.columns()
       .filter((column) => column.filter)
       .map((column) => ({
         columnId: column.id,
@@ -107,10 +113,14 @@ export class DataTable<T extends object> {
             ? `All ${column.header.toLowerCase()}`
             : `Filter ${column.header.toLowerCase()}`),
         options: column.filter!.options ?? [],
-      })),
-  );
+      }));
+  });
 
   readonly columnVisibilityOptions = computed<readonly DataTableColumnVisibilityOption[]>(() => {
+    if (!this.showColumnVisibility()) {
+      return [];
+    }
+
     const hideableColumns = this.columns().filter((column) => column.hideable !== false);
     const visibleCount = hideableColumns.filter((column) => this.isColumnVisible(column)).length;
 
