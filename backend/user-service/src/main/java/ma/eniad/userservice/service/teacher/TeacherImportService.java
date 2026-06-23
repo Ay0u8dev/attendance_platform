@@ -99,6 +99,11 @@ public class TeacherImportService {
                 continue;
             }
 
+            ResolvedStructure structure = resolveStructure(row, lookups, errors, failedRowNumbers, counters);
+            if (structure == null) {
+                continue;
+            }
+
             TeacherExcelRowDTO canonicalRow = canonicalIdentityByEmail.putIfAbsent(row.getEmail(), row);
             if (canonicalRow != null && namesDiffer(canonicalRow, row)) {
                 warnings.add(rowWarning(row, "Same teacher email appears with different names in the file. "
@@ -124,10 +129,7 @@ public class TeacherImportService {
                 }
             }
 
-            ResolvedStructure structure = resolveStructure(row, lookups, errors, failedRowNumbers, counters);
-            if (structure != null) {
-                resolvedRows.add(new ResolvedRow(row, teacher, structure));
-            }
+            resolvedRows.add(new ResolvedRow(row, teacher, structure));
         }
 
         if (!teachersToCreate.isEmpty()) {
@@ -185,6 +187,13 @@ public class TeacherImportService {
             .createdAssignments(counters.createdAssignments)
             .duplicateAssignments(counters.duplicateAssignments)
             .duplicateAssignmentsInsideFile(counters.duplicateAssignmentsInsideFile)
+            .teachersCreated(counters.createdTeachers)
+            .teachersUpdated(counters.updatedTeachers)
+            .assignmentsCreated(counters.createdAssignments)
+            .rowsRejected(failedRows)
+            .duplicatesSkipped(counters.duplicateAssignments + counters.duplicateAssignmentsInsideFile)
+            .warningsCount(warnings.size())
+            .errorsCount(errors.size())
             .missingAcademicYears(counters.missingAcademicYears)
             .missingFormations(counters.missingFormations)
             .missingGroups(counters.missingGroups)

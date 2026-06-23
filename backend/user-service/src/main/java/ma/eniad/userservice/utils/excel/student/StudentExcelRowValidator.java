@@ -30,6 +30,9 @@ public class StudentExcelRowValidator {
         validateLastName(row, errors);
         validateEmail(row, errors);
         validateNumApogee(row, errors);
+        validateRequired(row, "academicYear", row.getAcademicYear(), "Academic year is required", errors);
+        validateRequired(row, "formationName", row.getFormationName(), "Formation is required", errors);
+        validateRequired(row, "groupeCode", row.getGroupeCode(), "Groupe code is required", errors);
 
         return errors;
     }
@@ -134,6 +137,16 @@ public class StudentExcelRowValidator {
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private void validateRequired(StudentExcelRowDTO row,
+                                  String field,
+                                  String value,
+                                  String message,
+                                  List<RowErrorDTO> errors) {
+        if (isBlank(value)) {
+            errors.add(buildError(row, field, message));
+        }
     }
 
     private String normalizeDomain(String domain) {

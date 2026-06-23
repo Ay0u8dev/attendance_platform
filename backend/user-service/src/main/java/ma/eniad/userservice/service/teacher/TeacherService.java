@@ -45,8 +45,8 @@ public class TeacherService {
         if (teacher.getRoles() == null) {
             teacher.setRoles(new HashSet<>());
         }
-        teacher.getRoles().add(Role.TEACHER);        teacher.setEnabled(true);
-        teacher.setFirstLogin(true);
+        teacher.getRoles().add(Role.TEACHER);
+        applyAccountState(request, teacher, true, true);
 
         try {
             return teacherMapper.toResponse(teacherRepository.save(teacher));
@@ -86,6 +86,7 @@ public class TeacherService {
         }
 
         teacherMapper.updateEntity(request, teacher);
+        applyAccountState(request, teacher, teacher.isEnabled(), teacher.isFirstLogin());
         try {
             return teacherMapper.toResponse(teacherRepository.save(teacher));
         } catch (DataIntegrityViolationException ex) {
@@ -153,5 +154,16 @@ public class TeacherService {
         }
 
         return email.trim().toLowerCase();
+    }
+
+    private void applyAccountState(TeacherRequestDTO request,
+                                   Teacher teacher,
+                                   boolean defaultEnabled,
+                                   boolean defaultFirstLogin) {
+        boolean enabled = request.getEnabled() == null ? defaultEnabled : request.getEnabled();
+        boolean firstLogin = request.getFirstLogin() == null ? defaultFirstLogin : request.getFirstLogin();
+
+        teacher.setEnabled(enabled);
+        teacher.setFirstLogin(enabled && firstLogin);
     }
 }

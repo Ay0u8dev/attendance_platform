@@ -13,6 +13,7 @@ import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
 import ma.eniad.userservice.entity.structure.Formation;
 import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.exception.DuplicateResourceException;
+import ma.eniad.userservice.exception.InvalidInputException;
 import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.mapper.inscription.StudentInscriptionMapper;
 import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
@@ -45,9 +46,7 @@ public class StudentInscriptionService {
             throw new DuplicateResourceException("Student is already enrolled in an academic year");
         }
 
-        if (!groupeBelongsToFormation(groupe, formation)) {
-            throw new IllegalArgumentException("Groupe does not belong to the formation");
-        }
+        validateRelationships(annee, formation, groupe);
 
         Inscription inscription = inscriptionMapper.toEntity(request);
         inscription.setStudent(student);
@@ -91,10 +90,7 @@ public class StudentInscriptionService {
             }
         }
 
-        // Validate groupe-formation relationship
-        if (!groupeBelongsToFormation(groupe, formation)) {
-            throw new IllegalArgumentException("Groupe does not belong to the formation");
-        }
+        validateRelationships(annee, formation, groupe);
 
         // Update entity
         inscriptionMapper.updateEntity(request, inscription);
@@ -140,9 +136,15 @@ public class StudentInscriptionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Inscription not found"));
     }
 
-    // BUSINESS RULE
-    private boolean groupeBelongsToFormation(Groupe groupe, Formation formation) {
-        return groupe.getFormation() != null
-                && groupe.getFormation().getId().equals(formation.getId());
+    private void validateRelationships(AnneeUniversitaire annee, Formation formation, Groupe groupe) {
+        if (formation.getAnneeUniversitaire() == null
+                || !formation.getAnneeUniversitaire().getId().equals(annee.getId())) {
+            throw new InvalidInputException("Formation does not belong to the selected academic year");
+        }
+
+        if (groupe.getFormation() == null
+                || !groupe.getFormation().getId().equals(formation.getId())) {
+            throw new InvalidInputException("Groupe does not belong to the selected formation");
+        }
     }
 }

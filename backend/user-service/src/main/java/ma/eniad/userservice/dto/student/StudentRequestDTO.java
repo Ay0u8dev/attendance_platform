@@ -37,4 +37,8 @@ public class StudentRequestDTO {
     @NotBlank(message = "Apogee number is required")
     @Size(max = 30, message = "Apogee number must not exceed 30 characters")
     private String numApogee;
+
+    private Boolean enabled;
+
+    private Boolean firstLogin;
 }

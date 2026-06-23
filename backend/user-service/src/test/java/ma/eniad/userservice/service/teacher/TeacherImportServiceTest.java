@@ -199,7 +199,6 @@ class TeacherImportServiceTest {
     @Test
     void reportsMissingModule() {
         TeacherExcelRowDTO row = row(2, "GI1-A");
-        Teacher teacher = new Teacher();
 
         when(parser.parse(file)).thenReturn(List.of(row));
         when(validator.validate(row)).thenReturn(List.of());
@@ -209,11 +208,12 @@ class TeacherImportServiceTest {
         when(formationRepository.findByNameIn(anySet())).thenReturn(List.of(formation));
         when(groupeRepository.findByNameIn(anySet())).thenReturn(List.of(groupeA));
         when(moduleRepository.findByCodeIn(anySet())).thenReturn(List.of());
-        when(teacherMapper.toEntity(row)).thenReturn(teacher);
 
         TeacherImportResultDTO result = service.importFromExcel(file);
 
         assertThat(result.getStatus()).isEqualTo("FAILED");
+        assertThat(result.getCreatedTeachers()).isZero();
+        assertThat(result.getCreatedAssignments()).isZero();
         assertThat(result.getMissingModules()).isEqualTo(1);
         assertThat(result.getErrors())
             .singleElement()
@@ -221,7 +221,8 @@ class TeacherImportServiceTest {
                 assertThat(error.getField()).isEqualTo("moduleCode");
                 assertThat(error.getMessage()).isEqualTo("Module not found.");
             });
-        verify(teacherRepository).saveAll(any());
+        verify(teacherMapper, never()).toEntity(row);
+        verify(teacherRepository, never()).saveAll(any());
         verify(assignmentRepository, never()).saveAll(any());
     }
 

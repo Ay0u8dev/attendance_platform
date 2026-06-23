@@ -65,8 +65,8 @@ public class StudentImportService {
         List<String> warnings = new ArrayList<>();
         Map<Integer, List<RowErrorDTO>> rowErrors = new HashMap<>();
 
-        Set<String> seenEmails = new HashSet<>();
-        Set<String> seenApogees = new HashSet<>();
+        Map<String, String> apogeeByEmailInFile = new HashMap<>();
+        Map<String, String> emailByApogeeInFile = new HashMap<>();
 
         for (StudentExcelRowDTO row : rows) {
             normalizeRow(row);
@@ -77,14 +77,14 @@ public class StudentImportService {
                 continue;
             }
 
-            String normalizedEmail = row.getEmail();
-            if (!seenEmails.add(normalizedEmail)) {
-                addRowError(row, "email", "Duplicate email inside file", errors, rowErrors);
+            String previousApogee = apogeeByEmailInFile.putIfAbsent(row.getEmail(), row.getNumApogee());
+            if (previousApogee != null && !previousApogee.equals(row.getNumApogee())) {
+                addRowError(row, "email", "Email is used with another NumApogee inside the file.", errors, rowErrors);
             }
 
-            String normalizedApogee = row.getNumApogee();
-            if (!seenApogees.add(normalizedApogee)) {
-                addRowError(row, "numApogee", "Duplicate apogee inside file", errors, rowErrors);
+            String previousEmail = emailByApogeeInFile.putIfAbsent(row.getNumApogee(), row.getEmail());
+            if (previousEmail != null && !previousEmail.equals(row.getEmail())) {
+                addRowError(row, "numApogee", "NumApogee is used with another email inside the file.", errors, rowErrors);
             }
         }
 
@@ -164,12 +164,18 @@ public class StudentImportService {
             yearIds.add(year.getId());
         }
 
+        Set<Long> formationIds = formationsByName.values().stream()
+            .flatMap(List::stream)
+            .map(Formation::getId)
+            .collect(Collectors.toSet());
+        Set<Long> groupeIds = groupesByCode.values().stream()
+            .map(Groupe::getId)
+            .collect(Collectors.toSet());
+
         Set<String> existingEnrollmentKeys = new HashSet<>();
-        if (!studentIds.isEmpty() && !yearIds.isEmpty()) {
-            for (Object[] pair : inscriptionRepository.findExistingStudentYearPairs(studentIds, yearIds)) {
-                Long studentId = (Long) pair[0];
-                Long yearId = (Long) pair[1];
-                existingEnrollmentKeys.add(studentId + ":" + yearId);
+        if (!studentIds.isEmpty() && !yearIds.isEmpty() && !formationIds.isEmpty() && !groupeIds.isEmpty()) {
+            for (Object[] key : inscriptionRepository.findExistingEnrollmentKeys(studentIds, yearIds, formationIds, groupeIds)) {
+                existingEnrollmentKeys.add(enrollmentKey(key));
             }
         }
 
@@ -189,38 +195,6 @@ public class StudentImportService {
         for (StudentExcelRowDTO row : validRows) {
             if (nonStudentEmails.contains(row.getEmail())) {
                 addRowError(row, "email", "Email belongs to a non-student user.", errors, rowErrors);
-                continue;
-            }
-
-            Student student = studentsByEmail.get(row.getEmail());
-            Student studentByApogee = studentsByApogee.get(row.getNumApogee());
-
-            Student resolvedStudent;
-            if (student == null && studentByApogee == null) {
-                resolvedStudent = mapToStudent(row);
-                studentsToCreate.add(resolvedStudent);
-                createdStudents++;
-                changes.add(buildChange(row, "CREATED", List.of("Created student")));
-            } else if (student != null && studentByApogee != null) {
-                if (student.getId().equals(studentByApogee.getId())) {
-                    resolvedStudent = student;
-                    List<String> nameChanges = applyNameUpdates(resolvedStudent, row);
-                    if (!nameChanges.isEmpty()) {
-                        updatedStudents++;
-                        studentsToUpdate.add(resolvedStudent);
-                        warnings.add(buildRowWarning(row, "Student information updated."));
-                        changes.add(buildChange(row, "UPDATED", nameChanges));
-                    } else {
-                        changes.add(buildChange(row, "SKIPPED", List.of("Student information already up to date.")));
-                    }                } else {
-                    addRowError(row, "row", "Email and NumApogee belong to different students.", errors, rowErrors);
-                    continue;
-                }
-            } else if (student != null) {
-                addRowError(row, "email", "Email matches existing student, but NumApogee does not match that student's NumApogee.", errors, rowErrors);
-                continue;
-            } else {
-                addRowError(row, "numApogee", "NumApogee matches existing student, but email does not match that student's email.", errors, rowErrors);
                 continue;
             }
 
@@ -267,10 +241,43 @@ public class StudentImportService {
                 continue;
             }
 
-            String enrollmentKey = buildEnrollmentKey(resolvedStudent, year);
+            Student student = studentsByEmail.get(row.getEmail());
+            Student studentByApogee = studentsByApogee.get(row.getNumApogee());
+
+            Student resolvedStudent;
+            if (student == null && studentByApogee == null) {
+                resolvedStudent = mapToStudent(row);
+                studentsToCreate.add(resolvedStudent);
+                createdStudents++;
+                changes.add(buildChange(row, "CREATED", List.of("Created student")));
+            } else if (student != null && studentByApogee != null) {
+                if (student.getId().equals(studentByApogee.getId())) {
+                    resolvedStudent = student;
+                    List<String> nameChanges = applyNameUpdates(resolvedStudent, row);
+                    if (!nameChanges.isEmpty()) {
+                        updatedStudents++;
+                        studentsToUpdate.add(resolvedStudent);
+                        warnings.add(buildRowWarning(row, "Student information updated."));
+                        changes.add(buildChange(row, "UPDATED", nameChanges));
+                    } else {
+                        changes.add(buildChange(row, "SKIPPED", List.of("Student information already up to date.")));
+                    }
+                } else {
+                    addRowError(row, "row", "Email and NumApogee belong to different students.", errors, rowErrors);
+                    continue;
+                }
+            } else if (student != null) {
+                addRowError(row, "email", "Email matches existing student, but NumApogee does not match that student's NumApogee.", errors, rowErrors);
+                continue;
+            } else {
+                addRowError(row, "numApogee", "NumApogee matches existing student, but email does not match that student's email.", errors, rowErrors);
+                continue;
+            }
+
+            String enrollmentKey = buildEnrollmentKey(resolvedStudent, year, formation, groupe);
             if (existingEnrollmentKeys.contains(enrollmentKey) || !plannedEnrollmentKeys.add(enrollmentKey)) {
                 duplicateInscriptions++;
-                warnings.add(buildRowWarning(row, "Student already enrolled for this academic year."));
+                warnings.add(buildRowWarning(row, "Student inscription already exists for this academic year, formation and group."));
                 continue;
             }
 
@@ -308,6 +315,13 @@ public class StudentImportService {
             .createdInscriptions(createdInscriptions)
             .duplicateInscriptions(duplicateInscriptions)
             .failedRows(failedRows)
+            .studentsCreated(createdStudents)
+            .studentsUpdated(updatedStudents)
+            .inscriptionsCreated(createdInscriptions)
+            .rowsRejected(failedRows)
+            .duplicatesSkipped(duplicateInscriptions)
+            .warningsCount(warnings.size())
+            .errorsCount(errors.size())
             .missingAcademicYears(missingAcademicYears)
             .missingFormations(missingFormations)
             .missingGroups(missingGroups)
@@ -393,11 +407,17 @@ public class StudentImportService {
             .build();
     }
 
-    private String buildEnrollmentKey(Student student, AnneeUniversitaire year) {
+    private String buildEnrollmentKey(Student student, AnneeUniversitaire year, Formation formation, Groupe groupe) {
         if (student.getId() != null) {
-            return student.getId() + ":" + year.getId();
+            return student.getId() + ":" + year.getId() + ":" + formation.getId() + ":" + groupe.getId();
         }
-        return student.getEmail() + "|" + student.getNumApogee() + ":" + year.getId();
+        return student.getEmail() + "|" + student.getNumApogee() + ":" + year.getId() + ":" + formation.getId() + ":" + groupe.getId();
+    }
+
+    private String enrollmentKey(Object[] values) {
+        return java.util.Arrays.stream(values)
+            .map(String::valueOf)
+            .collect(Collectors.joining(":"));
     }
 
     private void addValidationErrors(List<RowErrorDTO> validationErrors,

@@ -19,12 +19,24 @@ public interface StudentInscriptionRepository extends JpaRepository<Inscription,
     
     boolean existsByStudentIdAndAnneeUniversitaireId(Long studentId, Long anneeId);
 
-        @Query("select i.student.id, i.anneeUniversitaire.id from Inscription i " +
+    @Query("select i.student.id, i.anneeUniversitaire.id from Inscription i " +
                    "where i.student.id in :studentIds and i.anneeUniversitaire.id in :anneeIds")
         List<Object[]> findExistingStudentYearPairs(
                 @Param("studentIds") Set<Long> studentIds,
                 @Param("anneeIds") Set<Long> anneeIds
         );
+
+    @Query("select i.student.id, i.anneeUniversitaire.id, i.formation.id, i.groupe.id from Inscription i " +
+            "where i.student.id in :studentIds " +
+            "and i.anneeUniversitaire.id in :anneeIds " +
+            "and i.formation.id in :formationIds " +
+            "and i.groupe.id in :groupeIds")
+    List<Object[]> findExistingEnrollmentKeys(
+            @Param("studentIds") Set<Long> studentIds,
+            @Param("anneeIds") Set<Long> anneeIds,
+            @Param("formationIds") Set<Long> formationIds,
+            @Param("groupeIds") Set<Long> groupeIds
+    );
 
     @Query("select i from Inscription i " +
             "join fetch i.formation " +

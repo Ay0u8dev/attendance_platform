@@ -27,6 +27,14 @@ public class StudentImportResultDTO {
     private int duplicateInscriptions;
     private int failedRows;
 
+    private int studentsCreated;
+    private int studentsUpdated;
+    private int inscriptionsCreated;
+    private int rowsRejected;
+    private int duplicatesSkipped;
+    private int warningsCount;
+    private int errorsCount;
+
     private int missingAcademicYears;
     private int missingFormations;
     private int missingGroups;

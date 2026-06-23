@@ -61,8 +61,7 @@ public class StudentService {
             student.setRoles(new HashSet<>());
         }
         student.getRoles().add(Role.STUDENT);
-        student.setEnabled(true);
-        student.setFirstLogin(true);
+        applyAccountState(request, student, true, true);
         try {
             return studentMapper.toResponse(studentRepository.save(student));
         } catch (DataIntegrityViolationException ex) {
@@ -135,6 +134,7 @@ public class StudentService {
         }
 
         studentMapper.updateEntity(request, student);
+        applyAccountState(request, student, student.isEnabled(), student.isFirstLogin());
         try {
             return studentMapper.toResponse(studentRepository.save(student));
         } catch (DataIntegrityViolationException ex) {
@@ -239,5 +239,16 @@ public class StudentService {
         }
 
         return email.trim().toLowerCase();
+    }
+
+    private void applyAccountState(StudentRequestDTO request,
+                                   Student student,
+                                   boolean defaultEnabled,
+                                   boolean defaultFirstLogin) {
+        boolean enabled = request.getEnabled() == null ? defaultEnabled : request.getEnabled();
+        boolean firstLogin = request.getFirstLogin() == null ? defaultFirstLogin : request.getFirstLogin();
+
+        student.setEnabled(enabled);
+        student.setFirstLogin(enabled && firstLogin);
     }
 }
