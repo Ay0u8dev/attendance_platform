@@ -9,9 +9,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.HashSet;
+import java.time.LocalDateTime;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,14 +25,17 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import ma.eniad.userservice.dto.student.StudentProfileDto;
 import ma.eniad.userservice.dto.student.StudentRequestDTO;
 import ma.eniad.userservice.dto.student.StudentResponseDTO;
 import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Student;
 import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.entity.enums.Role;
+import ma.eniad.userservice.entity.structure.Cycle;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
 import ma.eniad.userservice.entity.structure.Filiere;
 import ma.eniad.userservice.entity.structure.Formation;
@@ -300,10 +307,13 @@ class StudentServiceTest {
         student.setLastName("Alaoui");
         student.setPfpUrl("https://example.com/pfp.png");
         student.setNumApogee("A123");
+        LocalDateTime faceEnrolledAt = LocalDateTime.of(2026, 6, 22, 10, 30);
+        student.setFaceEnrolledAt(faceEnrolledAt);
 
-        AnneeUniversitaire activeYear = AnneeUniversitaire.builder().id(4L).build();
+        AnneeUniversitaire activeYear = AnneeUniversitaire.builder().id(4L).name("2025/2026").build();
+        Cycle cycle = Cycle.builder().name("Ingenieur").build();
         Filiere filiere = Filiere.builder().code("GI").build();
-        Formation formation = Formation.builder().id(2L).filiere(filiere).build();
+        Formation formation = Formation.builder().id(2L).cycle(cycle).filiere(filiere).build();
         Groupe groupe = Groupe.builder().id(3L).name("GI-1").formation(formation).build();
         Inscription inscription = new Inscription();
         inscription.setGroupe(groupe);
@@ -313,8 +323,8 @@ class StudentServiceTest {
         when(inscriptionRepository.findActiveByStudentIdAndYearId(1L, 4L)).thenReturn(Optional.of(inscription));
 
         assertThat(studentService.getCurrentProfile())
-            .extracting("id", "email", "firstName", "lastName", "pfpUrl", "numApogee", "groupe", "filiere")
-            .containsExactly(1L, "student@ump.ac.ma", "Sara", "Alaoui", "https://example.com/pfp.png", "A123", "GI-1", "GI");
+            .extracting("id", "email", "firstName", "lastName", "pfpUrl", "numApogee", "academicYear", "cycle", "groupe", "filiere", "faceEnrolled", "faceEnrolledAt")
+            .containsExactly(1L, "student@ump.ac.ma", "Sara", "Alaoui", "https://example.com/pfp.png", "A123", "2025/2026", "Ingenieur", "GI-1", "GI", true, faceEnrolledAt);
     }
 
     @Test
@@ -322,6 +332,111 @@ class StudentServiceTest {
         assertThatThrownBy(() -> studentService.getCurrentProfile())
             .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
             .hasMessageContaining("Missing user context");
+    }
+
+    @Test
+    void updateCurrentProfilePhoto_updatesOnlyCurrentStudentPhotoUrl() throws Exception {
+        UserContext.setCurrentUser("1", "student@ump.ac.ma", Set.of("STUDENT"));
+        Path storageDir = Files.createTempDirectory("student-profile-photos");
+        ReflectionTestUtils.setField(studentService, "profilePhotoStorageDir", storageDir.toString());
+        ReflectionTestUtils.setField(studentService, "profilePhotoPublicPath", "/api/users/public/profile-photos");
+
+        Student student = new Student();
+        student.setId(1L);
+        student.setEmail("student@ump.ac.ma");
+        student.setFirstName("Sara");
+        student.setLastName("Alaoui");
+        student.setNumApogee("A123");
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "avatar.png",
+                "image/png",
+                new byte[] {1, 2, 3}
+        );
+
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(studentRepository.save(student)).thenReturn(student);
+        when(anneeUniversitaireRepository.findByActiveTrue()).thenReturn(List.of());
+
+        StudentProfileDto profile = studentService.updateCurrentProfilePhoto(file);
+
+        assertThat(student.getPfpUrl()).startsWith("/api/users/public/profile-photos/student-1-");
+        assertThat(student.getPfpUrl()).endsWith(".png");
+        assertThat(profile.getPfpUrl()).isEqualTo(student.getPfpUrl());
+        try (Stream<Path> files = Files.list(storageDir)) {
+            assertThat(files).hasSize(1);
+        }
+        verify(studentRepository).save(student);
+    }
+
+    @Test
+    void updateCurrentProfilePhoto_deletesPreviousStoredProfilePhoto() throws Exception {
+        UserContext.setCurrentUser("1", "student@ump.ac.ma", Set.of("STUDENT"));
+        Path storageDir = Files.createTempDirectory("student-profile-photos");
+        Path oldPhoto = storageDir.resolve("student-1-old.png");
+        Files.write(oldPhoto, new byte[] {9, 9, 9});
+        ReflectionTestUtils.setField(studentService, "profilePhotoStorageDir", storageDir.toString());
+        ReflectionTestUtils.setField(studentService, "profilePhotoPublicPath", "/api/users/public/profile-photos");
+
+        Student student = new Student();
+        student.setId(1L);
+        student.setEmail("student@ump.ac.ma");
+        student.setFirstName("Sara");
+        student.setLastName("Alaoui");
+        student.setNumApogee("A123");
+        student.setPfpUrl("/api/users/public/profile-photos/student-1-old.png");
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "avatar.png",
+                "image/png",
+                new byte[] {1, 2, 3}
+        );
+
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(studentRepository.save(student)).thenReturn(student);
+        when(anneeUniversitaireRepository.findByActiveTrue()).thenReturn(List.of());
+
+        studentService.updateCurrentProfilePhoto(file);
+
+        assertThat(oldPhoto).doesNotExist();
+        try (Stream<Path> files = Files.list(storageDir)) {
+            assertThat(files).hasSize(1);
+        }
+    }
+
+    @Test
+    void updateCurrentProfilePhoto_doesNotDeleteExternalProfilePhotoUrl() throws Exception {
+        UserContext.setCurrentUser("1", "student@ump.ac.ma", Set.of("STUDENT"));
+        Path storageDir = Files.createTempDirectory("student-profile-photos");
+        ReflectionTestUtils.setField(studentService, "profilePhotoStorageDir", storageDir.toString());
+        ReflectionTestUtils.setField(studentService, "profilePhotoPublicPath", "/api/users/public/profile-photos");
+
+        Student student = new Student();
+        student.setId(1L);
+        student.setEmail("student@ump.ac.ma");
+        student.setFirstName("Sara");
+        student.setLastName("Alaoui");
+        student.setNumApogee("A123");
+        student.setPfpUrl("https://example.com/avatar.png");
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "avatar.png",
+                "image/png",
+                new byte[] {1, 2, 3}
+        );
+
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(studentRepository.save(student)).thenReturn(student);
+        when(anneeUniversitaireRepository.findByActiveTrue()).thenReturn(List.of());
+
+        studentService.updateCurrentProfilePhoto(file);
+
+        try (Stream<Path> files = Files.list(storageDir)) {
+            assertThat(files).hasSize(1);
+        }
     }
 
     @Test

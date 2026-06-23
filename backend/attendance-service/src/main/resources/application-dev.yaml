@@ -31,6 +31,11 @@ services:
     url: http://localhost:8082
 
 attendance:
+  internal:
+    # Local services run outside Docker and do not share a .env loader.
+    # Missing local tokens keep internal attendance updates disabled instead of blocking startup.
+    face-service-token: ${FACE_ATTENDANCE_INTERNAL_TOKEN:}
+    qr-service-token: ${QR_ATTENDANCE_INTERNAL_TOKEN:}
   session:
     auto-end-duration: PT30M
     finalized-state-retention: PT1H

@@ -6,6 +6,8 @@ services:
     ports:
       - "80:80" # traffic
       - "9000:8080" # dashboard
+    env_file:
+      - .env
     volumes:
       # Docker socket — only needed in prod when using Docker provider
       - /var/run/docker.sock:/var/run/docker.sock:ro

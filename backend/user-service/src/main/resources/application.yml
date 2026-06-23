@@ -2,11 +2,21 @@ spring:
   application:
     name: user-service
 
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../../.env[.properties]
+
   profiles:
     active: ${PROFILE:dev}
 
 app:
   allowed-domain: "ump.ac.ma"
+  profile-photos:
+    storage-dir: ${PROFILE_PHOTOS_STORAGE_DIR:uploads/profile-photos}
+    public-path: ${PROFILE_PHOTOS_PUBLIC_PATH:/api/users/public/profile-photos}
+  internal:
+    face-service-token: ${FACE_SERVICE_INTERNAL_TOKEN}
 
 
 #logging:

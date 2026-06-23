@@ -3,6 +3,7 @@ package ma.eniad.userservice.controller.student;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -11,7 +12,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -70,6 +73,19 @@ public class StudentController {
     @GetMapping("/profile")
     public ResponseEntity<StudentProfileDto> getProfile() {
         return ResponseEntity.ok(service.getCurrentProfile());
+    }
+
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Student profile photo updated successfully",
+                    content = @Content(schema = @Schema(implementation = StudentProfileDto.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid image file",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @RequireRole({"STUDENT"})
+    @PutMapping(value = "/profile/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<StudentProfileDto> updateProfilePhoto(
+            @RequestPart("file") MultipartFile file) {
+        return ResponseEntity.ok(service.updateCurrentProfilePhoto(file));
     }
 
     // GET /users/student/{id}

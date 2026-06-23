@@ -2,5 +2,19 @@ spring:
   application:
     name: attendance-service
 
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../../.env[.properties]
+
   profiles:
     active: ${PROFILE:dev}
+
+attendance:
+  internal:
+    face-service-token: ${FACE_ATTENDANCE_INTERNAL_TOKEN:}
+    qr-service-token: ${QR_ATTENDANCE_INTERNAL_TOKEN:}
+  lock:
+    lease-duration: ${ATTENDANCE_LOCK_LEASE_DURATION:PT2M}
+    acquire-timeout: ${ATTENDANCE_LOCK_ACQUIRE_TIMEOUT:PT2S}
+    retry-interval: ${ATTENDANCE_LOCK_RETRY_INTERVAL:PT0.05S}

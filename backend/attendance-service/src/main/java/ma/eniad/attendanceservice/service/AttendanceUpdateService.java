@@ -1,6 +1,5 @@
 package ma.eniad.attendanceservice.service;
 
-import lombok.RequiredArgsConstructor;
 import ma.eniad.attendanceservice.dto.AttendanceCounts;
 import ma.eniad.attendanceservice.dto.AttendanceUpdateEvent;
 import ma.eniad.attendanceservice.dto.AttendanceUpdateResponse;
@@ -12,6 +11,7 @@ import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
 import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -19,14 +19,12 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 
 @Service
-@RequiredArgsConstructor
 public class AttendanceUpdateService {
 
-    private static final Set<String> TRUSTED_SOURCES = Set.of("qr-service", "face-service");
     private static final Map<String, AttendanceSessionMethod> SOURCE_METHODS = Map.of(
             "qr-service", AttendanceSessionMethod.QR_CODE,
             "face-service", AttendanceSessionMethod.FACE_ID
@@ -37,10 +35,39 @@ public class AttendanceUpdateService {
 
     private final LiveAttendanceSessionStore liveAttendanceSessionStore;
     private final SimpMessagingTemplate messagingTemplate;
-    private final Map<Long, Object> sessionLocks = new ConcurrentHashMap<>();
+    private final AttendanceSessionLock sessionLock;
+
+    @Value("${attendance.internal.face-service-token:}")
+    private String faceServiceToken;
+
+    @Value("${attendance.internal.qr-service-token:}")
+    private String qrServiceToken;
 
     @Value("${attendance.self-mark.max-distance-meters:${attendance.qr.max-distance-meters:100}}")
     private double selfMarkMaxDistanceMeters = 100.0;
+
+    @Autowired
+    public AttendanceUpdateService(LiveAttendanceSessionStore store, SimpMessagingTemplate messagingTemplate,
+                                   AttendanceSessionLock sessionLock) {
+        this.liveAttendanceSessionStore = store;
+        this.messagingTemplate = messagingTemplate;
+        this.sessionLock = sessionLock;
+    }
+
+    AttendanceUpdateService(LiveAttendanceSessionStore store, SimpMessagingTemplate messagingTemplate) {
+        this(store, messagingTemplate, directLock());
+        this.faceServiceToken = "test-internal-token";
+        this.qrServiceToken = "test-internal-token";
+    }
+
+    private static AttendanceSessionLock directLock() {
+        return new AttendanceSessionLock() {
+            @Override
+            public <T> T execute(Long sessionId, java.util.function.Supplier<T> operation) {
+                return operation.get();
+            }
+        };
+    }
 
     public AttendanceUpdateResponse updateManualAttendance(Long teacherId,
                                                            Long sessionId,
@@ -49,7 +76,7 @@ public class AttendanceUpdateService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Manual status must be PRESENT or ABSENT");
         }
 
-        return withSessionLock(sessionId, () -> {
+        return sessionLock.execute(sessionId, () -> {
             LiveAttendanceSessionMeta sessionMeta = requireActiveSession(sessionId);
             if (!teacherId.equals(sessionMeta.teacherId())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Teacher does not own this session");
@@ -79,25 +106,31 @@ public class AttendanceUpdateService {
     }
 
     public AttendanceUpdateResponse updateInternalAttendance(String requestSource,
+                                                             String internalToken,
                                                              Long sessionId,
                                                              InternalAttendanceUpdateRequest request) {
-        if (requestSource == null || !TRUSTED_SOURCES.contains(requestSource)) {
+        if (requestSource == null || !SOURCE_METHODS.containsKey(requestSource)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Untrusted request source");
         }
+        validateInternalToken(requestSource, internalToken);
 
         AttendanceSessionMethod expectedMethod = SOURCE_METHODS.get(requestSource);
         if (expectedMethod != request.method()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Request source does not match attendance method");
         }
 
-        return withSessionLock(sessionId, () -> {
+        return sessionLock.execute(sessionId, () -> {
             LiveAttendanceSessionMeta sessionMeta = requireActiveSession(sessionId);
-
             LiveAttendanceStudentState currentStudent = requireStudent(sessionId, request.studentId());
+            AttendanceMarkData markData = resolveMarkData(request, sessionMeta);
             if (currentStudent.status() != AttendanceStudentStatus.UNKNOWN) {
+                if (currentStudent.status() == AttendanceStudentStatus.PRESENT
+                        && currentStudent.markMethod() == request.method()
+                        && markData.deviceId().equals(normalizeOptional(currentStudent.deviceId()))) {
+                    return buildResponse(sessionId, currentStudent, false);
+                }
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Student attendance is already resolved");
             }
-            AttendanceMarkData markData = resolveMarkData(request, sessionMeta);
 
             liveAttendanceSessionStore.findDeviceIdByStudent(sessionId, request.studentId())
                     .filter(existingDeviceId -> !existingDeviceId.equals(markData.deviceId()))
@@ -134,10 +167,16 @@ public class AttendanceUpdateService {
                     markData.gpsLon()
             );
 
-            liveAttendanceSessionStore.saveStudentState(sessionId, updatedStudent);
-            liveAttendanceSessionStore.bindDeviceToStudent(sessionId, markData.deviceId(), request.studentId());
-            return buildResponseAndBroadcast(sessionId, updatedStudent);
+            liveAttendanceSessionStore.saveStudentStateAndBindDevice(
+                    sessionId, updatedStudent, markData.deviceId(), request.studentId());
+            return buildResponse(sessionId, updatedStudent, true);
         });
+    }
+
+    AttendanceUpdateResponse updateInternalAttendance(String requestSource, Long sessionId,
+                                                       InternalAttendanceUpdateRequest request) {
+        String token = "face-service".equals(requestSource) ? faceServiceToken : qrServiceToken;
+        return updateInternalAttendance(requestSource, token, sessionId, request);
     }
 
     private LiveAttendanceSessionMeta requireActiveSession(Long sessionId) {
@@ -145,6 +184,9 @@ public class AttendanceUpdateService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
         if (sessionMeta.status() != AttendanceSessionStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Session is not active");
+        }
+        if (!sessionMeta.endsAt().isAfter(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Session has expired");
         }
         return sessionMeta;
     }
@@ -185,10 +227,23 @@ public class AttendanceUpdateService {
         return response;
     }
 
-    private AttendanceUpdateResponse withSessionLock(Long sessionId, UpdateOperation operation) {
-        Object lock = sessionLocks.computeIfAbsent(sessionId, ignored -> new Object());
-        synchronized (lock) {
-            return operation.execute();
+    private AttendanceUpdateResponse buildResponse(Long sessionId, LiveAttendanceStudentState student, boolean broadcast) {
+        if (broadcast) {
+            return buildResponseAndBroadcast(sessionId, student);
+        }
+        AttendanceCounts counts = liveAttendanceSessionStore.getAttendanceCounts(sessionId);
+        return new AttendanceUpdateResponse(sessionId, student.studentId(), student.status(), student.markMethod(),
+                student.markedAt(), counts.presentCount(), counts.absentCount(), counts.unknownCount());
+    }
+
+    private void validateInternalToken(String source, String suppliedToken) {
+        String expectedToken = "face-service".equals(source) ? faceServiceToken : qrServiceToken;
+        if (expectedToken == null || expectedToken.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Internal authentication is not configured");
+        }
+        byte[] supplied = suppliedToken == null ? new byte[0] : suppliedToken.getBytes(StandardCharsets.UTF_8);
+        if (!MessageDigest.isEqual(expectedToken.getBytes(StandardCharsets.UTF_8), supplied)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal service credentials");
         }
     }
 
@@ -196,6 +251,9 @@ public class AttendanceUpdateService {
                                                LiveAttendanceSessionMeta sessionMeta) {
         if (isStudentSelfMarkMethod(request.method())) {
             String deviceId = requireNonBlank(request.deviceId(), DEVICE_REQUIRED_MESSAGE);
+            if (deviceId.length() > 128) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "deviceId is too long");
+            }
             String gpsLat = requireNonBlank(request.gpsLat(), GPS_REQUIRED_MESSAGE);
             String gpsLon = requireNonBlank(request.gpsLon(), GPS_REQUIRED_MESSAGE);
             validateSelfMarkDistance(sessionMeta, gpsLat, gpsLon);
@@ -210,19 +268,23 @@ public class AttendanceUpdateService {
     }
 
     private void validateSelfMarkDistance(LiveAttendanceSessionMeta sessionMeta, String studentGpsLat, String studentGpsLon) {
-        double teacherLat = parseCoordinate(sessionMeta.gpsLat(), "Session GPS latitude is invalid");
-        double teacherLon = parseCoordinate(sessionMeta.gpsLon(), "Session GPS longitude is invalid");
-        double studentLat = parseCoordinate(studentGpsLat, "Student GPS latitude is invalid");
-        double studentLon = parseCoordinate(studentGpsLon, "Student GPS longitude is invalid");
+        double teacherLat = parseCoordinate(sessionMeta.gpsLat(), "Session GPS latitude is invalid", -90, 90);
+        double teacherLon = parseCoordinate(sessionMeta.gpsLon(), "Session GPS longitude is invalid", -180, 180);
+        double studentLat = parseCoordinate(studentGpsLat, "Student GPS latitude is invalid", -90, 90);
+        double studentLon = parseCoordinate(studentGpsLon, "Student GPS longitude is invalid", -180, 180);
         double distance = distanceMeters(teacherLat, teacherLon, studentLat, studentLon);
-        if (distance > selfMarkMaxDistanceMeters) {
+        if (!Double.isFinite(distance) || distance > selfMarkMaxDistanceMeters) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Student is too far from the attendance session location");
         }
     }
 
-    private double parseCoordinate(String value, String message) {
+    private double parseCoordinate(String value, String message, double min, double max) {
         try {
-            return Double.parseDouble(requireNonBlank(value, message));
+            double coordinate = Double.parseDouble(requireNonBlank(value, message));
+            if (!Double.isFinite(coordinate) || coordinate < min || coordinate > max) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+            }
+            return coordinate;
         } catch (NumberFormatException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
         }
@@ -254,11 +316,7 @@ public class AttendanceUpdateService {
         return normalized.isEmpty() ? null : normalized;
     }
 
-    @FunctionalInterface
-    private interface UpdateOperation {
-        AttendanceUpdateResponse execute();
-    }
-
     private record AttendanceMarkData(String deviceId, String gpsLat, String gpsLon) {
     }
+
 }

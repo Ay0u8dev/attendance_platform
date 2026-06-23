@@ -23,6 +23,9 @@ def _env(name: str, default: str) -> str:
 
 
 ATTENDANCE_SERVICE_URL = _env("ATTENDANCE_SERVICE_URL", "http://localhost:8083").rstrip("/")
+QR_ATTENDANCE_INTERNAL_TOKEN = _env("QR_ATTENDANCE_INTERNAL_TOKEN")
+if not QR_ATTENDANCE_INTERNAL_TOKEN:
+    raise RuntimeError("QR_ATTENDANCE_INTERNAL_TOKEN must be set for inter-service security")
 QR_TOKEN_SECRET = _env("QR_TOKEN_SECRET", "dev-only-change-me")
 QR_TOKEN_TTL_SECONDS = int(_env("QR_TOKEN_TTL_SECONDS", "30"))
 QR_TOKEN_VERSION = b"AQR1"
@@ -109,7 +112,10 @@ async def scan_student_qr(
     async with httpx.AsyncClient(timeout=10.0) as client:
         attendance_response = await client.post(
             f"{ATTENDANCE_SERVICE_URL}/attendance/internal/sessions/{session_id}/attendance",
-            headers={"X-Request-Source": "qr-service"},
+            headers={
+                "X-Request-Source": "qr-service",
+                "X-Internal-Service-Token": QR_ATTENDANCE_INTERNAL_TOKEN,
+            },
             json=body,
         )
 

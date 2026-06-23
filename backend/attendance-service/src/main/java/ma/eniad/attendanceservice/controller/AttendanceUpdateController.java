@@ -35,9 +35,24 @@ public class AttendanceUpdateController {
     }
 
     @PostMapping("/internal/sessions/{sessionId}/attendance")
-    public ResponseEntity<AttendanceUpdateResponse> updateAttendanceInternally(@PathVariable Long sessionId,
-                                                                               @RequestHeader(value = "X-Request-Source", required = false) String requestSource,
-                                                                               @Valid @RequestBody InternalAttendanceUpdateRequest request) {
-        return ResponseEntity.ok(attendanceUpdateService.updateInternalAttendance(requestSource, sessionId, request));
+    public ResponseEntity<AttendanceUpdateResponse> updateAttendanceInternally(
+        @PathVariable Long sessionId,
+        @RequestHeader(value = "X-Request-Source", required = false
+
+        ) String requestSource,
+        @RequestHeader(
+                value = "X-Internal-Service-Token",
+                required = false
+        ) String internalToken,
+        @Valid @RequestBody InternalAttendanceUpdateRequest request) {
+
+        return ResponseEntity.ok(
+            attendanceUpdateService.updateInternalAttendance(
+                requestSource,
+                internalToken,
+                sessionId,
+                request
+            )
+        );
     }
 }

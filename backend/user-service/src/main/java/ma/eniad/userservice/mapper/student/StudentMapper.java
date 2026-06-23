@@ -29,6 +29,10 @@ public interface StudentMapper {
     @Mapping(target = "enabled",      ignore = true)
     @Mapping(target = "firstLogin",   ignore = true)
     @Mapping(target = "embeddings",   ignore = true)
+    @Mapping(target = "faceEmbeddingModel", ignore = true)
+    @Mapping(target = "faceEmbeddingFormat", ignore = true)
+    @Mapping(target = "faceEmbeddingDimension", ignore = true)
+    @Mapping(target = "faceEnrolledAt", ignore = true)
     @Mapping(target = "inscriptions", ignore = true)
     Student toEntity(StudentRequestDTO request);
 
@@ -45,6 +49,10 @@ public interface StudentMapper {
     @Mapping(target = "enabled",      ignore = true)
     @Mapping(target = "firstLogin",   ignore = true)
     @Mapping(target = "embeddings",   ignore = true)
+    @Mapping(target = "faceEmbeddingModel", ignore = true)
+    @Mapping(target = "faceEmbeddingFormat", ignore = true)
+    @Mapping(target = "faceEmbeddingDimension", ignore = true)
+    @Mapping(target = "faceEnrolledAt", ignore = true)
     @Mapping(target = "inscriptions", ignore = true)
     void updateEntity(StudentRequestDTO request, @MappingTarget Student student);
 
@@ -67,6 +75,10 @@ public interface StudentMapper {
     @Mapping(target = "enabled",      ignore = true)
     @Mapping(target = "firstLogin",   ignore = true)
     @Mapping(target = "embeddings",   ignore = true)
+    @Mapping(target = "faceEmbeddingModel", ignore = true)
+    @Mapping(target = "faceEmbeddingFormat", ignore = true)
+    @Mapping(target = "faceEmbeddingDimension", ignore = true)
+    @Mapping(target = "faceEnrolledAt", ignore = true)
     @Mapping(target = "inscriptions", ignore = true)
     Student toEntity(StudentExcelRowDTO row);
 }
