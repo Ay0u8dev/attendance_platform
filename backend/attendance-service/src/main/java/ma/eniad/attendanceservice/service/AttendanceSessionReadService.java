@@ -82,8 +82,12 @@ public class AttendanceSessionReadService {
     }
 
     private AttendanceSessionDetailsResponse buildActiveResponseForAdmin(Long sessionId) {
-        LiveAttendanceSessionMeta meta = liveAttendanceSessionStore.findSessionMeta(sessionId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Live session state not found"));
+        LiveAttendanceSessionMeta meta = liveAttendanceSessionStore.findSessionMeta(sessionId).orElse(null);
+        if (meta == null) {
+            AttendanceSession session = attendanceSessionRepository.findById(sessionId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+            return buildFinalizedResponse(session);
+        }
 
         List<AttendanceStudentView> students = liveAttendanceSessionStore.findAllStudentStates(sessionId).stream()
                 .sorted(Comparator.comparing(LiveAttendanceStudentState::studentId))

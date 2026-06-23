@@ -45,7 +45,8 @@ public class AttendanceUpdateService {
     public AttendanceUpdateResponse updateManualAttendance(Long teacherId,
                                                            Long sessionId,
                                                            ManualAttendanceUpdateRequest request) {
-        if (request.status() == AttendanceStudentStatus.UNKNOWN) {
+        if (request.status() != AttendanceStudentStatus.PRESENT
+                && request.status() != AttendanceStudentStatus.ABSENT) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Manual status must be PRESENT or ABSENT");
         }
 
