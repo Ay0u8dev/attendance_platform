@@ -180,6 +180,8 @@ export class StudentAttendanceService {
         return 'Présent';
       case 'ABSENT':
         return 'Absent';
+      case 'JUSTIFIED':
+        return 'Justifie';
       default:
         return 'Inconnu';
     }
@@ -191,6 +193,8 @@ export class StudentAttendanceService {
         return 'success';
       case 'ABSENT':
         return 'error';
+      case 'JUSTIFIED':
+        return 'warning';
       default:
         return 'neutral';
     }

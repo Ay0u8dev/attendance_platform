@@ -8,16 +8,30 @@ import {
   StudentAttendanceSessionDetailDto,
   StudentAttendanceSessionSummaryDto,
 } from '../models/student-attendance.model';
+import { environment } from '../../../../environments/environment';
+import {
+  buildMockStudentAttendanceOverview,
+  MOCK_STUDENT_ATTENDANCE_DETAILS,
+  MOCK_STUDENT_ATTENDANCE_SUMMARIES,
+} from './student-attendance.mock';
 
 describe('StudentAttendanceService', () => {
   let service: StudentAttendanceService;
+  let originalUseMockStudentAttendance: boolean;
 
   beforeEach(() => {
+    originalUseMockStudentAttendance = environment.useMockStudentAttendance;
+    environment.useMockStudentAttendance = true;
+
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideRouter([])],
     });
 
     service = TestBed.inject(StudentAttendanceService);
+  });
+
+  afterEach(() => {
+    environment.useMockStudentAttendance = originalUseMockStudentAttendance;
   });
 
   it('maps teacherFullName into the list item view model', () => {
@@ -118,20 +132,27 @@ describe('StudentAttendanceService', () => {
 
   it('returns mock overview totals derived from mock sessions', async () => {
     const overview = await firstValueFrom(service.getStudentOverview());
+    const expectedOverview = buildMockStudentAttendanceOverview();
 
-    expect(overview.totalSessions).toBe(9);
-    expect(overview.presents).toBe(6);
-    expect(overview.absences).toBe(3);
-    expect(overview.attendanceRate).toBeCloseTo(6 / 9, 5);
+    expect(overview.totalSessions).toBe(expectedOverview.totalSessions);
+    expect(overview.presents).toBe(expectedOverview.presents);
+    expect(overview.absences).toBe(expectedOverview.absences);
+    expect(overview.attendanceRate).toBeCloseTo(expectedOverview.attendanceRate, 5);
   });
 
   it('filters mock sessions by present and absent statuses', async () => {
     const presentResponse = await firstValueFrom(service.getStudentSessions({ status: 'PRESENT' }));
     const absentResponse = await firstValueFrom(service.getStudentSessions({ status: 'ABSENT' }));
+    const presentCount = MOCK_STUDENT_ATTENDANCE_SUMMARIES.filter(
+      (item) => item.attendanceStatus === 'PRESENT',
+    ).length;
+    const absentCount = MOCK_STUDENT_ATTENDANCE_SUMMARIES.filter(
+      (item) => item.attendanceStatus === 'ABSENT',
+    ).length;
 
-    expect(presentResponse.items.length).toBe(6);
+    expect(presentResponse.items.length).toBe(presentCount);
     expect(presentResponse.items.every((item) => item.attendanceStatus === 'PRESENT')).toBe(true);
-    expect(absentResponse.items.length).toBe(3);
+    expect(absentResponse.items.length).toBe(absentCount);
     expect(absentResponse.items.every((item) => item.attendanceStatus === 'ABSENT')).toBe(true);
   });
 
@@ -153,10 +174,11 @@ describe('StudentAttendanceService', () => {
 
   it('returns matching mock detail by session id', async () => {
     const detail = await firstValueFrom(service.getStudentSession(5));
+    const expectedDetail = MOCK_STUDENT_ATTENDANCE_DETAILS.find((item) => item.sessionId === 5);
 
-    expect(detail.sessionId).toBe(5);
-    expect(detail.courseLabel).toBe('Algorithmique avancee');
-    expect(detail.markMethod).toBe('QR_CODE');
+    expect(detail.sessionId).toBe(expectedDetail?.sessionId);
+    expect(detail.courseLabel).toBe(expectedDetail?.courseLabel);
+    expect(detail.markMethod).toBe(expectedDetail?.markMethod);
   });
 
   it('returns a 404-like error for unknown mock details', async () => {

@@ -1,151 +1,441 @@
-<section class="space-y-6">
-    <!-- KPI cards -->
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        @for (stat of stats; track stat.label) {
-        <app-stat-card [label]="stat.label" [value]="stat.value" [icon]="stat.icon" [badge]="stat.badge" [variant]="stat.variant"></app-stat-card>
-        }
+<section class="space-y-8">
+  <header class="rounded-[1.75rem] border border-line bg-surface px-5 py-6 shadow-card sm:px-7">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Administrator dashboard</p>
+        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-principalText">Attendance control center</h1>
+        <p class="mt-2 max-w-3xl text-sm leading-6 text-secondaryText">
+          Clear operational view of sessions, absences, groups, teachers, and decisions waiting today.
+        </p>
+      </div>
+
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-3">
+          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Academic year</p>
+          <p class="mt-1 font-semibold text-principalText">{{ activeYearName() }}</p>
+        </div>
+        <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-3">
+          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Last updated</p>
+          <p class="mt-1 font-semibold text-principalText">{{ formatDateTime(lastUpdated()) }}</p>
+        </div>
+        <button
+          type="button"
+          class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-line bg-surface px-4 text-sm font-semibold text-principalText shadow-sm transition hover:-translate-y-0.5 hover:border-primary-soft hover:bg-primary-soft hover:text-primary hover:shadow-card disabled:cursor-not-allowed disabled:opacity-60"
+          [disabled]="loading()"
+          (click)="loadData()"
+        >
+          <i class="fa-solid fa-rotate" [class.fa-spin]="loading()" aria-hidden="true"></i>
+          Refresh
+        </button>
+      </div>
     </div>
 
-    <!-- Attendance trends chart -->
-    <article class="rounded-3xl border border-line bg-surface p-5 shadow-card sm:p-6">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-                <h2 class="text-lg font-semibold text-principalText">Attendance Trends</h2>
-                <p class="text-sm text-secondaryText">Daily presence rate over the last 30 days</p>
-            </div>
+    @if (errorMessage()) {
+      <div class="mt-5 rounded-2xl border border-warning-soft bg-warning-soft px-4 py-3 text-sm font-semibold text-warning-strong">
+        {{ errorMessage() }}
+      </div>
+    }
+  </header>
 
-            <button type="button" class="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2 text-sm font-medium text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary" aria-label="Select period">
-        Last 30 Days
-        <i class="fa-solid fa-chevron-down text-xs" aria-hidden="true"></i>
-      </button>
-        </div>
-
-        <div class="mt-6 overflow-x-auto">
-            <div class="min-w-160 rounded-2xl bg-linear-to-b from-primary-soft/40 via-surface to-surface p-4">
-                <svg viewBox="0 0 720 220" class="h-64 w-full" role="img" aria-label="Attendance trend chart">
-          <defs>
-            <linearGradient id="trendArea" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="rgb(0 35 111 / 0.18)"></stop>
-              <stop offset="100%" stop-color="rgb(0 35 111 / 0.02)"></stop>
-            </linearGradient>
-          </defs>
-
-          @for (line of [40, 85, 130, 175]; track line) {
-            <line
-              x1="0"
-              [attr.y1]="line"
-              x2="720"
-              [attr.y2]="line"
-              stroke="rgb(229 231 235 / 0.7)"
-            ></line>
-          }
-
-          <polyline
-            fill="url(#trendArea)"
-            stroke="none"
-            [attr.points]="'0,220 ' + trendPoints + ' 712,220'"
-          ></polyline>
-          <polyline
-            fill="none"
-            stroke="var(--color-primary)"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="3"
-            [attr.points]="trendPoints"
-          ></polyline>
-        </svg>
-
-                <div class="mt-3 grid grid-cols-6 gap-2 text-xs text-muted">
-                    <span>01 Oct</span>
-                    <span>07 Oct</span>
-                    <span>14 Oct</span>
-                    <span>21 Oct</span>
-                    <span>28 Oct</span>
-                    <span class="text-right">Today</span>
-                </div>
-            </div>
-        </div>
-    </article>
-
-    <!-- Recent sessions -->
-    <article class="rounded-3xl border border-line bg-surface shadow-card">
-        <div class="flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
-            <h2 class="text-lg font-semibold text-principalText">Recent Sessions</h2>
-            <a routerLink="/attendance" class="text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary-strong">
-        View All
-      </a>
-        </div>
-
-        <div class="hidden overflow-hidden border-t border-line lg:block">
-            <div class="grid grid-cols-[1.1fr_1.3fr_1.3fr_1.2fr_0.9fr_0.5fr] bg-surface-subtle px-6 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-                <span>Date &amp; Time</span>
-                <span>Class / Section</span>
-                <span>Module</span>
-                <span>Teacher</span>
-                <span>Method</span>
-                <span class="text-right">Action</span>
-            </div>
-
-            @for (session of sessions; track session.module) {
-            <div class="grid grid-cols-[1.1fr_1.3fr_1.3fr_1.2fr_0.9fr_0.5fr] items-center border-t border-line px-6 py-4 text-sm">
-                <div>
-                    <p class="font-medium text-principalText">{{ session.date }}</p>
-                    <p class="text-xs text-secondaryText">{{ session.time }}</p>
-                </div>
-                <span class="text-principalText">{{ session.classroom }}</span>
-                <span class="text-principalText">{{ session.module }}</span>
-                <span class="text-principalText">{{ session.teacher }}</span>
-                <div>
-                    <app-status-badge [label]="session.method" [variant]="session.methodVariant"></app-status-badge>
-                </div>
-                <div class="flex justify-end">
-                    <button type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-secondaryText transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText" [attr.aria-label]="'Open actions for ' + session.module">
-              <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
-            </button>
-                </div>
-            </div>
-            }
-        </div>
-
-        <!-- Mobile / tablet stacked list -->
-        <div class="space-y-3 border-t border-line p-4 lg:hidden">
-            @for (session of sessions; track session.module) {
-            <div class="rounded-2xl border border-line p-4">
-                <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0">
-                        <p class="text-sm font-semibold text-principalText">{{ session.module }}</p>
-                        <p class="text-xs text-secondaryText">{{ session.classroom }}</p>
-                    </div>
-                    <app-status-badge [label]="session.method" [variant]="session.methodVariant"></app-status-badge>
-                </div>
-                <dl class="mt-3 grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                        <dt class="text-muted">Date</dt>
-                        <dd class="text-principalText">{{ session.date }} · {{ session.time }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-muted">Teacher</dt>
-                        <dd class="text-principalText">{{ session.teacher }}</dd>
-                    </div>
-                </dl>
-            </div>
-            }
-        </div>
-    </article>
-
-    <!-- Quick actions -->
-    <section>
-        <h2 class="mb-3 text-lg font-semibold text-principalText">Quick Actions</h2>
-
-        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            @for (action of quickActions; track action.label) {
-            <a [routerLink]="action.route" class="group flex flex-col items-center justify-center gap-2 rounded-2xl border border-line bg-surface p-5 text-center shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary-soft hover:bg-primary-soft hover:shadow-card-strong">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-subtle text-secondaryText transition-colors duration-200 group-hover:bg-surface group-hover:text-primary">
-            <i [class]="action.icon" aria-hidden="true"></i>
+  <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    @for (card of kpiCards(); track card.label) {
+      <article class="rounded-[1.35rem] border border-line bg-surface p-5 shadow-card transition hover:-translate-y-0.5 hover:shadow-card-strong">
+        <div class="flex items-start justify-between gap-4">
+          <span
+            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+            [class.bg-primary-soft]="card.variant === 'info'"
+            [class.text-primary]="card.variant === 'info'"
+            [class.bg-secondary-soft]="card.variant === 'success'"
+            [class.text-secondary-strong]="card.variant === 'success'"
+            [class.bg-warning-soft]="card.variant === 'warning'"
+            [class.text-warning-strong]="card.variant === 'warning'"
+            [class.bg-danger-soft]="card.variant === 'error'"
+            [class.text-danger]="card.variant === 'error'"
+            [class.bg-surface-subtle]="card.variant === 'neutral'"
+            [class.text-secondaryText]="card.variant === 'neutral'"
+          >
+            <i [class]="card.icon" aria-hidden="true"></i>
           </span>
-                <span class="text-sm font-medium text-principalText">{{ action.label }}</span>
-            </a>
-            }
+          <app-status-badge [label]="card.helper" [variant]="card.variant"></app-status-badge>
         </div>
-    </section>
+        <p class="mt-5 text-3xl font-semibold tracking-tight text-principalText">{{ card.value }}</p>
+        <p class="mt-1 text-sm font-semibold text-secondaryText">{{ card.label }}</p>
+      </article>
+    }
+  </section>
+
+  <section class="rounded-[1.75rem] border border-line bg-surface p-6 shadow-card">
+    <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Attendance intelligence</p>
+        <h2 class="mt-1 text-2xl font-semibold text-principalText">Absence analytics</h2>
+        <p class="mt-2 max-w-2xl text-sm leading-6 text-secondaryText">
+          Explore absence peaks by date or time period, then expand the chart for a wider audit view.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        @for (range of analyticsRanges; track range.value) {
+          <button
+            type="button"
+            class="rounded-xl border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            [class.border-primary]="analyticsRange() === range.value"
+            [class.bg-primary]="analyticsRange() === range.value"
+            [class.text-white]="analyticsRange() === range.value"
+            [class.border-line]="analyticsRange() !== range.value"
+            [class.bg-surface]="analyticsRange() !== range.value"
+            [class.text-secondaryText]="analyticsRange() !== range.value"
+            (click)="setAnalyticsRange(range.value)"
+          >
+            {{ range.label }}
+          </button>
+        }
+        @for (mode of analyticsModes; track mode.value) {
+          <button
+            type="button"
+            class="rounded-xl border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            [class.border-secondary-soft]="analyticsMode() === mode.value"
+            [class.bg-secondary-soft]="analyticsMode() === mode.value"
+            [class.text-secondary-strong]="analyticsMode() === mode.value"
+            [class.border-line]="analyticsMode() !== mode.value"
+            [class.bg-surface]="analyticsMode() !== mode.value"
+            [class.text-secondaryText]="analyticsMode() !== mode.value"
+            (click)="setAnalyticsMode(mode.value)"
+          >
+            {{ mode.label }}
+          </button>
+        }
+        <button
+          type="button"
+          class="rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-primary transition hover:border-primary-soft hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          (click)="openAnalytics()"
+        >
+          Expand chart
+        </button>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-3 sm:grid-cols-5">
+      <div class="rounded-2xl border border-secondary-soft bg-secondary-soft px-4 py-3">
+        <p class="text-2xl font-semibold text-secondary-strong">{{ todayPresent() }}</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.12em] text-secondary-strong">Present today</p>
+      </div>
+      <div class="rounded-2xl border border-danger/20 bg-danger-soft px-4 py-3">
+        <p class="text-2xl font-semibold text-danger">{{ todayAbsent() }}</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.12em] text-danger">Absent today</p>
+      </div>
+      <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-3">
+        <p class="text-2xl font-semibold text-principalText">{{ todayOpen() }}</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Open today</p>
+      </div>
+      <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-3">
+        <p class="text-2xl font-semibold text-principalText">{{ markedToday() }}</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Total marks</p>
+      </div>
+      <div class="rounded-2xl border border-primary-soft bg-primary-soft px-4 py-3">
+        <p class="text-2xl font-semibold text-primary">{{ formatPercent(todayAttendanceRate()) }}</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.12em] text-primary">Rate today</p>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="mt-6 block w-full rounded-3xl border border-line bg-surface-subtle p-5 text-left shadow-inner transition hover:border-primary-soft hover:bg-primary-soft/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+      aria-label="Expand absence analytics chart"
+      (click)="openAnalytics()"
+    >
+      <div class="min-h-80 overflow-x-auto">
+        <div class="flex min-w-[52rem] items-end gap-3 pt-6">
+          @for (point of analyticsPoints(); track point.label + point.detail) {
+            <div class="group flex min-w-16 flex-1 flex-col items-center gap-3" [attr.title]="analyticsTooltip(point)">
+              <div class="relative flex h-56 w-full items-end rounded-2xl border border-line bg-surface px-2 pb-2 shadow-sm">
+                <span
+                  class="w-full rounded-t-xl bg-danger transition-all group-hover:bg-danger"
+                  [style.height.%]="analyticsBarHeight(point)"
+                ></span>
+                <span
+                  class="absolute -top-5 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-principalText shadow-card group-hover:block"
+                >
+                  {{ point.absent }} absent - {{ point.sessions }} session(s)
+                </span>
+              </div>
+              <div class="text-center">
+                <p class="text-sm font-semibold text-principalText">{{ point.absent }}</p>
+                <p class="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-muted">{{ point.label }}</p>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </button>
+  </section>
+
+  <section class="grid gap-6 xl:grid-cols-2">
+    <article class="rounded-[1.75rem] border border-line bg-surface p-6 shadow-card">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Groups</p>
+          <h2 class="mt-1 text-xl font-semibold text-principalText">Attendance rate by group</h2>
+        </div>
+        <a routerLink="/attendance" class="text-sm font-semibold text-primary hover:text-primary-strong">Audit</a>
+      </div>
+
+      <div class="mt-6 space-y-4">
+        @for (row of groupPerformance(); track row.label) {
+          <div class="rounded-2xl border border-line bg-surface-subtle/60 p-4">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="font-semibold text-principalText">{{ row.label }}</p>
+                <p class="mt-1 text-xs text-secondaryText">{{ row.present }} present / {{ row.absent }} absent</p>
+              </div>
+              <app-status-badge [label]="formatPercent(row.rate)" [variant]="row.variant"></app-status-badge>
+            </div>
+            <div class="mt-3 h-3 overflow-hidden rounded-full bg-surface">
+              <span
+                class="block h-full rounded-full"
+                [class.bg-secondary]="row.variant === 'success'"
+                [class.bg-warning]="row.variant === 'warning'"
+                [class.bg-danger]="row.variant === 'error'"
+                [class.bg-line-strong]="row.variant === 'neutral'"
+                [style.width.%]="row.rate"
+              ></span>
+            </div>
+          </div>
+        } @empty {
+          <div class="rounded-2xl border border-dashed border-line p-8 text-center text-sm text-secondaryText">
+            Group performance appears after attendance sessions are captured.
+          </div>
+        }
+      </div>
+    </article>
+
+    <article class="rounded-[1.75rem] border border-line bg-surface p-6 shadow-card">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Academic structure</p>
+          <h2 class="mt-1 text-xl font-semibold text-principalText">Operational capacity</h2>
+        </div>
+        <a routerLink="/structure" class="text-sm font-semibold text-primary hover:text-primary-strong">Structure</a>
+      </div>
+
+      <div class="mt-6 grid gap-3 sm:grid-cols-2">
+        <div class="rounded-2xl border border-line bg-surface-subtle/70 p-4">
+          <p class="text-2xl font-semibold text-principalText">{{ students().length }}</p>
+          <p class="text-sm font-semibold text-secondaryText">Students</p>
+        </div>
+        <div class="rounded-2xl border border-line bg-surface-subtle/70 p-4">
+          <p class="text-2xl font-semibold text-principalText">{{ teachers().length }}</p>
+          <p class="text-sm font-semibold text-secondaryText">Teachers</p>
+        </div>
+        <div class="rounded-2xl border border-line bg-surface-subtle/70 p-4">
+          <p class="text-2xl font-semibold text-principalText">{{ groups().length }}</p>
+          <p class="text-sm font-semibold text-secondaryText">Groups</p>
+        </div>
+        <div class="rounded-2xl border border-line bg-surface-subtle/70 p-4">
+          <p class="text-2xl font-semibold text-principalText">{{ modules().length }}</p>
+          <p class="text-sm font-semibold text-secondaryText">Modules</p>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="grid gap-6 xl:grid-cols-[1fr_0.85fr]">
+    <article class="rounded-[1.75rem] border border-line bg-surface p-6 shadow-card">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Teachers</p>
+          <h2 class="mt-1 text-xl font-semibold text-principalText">Lowest attendance coverage</h2>
+        </div>
+        <a routerLink="/teachers" class="text-sm font-semibold text-primary hover:text-primary-strong">Teachers</a>
+      </div>
+
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        @for (row of teacherPerformance(); track row.label) {
+          <div class="rounded-2xl border border-line bg-surface-subtle/60 p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="truncate font-semibold text-principalText">{{ row.label }}</p>
+                <p class="mt-1 text-xs text-secondaryText">{{ row.meta }}</p>
+              </div>
+              <app-status-badge [label]="formatPercent(row.rate)" [variant]="row.variant"></app-status-badge>
+            </div>
+            <div class="mt-4 h-3 overflow-hidden rounded-full bg-surface">
+              <span
+                class="block h-full rounded-full"
+                [class.bg-secondary]="row.variant === 'success'"
+                [class.bg-warning]="row.variant === 'warning'"
+                [class.bg-danger]="row.variant === 'error'"
+                [class.bg-line-strong]="row.variant === 'neutral'"
+                [style.width.%]="row.rate"
+              ></span>
+            </div>
+          </div>
+        } @empty {
+          <div class="rounded-2xl border border-dashed border-line p-8 text-center text-sm text-secondaryText md:col-span-2">
+            Teacher ranking appears after sessions are captured.
+          </div>
+        }
+      </div>
+    </article>
+
+    <article class="rounded-[1.75rem] border border-line bg-surface p-6 shadow-card">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Required actions</p>
+        <h2 class="mt-1 text-xl font-semibold text-principalText">Decision queue</h2>
+      </div>
+
+      <div class="mt-6 space-y-3">
+        @for (alert of alerts(); track alert.title) {
+          <article class="rounded-2xl border border-line bg-surface-subtle/70 p-4">
+            <app-status-badge [label]="severityLabel(alert.severity)" [variant]="alertVariant(alert.severity)"></app-status-badge>
+            <h3 class="mt-3 font-semibold text-principalText">{{ alert.title }}</h3>
+            <p class="mt-1 text-sm leading-6 text-secondaryText">{{ alert.description }}</p>
+            <a
+              [routerLink]="alert.route"
+              class="mt-3 inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-primary transition hover:border-primary-soft hover:bg-primary-soft"
+            >
+              {{ alert.actionLabel }}
+              <i class="fa-solid fa-arrow-right text-xs" aria-hidden="true"></i>
+            </a>
+          </article>
+        }
+      </div>
+    </article>
+  </section>
+
+  <section class="overflow-hidden rounded-[1.75rem] border border-line bg-surface shadow-card">
+    <div class="border-b border-line px-5 py-5 sm:px-6">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Recent sessions</p>
+          <h2 class="mt-1 text-xl font-semibold text-principalText">Latest attendance activity</h2>
+        </div>
+        <a routerLink="/attendance" class="text-sm font-semibold text-primary hover:text-primary-strong">View all</a>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-surface-subtle text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+          <tr>
+            <th class="px-6 py-4 text-left">Teacher</th>
+            <th class="px-6 py-4 text-left">Module</th>
+            <th class="px-6 py-4 text-left">Group</th>
+            <th class="px-6 py-4 text-left">Time</th>
+            <th class="px-6 py-4 text-left">Attendance rate</th>
+            <th class="px-6 py-4 text-left">Status</th>
+            <th class="px-6 py-4 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (session of recentSessions(); track session.sessionId) {
+            <tr class="border-t border-line transition hover:bg-primary-soft/25">
+              <td class="px-6 py-5 font-semibold text-principalText">
+                {{ session.teacherFullName || 'Teacher not provided' }}
+              </td>
+              <td class="px-6 py-5 text-principalText">{{ session.courseLabel }}</td>
+              <td class="px-6 py-5 text-secondaryText">{{ groupLabel(session.groupIds) }}</td>
+              <td class="px-6 py-5 text-secondaryText">{{ formatTimeRange(session) }}</td>
+              <td class="px-6 py-5">
+                <app-status-badge
+                  [label]="formatPercent(sessionRate(session))"
+                  [variant]="sessionRate(session) >= 85 ? 'success' : sessionRate(session) >= 70 ? 'warning' : 'error'"
+                ></app-status-badge>
+              </td>
+              <td class="px-6 py-5">
+                <app-status-badge
+                  [label]="sessionStatusLabel(session)"
+                  [variant]="session.status === 'ACTIVE' ? 'info' : 'success'"
+                ></app-status-badge>
+              </td>
+              <td class="px-6 py-5 text-right">
+                <a
+                  routerLink="/attendance"
+                  class="inline-flex h-9 items-center justify-center rounded-xl border border-line bg-surface px-3 text-xs font-semibold text-principalText transition hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
+                >
+                  Details
+                </a>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7" class="px-6 py-12 text-center text-sm text-secondaryText">
+                No attendance sessions found.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <app-modal
+    [open]="analyticsExpanded()"
+    title="Expanded absence analytics"
+    description="Scroll horizontally to inspect absence peaks across the selected period."
+    size="lg"
+    [showFooter]="false"
+    (closed)="closeAnalytics()"
+  >
+    <div modal-body>
+      <div class="mb-5 flex flex-wrap gap-2">
+        @for (range of analyticsRanges; track range.value) {
+          <button
+            type="button"
+            class="rounded-xl border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            [class.border-primary]="analyticsRange() === range.value"
+            [class.bg-primary]="analyticsRange() === range.value"
+            [class.text-white]="analyticsRange() === range.value"
+            [class.border-line]="analyticsRange() !== range.value"
+            [class.bg-surface]="analyticsRange() !== range.value"
+            [class.text-secondaryText]="analyticsRange() !== range.value"
+            (click)="setAnalyticsRange(range.value)"
+          >
+            {{ range.label }}
+          </button>
+        }
+        @for (mode of analyticsModes; track mode.value) {
+          <button
+            type="button"
+            class="rounded-xl border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            [class.border-secondary-soft]="analyticsMode() === mode.value"
+            [class.bg-secondary-soft]="analyticsMode() === mode.value"
+            [class.text-secondary-strong]="analyticsMode() === mode.value"
+            [class.border-line]="analyticsMode() !== mode.value"
+            [class.bg-surface]="analyticsMode() !== mode.value"
+            [class.text-secondaryText]="analyticsMode() !== mode.value"
+            (click)="setAnalyticsMode(mode.value)"
+          >
+            {{ mode.label }}
+          </button>
+        }
+      </div>
+
+      <div class="rounded-3xl border border-line bg-surface-subtle p-5">
+        <div class="max-h-[34rem] overflow-x-auto pb-3">
+          <div class="flex min-w-[68rem] items-end gap-3 pt-8">
+            @for (point of analyticsPoints(); track point.label + point.detail) {
+              <div class="group flex min-w-20 flex-1 flex-col items-center gap-3" [attr.title]="analyticsTooltip(point)">
+                <div class="relative flex h-80 w-full items-end rounded-2xl border border-line bg-surface px-2 pb-2 shadow-sm">
+                  <span
+                    class="w-full rounded-t-xl bg-danger transition-all group-hover:bg-danger"
+                    [style.height.%]="analyticsBarHeight(point)"
+                  ></span>
+                  <span
+                    class="absolute -top-7 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-principalText shadow-card group-hover:block"
+                  >
+                    {{ point.absent }} absent - {{ point.sessions }} session(s) - {{ formatPercent(point.rate) }}
+                  </span>
+                </div>
+                <div class="text-center">
+                  <p class="text-base font-semibold text-principalText">{{ point.absent }}</p>
+                  <p class="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-muted">{{ point.label }}</p>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </app-modal>
 </section>

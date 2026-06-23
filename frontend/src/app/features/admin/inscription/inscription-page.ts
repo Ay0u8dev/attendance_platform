@@ -1,12 +1,24 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize, forkJoin } from 'rxjs';
 
 import {
-  AdminDirectoryStore,
-  StudentRecord,
-  TeacherAssignmentPayload,
-  TeacherRecord,
-} from '../admin-directory.store';
+  AdminStudentInscriptionDto,
+  AdminTeacherAssignmentDto,
+} from '../../../core/admin/models/admin-inscription.model';
+import { AdminStudentDto, AdminTeacherDto, fullName, initials } from '../../../core/admin/models/admin-user.model';
+import { AdminInscriptionService } from '../../../core/admin/services/admin-inscription.service';
+import { AdminStudentService } from '../../../core/admin/services/admin-student.service';
+import { AdminTeacherService } from '../../../core/admin/services/admin-teacher.service';
+import { AnneeUniversitaire } from '../../../core/structure/models/annee-universitaire.model';
+import { Formation } from '../../../core/structure/models/formation.model';
+import { Groupe } from '../../../core/structure/models/groupe.model';
+import { Module } from '../../../core/structure/models/module.model';
+import { AnneeUniversitaireService } from '../../../core/structure/services/annee-universitaire.service';
+import { FormationService } from '../../../core/structure/services/formation.service';
+import { GroupeService } from '../../../core/structure/services/groupe.service';
+import { ModuleService } from '../../../core/structure/services/module.service';
 import { Button } from '../../../shared/components/button/button';
 import { DataTable } from '../../../shared/components/data-table/data-table';
 import { DataTableCellDef } from '../../../shared/components/data-table/data-table-cell-def';
@@ -16,8 +28,11 @@ import { DropdownFilter } from '../../../shared/components/dropdown-filter/dropd
 import { IconButton } from '../../../shared/components/button/icon-button';
 import { Modal } from '../../../shared/components/modal/modal';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
+import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
+import { ToastService } from '../../../shared/components/toast/toast.service';
 
 type InscriptionSection = 'students' | 'teachers';
+type Option = { readonly label: string; readonly value: string };
 
 @Component({
   selector: 'app-inscription-page',
@@ -31,23 +46,24 @@ type InscriptionSection = 'students' | 'teachers';
     IconButton,
     Modal,
     PageHeader,
+    StatusBadge,
   ],
   template: `
     <section class="space-y-5">
       <app-page-header
         title="Inscription"
-        description="Assign students to cycles, years, and groups, and assign teachers to modules and groups."
+        description="Assign students and teachers to the active academic structure used by attendance."
         [meta]="inscriptionMeta()"
       ></app-page-header>
 
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div
-          class="inline-flex rounded-xl border border-line bg-surface p-1 shadow-card"
+          class="inline-flex rounded-2xl border border-line bg-surface p-1 shadow-card"
           aria-label="Inscription section"
         >
           <button
             type="button"
-            class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
+            class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
             [class.bg-primary]="activeSection() === 'students'"
             [class.text-white]="activeSection() === 'students'"
             [class.text-secondaryText]="activeSection() !== 'students'"
@@ -59,7 +75,7 @@ type InscriptionSection = 'students' | 'teachers';
           </button>
           <button
             type="button"
-            class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
+            class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
             [class.bg-primary]="activeSection() === 'teachers'"
             [class.text-white]="activeSection() === 'teachers'"
             [class.text-secondaryText]="activeSection() !== 'teachers'"
@@ -79,59 +95,71 @@ type InscriptionSection = 'students' | 'teachers';
         ></app-button>
       </div>
 
+      @if (errorMessage()) {
+        <div class="rounded-2xl border border-danger/20 bg-danger-soft px-4 py-3 text-sm font-medium text-danger">
+          {{ errorMessage() }}
+        </div>
+      }
+
       @if (activeSection() === 'students') {
         <app-data-table
           title="Student inscriptions"
-          description="Student name with school inscription information."
+          description="Student enrollment rows loaded from user-service."
           caption="Student assignments"
-          searchPlaceholder="Search students by name, group, cycle, or year..."
-          emptyStateTitle="No students available"
-          emptyStateDescription="Create students first, then assign their inscription details here."
-          [rows]="students()"
+          searchPlaceholder="Search by student, formation, group, or academic year..."
+          emptyStateTitle="No student inscriptions found"
+          emptyStateDescription="Create student inscriptions after students and structure data exist."
+          [rows]="studentInscriptions()"
           [columns]="studentColumns"
           [rowId]="studentRowId"
-          [initialPageSize]="5"
+          [initialPageSize]="10"
+          [showColumnFilters]="false"
+          [showColumnVisibility]="false"
         >
           <ng-template [appDataTableCell]="'student'" let-row="row">
-            <div class="flex min-w-0 items-center gap-3">
+            <div class="flex min-w-0 items-center gap-4">
               <span
-                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary"
+                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary-soft bg-gradient-to-br from-primary-soft to-surface text-sm font-semibold text-primary shadow-sm"
                 aria-hidden="true"
               >
-                {{ initials(row.name) }}
+                {{ initials(studentName(row)) }}
               </span>
-              <p class="truncate font-medium text-principalText">{{ row.name }}</p>
+              <div class="min-w-0">
+                <p class="truncate text-[0.95rem] font-semibold text-principalText">{{ studentName(row) }}</p>
+                <p class="mt-0.5 truncate text-[0.8rem] text-secondaryText">Student #{{ row.studentId }}</p>
+              </div>
             </div>
           </ng-template>
 
-          <ng-template [appDataTableCell]="'cycle'" let-row="row">
-            <span class="text-sm text-principalText">{{ row.cycle || 'Not assigned' }}</span>
+          <ng-template [appDataTableCell]="'academicYear'" let-row="row">
+            <app-status-badge [label]="row.academicYearName" variant="info"></app-status-badge>
           </ng-template>
 
-          <ng-template [appDataTableCell]="'year'" let-row="row">
-            <span class="text-sm text-principalText">{{ row.year || 'Not assigned' }}</span>
+          <ng-template [appDataTableCell]="'formation'" let-row="row">
+            <span class="font-medium text-principalText">{{ row.formationName }}</span>
           </ng-template>
 
-          <ng-template [appDataTableCell]="'group'" let-row="row">
-            <span class="text-sm text-principalText">{{ row.group || 'Not assigned' }}</span>
+          <ng-template [appDataTableCell]="'groupe'" let-row="row">
+            <span class="inline-flex rounded-xl border border-secondary-soft bg-secondary-soft px-3 py-1.5 text-sm font-semibold text-secondary-strong shadow-sm">
+              {{ row.groupeName }}
+            </span>
           </ng-template>
 
           <ng-template [appDataTableCell]="'studentActions'" let-row="row">
-            <div class="flex justify-end gap-1.5">
+            <div class="flex justify-end gap-2">
               <app-icon-button
                 icon="fa-regular fa-pen-to-square"
-                [label]="'Edit inscription for ' + row.name"
+                [label]="'Edit inscription for ' + studentName(row)"
                 tone="primary"
                 size="sm"
                 (click)="openEditStudentAssignmentModal(row)"
               ></app-icon-button>
               <app-icon-button
                 icon="fa-regular fa-trash-can"
-                [label]="'Clear inscription for ' + row.name"
+                [label]="'Delete inscription for ' + studentName(row)"
                 tone="danger"
                 size="sm"
-                [disabled]="!hasStudentInscription(row)"
-                (click)="openClearStudentAssignmentModal(row)"
+                (click)="openDeleteStudentAssignmentModal(row)"
               ></app-icon-button>
             </div>
           </ng-template>
@@ -139,56 +167,64 @@ type InscriptionSection = 'students' | 'teachers';
       } @else {
         <app-data-table
           title="Teacher assignments"
-          description="Teacher name with assigned modules and groups."
+          description="Teacher module and group assignments loaded from user-service."
           caption="Teacher assignments"
-          searchPlaceholder="Search teachers by name, module, or group..."
-          emptyStateTitle="No teachers available"
-          emptyStateDescription="Create teachers first, then assign their teaching information here."
-          [rows]="teachers()"
+          searchPlaceholder="Search by teacher, module, formation, group, or year..."
+          emptyStateTitle="No teacher assignments found"
+          emptyStateDescription="Create teacher assignments after teachers and structure data exist."
+          [rows]="teacherAssignments()"
           [columns]="teacherColumns"
           [rowId]="teacherRowId"
-          [initialPageSize]="5"
+          [initialPageSize]="10"
+          [showColumnFilters]="false"
+          [showColumnVisibility]="false"
         >
           <ng-template [appDataTableCell]="'teacher'" let-row="row">
-            <div class="flex min-w-0 items-center gap-3">
+            <div class="flex min-w-0 items-center gap-4">
               <span
-                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary"
+                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary-soft bg-gradient-to-br from-primary-soft to-surface text-sm font-semibold text-primary shadow-sm"
                 aria-hidden="true"
               >
-                {{ initials(row.name) }}
+                {{ initials(teacherName(row)) }}
               </span>
-              <p class="truncate font-medium text-principalText">{{ row.name }}</p>
+              <div class="min-w-0">
+                <p class="truncate text-[0.95rem] font-semibold text-principalText">{{ teacherName(row) }}</p>
+                <p class="mt-0.5 truncate text-[0.8rem] text-secondaryText">{{ row.teacherEmail }}</p>
+              </div>
             </div>
           </ng-template>
 
-          <ng-template [appDataTableCell]="'teacherModules'" let-row="row">
-            <p class="max-w-72 truncate text-sm text-principalText">
-              {{ formatModules(row.modules) }}
-            </p>
+          <ng-template [appDataTableCell]="'module'" let-row="row">
+            <div>
+              <p class="font-medium text-principalText">{{ row.moduleName }}</p>
+              <p class="text-xs text-secondaryText">{{ row.moduleCode }}</p>
+            </div>
           </ng-template>
 
-          <ng-template [appDataTableCell]="'teacherGroups'" let-row="row">
-            <p class="max-w-56 truncate text-sm text-principalText">
-              {{ formatGroups(row.groups) }}
-            </p>
+          <ng-template [appDataTableCell]="'scope'" let-row="row">
+            <div class="flex flex-wrap gap-2">
+              <app-status-badge [label]="row.academicYearName" variant="info"></app-status-badge>
+              <span class="inline-flex rounded-xl border border-secondary-soft bg-secondary-soft px-3 py-1.5 text-xs font-semibold text-secondary-strong shadow-sm">
+                {{ row.groupeName }}
+              </span>
+            </div>
           </ng-template>
 
           <ng-template [appDataTableCell]="'teacherActions'" let-row="row">
-            <div class="flex justify-end gap-1.5">
+            <div class="flex justify-end gap-2">
               <app-icon-button
                 icon="fa-regular fa-pen-to-square"
-                [label]="'Edit assignment for ' + row.name"
+                [label]="'Edit assignment for ' + teacherName(row)"
                 tone="primary"
                 size="sm"
                 (click)="openEditTeacherAssignmentModal(row)"
               ></app-icon-button>
               <app-icon-button
                 icon="fa-regular fa-trash-can"
-                [label]="'Clear assignment for ' + row.name"
+                [label]="'Delete assignment for ' + teacherName(row)"
                 tone="danger"
                 size="sm"
-                [disabled]="!hasTeacherAssignment(row)"
-                (click)="openClearTeacherAssignmentModal(row)"
+                (click)="openDeleteTeacherAssignmentModal(row)"
               ></app-icon-button>
             </div>
           </ng-template>
@@ -199,59 +235,71 @@ type InscriptionSection = 'students' | 'teachers';
     <app-modal
       [open]="studentAssignmentOpen()"
       [title]="studentAssignmentTitle()"
-      description="Assign an existing student to a cycle, academic year, and group."
+      description="Assign an existing student to an academic year, formation, and group."
       size="md"
       (closed)="closeStudentAssignmentModal()"
     >
       <div modal-body>
-        <form [formGroup]="studentAssignmentForm" class="space-y-6">
-          <app-dropdown-filter
-            label="Student *"
-            identifier="assignment-student"
-            allLabel="Select student"
-            [options]="studentOptions()"
-            [value]="studentAssignmentValue('studentId')"
-            iconClass="fa-solid fa-user-graduate"
-            iconBackgroundClass="bg-primary-soft"
-            (filterChange)="setStudentAssignmentValue('studentId', $event)"
-          ></app-dropdown-filter>
-
-          <div class="grid gap-x-5 gap-y-6 pt-2 sm:grid-cols-2">
+        <form [formGroup]="studentAssignmentForm" class="grid gap-5 sm:grid-cols-2">
+          <div class="sm:col-span-2">
             <app-dropdown-filter
-              label="Cycle *"
-              identifier="assignment-cycle"
-              allLabel="Select cycle"
-              [options]="cycleDropdownOptions()"
-              [value]="studentAssignmentValue('cycle')"
-              iconClass="fa-solid fa-graduation-cap"
-              iconBackgroundClass="bg-secondary-soft"
-              iconColor="secondary"
-              (filterChange)="setStudentAssignmentValue('cycle', $event)"
-            ></app-dropdown-filter>
-
-            <app-dropdown-filter
-              label="Year *"
-              identifier="assignment-year"
-              allLabel="Select year"
-              [options]="yearDropdownOptions()"
-              [value]="studentAssignmentValue('year')"
-              iconClass="fa-regular fa-calendar"
-              iconBackgroundClass="bg-warning-soft"
-              iconColor="warning"
-              (filterChange)="setStudentAssignmentValue('year', $event)"
+              label="Student *"
+              identifier="student-inscription-student"
+              allLabel="Select student"
+              [options]="studentOptions()"
+              [value]="studentAssignmentValue('studentId')"
+              iconClass="fa-solid fa-user-graduate"
+              iconBackgroundClass="bg-primary-soft"
+              (filterChange)="setStudentAssignmentValue('studentId', $event)"
             ></app-dropdown-filter>
           </div>
 
           <app-dropdown-filter
-            label="Group *"
-            identifier="assignment-group"
-            allLabel="Select group"
-            [options]="groupDropdownOptions()"
-            [value]="studentAssignmentValue('group')"
-            iconClass="fa-solid fa-users"
-            iconBackgroundClass="bg-primary-soft"
-            (filterChange)="setStudentAssignmentValue('group', $event)"
+            label="Academic year *"
+            identifier="student-inscription-year"
+            allLabel="Select academic year"
+            [options]="academicYearOptions()"
+            [value]="studentAssignmentValue('academicYearId')"
+            iconClass="fa-regular fa-calendar"
+            iconBackgroundClass="bg-warning-soft"
+            iconColor="warning"
+            (filterChange)="setStudentAssignmentValue('academicYearId', $event)"
           ></app-dropdown-filter>
+
+          <div>
+            <app-dropdown-filter
+              label="Formation *"
+              identifier="student-inscription-formation"
+              [allLabel]="studentAssignmentValue('academicYearId') ? 'Select formation' : 'Select an academic year first'"
+              [options]="studentFormationOptions()"
+              [value]="studentAssignmentValue('formationId')"
+              iconClass="fa-solid fa-layer-group"
+              iconBackgroundClass="bg-secondary-soft"
+              [disabled]="!studentAssignmentValue('academicYearId')"
+            iconColor="secondary"
+            (filterChange)="setStudentAssignmentValue('formationId', $event)"
+          ></app-dropdown-filter>
+            @if (studentAssignmentValue('academicYearId') && studentFormationOptions().length === 0) {
+              <p class="mt-2 text-xs font-medium text-secondaryText">No formations available for this academic year.</p>
+            }
+          </div>
+
+          <div class="sm:col-span-2">
+            <app-dropdown-filter
+              label="Group *"
+              identifier="student-inscription-group"
+              [allLabel]="studentAssignmentValue('formationId') ? 'Select group' : 'Select a formation first'"
+              [options]="studentGroupOptions()"
+              [value]="studentAssignmentValue('groupeId')"
+              iconClass="fa-solid fa-users"
+              iconBackgroundClass="bg-primary-soft"
+              [disabled]="!studentAssignmentValue('formationId')"
+              (filterChange)="setStudentAssignmentValue('groupeId', $event)"
+            ></app-dropdown-filter>
+            @if (studentAssignmentValue('formationId') && studentGroupOptions().length === 0) {
+              <p class="mt-2 text-xs font-medium text-secondaryText">No groups available for this formation.</p>
+            }
+          </div>
         </form>
       </div>
 
@@ -263,8 +311,9 @@ type InscriptionSection = 'students' | 'teachers';
           (clicked)="closeStudentAssignmentModal()"
         ></app-button>
         <app-button
-          label="Save Assignment"
-          [disabled]="!studentAssignmentForm.valid"
+          label="Save inscription"
+          [disabled]="studentAssignmentForm.invalid || saving()"
+          [loading]="saving()"
           [fullWidth]="true"
           (clicked)="submitStudentAssignment()"
         ></app-button>
@@ -274,47 +323,88 @@ type InscriptionSection = 'students' | 'teachers';
     <app-modal
       [open]="teacherAssignmentOpen()"
       [title]="teacherAssignmentTitle()"
-      description="Assign an existing teacher to a module and a group."
+      description="Assign an existing teacher to an academic year, formation, group, and module."
       size="md"
       (closed)="closeTeacherAssignmentModal()"
     >
       <div modal-body>
-        <form [formGroup]="teacherAssignmentForm" class="space-y-8">
+        <form [formGroup]="teacherAssignmentForm" class="grid gap-5 sm:grid-cols-2">
+          <div class="sm:col-span-2">
+            <app-dropdown-filter
+              label="Teacher *"
+              identifier="teacher-assignment-teacher"
+              allLabel="Select teacher"
+              [options]="teacherOptions()"
+              [value]="teacherAssignmentValue('teacherId')"
+              iconClass="fa-solid fa-chalkboard-user"
+              iconBackgroundClass="bg-primary-soft"
+              (filterChange)="setTeacherAssignmentValue('teacherId', $event)"
+            ></app-dropdown-filter>
+          </div>
+
           <app-dropdown-filter
-            label="Select Teacher *"
-            identifier="assignment-teacher"
-            allLabel="Select teacher"
-            [options]="teacherOptions()"
-            [value]="teacherAssignmentValue('teacherId')"
-            iconClass="fa-solid fa-chalkboard-user"
-            iconBackgroundClass="bg-primary-soft"
-            (filterChange)="setTeacherAssignmentValue('teacherId', $event)"
+            label="Academic year *"
+            identifier="teacher-assignment-year"
+            allLabel="Select academic year"
+            [options]="academicYearOptions()"
+            [value]="teacherAssignmentValue('academicYearId')"
+            iconClass="fa-regular fa-calendar"
+            iconBackgroundClass="bg-warning-soft"
+            iconColor="warning"
+            (filterChange)="setTeacherAssignmentValue('academicYearId', $event)"
           ></app-dropdown-filter>
 
-          <div class="grid gap-x-5 gap-y-7 border-t border-line/70 pt-7 sm:grid-cols-2">
+          <div>
             <app-dropdown-filter
-              label="Module *"
-              identifier="assignment-module"
-              allLabel="Select module"
-              [options]="moduleDropdownOptions()"
-              [value]="teacherAssignmentValue('module')"
+              label="Formation *"
+              identifier="teacher-assignment-formation"
+              [allLabel]="teacherAssignmentValue('academicYearId') ? 'Select formation' : 'Select an academic year first'"
+              [options]="teacherFormationOptions()"
+              [value]="teacherAssignmentValue('formationId')"
               iconClass="fa-solid fa-layer-group"
               iconBackgroundClass="bg-secondary-soft"
-              iconColor="secondary"
-              (filterChange)="setTeacherAssignmentValue('module', $event)"
-            ></app-dropdown-filter>
+              [disabled]="!teacherAssignmentValue('academicYearId')"
+            iconColor="secondary"
+            (filterChange)="setTeacherAssignmentValue('formationId', $event)"
+          ></app-dropdown-filter>
+            @if (teacherAssignmentValue('academicYearId') && teacherFormationOptions().length === 0) {
+              <p class="mt-2 text-xs font-medium text-secondaryText">No formations available for this academic year.</p>
+            }
+          </div>
 
+          <div>
             <app-dropdown-filter
               label="Group *"
-              identifier="assignment-teacher-group"
-              allLabel="Select group"
-              [options]="groupDropdownOptions()"
-              [value]="teacherAssignmentValue('group')"
+              identifier="teacher-assignment-group"
+              [allLabel]="teacherAssignmentValue('formationId') ? 'Select group' : 'Select a formation first'"
+              [options]="teacherGroupOptions()"
+              [value]="teacherAssignmentValue('groupeId')"
               iconClass="fa-solid fa-users"
-              iconBackgroundClass="bg-warning-soft"
-              iconColor="warning"
-              (filterChange)="setTeacherAssignmentValue('group', $event)"
+              iconBackgroundClass="bg-primary-soft"
+              [disabled]="!teacherAssignmentValue('formationId')"
+              (filterChange)="setTeacherAssignmentValue('groupeId', $event)"
             ></app-dropdown-filter>
+            @if (teacherAssignmentValue('formationId') && teacherGroupOptions().length === 0) {
+              <p class="mt-2 text-xs font-medium text-secondaryText">No groups available for this formation.</p>
+            }
+          </div>
+
+          <div>
+            <app-dropdown-filter
+              label="Module *"
+              identifier="teacher-assignment-module"
+              [allLabel]="teacherAssignmentValue('formationId') ? 'Select module' : 'Select a formation first'"
+              [options]="teacherModuleOptions()"
+              [value]="teacherAssignmentValue('moduleId')"
+              iconClass="fa-solid fa-book"
+              iconBackgroundClass="bg-secondary-soft"
+              iconColor="secondary"
+              [disabled]="!teacherAssignmentValue('formationId')"
+              (filterChange)="setTeacherAssignmentValue('moduleId', $event)"
+            ></app-dropdown-filter>
+            @if (teacherAssignmentValue('formationId') && teacherModuleOptions().length === 0) {
+              <p class="mt-2 text-xs font-medium text-secondaryText">No modules available for this formation.</p>
+            }
           </div>
         </form>
       </div>
@@ -327,8 +417,9 @@ type InscriptionSection = 'students' | 'teachers';
           (clicked)="closeTeacherAssignmentModal()"
         ></app-button>
         <app-button
-          label="Save Assignment"
-          [disabled]="!teacherAssignmentForm.valid"
+          label="Save assignment"
+          [disabled]="teacherAssignmentForm.invalid || saving()"
+          [loading]="saving()"
           [fullWidth]="true"
           (clicked)="submitTeacherAssignment()"
         ></app-button>
@@ -336,124 +427,180 @@ type InscriptionSection = 'students' | 'teachers';
     </app-modal>
 
     <app-delete-modal
-      [open]="clearStudentOpen()"
-      title="Clear this inscription?"
-      [itemName]="selectedStudent()?.name || ''"
-      confirmMessage="You are about to clear inscription for:"
-      warningMessage="The student will remain in the Students page. Only cycle, year, and group are removed."
-      deleteButtonLabel="Clear inscription"
-      (closeRequested)="closeClearStudentAssignmentModal()"
-      (confirmDelete)="confirmClearStudentAssignment()"
+      [open]="deleteStudentOpen()"
+      title="Delete this inscription?"
+      [itemName]="selectedStudentInscription() ? studentName(selectedStudentInscription()!) : ''"
+      confirmMessage="You are about to delete inscription for:"
+      warningMessage="The student account stays in the database. Only this inscription row is removed."
+      deleteButtonLabel="Delete inscription"
+      (closeRequested)="closeDeleteStudentAssignmentModal()"
+      (confirmDelete)="confirmDeleteStudentAssignment()"
     ></app-delete-modal>
 
     <app-delete-modal
-      [open]="clearTeacherOpen()"
-      title="Clear this teacher assignment?"
-      [itemName]="selectedTeacher()?.name || ''"
-      confirmMessage="You are about to clear assignment for:"
-      warningMessage="The teacher will remain in the Teachers page. Only modules and groups are reset."
-      deleteButtonLabel="Clear assignment"
-      (closeRequested)="closeClearTeacherAssignmentModal()"
-      (confirmDelete)="confirmClearTeacherAssignment()"
+      [open]="deleteTeacherOpen()"
+      title="Delete this teacher assignment?"
+      [itemName]="selectedTeacherAssignment() ? teacherName(selectedTeacherAssignment()!) : ''"
+      confirmMessage="You are about to delete assignment for:"
+      warningMessage="The teacher account stays in the database. Only this assignment row is removed."
+      deleteButtonLabel="Delete assignment"
+      (closeRequested)="closeDeleteTeacherAssignmentModal()"
+      (confirmDelete)="confirmDeleteTeacherAssignment()"
     ></app-delete-modal>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InscriptionPage {
   private readonly fb = inject(FormBuilder);
-  private readonly directory = inject(AdminDirectoryStore);
-
-  readonly students = this.directory.students;
-  readonly teachers = this.directory.teachers;
-  readonly cycles = this.directory.cycles;
-  readonly years = this.directory.years;
-  readonly groups = this.directory.groups;
-  readonly moduleOptions = this.directory.moduleOptions;
+  private readonly inscriptionService = inject(AdminInscriptionService);
+  private readonly studentService = inject(AdminStudentService);
+  private readonly teacherService = inject(AdminTeacherService);
+  private readonly yearService = inject(AnneeUniversitaireService);
+  private readonly formationService = inject(FormationService);
+  private readonly groupService = inject(GroupeService);
+  private readonly moduleService = inject(ModuleService);
+  private readonly toast = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly activeSection = signal<InscriptionSection>('students');
+  readonly studentInscriptions = signal<readonly AdminStudentInscriptionDto[]>([]);
+  readonly teacherAssignments = signal<readonly AdminTeacherAssignmentDto[]>([]);
+  readonly students = signal<readonly AdminStudentDto[]>([]);
+  readonly teachers = signal<readonly AdminTeacherDto[]>([]);
+  readonly academicYears = signal<readonly AnneeUniversitaire[]>([]);
+  readonly formations = signal<readonly Formation[]>([]);
+  readonly groups = signal<readonly Groupe[]>([]);
+  readonly modules = signal<readonly Module[]>([]);
+  readonly errorMessage = signal<string | null>(null);
+  readonly saving = signal(false);
+
   readonly studentAssignmentOpen = signal(false);
   readonly teacherAssignmentOpen = signal(false);
-  readonly clearStudentOpen = signal(false);
-  readonly clearTeacherOpen = signal(false);
-  readonly editingStudentAssignmentId = signal<string | null>(null);
-  readonly editingTeacherAssignmentId = signal<string | null>(null);
-  readonly selectedStudent = signal<StudentRecord | null>(null);
-  readonly selectedTeacher = signal<TeacherRecord | null>(null);
+  readonly deleteStudentOpen = signal(false);
+  readonly deleteTeacherOpen = signal(false);
+  readonly editingStudentInscriptionId = signal<number | null>(null);
+  readonly editingTeacherAssignmentId = signal<number | null>(null);
+  readonly selectedStudentInscription = signal<AdminStudentInscriptionDto | null>(null);
+  readonly selectedTeacherAssignment = signal<AdminTeacherAssignmentDto | null>(null);
+  readonly studentAcademicYearSelection = signal('');
+  readonly studentFormationSelection = signal('');
+  readonly teacherAcademicYearSelection = signal('');
+  readonly teacherFormationSelection = signal('');
 
-  readonly studentAssignmentForm: FormGroup;
-  readonly teacherAssignmentForm: FormGroup;
-  readonly studentRowId = (row: StudentRecord) => row.id;
-  readonly teacherRowId = (row: TeacherRecord) => row.id;
+  readonly studentRowId = (row: AdminStudentInscriptionDto) => String(row.id);
+  readonly teacherRowId = (row: AdminTeacherAssignmentDto) => String(row.id);
 
-  readonly inscriptionMeta = computed(() => {
-    const assignedStudents = this.students().filter((student) =>
-      this.hasStudentInscription(student),
-    ).length;
-    const assignedTeachers = this.teachers().filter((teacher) =>
-      this.hasTeacherAssignment(teacher),
-    ).length;
-    return `${assignedStudents} student inscriptions - ${assignedTeachers} teacher assignments`;
+  readonly studentAssignmentForm = this.fb.nonNullable.group({
+    studentId: ['', [Validators.required]],
+    academicYearId: ['', [Validators.required]],
+    formationId: ['', [Validators.required]],
+    groupeId: ['', [Validators.required]],
   });
 
+  readonly teacherAssignmentForm = this.fb.nonNullable.group({
+    teacherId: ['', [Validators.required]],
+    academicYearId: ['', [Validators.required]],
+    formationId: ['', [Validators.required]],
+    groupeId: ['', [Validators.required]],
+    moduleId: ['', [Validators.required]],
+  });
+
+  readonly inscriptionMeta = computed(
+    () => `${this.studentInscriptions().length} student inscriptions - ${this.teacherAssignments().length} teacher assignments`,
+  );
   readonly studentAssignmentTitle = computed(() =>
-    this.editingStudentAssignmentId() ? 'Edit Student Inscription' : 'Assign Student',
+    this.editingStudentInscriptionId() ? 'Edit student inscription' : 'Assign student',
   );
   readonly teacherAssignmentTitle = computed(() =>
-    this.editingTeacherAssignmentId() ? 'Edit Teacher Assignment' : 'Assign Teacher',
-  );
-  readonly studentOptions = computed(() =>
-    this.students().map((student) => ({ label: student.name, value: student.id })),
-  );
-  readonly cycleDropdownOptions = computed(() =>
-    this.cycles.map((cycle) => ({ label: cycle, value: cycle })),
-  );
-  readonly yearDropdownOptions = computed(() =>
-    this.years.map((year) => ({ label: year, value: year })),
-  );
-  readonly teacherOptions = computed(() =>
-    this.teachers().map((teacher) => ({ label: teacher.name, value: teacher.id })),
-  );
-  readonly moduleDropdownOptions = computed(() =>
-    this.moduleOptions.map((module) => ({ label: module, value: module })),
-  );
-  readonly groupDropdownOptions = computed(() =>
-    this.groups.map((group) => ({ label: group, value: group })),
+    this.editingTeacherAssignmentId() ? 'Edit teacher assignment' : 'Assign teacher',
   );
 
-  readonly studentColumns: readonly DataTableColumn<StudentRecord>[] = [
+  readonly studentOptions = computed<Option[]>(() => {
+    const editingId = this.editingStudentInscriptionId();
+    const assignedStudentIds = new Set(
+      this.studentInscriptions()
+        .filter((inscription) => inscription.id !== editingId)
+        .map((inscription) => inscription.studentId),
+    );
+
+    return this.students()
+      .filter((student) => !assignedStudentIds.has(student.id))
+      .map((student) => ({
+        label: fullName(student.firstName, student.lastName) || student.email,
+        value: String(student.id),
+      }));
+  });
+  readonly teacherOptions = computed<Option[]>(() =>
+    this.teachers().map((teacher) => ({
+      label: fullName(teacher.firstName, teacher.lastName) || teacher.email,
+      value: String(teacher.id),
+    })),
+  );
+  readonly academicYearOptions = computed<Option[]>(() =>
+    this.academicYears().map((year) => ({
+      label: year.active ? `${year.name} (active)` : year.name,
+      value: String(year.id),
+    })),
+  );
+  readonly studentFormationOptions = computed<Option[]>(() =>
+    this.filteredFormations(this.studentAcademicYearSelection()),
+  );
+  readonly teacherFormationOptions = computed<Option[]>(() =>
+    this.filteredFormations(this.teacherAcademicYearSelection()),
+  );
+  readonly studentGroupOptions = computed<Option[]>(() =>
+    this.filteredGroups(this.studentAcademicYearSelection(), this.studentFormationSelection()),
+  );
+  readonly teacherGroupOptions = computed<Option[]>(() =>
+    this.filteredGroups(this.teacherAcademicYearSelection(), this.teacherFormationSelection()),
+  );
+  readonly teacherModuleOptions = computed<Option[]>(() =>
+    this.filteredModules(this.teacherAcademicYearSelection(), this.teacherFormationSelection()),
+  );
+
+  readonly studentColumns: readonly DataTableColumn<AdminStudentInscriptionDto>[] = [
     {
       id: 'student',
-      header: 'Name',
-      accessor: (row) => row.name,
-      filterValue: (row) => [row.name, row.cycle, row.year, row.group],
-      width: '18rem',
+      header: 'Student',
+      accessor: (row) => this.studentName(row),
+      filterValue: (row) => [this.studentName(row), row.formationName, row.groupeName, row.academicYearName],
+      sortable: false,
+      width: '20rem',
     },
     {
-      id: 'cycle',
-      header: 'Cycle',
-      accessor: (row) => row.cycle,
+      id: 'academicYear',
+      header: 'Academic year',
+      accessor: (row) => row.academicYearName,
+      sortable: false,
       filter: {
-        type: 'select',
-        options: this.cycles.map((cycle) => ({ label: cycle, value: cycle })),
+        type: 'text',
+        label: 'Academic year',
+        placeholder: 'Filter year',
+      },
+      width: '12rem',
+    },
+    {
+      id: 'formation',
+      header: 'Formation',
+      accessor: (row) => row.formationName,
+      sortable: false,
+      filter: {
+        type: 'text',
+        label: 'Formation',
+        placeholder: 'Filter formation',
       },
     },
     {
-      id: 'year',
-      header: 'Year',
-      accessor: (row) => row.year,
-      filter: {
-        type: 'select',
-        options: this.years.map((year) => ({ label: year, value: year })),
-      },
-    },
-    {
-      id: 'group',
+      id: 'groupe',
       header: 'Group',
-      accessor: (row) => row.group,
+      accessor: (row) => row.groupeName,
+      sortable: false,
       filter: {
-        type: 'select',
-        options: this.groups.map((group) => ({ label: group, value: group })),
+        type: 'text',
+        label: 'Group',
+        placeholder: 'Filter group',
       },
+      width: '10rem',
     },
     {
       id: 'studentActions',
@@ -467,30 +614,44 @@ export class InscriptionPage {
     },
   ];
 
-  readonly teacherColumns: readonly DataTableColumn<TeacherRecord>[] = [
+  readonly teacherColumns: readonly DataTableColumn<AdminTeacherAssignmentDto>[] = [
     {
       id: 'teacher',
-      header: 'Name',
-      accessor: (row) => row.name,
-      filterValue: (row) => [row.name, row.modules.join(' '), row.groups.join(' ')],
-      width: '18rem',
-    },
-    {
-      id: 'teacherModules',
-      header: 'Modules',
-      accessor: (row) => row.modules,
+      header: 'Teacher',
+      accessor: (row) => this.teacherName(row),
+      filterValue: (row) => [this.teacherName(row), row.teacherEmail, row.moduleName, row.groupeName, row.academicYearName],
       sortable: false,
       width: '20rem',
     },
     {
-      id: 'teacherGroups',
-      header: 'Groups',
-      accessor: (row) => row.groups,
+      id: 'module',
+      header: 'Module',
+      accessor: (row) => row.moduleName,
+      sortable: false,
+      width: '18rem',
+    },
+    {
+      id: 'formation',
+      header: 'Formation',
+      accessor: (row) => row.formationName,
       sortable: false,
       filter: {
-        type: 'select',
-        options: this.groups.map((group) => ({ label: group, value: group })),
+        type: 'text',
+        label: 'Formation',
+        placeholder: 'Filter formation',
       },
+    },
+    {
+      id: 'scope',
+      header: 'Scope',
+      accessor: (row) => `${row.academicYearName} ${row.groupeName}`,
+      sortable: false,
+      filter: {
+        type: 'text',
+        label: 'Scope',
+        placeholder: 'Year or group',
+      },
+      width: '16rem',
     },
     {
       id: 'teacherActions',
@@ -505,18 +666,35 @@ export class InscriptionPage {
   ];
 
   constructor() {
-    this.studentAssignmentForm = this.fb.group({
-      studentId: ['', [Validators.required]],
-      cycle: ['', [Validators.required]],
-      year: ['', [Validators.required]],
-      group: ['', [Validators.required]],
-    });
+    this.loadData();
+  }
 
-    this.teacherAssignmentForm = this.fb.group({
-      teacherId: ['', [Validators.required]],
-      module: ['', [Validators.required]],
-      group: ['', [Validators.required]],
-    });
+  loadData(): void {
+    this.errorMessage.set(null);
+    forkJoin({
+      studentInscriptions: this.inscriptionService.getStudentInscriptions(),
+      teacherAssignments: this.inscriptionService.getTeacherAssignments(),
+      students: this.studentService.getAll(),
+      teachers: this.teacherService.getAll(),
+      academicYears: this.yearService.getAll(),
+      formations: this.formationService.getAll(),
+      groups: this.groupService.getAll(),
+      modules: this.moduleService.getAll(),
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => {
+          this.studentInscriptions.set(data.studentInscriptions);
+          this.teacherAssignments.set(data.teacherAssignments);
+          this.students.set(data.students);
+          this.teachers.set(data.teachers);
+          this.academicYears.set(data.academicYears);
+          this.formations.set(data.formations);
+          this.groups.set(data.groups);
+          this.modules.set(data.modules);
+        },
+        error: () => this.errorMessage.set('Unable to load inscription data from backend services.'),
+      });
   }
 
   setSection(section: InscriptionSection): void {
@@ -533,169 +711,340 @@ export class InscriptionPage {
   }
 
   openCreateStudentAssignmentModal(): void {
-    this.editingStudentAssignmentId.set(null);
+    this.editingStudentInscriptionId.set(null);
+    const academicYearId = this.defaultAcademicYearId();
     this.studentAssignmentForm.reset({
       studentId: '',
-      cycle: '',
-      year: '',
-      group: '',
+      academicYearId,
+      formationId: '',
+      groupeId: '',
     });
+    this.studentAcademicYearSelection.set(academicYearId);
+    this.studentFormationSelection.set('');
     this.studentAssignmentOpen.set(true);
   }
 
-  openEditStudentAssignmentModal(student: StudentRecord): void {
-    this.editingStudentAssignmentId.set(student.id);
+  openEditStudentAssignmentModal(row: AdminStudentInscriptionDto): void {
+    this.editingStudentInscriptionId.set(row.id);
+    const academicYearId = String(row.academicYearId);
+    const formationId = String(row.formationId);
     this.studentAssignmentForm.reset({
-      studentId: student.id,
-      cycle: student.cycle,
-      year: student.year,
-      group: student.group,
+      studentId: String(row.studentId),
+      academicYearId,
+      formationId,
+      groupeId: String(row.groupeId),
     });
+    this.studentAcademicYearSelection.set(academicYearId);
+    this.studentFormationSelection.set(formationId);
     this.studentAssignmentOpen.set(true);
   }
 
   closeStudentAssignmentModal(): void {
     this.studentAssignmentOpen.set(false);
-    this.editingStudentAssignmentId.set(null);
+    this.editingStudentInscriptionId.set(null);
+    this.studentAcademicYearSelection.set('');
+    this.studentFormationSelection.set('');
     this.studentAssignmentForm.reset();
   }
 
   submitStudentAssignment(): void {
-    if (!this.studentAssignmentForm.valid) {
+    if (this.studentAssignmentForm.invalid) {
+      this.studentAssignmentForm.markAllAsTouched();
       return;
     }
 
-    const value = this.studentAssignmentForm.value;
-    this.directory.updateStudentInscription(value.studentId, {
-      cycle: value.cycle,
-      year: value.year,
-      group: value.group,
-    });
-    this.closeStudentAssignmentModal();
+    const value = this.studentAssignmentForm.getRawValue();
+    const payload = {
+      studentId: Number(value.studentId),
+      academicYearId: Number(value.academicYearId),
+      formationId: Number(value.formationId),
+      groupeId: Number(value.groupeId),
+    };
+    if (!this.studentAssignmentRelationshipsValid(payload.academicYearId, payload.formationId, payload.groupeId)) {
+      this.toast.error('Invalid academic structure', 'Select a formation and group that belong to the selected academic year.');
+      return;
+    }
+    const editingId = this.editingStudentInscriptionId();
+    const request = editingId
+      ? this.inscriptionService.updateStudentInscription(editingId, payload)
+      : this.inscriptionService.createStudentInscription(payload);
+
+    this.saving.set(true);
+    request
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.saving.set(false)),
+      )
+      .subscribe({
+        next: () => {
+          this.toast.success(editingId ? 'Inscription updated' : 'Inscription created');
+          this.closeStudentAssignmentModal();
+          this.loadData();
+        },
+        error: () => this.toast.error('Save failed', 'Check selected academic relationships.'),
+      });
   }
 
-  openClearStudentAssignmentModal(student: StudentRecord): void {
-    this.selectedStudent.set(student);
-    this.clearStudentOpen.set(true);
+  openDeleteStudentAssignmentModal(row: AdminStudentInscriptionDto): void {
+    this.selectedStudentInscription.set(row);
+    this.deleteStudentOpen.set(true);
   }
 
-  closeClearStudentAssignmentModal(): void {
-    this.clearStudentOpen.set(false);
+  closeDeleteStudentAssignmentModal(): void {
+    this.deleteStudentOpen.set(false);
+    this.selectedStudentInscription.set(null);
   }
 
-  confirmClearStudentAssignment(): void {
-    const student = this.selectedStudent();
-    if (!student) {
+  confirmDeleteStudentAssignment(): void {
+    const row = this.selectedStudentInscription();
+    if (!row) {
       return;
     }
 
-    this.directory.clearStudentInscription(student.id);
-    this.clearStudentOpen.set(false);
-    this.selectedStudent.set(null);
+    this.inscriptionService
+      .deleteStudentInscription(row.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toast.success('Inscription deleted');
+          this.closeDeleteStudentAssignmentModal();
+          this.loadData();
+        },
+        error: () => this.toast.error('Delete failed'),
+      });
   }
 
   openCreateTeacherAssignmentModal(): void {
     this.editingTeacherAssignmentId.set(null);
+    const academicYearId = this.defaultAcademicYearId();
     this.teacherAssignmentForm.reset({
       teacherId: '',
-      module: '',
-      group: '',
+      academicYearId,
+      formationId: '',
+      groupeId: '',
+      moduleId: '',
     });
+    this.teacherAcademicYearSelection.set(academicYearId);
+    this.teacherFormationSelection.set('');
     this.teacherAssignmentOpen.set(true);
   }
 
-  openEditTeacherAssignmentModal(teacher: TeacherRecord): void {
-    this.editingTeacherAssignmentId.set(teacher.id);
+  openEditTeacherAssignmentModal(row: AdminTeacherAssignmentDto): void {
+    this.editingTeacherAssignmentId.set(row.id);
+    const academicYearId = String(row.academicYearId);
+    const formationId = String(row.formationId);
     this.teacherAssignmentForm.reset({
-      teacherId: teacher.id,
-      module: teacher.modules[0] ?? '',
-      group: teacher.groups[0] ?? '',
+      teacherId: String(row.teacherId),
+      academicYearId,
+      formationId,
+      groupeId: String(row.groupeId),
+      moduleId: String(row.moduleId),
     });
+    this.teacherAcademicYearSelection.set(academicYearId);
+    this.teacherFormationSelection.set(formationId);
     this.teacherAssignmentOpen.set(true);
   }
 
   closeTeacherAssignmentModal(): void {
     this.teacherAssignmentOpen.set(false);
     this.editingTeacherAssignmentId.set(null);
+    this.teacherAcademicYearSelection.set('');
+    this.teacherFormationSelection.set('');
     this.teacherAssignmentForm.reset();
   }
 
   submitTeacherAssignment(): void {
-    if (!this.teacherAssignmentForm.valid) {
+    if (this.teacherAssignmentForm.invalid) {
+      this.teacherAssignmentForm.markAllAsTouched();
       return;
     }
 
-    const value = this.teacherAssignmentForm.value;
-    const payload: TeacherAssignmentPayload = {
-      modules: [value.module],
-      groups: [value.group],
+    const value = this.teacherAssignmentForm.getRawValue();
+    const payload = {
+      teacherId: Number(value.teacherId),
+      academicYearId: Number(value.academicYearId),
+      formationId: Number(value.formationId),
+      groupeId: Number(value.groupeId),
+      moduleId: Number(value.moduleId),
     };
+    if (
+      !this.teacherAssignmentRelationshipsValid(
+        payload.academicYearId,
+        payload.formationId,
+        payload.groupeId,
+        payload.moduleId,
+      )
+    ) {
+      this.toast.error('Invalid academic structure', 'Select group and module values that belong to the selected formation.');
+      return;
+    }
+    const editingId = this.editingTeacherAssignmentId();
+    const request = editingId
+      ? this.inscriptionService.updateTeacherAssignment(editingId, payload)
+      : this.inscriptionService.createTeacherAssignment(payload);
 
-    this.directory.updateTeacherAssignment(value.teacherId, payload);
-    this.closeTeacherAssignmentModal();
+    this.saving.set(true);
+    request
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.saving.set(false)),
+      )
+      .subscribe({
+        next: () => {
+          this.toast.success(editingId ? 'Assignment updated' : 'Assignment created');
+          this.closeTeacherAssignmentModal();
+          this.loadData();
+        },
+        error: () => this.toast.error('Save failed', 'Check selected academic relationships.'),
+      });
   }
 
-  openClearTeacherAssignmentModal(teacher: TeacherRecord): void {
-    this.selectedTeacher.set(teacher);
-    this.clearTeacherOpen.set(true);
+  openDeleteTeacherAssignmentModal(row: AdminTeacherAssignmentDto): void {
+    this.selectedTeacherAssignment.set(row);
+    this.deleteTeacherOpen.set(true);
   }
 
-  closeClearTeacherAssignmentModal(): void {
-    this.clearTeacherOpen.set(false);
+  closeDeleteTeacherAssignmentModal(): void {
+    this.deleteTeacherOpen.set(false);
+    this.selectedTeacherAssignment.set(null);
   }
 
-  confirmClearTeacherAssignment(): void {
-    const teacher = this.selectedTeacher();
-    if (!teacher) {
+  confirmDeleteTeacherAssignment(): void {
+    const row = this.selectedTeacherAssignment();
+    if (!row) {
       return;
     }
 
-    this.directory.clearTeacherAssignment(teacher.id);
-    this.clearTeacherOpen.set(false);
-    this.selectedTeacher.set(null);
+    this.inscriptionService
+      .deleteTeacherAssignment(row.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toast.success('Assignment deleted');
+          this.closeDeleteTeacherAssignmentModal();
+          this.loadData();
+        },
+        error: () => this.toast.error('Delete failed'),
+      });
   }
 
-  hasStudentInscription(student: StudentRecord): boolean {
-    return Boolean(student.cycle && student.year && student.group);
+  studentName(row: AdminStudentInscriptionDto): string {
+    return fullName(row.studentFirstName, row.studentLastName) || `Student #${row.studentId}`;
   }
 
-  hasTeacherAssignment(teacher: TeacherRecord): boolean {
-    return teacher.modules.length > 0 && teacher.groups.length > 0;
+  teacherName(row: AdminTeacherAssignmentDto): string {
+    return fullName(row.teacherFirstName, row.teacherLastName) || row.teacherEmail;
   }
 
-  formatModules(modules: readonly string[]): string {
-    return modules.length > 0 ? modules.join(', ') : 'Not assigned';
+  initials(name: string): string {
+    return initials(name);
   }
 
-  formatGroups(groups: readonly string[]): string {
-    return groups.length > 0 ? groups.join(', ') : 'Not assigned';
-  }
-
-  studentAssignmentValue(controlName: 'studentId' | 'cycle' | 'year' | 'group'): string {
+  studentAssignmentValue(controlName: 'studentId' | 'academicYearId' | 'formationId' | 'groupeId'): string {
     return String(this.studentAssignmentForm.get(controlName)?.value ?? '');
   }
 
   setStudentAssignmentValue(
-    controlName: 'studentId' | 'cycle' | 'year' | 'group',
+    controlName: 'studentId' | 'academicYearId' | 'formationId' | 'groupeId',
     value: string | null,
   ): void {
-    this.studentAssignmentForm.patchValue({ [controlName]: value ?? '' });
+    const nextValue = value ?? '';
+    this.studentAssignmentForm.patchValue({ [controlName]: nextValue });
+    if (controlName === 'academicYearId') {
+      this.studentAssignmentForm.patchValue({ formationId: '', groupeId: '' });
+      this.studentAcademicYearSelection.set(nextValue);
+      this.studentFormationSelection.set('');
+    }
+    if (controlName === 'formationId') {
+      this.studentAssignmentForm.patchValue({ groupeId: '' });
+      this.studentFormationSelection.set(nextValue);
+    }
     this.studentAssignmentForm.get(controlName)?.markAsTouched();
   }
 
-  teacherAssignmentValue(controlName: 'teacherId' | 'module' | 'group'): string {
+  teacherAssignmentValue(
+    controlName: 'teacherId' | 'academicYearId' | 'formationId' | 'groupeId' | 'moduleId',
+  ): string {
     return String(this.teacherAssignmentForm.get(controlName)?.value ?? '');
   }
 
   setTeacherAssignmentValue(
-    controlName: 'teacherId' | 'module' | 'group',
+    controlName: 'teacherId' | 'academicYearId' | 'formationId' | 'groupeId' | 'moduleId',
     value: string | null,
   ): void {
-    this.teacherAssignmentForm.patchValue({ [controlName]: value ?? '' });
+    const nextValue = value ?? '';
+    this.teacherAssignmentForm.patchValue({ [controlName]: nextValue });
+    if (controlName === 'academicYearId') {
+      this.teacherAssignmentForm.patchValue({ formationId: '', groupeId: '', moduleId: '' });
+      this.teacherAcademicYearSelection.set(nextValue);
+      this.teacherFormationSelection.set('');
+    }
+    if (controlName === 'formationId') {
+      this.teacherAssignmentForm.patchValue({ groupeId: '', moduleId: '' });
+      this.teacherFormationSelection.set(nextValue);
+    }
     this.teacherAssignmentForm.get(controlName)?.markAsTouched();
   }
 
-  initials(name: string): string {
-    return this.directory.initials(name);
+  private filteredFormations(academicYearIdValue: string): Option[] {
+    const academicYearId = Number(academicYearIdValue);
+    if (!academicYearId) {
+      return [];
+    }
+    return this.formations()
+      .filter((formation) => formation.anneeUniversitaireId === academicYearId)
+      .map((formation) => ({ label: formation.name, value: String(formation.id) }));
+  }
+
+  private filteredGroups(academicYearIdValue: string, formationIdValue: string): Option[] {
+    const academicYearId = Number(academicYearIdValue);
+    const formationId = Number(formationIdValue);
+    if (!academicYearId || !formationId || !this.formationBelongsToYear(formationId, academicYearId)) {
+      return [];
+    }
+    return this.groups()
+      .filter((group) => group.formationId === formationId)
+      .map((group) => ({ label: group.name, value: String(group.id) }));
+  }
+
+  private filteredModules(academicYearIdValue: string, formationIdValue: string): Option[] {
+    const academicYearId = Number(academicYearIdValue);
+    const formationId = Number(formationIdValue);
+    if (!academicYearId || !formationId || !this.formationBelongsToYear(formationId, academicYearId)) {
+      return [];
+    }
+    return this.modules()
+      .filter((module) => module.formationId === formationId)
+      .map((module) => ({ label: `${module.code} - ${module.name}`, value: String(module.id) }));
+  }
+
+  private formationBelongsToYear(formationId: number, academicYearId: number): boolean {
+    return this.formations().some(
+      (formation) => formation.id === formationId && formation.anneeUniversitaireId === academicYearId,
+    );
+  }
+
+  private studentAssignmentRelationshipsValid(academicYearId: number, formationId: number, groupId: number): boolean {
+    return (
+      this.formationBelongsToYear(formationId, academicYearId) &&
+      this.groups().some((group) => group.id === groupId && group.formationId === formationId)
+    );
+  }
+
+  private teacherAssignmentRelationshipsValid(
+    academicYearId: number,
+    formationId: number,
+    groupId: number,
+    moduleId: number,
+  ): boolean {
+    return (
+      this.studentAssignmentRelationshipsValid(academicYearId, formationId, groupId) &&
+      this.modules().some((module) => module.id === moduleId && module.formationId === formationId)
+    );
+  }
+
+  private defaultAcademicYearId(): string {
+    const activeYear = this.academicYears().find((year) => year.active) ?? this.academicYears()[0];
+    return activeYear ? String(activeYear.id) : '';
   }
 }

@@ -1,113 +1,655 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
- 
-import { StatCard } from '../../../../shared/components/stat-card/stat-card';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { catchError, finalize, forkJoin, of, OperatorFunction } from 'rxjs';
+
+import {
+  AdminAttendanceOverviewDto,
+  AdminAttendanceSessionSummaryDto,
+  PagedResponseDto,
+} from '../../../../core/admin/models/admin-attendance.model';
+import { AdminStudentInscriptionDto, AdminTeacherAssignmentDto } from '../../../../core/admin/models/admin-inscription.model';
+import { AdminJustificationDto } from '../../../../core/admin/models/admin-justification.model';
+import { AdminStudentDto, AdminTeacherDto } from '../../../../core/admin/models/admin-user.model';
+import { AdminAttendanceService } from '../../../../core/admin/services/admin-attendance.service';
+import { AdminInscriptionService } from '../../../../core/admin/services/admin-inscription.service';
+import { AdminJustificationService } from '../../../../core/admin/services/admin-justification.service';
+import { AdminStudentService } from '../../../../core/admin/services/admin-student.service';
+import { AdminTeacherService } from '../../../../core/admin/services/admin-teacher.service';
+import { AnneeUniversitaire } from '../../../../core/structure/models/annee-universitaire.model';
+import { Filiere } from '../../../../core/structure/models/filiere.model';
+import { Formation } from '../../../../core/structure/models/formation.model';
+import { Groupe } from '../../../../core/structure/models/groupe.model';
+import { Module } from '../../../../core/structure/models/module.model';
+import { AnneeUniversitaireService } from '../../../../core/structure/services/annee-universitaire.service';
+import { FiliereService } from '../../../../core/structure/services/filiere.service';
+import { FormationService } from '../../../../core/structure/services/formation.service';
+import { GroupeService } from '../../../../core/structure/services/groupe.service';
+import { ModuleService } from '../../../../core/structure/services/module.service';
+import { Modal } from '../../../../shared/components/modal/modal';
 import { StatusBadge } from '../../../../shared/components/status-badge/status-badge';
- 
-type StatVariant = 'info' | 'error' | 'warning' | 'success';
-type MethodVariant = 'success' | 'info' | 'warning' | 'error';
- 
-type DashboardStat = {
+
+type DashboardVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral';
+type AlertSeverity = 'critical' | 'warning' | 'info' | 'success';
+type AnalyticsRange = '14' | '30' | 'month' | 'year';
+type AnalyticsMode = 'day' | 'time';
+
+interface KpiCard {
   readonly label: string;
   readonly value: string;
+  readonly helper: string;
   readonly icon: string;
-  readonly badge: string;
-  readonly variant: StatVariant;
-};
- 
-type RecentSession = {
-  readonly date: string;
-  readonly time: string;
-  readonly classroom: string;
-  readonly module: string;
-  readonly teacher: string;
-  readonly method: string;
-  readonly methodVariant: MethodVariant;
-};
- 
-type QuickAction = {
+  readonly variant: DashboardVariant;
+}
+
+interface DistributionSegment {
   readonly label: string;
-  readonly icon: string;
+  readonly value: number;
+  readonly percent: number;
+  readonly variant: DashboardVariant;
+}
+
+interface AnalyticsPoint {
+  readonly label: string;
+  readonly detail: string;
+  readonly absent: number;
+  readonly present: number;
+  readonly open: number;
+  readonly sessions: number;
+  readonly rate: number;
+}
+
+interface PerformanceRow {
+  readonly label: string;
+  readonly meta: string;
+  readonly rate: number;
+  readonly present: number;
+  readonly absent: number;
+  readonly variant: DashboardVariant;
+}
+
+interface AlertItem {
+  readonly severity: AlertSeverity;
+  readonly title: string;
+  readonly description: string;
+  readonly actionLabel: string;
   readonly route: string;
-};
- 
+}
+
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, StatCard, StatusBadge],
+  imports: [RouterLink, Modal, StatusBadge],
   templateUrl: './dashboard.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Dashboard {
-  readonly stats: readonly DashboardStat[] = [
+  private readonly attendanceService = inject(AdminAttendanceService);
+  private readonly justificationService = inject(AdminJustificationService);
+  private readonly studentService = inject(AdminStudentService);
+  private readonly teacherService = inject(AdminTeacherService);
+  private readonly inscriptionService = inject(AdminInscriptionService);
+  private readonly yearService = inject(AnneeUniversitaireService);
+  private readonly formationService = inject(FormationService);
+  private readonly groupService = inject(GroupeService);
+  private readonly moduleService = inject(ModuleService);
+  private readonly filiereService = inject(FiliereService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly overview = signal<AdminAttendanceOverviewDto | null>(null);
+  readonly sessions = signal<readonly AdminAttendanceSessionSummaryDto[]>([]);
+  readonly justifications = signal<readonly AdminJustificationDto[]>([]);
+  readonly students = signal<readonly AdminStudentDto[]>([]);
+  readonly teachers = signal<readonly AdminTeacherDto[]>([]);
+  readonly studentInscriptions = signal<readonly AdminStudentInscriptionDto[]>([]);
+  readonly teacherAssignments = signal<readonly AdminTeacherAssignmentDto[]>([]);
+  readonly academicYears = signal<readonly AnneeUniversitaire[]>([]);
+  readonly formations = signal<readonly Formation[]>([]);
+  readonly groups = signal<readonly Groupe[]>([]);
+  readonly modules = signal<readonly Module[]>([]);
+  readonly filieres = signal<readonly Filiere[]>([]);
+  readonly loading = signal(false);
+  readonly errorMessage = signal<string | null>(null);
+  readonly lastUpdated = signal<Date | null>(null);
+  readonly analyticsRange = signal<AnalyticsRange>('30');
+  readonly analyticsMode = signal<AnalyticsMode>('day');
+  readonly analyticsExpanded = signal(false);
+
+  readonly analyticsRanges: ReadonlyArray<{ readonly value: AnalyticsRange; readonly label: string }> = [
+    { value: '14', label: '14 days' },
+    { value: '30', label: '30 days' },
+    { value: 'month', label: 'Month' },
+    { value: 'year', label: 'Year' },
+  ];
+  readonly analyticsModes: ReadonlyArray<{ readonly value: AnalyticsMode; readonly label: string }> = [
+    { value: 'day', label: 'By day' },
+    { value: 'time', label: 'By time of day' },
+  ];
+
+  readonly activeYearName = computed(() => this.academicYears().find((year) => year.active)?.name ?? 'No active year');
+  readonly todaySessions = computed(() => this.sessions().filter((session) => this.isToday(session.startedAt)));
+  readonly activeSessions = computed(() => this.sessions().filter((session) => session.status === 'ACTIVE'));
+  readonly pendingJustifications = computed(() => this.justifications().filter((item) => item.status === 'PENDING'));
+  readonly todayPresent = computed(() => this.todaySessions().reduce((total, session) => total + session.presentCount, 0));
+  readonly todayAbsent = computed(() => this.todaySessions().reduce((total, session) => total + session.absentCount, 0));
+  readonly todayOpen = computed(() => this.todaySessions().reduce((total, session) => total + session.unknownCount, 0));
+  readonly todayAttendanceRate = computed(() => this.rate(this.todayPresent(), this.todayAbsent()));
+
+  readonly groupsWithAttendanceToday = computed(() => {
+    const ids = new Set<number>();
+    for (const session of this.todaySessions()) {
+      session.groupIds.forEach((groupId) => ids.add(groupId));
+    }
+    return ids;
+  });
+  readonly groupsWithoutAttendanceToday = computed(() =>
+    this.groups().filter((group) => !this.groupsWithAttendanceToday().has(group.id)).length,
+  );
+
+  readonly kpiCards = computed<readonly KpiCard[]>(() => [
     {
-      label: 'Sessions Today',
-      value: '12',
-      icon: 'fa-regular fa-calendar-days',
-      badge: '+12%',
+      label: 'Total students',
+      value: String(this.students().length),
+      helper: `${this.studentInscriptions().length} enrolled`,
+      icon: 'fa-solid fa-user-graduate',
       variant: 'info',
     },
     {
-      label: 'Absent Students',
-      value: '3',
-      icon: 'fa-solid fa-user-slash',
-      badge: '-3%',
-      variant: 'error',
+      label: 'Teachers',
+      value: String(this.teachers().length),
+      helper: `${this.teacherAssignments().length} assignments`,
+      icon: 'fa-solid fa-chalkboard-user',
+      variant: 'neutral',
     },
     {
-      label: 'Pending Justifications',
-      value: '5',
-      icon: 'fa-regular fa-clipboard',
-      badge: 'New',
+      label: 'Groups',
+      value: String(this.groups().length),
+      helper: `${this.groupsWithoutAttendanceToday()} without attendance today`,
+      icon: 'fa-solid fa-users-rectangle',
+      variant: this.groupsWithoutAttendanceToday() > 0 ? 'warning' : 'success',
+    },
+    {
+      label: 'Modules',
+      value: String(this.modules().length),
+      helper: `${this.formations().length} formation(s)`,
+      icon: 'fa-solid fa-book-open',
+      variant: 'neutral',
+    },
+    {
+      label: 'Today sessions',
+      value: String(this.todaySessions().length),
+      helper: `${this.sessions().length} total recorded`,
+      icon: 'fa-regular fa-calendar-check',
       variant: 'info',
     },
     {
-      label: 'Critical Student',
-      value: '1',
-      icon: 'fa-solid fa-circle-exclamation',
-      badge: 'Warning',
-      variant: 'warning',
-    },
-  ];
- 
-  readonly sessions: readonly RecentSession[] = [
-    {
-      date: 'Oct 24, 2023',
-      time: '09:00 AM',
-      classroom: 'Computer Science A1',
-      module: 'Advanced Algorithms',
-      teacher: 'Dr. Robert Chen',
-      method: 'In-person',
-      methodVariant: 'success',
+      label: 'Active sessions',
+      value: String(this.activeSessions().length),
+      helper: this.activeSessions().length ? 'live supervision' : 'none running',
+      icon: 'fa-solid fa-signal',
+      variant: this.activeSessions().length ? 'info' : 'neutral',
     },
     {
-      date: 'Oct 24, 2023',
-      time: '11:30 AM',
-      classroom: 'Economics B3',
-      module: 'Macro Analysis',
-      teacher: 'Sarah Jenkins',
-      method: 'Remote',
-      methodVariant: 'info',
+      label: 'Attendance today',
+      value: this.formatPercent(this.todayAttendanceRate()),
+      helper: `${this.todayPresent()} present / ${this.todayAbsent()} absent`,
+      icon: 'fa-solid fa-chart-line',
+      variant: this.healthVariant(this.todayAttendanceRate()),
     },
     {
-      date: 'Oct 23, 2023',
-      time: '02:00 PM',
-      classroom: 'Physics C2',
-      module: 'Quantum Mechanics',
-      teacher: 'Prof. Marcus Thorne',
-      method: 'In-person',
-      methodVariant: 'success',
+      label: 'Pending justifications',
+      value: String(this.pendingJustifications().length),
+      helper: 'waiting for decision',
+      icon: 'fa-regular fa-file-lines',
+      variant: this.pendingJustifications().length ? 'warning' : 'success',
     },
-  ];
- 
-  readonly quickActions: readonly QuickAction[] = [
-    { label: 'Add Student', icon: 'fa-solid fa-user-plus', route: '/students' },
-    { label: 'New Session', icon: 'fa-regular fa-calendar-plus', route: '/attendance' },
-    { label: 'Send Alerts', icon: 'fa-regular fa-envelope', route: '/alerts' },
-    { label: 'Reports', icon: 'fa-regular fa-file-lines', route: '/statistics' },
-    { label: 'Integration', icon: 'fa-solid fa-sliders', route: '/structure' },
-    { label: 'Support', icon: 'fa-regular fa-circle-question', route: '/dashboard' },
-  ];
- 
-  readonly trendPoints =
-    '8,160 60,110 120,135 180,90 240,55 300,75 360,150 420,180 480,135 540,55 600,30 660,95 712,150';
+  ]);
+
+  readonly attendanceDistribution = computed<readonly DistributionSegment[]>(() => {
+    const total = this.todayPresent() + this.todayAbsent() + this.todayOpen();
+    return [
+      { label: 'Present', value: this.todayPresent(), percent: this.percent(this.todayPresent(), total), variant: 'success' },
+      { label: 'Absent', value: this.todayAbsent(), percent: this.percent(this.todayAbsent(), total), variant: 'error' },
+      { label: 'Open', value: this.todayOpen(), percent: this.percent(this.todayOpen(), total), variant: 'neutral' },
+    ];
+  });
+
+  readonly analyticsPoints = computed<readonly AnalyticsPoint[]>(() =>
+    this.analyticsMode() === 'time' ? this.buildTimeAnalytics() : this.buildTimelineAnalytics(),
+  );
+  readonly maxAnalyticsAbsences = computed(() => Math.max(1, ...this.analyticsPoints().map((point) => point.absent)));
+  readonly markedToday = computed(() => this.todayPresent() + this.todayAbsent() + this.todayOpen());
+  readonly groupPerformance = computed(() => this.performanceByGroup().slice(0, 6));
+  readonly teacherPerformance = computed(() => this.performanceByTeacher().slice(0, 5));
+  readonly recentSessions = computed(() => this.sessions().slice(0, 6));
+
+  readonly alerts = computed<readonly AlertItem[]>(() => {
+    const alerts: AlertItem[] = [];
+    if (this.pendingJustifications().length > 0) {
+      alerts.push({
+        severity: 'warning',
+        title: `${this.pendingJustifications().length} justification(s) pending`,
+        description: 'Review requests so justified absences are reflected correctly.',
+        actionLabel: 'Review',
+        route: '/justifications',
+      });
+    }
+
+    if (this.groupsWithoutAttendanceToday() > 0) {
+      alerts.push({
+        severity: 'info',
+        title: `${this.groupsWithoutAttendanceToday()} group(s) without attendance`,
+        description: 'Check timetable coverage or missing session starts.',
+        actionLabel: 'Open structure',
+        route: '/structure',
+      });
+    }
+
+    const activeTooLong = this.activeSessions().filter((session) => new Date(session.endsAt) < new Date()).length;
+    if (activeTooLong > 0) {
+      alerts.push({
+        severity: 'critical',
+        title: `${activeTooLong} active session(s) past end time`,
+        description: 'Ask teachers to finalize sessions or verify live capture.',
+        actionLabel: 'Inspect',
+        route: '/attendance',
+      });
+    }
+
+    const weakGroup = this.groupPerformance().find((row) => row.rate > 0 && row.rate < 70);
+    if (weakGroup) {
+      alerts.push({
+        severity: 'critical',
+        title: `${weakGroup.label} needs follow-up`,
+        description: `Attendance is ${this.formatPercent(weakGroup.rate)} across captured sessions.`,
+        actionLabel: 'Audit',
+        route: '/attendance',
+      });
+    }
+
+    return alerts.length
+      ? alerts.slice(0, 4)
+      : [
+          {
+            severity: 'success',
+            title: 'No immediate blocker',
+            description: 'Attendance signals are stable based on loaded data.',
+            actionLabel: 'View sessions',
+            route: '/attendance',
+          },
+        ];
+  });
+
+  constructor() {
+    this.loadData();
+  }
+
+  loadData(): void {
+    this.loading.set(true);
+    this.errorMessage.set(null);
+
+    forkJoin({
+      overview: this.attendanceService.getOverview().pipe(
+        catchError(() => {
+          this.setPartialDataError();
+          return of(null as AdminAttendanceOverviewDto | null);
+        }),
+      ),
+      sessions: this.attendanceService
+        .getSessions({ page: 0, size: 250, sort: 'startedAt,desc' })
+        .pipe(this.withDashboardFallback(this.emptySessionPage())),
+      justifications: this.justificationService.getAll().pipe(this.withDashboardFallback<readonly AdminJustificationDto[]>([])),
+      students: this.studentService.getAll().pipe(this.withDashboardFallback<readonly AdminStudentDto[]>([])),
+      teachers: this.teacherService.getAll().pipe(this.withDashboardFallback<readonly AdminTeacherDto[]>([])),
+      studentInscriptions: this.inscriptionService
+        .getStudentInscriptions()
+        .pipe(this.withDashboardFallback<readonly AdminStudentInscriptionDto[]>([])),
+      teacherAssignments: this.inscriptionService
+        .getTeacherAssignments()
+        .pipe(this.withDashboardFallback<readonly AdminTeacherAssignmentDto[]>([])),
+      academicYears: this.yearService.getAll().pipe(this.withDashboardFallback<readonly AnneeUniversitaire[]>([])),
+      formations: this.formationService.getAll().pipe(this.withDashboardFallback<readonly Formation[]>([])),
+      groups: this.groupService.getAll().pipe(this.withDashboardFallback<readonly Groupe[]>([])),
+      modules: this.moduleService.getAll().pipe(this.withDashboardFallback<readonly Module[]>([])),
+      filieres: this.filiereService.getAll().pipe(this.withDashboardFallback<readonly Filiere[]>([])),
+    })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.loading.set(false)),
+      )
+      .subscribe({
+        next: (data) => {
+          this.overview.set(data.overview);
+          this.sessions.set(data.sessions.items);
+          this.justifications.set(data.justifications);
+          this.students.set(data.students);
+          this.teachers.set(data.teachers);
+          this.studentInscriptions.set(data.studentInscriptions);
+          this.teacherAssignments.set(data.teacherAssignments);
+          this.academicYears.set(data.academicYears);
+          this.formations.set(data.formations);
+          this.groups.set(data.groups);
+          this.modules.set(data.modules);
+          this.filieres.set(data.filieres);
+          this.lastUpdated.set(new Date());
+        },
+        error: () => {
+          this.errorMessage.set('Unable to load the dashboard. Check backend services and auth.');
+        },
+      });
+  }
+
+  formatPercent(value: number): string {
+    return `${Math.round(value)}%`;
+  }
+
+  formatDateTime(value: string | Date | null): string {
+    if (!value) {
+      return 'Not refreshed yet';
+    }
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(value));
+  }
+
+  formatTimeRange(session: AdminAttendanceSessionSummaryDto): string {
+    const formatter = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const start = formatter.format(new Date(session.startedAt));
+    const end = formatter.format(new Date(session.endedAt ?? session.endsAt));
+    return `${start} - ${end}`;
+  }
+
+  groupLabel(groupIds: readonly number[]): string {
+    return groupIds.length ? groupIds.map((id) => this.groupName(id)).join(', ') : 'No group';
+  }
+
+  sessionRate(session: AdminAttendanceSessionSummaryDto): number {
+    return this.rate(session.presentCount, session.absentCount);
+  }
+
+  sessionStatusLabel(session: AdminAttendanceSessionSummaryDto): string {
+    return session.status === 'ACTIVE' ? 'Active' : 'Finalized';
+  }
+
+  barWidth(value: number, max: number): number {
+    if (value === 0 || max === 0) {
+      return 0;
+    }
+    return Math.max(4, Math.round((value / max) * 100));
+  }
+
+  badgeVariant(value: DashboardVariant): DashboardVariant {
+    return value;
+  }
+
+  alertVariant(severity: AlertSeverity): DashboardVariant {
+    switch (severity) {
+      case 'critical':
+        return 'error';
+      case 'warning':
+        return 'warning';
+      case 'success':
+        return 'success';
+      default:
+        return 'info';
+    }
+  }
+
+  severityLabel(severity: AlertSeverity): string {
+    switch (severity) {
+      case 'critical':
+        return 'Critical';
+      case 'warning':
+        return 'Warning';
+      case 'success':
+        return 'Stable';
+      default:
+        return 'Info';
+    }
+  }
+
+  setAnalyticsRange(range: AnalyticsRange): void {
+    this.analyticsRange.set(range);
+  }
+
+  setAnalyticsMode(mode: AnalyticsMode): void {
+    this.analyticsMode.set(mode);
+  }
+
+  openAnalytics(): void {
+    this.analyticsExpanded.set(true);
+  }
+
+  closeAnalytics(): void {
+    this.analyticsExpanded.set(false);
+  }
+
+  analyticsBarHeight(point: AnalyticsPoint): number {
+    return this.barWidth(point.absent, this.maxAnalyticsAbsences());
+  }
+
+  analyticsTooltip(point: AnalyticsPoint): string {
+    return `${point.detail}: ${point.absent} absent, ${point.sessions} session(s), ${this.formatPercent(point.rate)} attendance`;
+  }
+
+  private performanceByGroup(): readonly PerformanceRow[] {
+    const byGroup = new Map<number, { present: number; absent: number; sessions: number }>();
+    for (const session of this.sessions()) {
+      for (const groupId of session.groupIds) {
+        const current = byGroup.get(groupId) ?? { present: 0, absent: 0, sessions: 0 };
+        current.present += session.presentCount;
+        current.absent += session.absentCount;
+        current.sessions += 1;
+        byGroup.set(groupId, current);
+      }
+    }
+
+    return Array.from(byGroup.entries())
+      .map(([groupId, value]) => this.toPerformanceRow(this.groupName(groupId), `${value.sessions} session(s)`, value))
+      .sort((left, right) => left.rate - right.rate);
+  }
+
+  private performanceByTeacher(): readonly PerformanceRow[] {
+    const byTeacher = new Map<string, { present: number; absent: number; sessions: number }>();
+    for (const session of this.sessions()) {
+      const teacher = session.teacherFullName?.trim() || 'Teacher not provided';
+      const current = byTeacher.get(teacher) ?? { present: 0, absent: 0, sessions: 0 };
+      current.present += session.presentCount;
+      current.absent += session.absentCount;
+      current.sessions += 1;
+      byTeacher.set(teacher, current);
+    }
+
+    return Array.from(byTeacher.entries())
+      .map(([teacher, value]) => this.toPerformanceRow(teacher, `${value.sessions} session(s)`, value))
+      .sort((left, right) => left.rate - right.rate);
+  }
+
+  private toPerformanceRow(
+    label: string,
+    meta: string,
+    value: { present: number; absent: number },
+  ): PerformanceRow {
+    const rate = this.rate(value.present, value.absent);
+    return {
+      label,
+      meta,
+      rate,
+      present: value.present,
+      absent: value.absent,
+      variant: this.healthVariant(rate),
+    };
+  }
+
+  private groupName(groupId: number): string {
+    return this.groups().find((group) => group.id === groupId)?.name ?? `Group #${groupId}`;
+  }
+
+  private rate(present: number, absent: number): number {
+    const resolved = present + absent;
+    return resolved === 0 ? 0 : (present / resolved) * 100;
+  }
+
+  private percent(value: number, total: number): number {
+    return total === 0 ? 0 : Math.round((value / total) * 100);
+  }
+
+  private healthVariant(rate: number): DashboardVariant {
+    if (rate === 0) {
+      return 'neutral';
+    }
+    if (rate < 70) {
+      return 'error';
+    }
+    if (rate < 85) {
+      return 'warning';
+    }
+    return 'success';
+  }
+
+  private buildTimelineAnalytics(): readonly AnalyticsPoint[] {
+    if (this.analyticsRange() === 'year') {
+      return this.monthBuckets().map((month) => this.toAnalyticsPoint(month.label, month.detail, month.sessions));
+    }
+
+    return this.dayBuckets().map((day) => this.toAnalyticsPoint(day.label, day.detail, day.sessions));
+  }
+
+  private buildTimeAnalytics(): readonly AnalyticsPoint[] {
+    const sessions = this.sessionsInRange();
+    const buckets = [
+      { label: '06-08', detail: 'Early morning', from: 6, to: 8 },
+      { label: '08-10', detail: '08:00 - 10:00', from: 8, to: 10 },
+      { label: '10-12', detail: '10:00 - 12:00', from: 10, to: 12 },
+      { label: '12-14', detail: '12:00 - 14:00', from: 12, to: 14 },
+      { label: '14-16', detail: '14:00 - 16:00', from: 14, to: 16 },
+      { label: '16-18', detail: '16:00 - 18:00', from: 16, to: 18 },
+      { label: '18-20', detail: '18:00 - 20:00', from: 18, to: 20 },
+    ];
+
+    return buckets.map((bucket) =>
+      this.toAnalyticsPoint(
+        bucket.label,
+        bucket.detail,
+        sessions.filter((session) => {
+          const hour = new Date(session.startedAt).getHours();
+          return hour >= bucket.from && hour < bucket.to;
+        }),
+      ),
+    );
+  }
+
+  private dayBuckets(): ReadonlyArray<{
+    readonly label: string;
+    readonly detail: string;
+    readonly sessions: readonly AdminAttendanceSessionSummaryDto[];
+  }> {
+    const days = this.analyticsRange() === '14' ? 14 : this.analyticsRange() === 'month' ? this.currentMonthDayCount() : 30;
+    return Array.from({ length: days }, (_, index) => {
+      const date = new Date();
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() - (days - 1 - index));
+      return {
+        label: new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short' }).format(date),
+        detail: new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(date),
+        sessions: this.sessions().filter((session) => this.sameDay(session.startedAt, date)),
+      };
+    });
+  }
+
+  private monthBuckets(): ReadonlyArray<{
+    readonly label: string;
+    readonly detail: string;
+    readonly sessions: readonly AdminAttendanceSessionSummaryDto[];
+  }> {
+    return Array.from({ length: 12 }, (_, index) => {
+      const date = new Date();
+      date.setDate(1);
+      date.setHours(0, 0, 0, 0);
+      date.setMonth(date.getMonth() - (11 - index));
+      return {
+        label: new Intl.DateTimeFormat('fr-FR', { month: 'short' }).format(date),
+        detail: new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(date),
+        sessions: this.sessions().filter((session) => {
+          const startedAt = new Date(session.startedAt);
+          return startedAt.getFullYear() === date.getFullYear() && startedAt.getMonth() === date.getMonth();
+        }),
+      };
+    });
+  }
+
+  private sessionsInRange(): readonly AdminAttendanceSessionSummaryDto[] {
+    if (this.analyticsRange() === 'year') {
+      const oldestMonth = new Date();
+      oldestMonth.setDate(1);
+      oldestMonth.setHours(0, 0, 0, 0);
+      oldestMonth.setMonth(oldestMonth.getMonth() - 11);
+      return this.sessions().filter((session) => new Date(session.startedAt) >= oldestMonth);
+    }
+
+    const days = this.analyticsRange() === '14' ? 14 : this.analyticsRange() === 'month' ? this.currentMonthDayCount() : 30;
+    const from = new Date();
+    from.setHours(0, 0, 0, 0);
+    from.setDate(from.getDate() - (days - 1));
+    return this.sessions().filter((session) => new Date(session.startedAt) >= from);
+  }
+
+  private currentMonthDayCount(): number {
+    return new Date().getDate();
+  }
+
+  private toAnalyticsPoint(
+    label: string,
+    detail: string,
+    sessions: readonly AdminAttendanceSessionSummaryDto[],
+  ): AnalyticsPoint {
+    const present = sessions.reduce((total, session) => total + session.presentCount, 0);
+    const absent = sessions.reduce((total, session) => total + session.absentCount, 0);
+    const open = sessions.reduce((total, session) => total + session.unknownCount, 0);
+    return {
+      label,
+      detail,
+      absent,
+      present,
+      open,
+      sessions: sessions.length,
+      rate: this.rate(present, absent),
+    };
+  }
+
+  private isToday(value: string): boolean {
+    return this.sameDay(value, new Date());
+  }
+
+  private sameDay(value: string, date: Date): boolean {
+    const sessionDate = new Date(value);
+    return (
+      sessionDate.getFullYear() === date.getFullYear() &&
+      sessionDate.getMonth() === date.getMonth() &&
+      sessionDate.getDate() === date.getDate()
+    );
+  }
+
+  private withDashboardFallback<T>(fallback: T): OperatorFunction<T, T> {
+    return catchError(() => {
+      this.setPartialDataError();
+      return of(fallback);
+    });
+  }
+
+  private setPartialDataError(): void {
+    this.errorMessage.set('Some dashboard data could not be loaded. Check backend services and auth.');
+  }
+
+  private emptySessionPage(): PagedResponseDto<AdminAttendanceSessionSummaryDto> {
+    return {
+      items: [],
+      page: 0,
+      size: 0,
+      totalElements: 0,
+      totalPages: 0,
+    };
+  }
 }
