@@ -51,7 +51,9 @@ public class SecurityConfig {
                 "http://attendance-platform.ma",
                 "http://192.168.100.73:18080",
                 "https://yunoserver.tail8ea16a.ts.net",
-                "https://yunoserver.tail8ea16a.ts.net/*"
+                "https://yunoserver.tail8ea16a.ts.net/*",
+                "http://attendance-yuno.duckdns.org",
+                "https://attendance-yuno.duckdns.org"
         ));
         config.setAllowedMethods(List.of(
                 "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
