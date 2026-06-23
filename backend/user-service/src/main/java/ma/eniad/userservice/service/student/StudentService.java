@@ -33,6 +33,7 @@ import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
+import ma.eniad.userservice.repository.structure.GroupeRepository;
 import ma.eniad.userservice.service.UserContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,6 +47,7 @@ public class StudentService {
     private final UserRepository userRepository;
     private final StudentInscriptionRepository inscriptionRepository;
     private final AnneeUniversitaireRepository anneeUniversitaireRepository;
+    private final GroupeRepository groupeRepository;
     private final StudentMapper      studentMapper;
 
     @Value("${app.allowed-domain}")
@@ -99,6 +101,16 @@ public class StudentService {
 
     public List<StudentResponseDTO> getAll() {
         return studentRepository.findAll().stream()
+                .map(studentMapper::toResponse)
+                .toList();
+    }
+
+    public List<StudentResponseDTO> getByGroupeId(Long groupeId) {
+        if (!groupeRepository.existsById(groupeId)) {
+            throw new ResourceNotFoundException("Groupe not found");
+        }
+
+        return studentRepository.findByGroupeId(groupeId).stream()
                 .map(studentMapper::toResponse)
                 .toList();
     }

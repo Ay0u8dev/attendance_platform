@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,7 +19,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.springframework.web.bind.annotation.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
@@ -31,13 +31,13 @@ import ma.eniad.userservice.service.student.StudentService;
 @RestController
 @RequestMapping("users/student")
 public class StudentController {
+
     private final StudentService service;
 
     public StudentController(StudentService service) {
         this.service = service;
     }
 
-    // POST /users/student
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Student created successfully",
                     content = @Content(schema = @Schema(implementation = StudentResponseDTO.class))),
@@ -53,7 +53,6 @@ public class StudentController {
                 .body(service.create(request));
     }
 
-    // GET /users/student
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "List of students retrieved successfully",
                     content = @Content(mediaType = "application/json",
@@ -88,7 +87,19 @@ public class StudentController {
         return ResponseEntity.ok(service.updateCurrentProfilePhoto(file));
     }
 
-    // GET /users/student/{id}
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Students in group retrieved successfully",
+                    content = @Content(mediaType = "application/json",
+                            array = @io.swagger.v3.oas.annotations.media.ArraySchema(
+                                    schema = @Schema(implementation = StudentResponseDTO.class)))),
+            @ApiResponse(responseCode = "404", description = "Group not found",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @GetMapping("/groupe/{groupeId}")
+    public ResponseEntity<List<StudentResponseDTO>> getByGroupeId(@PathVariable Long groupeId) {
+        return ResponseEntity.ok(service.getByGroupeId(groupeId));
+    }
+
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Student retrieved successfully",
                     content = @Content(schema = @Schema(implementation = StudentResponseDTO.class))),
@@ -100,7 +111,6 @@ public class StudentController {
         return ResponseEntity.ok(service.getById(id));
     }
 
-    // PUT /users/student/{id}
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Student updated successfully",
                     content = @Content(schema = @Schema(implementation = StudentResponseDTO.class))),
@@ -114,11 +124,10 @@ public class StudentController {
     @RequireRole({"ADMIN"})
     @PutMapping("/{id}")
     public ResponseEntity<StudentResponseDTO> update(@PathVariable Long id,
-            @Valid @RequestBody StudentRequestDTO request) {
+                                                     @Valid @RequestBody StudentRequestDTO request) {
         return ResponseEntity.ok(service.update(id, request));
     }
 
-    // DELETE /users/student/{id}
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Student deleted successfully"),
             @ApiResponse(responseCode = "404", description = "Student not found",

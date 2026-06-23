@@ -9,7 +9,7 @@ http:
     auth:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/auth`)"
-      middlewares: ["strip-api-auth"]
+      middlewares: ["cors", "strip-api-auth"]
       service: auth-service
 
     user-public-profile-photos:
@@ -30,15 +30,20 @@ http:
     attendance-ws:
       entryPoints: ["web"]
       rule: "Path(`/api/ws/attendance/ws`)"
-      middlewares: ["strip-api-ws-attendance"]
+      middlewares: ["cors", "strip-api-ws-attendance"]
       service: attendance-service
 
-    # Attendance routes — protected, JWT required
     attendance:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/attendance`) && !PathPrefix(`/api/attendance/internal`)"
       middlewares: ["sanitize-auth-headers", "forward-auth", "strip-api-attendance"]
       service: attendance-service
+
+    justification:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/justifications`)"
+      middlewares: ["cors", "forward-auth", "strip-api-justification"]
+      service: justification-service
 
     qr:
       entryPoints: ["web"]
@@ -89,6 +94,10 @@ http:
         prefixes: ["/api"]
 
     strip-api-attendance:
+      stripPrefix:
+        prefixes: ["/api"]
+
+    strip-api-justification:
       stripPrefix:
         prefixes: ["/api"]
 
@@ -146,6 +155,11 @@ http:
       loadBalancer:
         servers:
           - url: "http://host.docker.internal:8083"
+
+    justification-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8085"
 
     qr-service:
       loadBalancer:

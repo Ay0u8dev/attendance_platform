@@ -1,5 +1,7 @@
 package ma.eniad.attendanceservice.service;
 
+import feign.Request;
+import feign.RetryableException;
 import ma.eniad.attendanceservice.client.UserServiceClient;
 import ma.eniad.attendanceservice.config.AttendanceSessionProperties;
 import ma.eniad.attendanceservice.dto.AttendanceSessionResponse;
@@ -18,8 +20,11 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.net.ConnectException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -191,6 +196,24 @@ class AttendanceSessionServiceTest {
         verify(liveAttendanceSessionStore, never()).initializeSession(any(), any());
     }
 
+    @Test
+    void createSessionReturnsServiceUnavailableWhenUserServiceIsDown() {
+        when(attendanceSessionRepository.existsByTeacherIdAndStatus(77L, AttendanceSessionStatus.ACTIVE)).thenReturn(false);
+        when(userServiceClient.getTeacherIdentity(77L))
+                .thenThrow(userServiceConnectionRefused());
+
+        assertThatThrownBy(() -> attendanceSessionService.createSession(77L, baseRequest()))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> {
+                    ResponseStatusException statusException = (ResponseStatusException) ex;
+                    assertThat(statusException.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                    assertThat(statusException.getReason()).isEqualTo("User service is unavailable");
+                });
+
+        verify(attendanceSessionRepository, never()).saveAndFlush(any());
+        verify(liveAttendanceSessionStore, never()).initializeSession(any(), any());
+    }
+
     private CreateAttendanceSessionRequest baseRequest() {
         return new CreateAttendanceSessionRequest(
                 List.of(1L, 2L, 1L),
@@ -198,6 +221,24 @@ class AttendanceSessionServiceTest {
                 "  Room B12  ",
                 " 34.6814 ",
                 " -1.9086 "
+        );
+    }
+
+    private RetryableException userServiceConnectionRefused() {
+        Request request = Request.create(
+                Request.HttpMethod.GET,
+                "http://localhost:8082/users/internal/teachers/77/identity",
+                Collections.emptyMap(),
+                null,
+                StandardCharsets.UTF_8
+        );
+        return new RetryableException(
+                -1,
+                "Connection refused",
+                Request.HttpMethod.GET,
+                new ConnectException("Connection refused"),
+                (Long) null,
+                request
         );
     }
 }

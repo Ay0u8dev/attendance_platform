@@ -1,0 +1,210 @@
+<!-- facial-recognition.html -->
+<div class="marking-page">
+
+  <!-- Session Header -->
+  <header class="session-header">
+    <div class="session-info">
+      <div class="session-badge">
+        <span class="session-dot"></span>
+        SESSION EN COURS
+      </div>
+      <span class="session-date">
+        <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+        {{ sessionInfo().date }}
+      </span>
+    </div>
+
+    <div class="session-main">
+      <h1 class="session-title">{{ sessionInfo().module }}</h1>
+      <button type="button" class="btn-end" [disabled]="ending()" (click)="endSession()">
+        <i class="fa-solid fa-circle-stop" aria-hidden="true"></i>
+        {{ ending() ? 'Finalisation...' : 'Terminer la session' }}
+      </button>
+    </div>
+
+    <div class="session-meta">
+      <span>
+        <i class="fa-solid fa-users" aria-hidden="true"></i>
+        {{ sessionInfo().group }}
+      </span>
+      <span>
+        <i class="fa-regular fa-clock" aria-hidden="true"></i>
+        {{ sessionInfo().time }}
+      </span>
+      <span>
+        <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+        {{ sessionInfo().location }}
+      </span>
+    </div>
+  </header>
+
+  <!-- Main Content: Video + Panels -->
+  <div class="recognition-layout">
+
+    <!-- Left: Video Feed -->
+    <div class="video-section">
+      <div class="video-card">
+        <div class="video-card-header">
+          <div class="live-badge">
+            <span class="live-dot"></span>
+            FLUX VIDÉO EN DIRECT
+          </div>
+          <div class="confidence-badge">
+            <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+            Confidence threshold: {{ confidenceThreshold }}%
+          </div>
+        </div>
+
+        <div class="video-feed">
+          <!-- Video placeholder with recognition overlay -->
+          <div class="video-placeholder">
+            <div class="video-bg-grid"></div>
+            <div class="camera-icon-wrap">
+              <i class="fa-solid fa-video" aria-hidden="true"></i>
+            </div>
+
+            <!-- Detection boxes overlay -->
+            @for (detection of activeDetections(); track detection.id) {
+              <div
+                class="detection-box"
+                [class.detection-confirmed]="detection.confirmed"
+                [style.left.%]="detection.x"
+                [style.top.%]="detection.y"
+                [style.width.%]="detection.w"
+                [style.height.%]="detection.h"
+              >
+                <div class="detection-label">
+                  <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+                  {{ detection.name }}
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="video-footer">
+            <span class="camera-info">
+              <i class="fa-solid fa-circle" style="color: #22c55e; font-size: 0.5rem;"></i>
+              Caméra #01 – Frontal AmphithéPtre
+            </span>
+            <div class="video-controls">
+              <button type="button" class="vid-btn" title="Zoom">
+                <i class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="vid-btn" title="Fullscreen">
+                <i class="fa-solid fa-expand" aria-hidden="true"></i>
+              </button>
+            </div>
+            <span class="uptime">
+              <i class="fa-regular fa-clock" aria-hidden="true"></i>
+              Uptime: {{ uptime }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Panels -->
+    <div class="panels-section">
+
+      <!-- Auto-identified panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+            Identifiés automatiquement
+          </h2>
+          <div class="panel-badge auto-badge">
+            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+            {{ autoIdentifiedCount() }} étudiants
+          </div>
+        </div>
+
+        <div class="panel-list">
+          @for (student of autoIdentified(); track student.id) {
+            <div class="panel-row">
+              <div class="student-cell">
+                <div class="avatar" [style.background]="student.avatarBg" [style.color]="student.avatarColor">
+                  {{ student.avatarInitials }}
+                </div>
+                <div class="student-info">
+                  <span class="student-name">{{ student.name }}</span>
+                  <span class="apogee">{{ student.apogee }}</span>
+                </div>
+              </div>
+              <div class="auto-status">
+                <i class="fa-solid fa-circle-check status-check" aria-label="Identifié"></i>
+              </div>
+            </div>
+          }
+        </div>
+
+        <button type="button" class="btn-see-all" (click)="seeAllStudents()">
+          Voir tous les étudiants ({{ autoIdentifiedCount() }}/{{ totalStudents() }})
+          <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <!-- Manual marking panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+            Marquage manuel
+          </h2>
+        </div>
+
+        <div class="manual-search-wrap">
+          <i class="fa-solid fa-magnifying-glass manual-search-icon" aria-hidden="true"></i>
+          <input
+            type="search"
+            class="manual-search-input"
+            placeholder="Rechercher un étudiant..."
+            [(ngModel)]="manualSearchQuery"
+          />
+        </div>
+
+        @if (manualSearchResults().length > 0) {
+          <div class="manual-results">
+            @for (student of manualSearchResults(); track student.id) {
+              <div class="manual-result-row">
+                <div class="student-cell">
+                  <div class="avatar" [style.background]="student.avatarBg" [style.color]="student.avatarColor">
+                    {{ student.avatarInitials }}
+                  </div>
+                  <div class="student-info">
+                    <span class="student-name">{{ student.name }}</span>
+                    <span class="apogee">{{ student.apogee }}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  class="btn-mark-present"
+                  [class.marked]="student.status === 'present'"
+                  (click)="markPresent(student.id)"
+                >
+                  @if (student.status === 'present') {
+                    <i class="fa-solid fa-check" aria-hidden="true"></i>
+                    Présent
+                  } @else {
+                    Marquer présent
+                  }
+                </button>
+              </div>
+            }
+          </div>
+        }
+
+        <button
+          type="button"
+          class="btn-mark-all-present"
+          (click)="markSelectedPresent()"
+        >
+          <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+          Marquer comme présent
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</div>

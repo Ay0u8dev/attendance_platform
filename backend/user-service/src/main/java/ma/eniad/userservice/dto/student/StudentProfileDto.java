@@ -20,3 +20,4 @@ public class StudentProfileDto {
     private boolean faceEnrolled;
     private LocalDateTime faceEnrolledAt;
 }
+

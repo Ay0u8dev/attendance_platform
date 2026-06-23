@@ -61,7 +61,7 @@ public class AttendanceRecord {
     private String numApogee;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(32)")
     private AttendanceStudentStatus status;
 
     @Enumerated(EnumType.STRING)

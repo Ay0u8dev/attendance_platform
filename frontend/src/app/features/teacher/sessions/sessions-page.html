@@ -1,0 +1,177 @@
+<section class="space-y-6">
+  <app-page-header
+    title="Attendance Sessions"
+    description="Track and manage your teaching sessions and student attendance records."
+    [meta]="totalElements() + ' sessions'"
+  ></app-page-header>
+
+  <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4">
+    <div>
+      <p class="text-sm font-semibold text-principalText">Historique des sessions</p>
+      <p class="text-xs text-secondaryText">{{ finalizedCount() }} sessions finalisees chargees</p>
+    </div>
+    <div class="flex gap-3">
+      <button
+        type="button"
+        class="rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-principalText transition-all hover:bg-surface-subtle"
+        (click)="loadSessions()"
+      >
+        Actualiser
+      </button>
+      <a
+        routerLink="/teacher/mark-attendance/start-session"
+        class="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-primary/90"
+      >
+        Start New Session
+      </a>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm font-semibold text-danger">
+      {{ error() }}
+    </div>
+  }
+
+  <div class="overflow-hidden rounded-2xl border border-line bg-surface">
+    <div class="sessions-grid border-b border-line bg-surface-subtle px-5 py-3 text-xs font-bold uppercase text-secondaryText">
+      <span>Cours</span>
+      <span>Date</span>
+      <span>Presence</span>
+      <span>Statut</span>
+      <span>Actions</span>
+    </div>
+
+    @if (loading()) {
+      <div class="p-8 text-center text-sm text-secondaryText">Chargement...</div>
+    } @else if (sessions().length === 0) {
+      <div class="p-12 text-center">
+        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+          <i class="fa-regular fa-calendar-check text-2xl"></i>
+        </div>
+        <h3 class="mt-6 text-xl font-bold text-principalText">Aucune session</h3>
+        <p class="mt-2 text-secondaryText">Demarrez une session pour voir l historique ici.</p>
+      </div>
+    } @else {
+      @for (session of sessions(); track session.sessionId) {
+        <div class="sessions-grid items-center border-b border-line px-5 py-4 last:border-b-0">
+          <div class="min-w-0">
+            <p class="truncate font-semibold text-principalText">{{ session.courseLabel }}</p>
+            <p class="truncate text-xs text-secondaryText">
+              {{ session.roomLabel || 'Salle non renseignee' }} | Groupes {{ session.groupIds.join(', ') }}
+            </p>
+          </div>
+          <span class="text-sm text-secondaryText">{{ session.startedAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+          <div class="text-sm text-secondaryText">
+            <span class="font-bold text-principalText">{{ attendanceRate(session) }}%</span>
+            <span> ({{ session.presentCount }} presents)</span>
+          </div>
+          <div class="status-cell">
+            <app-status-badge
+              [label]="session.status"
+              [variant]="statusVariant(session)"
+            ></app-status-badge>
+          </div>
+          <div class="actions-cell flex justify-end">
+            <button
+              type="button"
+              class="action-btn action-btn-neutral"
+              [disabled]="loadingDetails()"
+              (click)="openDetails(session)"
+            >
+              <i class="fa-regular fa-eye" aria-hidden="true"></i>
+              Voir details
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</section>
+
+@if (selectedSession(); as session) {
+  <div class="modal-backdrop" (click)="closeDetails()">
+    <div class="details-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="min-w-0">
+          <p class="modal-eyebrow">Session</p>
+          <h2 class="modal-title">{{ session.courseLabel }}</h2>
+          <p class="modal-subtitle">
+            {{ session.roomLabel || 'Salle non renseignee' }} -
+            {{ session.startedAt | date: 'dd/MM/yyyy HH:mm' }}
+          </p>
+        </div>
+        <button type="button" class="icon-btn" aria-label="Fermer" (click)="closeDetails()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="details-summary">
+        <span><strong>{{ session.presentCount ?? 0 }}</strong> presents</span>
+        <span><strong>{{ session.absentCount ?? 0 }}</strong> absents</span>
+        <span><strong>{{ session.unknownCount ?? 0 }}</strong> inconnus</span>
+      </div>
+
+      @if (session.status !== 'FINALIZED') {
+        <a
+          class="resume-session-btn"
+          [routerLink]="resumeSessionRoute(session)"
+          [queryParams]="{ sessionId: session.sessionId }"
+        >
+          <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+          Continuer et terminer la session
+        </a>
+      }
+
+      @if (detailError()) {
+        <div class="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm font-semibold text-danger">
+          {{ detailError() }}
+        </div>
+      }
+
+      <div class="students-list">
+        @for (student of session.students ?? []; track student.studentId) {
+          <div class="student-row">
+            <div class="student-main">
+              <div class="avatar">
+                {{ student.firstName.charAt(0) }}{{ student.lastName.charAt(0) }}
+              </div>
+              <div class="min-w-0">
+                <p class="student-name">{{ student.firstName }} {{ student.lastName }}</p>
+                <p class="student-meta">Apogee {{ student.numApogee }} - Groupe {{ student.groupId }}</p>
+              </div>
+            </div>
+
+            <app-status-badge
+              [label]="studentStatusLabel(student.status)"
+              [variant]="studentStatusVariant(student.status)"
+            ></app-status-badge>
+
+            <div class="student-actions">
+              <button
+                type="button"
+                class="status-btn present"
+                [class.active]="student.status === 'PRESENT'"
+                [disabled]="updatingStudentId() === student.studentId"
+                (click)="updateStudentStatus(student, 'PRESENT')"
+              >
+                Present
+              </button>
+              <button
+                type="button"
+                class="status-btn absent"
+                [class.active]="student.status === 'ABSENT'"
+                [disabled]="updatingStudentId() === student.studentId"
+                (click)="updateStudentStatus(student, 'ABSENT')"
+              >
+                Absent
+              </button>
+            </div>
+          </div>
+        } @empty {
+          <div class="empty-students">Aucun etudiant dans cette session.</div>
+        }
+      </div>
+    </div>
+  </div>
+}

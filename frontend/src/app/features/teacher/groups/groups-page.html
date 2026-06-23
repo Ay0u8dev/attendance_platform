@@ -1,0 +1,79 @@
+<section class="space-y-6">
+  <app-page-header
+    title="My Groups"
+    description="Manage student cohorts and tutorial groups for your active modules."
+    [meta]="groupItems().length + ' student groups'"
+  ></app-page-header>
+
+  @if (error()) {
+    <div class="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm font-semibold text-danger">
+      {{ error() }}
+    </div>
+  }
+
+  <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    @if (loading()) {
+      <div class="rounded-3xl border border-line bg-surface p-6 text-secondaryText">Chargement...</div>
+    }
+
+    @for (group of groupItems(); track group.id) {
+      <div class="flex flex-col rounded-3xl border border-line bg-surface p-5 transition-all duration-200 hover:border-primary-soft hover:shadow-shell">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-soft text-primary font-bold">
+              {{ group.name }}
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-principalText">{{ group.name }}</h3>
+              <p class="text-xs text-secondaryText">{{ group.type }}</p>
+            </div>
+          </div>
+          <button routerLink="/teacher/sessions" class="h-8 w-8 rounded-lg text-secondaryText hover:bg-surface-subtle transition-colors">
+            <i class="fa-solid fa-ellipsis-vertical"></i>
+          </button>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-line/50">
+          <div class="flex items-center justify-between text-sm mb-1">
+            <span class="text-secondaryText">Module</span>
+            <span class="font-medium text-principalText">{{ group.module }}</span>
+          </div>
+          <div class="flex items-center justify-between text-sm mb-1">
+            <span class="text-secondaryText">Students</span>
+            <span class="font-medium text-principalText">{{ group.students }} students</span>
+          </div>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-secondaryText">Next Session</span>
+            <span class="font-medium text-primary">{{ group.nextSession }}</span>
+          </div>
+        </div>
+
+        <div class="mt-5 space-y-2">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-semibold text-secondaryText">Average Attendance</span>
+            <span class="font-bold text-principalText">{{ group.attendanceRate }}%</span>
+          </div>
+          <div class="h-2 w-full rounded-full bg-line/30 overflow-hidden">
+            <div 
+              class="h-full bg-linear-to-r from-primary to-primary-soft transition-all duration-1000"
+              [style.width.%]="group.attendanceRate"
+            ></div>
+          </div>
+        </div>
+
+        <div class="mt-6 flex gap-2">
+          <button
+            routerLink="/teacher/students"
+            [queryParams]="{ groupId: group.id, groupName: group.name }"
+            class="flex-1 rounded-xl bg-surface-subtle border border-line py-2 text-xs font-bold text-principalText transition-colors hover:bg-line/50"
+          >
+            View List
+          </button>
+          <button routerLink="/teacher/mark-attendance/start-session" class="flex-1 rounded-xl bg-primary py-2 text-xs font-bold text-white transition-shadow hover:shadow-lg">
+            Mark Session
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+</section>
