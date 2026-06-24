@@ -23,9 +23,7 @@ def _env(name: str, default: str) -> str:
 
 
 ATTENDANCE_SERVICE_URL = _env("ATTENDANCE_SERVICE_URL", "http://localhost:8083").rstrip("/")
-QR_ATTENDANCE_INTERNAL_TOKEN = _env("QR_ATTENDANCE_INTERNAL_TOKEN")
-if not QR_ATTENDANCE_INTERNAL_TOKEN:
-    raise RuntimeError("QR_ATTENDANCE_INTERNAL_TOKEN must be set for inter-service security")
+QR_ATTENDANCE_INTERNAL_TOKEN = _env("QR_ATTENDANCE_INTERNAL_TOKEN", "")
 QR_TOKEN_SECRET = _env("QR_TOKEN_SECRET", "dev-only-change-me")
 QR_TOKEN_TTL_SECONDS = int(_env("QR_TOKEN_TTL_SECONDS", "30"))
 QR_TOKEN_VERSION = b"AQR1"
@@ -108,6 +106,12 @@ async def scan_student_qr(
         "gpsLat": normalize_optional(request.gpsLat),
         "gpsLon": normalize_optional(request.gpsLon),
     }
+
+    if not QR_ATTENDANCE_INTERNAL_TOKEN:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Internal attendance authentication is not configured",
+        )
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         attendance_response = await client.post(
