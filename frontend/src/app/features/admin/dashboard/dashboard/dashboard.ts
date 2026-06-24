@@ -28,6 +28,10 @@ import { GroupeService } from '../../../../core/structure/services/groupe.servic
 import { ModuleService } from '../../../../core/structure/services/module.service';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { StatusBadge } from '../../../../shared/components/status-badge/status-badge';
+import {
+  AbsenceAnalyticsPoint,
+  AbsenceLineChart,
+} from '../components/absence-line-chart/absence-line-chart';
 
 type DashboardVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral';
 type AlertSeverity = 'critical' | 'warning' | 'info' | 'success';
@@ -49,16 +53,6 @@ interface DistributionSegment {
   readonly variant: DashboardVariant;
 }
 
-interface AnalyticsPoint {
-  readonly label: string;
-  readonly detail: string;
-  readonly absent: number;
-  readonly present: number;
-  readonly open: number;
-  readonly sessions: number;
-  readonly rate: number;
-}
-
 interface PerformanceRow {
   readonly label: string;
   readonly meta: string;
@@ -78,7 +72,7 @@ interface AlertItem {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, Modal, StatusBadge],
+  imports: [RouterLink, Modal, StatusBadge, AbsenceLineChart],
   templateUrl: './dashboard.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -213,10 +207,9 @@ export class Dashboard {
     ];
   });
 
-  readonly analyticsPoints = computed<readonly AnalyticsPoint[]>(() =>
+  readonly analyticsPoints = computed<readonly AbsenceAnalyticsPoint[]>(() =>
     this.analyticsMode() === 'time' ? this.buildTimeAnalytics() : this.buildTimelineAnalytics(),
   );
-  readonly maxAnalyticsAbsences = computed(() => Math.max(1, ...this.analyticsPoints().map((point) => point.absent)));
   readonly markedToday = computed(() => this.todayPresent() + this.todayAbsent() + this.todayOpen());
   readonly groupPerformance = computed(() => this.performanceByGroup().slice(0, 6));
   readonly teacherPerformance = computed(() => this.performanceByTeacher().slice(0, 5));
@@ -426,14 +419,6 @@ export class Dashboard {
     this.analyticsExpanded.set(false);
   }
 
-  analyticsBarHeight(point: AnalyticsPoint): number {
-    return this.barWidth(point.absent, this.maxAnalyticsAbsences());
-  }
-
-  analyticsTooltip(point: AnalyticsPoint): string {
-    return `${point.detail}: ${point.absent} absent, ${point.sessions} session(s), ${this.formatPercent(point.rate)} attendance`;
-  }
-
   private performanceByGroup(): readonly PerformanceRow[] {
     const byGroup = new Map<number, { present: number; absent: number; sessions: number }>();
     for (const session of this.sessions()) {
@@ -509,7 +494,7 @@ export class Dashboard {
     return 'success';
   }
 
-  private buildTimelineAnalytics(): readonly AnalyticsPoint[] {
+  private buildTimelineAnalytics(): readonly AbsenceAnalyticsPoint[] {
     if (this.analyticsRange() === 'year') {
       return this.monthBuckets().map((month) => this.toAnalyticsPoint(month.label, month.detail, month.sessions));
     }
@@ -517,7 +502,7 @@ export class Dashboard {
     return this.dayBuckets().map((day) => this.toAnalyticsPoint(day.label, day.detail, day.sessions));
   }
 
-  private buildTimeAnalytics(): readonly AnalyticsPoint[] {
+  private buildTimeAnalytics(): readonly AbsenceAnalyticsPoint[] {
     const sessions = this.sessionsInRange();
     const buckets = [
       { label: '06-08', detail: 'Early morning', from: 6, to: 8 },
@@ -604,7 +589,7 @@ export class Dashboard {
     label: string,
     detail: string,
     sessions: readonly AdminAttendanceSessionSummaryDto[],
-  ): AnalyticsPoint {
+  ): AbsenceAnalyticsPoint {
     const present = sessions.reduce((total, session) => total + session.presentCount, 0);
     const absent = sessions.reduce((total, session) => total + session.absentCount, 0);
     const open = sessions.reduce((total, session) => total + session.unknownCount, 0);

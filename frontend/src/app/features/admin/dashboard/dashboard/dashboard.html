@@ -138,36 +138,12 @@
       </div>
     </div>
 
-    <button
-      type="button"
-      class="mt-6 block w-full rounded-3xl border border-line bg-surface-subtle p-5 text-left shadow-inner transition hover:border-primary-soft hover:bg-primary-soft/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-      aria-label="Expand absence analytics chart"
-      (click)="openAnalytics()"
-    >
-      <div class="min-h-80 overflow-x-auto">
-        <div class="flex min-w-[52rem] items-end gap-3 pt-6">
-          @for (point of analyticsPoints(); track point.label + point.detail) {
-            <div class="group flex min-w-16 flex-1 flex-col items-center gap-3" [attr.title]="analyticsTooltip(point)">
-              <div class="relative flex h-56 w-full items-end rounded-2xl border border-line bg-surface px-2 pb-2 shadow-sm">
-                <span
-                  class="w-full rounded-t-xl bg-danger transition-all group-hover:bg-danger"
-                  [style.height.%]="analyticsBarHeight(point)"
-                ></span>
-                <span
-                  class="absolute -top-5 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-principalText shadow-card group-hover:block"
-                >
-                  {{ point.absent }} absent - {{ point.sessions }} session(s)
-                </span>
-              </div>
-              <div class="text-center">
-                <p class="text-sm font-semibold text-principalText">{{ point.absent }}</p>
-                <p class="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-muted">{{ point.label }}</p>
-              </div>
-            </div>
-          }
-        </div>
-      </div>
-    </button>
+    <div class="mt-6">
+      <app-absence-line-chart
+        [points]="analyticsPoints()"
+        (expandRequested)="openAnalytics()"
+      ></app-absence-line-chart>
+    </div>
   </section>
 
   <section class="grid gap-6 xl:grid-cols-2">
@@ -411,31 +387,10 @@
         }
       </div>
 
-      <div class="rounded-3xl border border-line bg-surface-subtle p-5">
-        <div class="max-h-[34rem] overflow-x-auto pb-3">
-          <div class="flex min-w-[68rem] items-end gap-3 pt-8">
-            @for (point of analyticsPoints(); track point.label + point.detail) {
-              <div class="group flex min-w-20 flex-1 flex-col items-center gap-3" [attr.title]="analyticsTooltip(point)">
-                <div class="relative flex h-80 w-full items-end rounded-2xl border border-line bg-surface px-2 pb-2 shadow-sm">
-                  <span
-                    class="w-full rounded-t-xl bg-danger transition-all group-hover:bg-danger"
-                    [style.height.%]="analyticsBarHeight(point)"
-                  ></span>
-                  <span
-                    class="absolute -top-7 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-principalText shadow-card group-hover:block"
-                  >
-                    {{ point.absent }} absent - {{ point.sessions }} session(s) - {{ formatPercent(point.rate) }}
-                  </span>
-                </div>
-                <div class="text-center">
-                  <p class="text-base font-semibold text-principalText">{{ point.absent }}</p>
-                  <p class="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-muted">{{ point.label }}</p>
-                </div>
-              </div>
-            }
-          </div>
-        </div>
-      </div>
+      <app-absence-line-chart
+        [points]="analyticsPoints()"
+        [expanded]="true"
+      ></app-absence-line-chart>
     </div>
   </app-modal>
 </section>
