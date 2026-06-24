@@ -9,11 +9,11 @@ import {
   PagedResponseDto,
 } from '../../../../core/admin/models/admin-attendance.model';
 import { AdminStudentInscriptionDto, AdminTeacherAssignmentDto } from '../../../../core/admin/models/admin-inscription.model';
-import { AdminJustificationDto } from '../../../../core/admin/models/admin-justification.model';
+import { JustificationDto } from '../../../../core/justifications/justification.model';
 import { AdminStudentDto, AdminTeacherDto } from '../../../../core/admin/models/admin-user.model';
 import { AdminAttendanceService } from '../../../../core/admin/services/admin-attendance.service';
 import { AdminInscriptionService } from '../../../../core/admin/services/admin-inscription.service';
-import { AdminJustificationService } from '../../../../core/admin/services/admin-justification.service';
+import { JustificationService } from '../../../../core/justifications/justification.service';
 import { AdminStudentService } from '../../../../core/admin/services/admin-student.service';
 import { AdminTeacherService } from '../../../../core/admin/services/admin-teacher.service';
 import { AnneeUniversitaire } from '../../../../core/structure/models/annee-universitaire.model';
@@ -78,7 +78,7 @@ interface AlertItem {
 })
 export class Dashboard {
   private readonly attendanceService = inject(AdminAttendanceService);
-  private readonly justificationService = inject(AdminJustificationService);
+  private readonly justificationService = inject(JustificationService);
   private readonly studentService = inject(AdminStudentService);
   private readonly teacherService = inject(AdminTeacherService);
   private readonly inscriptionService = inject(AdminInscriptionService);
@@ -91,7 +91,7 @@ export class Dashboard {
 
   readonly overview = signal<AdminAttendanceOverviewDto | null>(null);
   readonly sessions = signal<readonly AdminAttendanceSessionSummaryDto[]>([]);
-  readonly justifications = signal<readonly AdminJustificationDto[]>([]);
+  readonly justifications = signal<readonly JustificationDto[]>([]);
   readonly students = signal<readonly AdminStudentDto[]>([]);
   readonly teachers = signal<readonly AdminTeacherDto[]>([]);
   readonly studentInscriptions = signal<readonly AdminStudentInscriptionDto[]>([]);
@@ -290,7 +290,9 @@ export class Dashboard {
       sessions: this.attendanceService
         .getSessions({ page: 0, size: 250, sort: 'startedAt,desc' })
         .pipe(this.withDashboardFallback(this.emptySessionPage())),
-      justifications: this.justificationService.getAll().pipe(this.withDashboardFallback<readonly AdminJustificationDto[]>([])),
+      justifications: this.justificationService
+        .getAdminJustifications()
+        .pipe(this.withDashboardFallback<readonly JustificationDto[]>([])),
       students: this.studentService.getAll().pipe(this.withDashboardFallback<readonly AdminStudentDto[]>([])),
       teachers: this.teacherService.getAll().pipe(this.withDashboardFallback<readonly AdminTeacherDto[]>([])),
       studentInscriptions: this.inscriptionService

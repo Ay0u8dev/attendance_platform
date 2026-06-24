@@ -1,0 +1,93 @@
+<section class="space-y-6">
+  <app-page-header
+    title="My Modules"
+    description="View and manage the academic modules assigned to you for this semester."
+    [meta]="moduleItems().length + ' active modules'"
+  ></app-page-header>
+
+  @if (error()) {
+    <div class="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm font-semibold text-danger">
+      {{ error() }}
+    </div>
+  }
+
+  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+    @if (loading()) {
+      <div class="rounded-3xl border border-line bg-surface p-6 text-secondaryText">Chargement...</div>
+    }
+
+    @for (module of moduleItems(); track module.id) {
+      <div class="group relative flex flex-col overflow-hidden rounded-3xl border border-line bg-surface p-6 transition-all duration-300 hover:border-primary-soft hover:shadow-shell hover:-translate-y-1">
+        <div 
+          class="absolute top-0 right-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full opacity-5 transition-transform duration-500 group-hover:scale-110"
+          [class]="module.color"
+        ></div>
+
+        <div class="flex items-start justify-between">
+          <div 
+            class="flex h-12 w-12 items-center justify-center rounded-2xl border border-line bg-surface-subtle text-xl transition-colors duration-300 group-hover:border-primary-soft group-hover:bg-primary-soft group-hover:text-primary"
+          >
+            <i [class]="module.icon"></i>
+          </div>
+          <span class="rounded-lg bg-surface-subtle px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-wider text-secondaryText border border-line">
+            {{ module.code }}
+          </span>
+        </div>
+
+        <div class="mt-5">
+          <h3 class="text-lg font-bold text-principalText leading-tight">{{ module.name }}</h3>
+          <p class="mt-1 text-sm text-secondaryText">{{ module.program }}</p>
+        </div>
+
+        <div class="mt-8 space-y-4">
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-xs font-medium">
+              <span class="text-secondaryText">Curriculum Progress</span>
+              <span class="text-principalText">{{ module.progress }}%</span>
+            </div>
+            <div class="h-1.5 w-full overflow-hidden rounded-full bg-line/50">
+              <div 
+                class="h-full bg-primary transition-all duration-1000 ease-out"
+                [style.width.%]="module.progress"
+              ></div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 pt-2">
+            <div class="rounded-2xl bg-surface-subtle border border-line p-3">
+              <p class="text-[0.65rem] font-bold uppercase tracking-wider text-secondaryText">Students</p>
+              <p class="mt-0.5 text-lg font-bold text-principalText">{{ module.students }}</p>
+            </div>
+            <div class="rounded-2xl bg-surface-subtle border border-line p-3">
+              <p class="text-[0.65rem] font-bold uppercase tracking-wider text-secondaryText">Sessions</p>
+              <p class="mt-0.5 text-lg font-bold text-principalText">{{ module.sessions }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 flex items-center gap-3">
+          <button 
+            routerLink="/teacher/sessions"
+            class="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-primary/90 hover:shadow-lg active:scale-[0.98]"
+          >
+            View Details
+          </button>
+          <button 
+            routerLink="/teacher/mark-attendance/start-session"
+            class="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
+          >
+            <i class="fa-solid fa-gear text-sm"></i>
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Add Module Placeholder -->
+    <button routerLink="/teacher/mark-attendance/start-session" class="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-line bg-transparent p-6 text-secondaryText transition-all duration-200 hover:border-primary-soft hover:bg-primary-soft/10 hover:text-primary group">
+      <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-line/50 text-xl transition-colors duration-200 group-hover:bg-primary-soft">
+        <i class="fa-solid fa-plus"></i>
+      </div>
+      <span class="mt-4 text-sm font-semibold">Request Module Assignment</span>
+    </button>
+  </div>
+</section>

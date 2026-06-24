@@ -1,0 +1,24 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    openfeign:
+      okhttp:
+        enabled: true
+
+  datasource:
+    url: jdbc:postgresql://attendance-db:5432/attendance_db
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+services:
+  attendance-service:
+    url: http://attendance-service:8080

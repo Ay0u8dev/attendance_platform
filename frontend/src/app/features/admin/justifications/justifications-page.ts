@@ -3,18 +3,18 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 
 import {
-  AdminJustificationDto,
-  AdminJustificationStatus,
-} from '../../../core/admin/models/admin-justification.model';
-import { fullName, initials } from '../../../core/admin/models/admin-user.model';
-import { AdminJustificationService } from '../../../core/admin/services/admin-justification.service';
+  JustificationDto,
+  JustificationStatus,
+} from '../../../core/justifications/justification.model';
+import { JustificationService } from '../../../core/justifications/justification.service';
+import { initials } from '../../../core/admin/models/admin-user.model';
 import { Button } from '../../../shared/components/button/button';
 import { DropdownFilter } from '../../../shared/components/dropdown-filter/dropdown-filter';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
 import { ToastService } from '../../../shared/components/toast/toast.service';
 
-type TabKey = 'ALL' | AdminJustificationStatus;
+type TabKey = 'ALL' | JustificationStatus;
 type FilterKey = 'module' | 'group' | 'search';
 type Option = { readonly value: string; readonly label: string };
 
@@ -198,7 +198,7 @@ type Option = { readonly value: string; readonly label: string };
                           {{ item.courseLabel }} - {{ groupLabel(item.groupId) }}
                         </span>
                         <span class="mt-0.5 block truncate text-xs text-muted">
-                          Apogee {{ item.numApogee }} - {{ formatDateTime(item.absenceStartedAt) }}
+                          Apogee {{ item.studentCode || '-' }} - {{ formatDateTime(item.absenceStartedAt) }}
                         </span>
                       </span>
                     </button>
@@ -280,9 +280,11 @@ type Option = { readonly value: string; readonly label: string };
                   {{ avatar(detail) }}
                 </span>
                 <div class="min-w-0">
-                  <p class="truncate font-semibold text-principalText">{{ detail.studentEmail }}</p>
+                  <p class="truncate font-semibold text-principalText">
+                    {{ detail.studentEmail || 'Email not provided' }}
+                  </p>
                   <p class="mt-1 text-sm text-secondaryText">
-                    Apogee {{ detail.numApogee }} - {{ groupLabel(detail.groupId) }}
+                    Apogee {{ detail.studentCode || '-' }} - {{ groupLabel(detail.groupId) }}
                   </p>
                 </div>
               </div>
@@ -299,7 +301,7 @@ type Option = { readonly value: string; readonly label: string };
                     Teacher
                   </p>
                   <p class="mt-1 text-sm font-semibold text-principalText">
-                    {{ detail.teacherFullName || 'Not provided' }}
+                    {{ detail.teacherName || 'Not provided' }}
                   </p>
                 </div>
                 <div class="rounded-2xl border border-line p-3">
@@ -324,7 +326,9 @@ type Option = { readonly value: string; readonly label: string };
                 <p class="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted">
                   Student motive
                 </p>
-                <p class="mt-2 text-sm leading-6 text-principalText">{{ detail.motive }}</p>
+                <p class="mt-2 text-sm leading-6 text-principalText">
+                  {{ detail.reason || 'No reason provided' }}
+                </p>
               </section>
 
               <section class="rounded-2xl border border-line p-4">
@@ -340,9 +344,11 @@ type Option = { readonly value: string; readonly label: string };
                   </span>
                   <div class="min-w-0">
                     <p class="truncate text-sm font-semibold text-principalText">
-                      {{ detail.attachmentLabel || 'No attachment label' }}
+                      {{ attachmentName(detail.attachmentUrl) }}
                     </p>
-                    <p class="text-xs text-secondaryText">Stored metadata from attendance-service</p>
+                    <p class="text-xs text-secondaryText">
+                      {{ detail.attachmentUrl ? 'Student-provided attachment' : 'No attachment provided' }}
+                    </p>
                   </div>
                 </div>
               </section>
@@ -361,11 +367,11 @@ type Option = { readonly value: string; readonly label: string };
                     class="mt-2 w-full resize-none rounded-xl border border-line bg-surface-subtle px-3 py-2.5 text-sm leading-6 text-principalText outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-soft disabled:cursor-not-allowed disabled:text-muted"
                   ></textarea>
                 </label>
-                @if (detail.reviewedAt) {
+                @if (detail.decidedAt) {
                   <p class="mt-2 text-xs text-secondaryText">
-                    Reviewed {{ formatDateTime(detail.reviewedAt) }}
-                    @if (detail.reviewedBy) {
-                      <span> by admin #{{ detail.reviewedBy }}</span>
+                    Reviewed {{ formatDateTime(detail.decidedAt) }}
+                    @if (detail.decidedBy) {
+                      <span> by {{ detail.decidedByRole || 'reviewer' }} #{{ detail.decidedBy }}</span>
                     }
                   </p>
                 }
@@ -411,7 +417,7 @@ type Option = { readonly value: string; readonly label: string };
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class JustificationsPage {
-  private readonly justificationService = inject(AdminJustificationService);
+  private readonly justificationService = inject(JustificationService);
   private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -422,7 +428,7 @@ export class JustificationsPage {
     { key: 'REJECTED', label: 'Rejected' },
   ];
 
-  readonly justifications = signal<readonly AdminJustificationDto[]>([]);
+  readonly justifications = signal<readonly JustificationDto[]>([]);
   readonly activeTab = signal<TabKey>('ALL');
   readonly moduleFilter = signal('all');
   readonly groupFilter = signal('all');
@@ -464,7 +470,11 @@ export class JustificationsPage {
   });
 
   readonly groupOptions = computed<Option[]>(() => {
-    const groupIds = new Set(this.justifications().map((item) => item.groupId));
+    const groupIds = new Set(
+      this.justifications()
+        .map((item) => item.groupId)
+        .filter((id): id is number => id !== null),
+    );
     return Array.from(groupIds)
       .sort((a, b) => a - b)
       .map((id) => ({ value: String(id), label: this.groupLabel(id) }));
@@ -496,7 +506,7 @@ export class JustificationsPage {
 
   readonly pendingCount = computed(() => this.countFor('PENDING'));
 
-  readonly selected = computed<AdminJustificationDto | null>(() => {
+  readonly selected = computed<JustificationDto | null>(() => {
     const id = this.selectedId();
     if (!id) {
       return null;
@@ -535,7 +545,7 @@ export class JustificationsPage {
     this.errorMessage.set(null);
 
     this.justificationService
-      .getAll()
+      .getAdminJustifications()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isLoading.set(false)),
@@ -551,11 +561,11 @@ export class JustificationsPage {
           if (!selectedStillExists) {
             const firstItem = items[0] ?? null;
             this.selectedId.set(firstItem?.id ?? null);
-            this.reviewComment.set(firstItem?.adminComment ?? '');
+            this.reviewComment.set(firstItem?.decisionComment ?? '');
           }
         },
         error: () => {
-          this.errorMessage.set('Unable to load justifications from attendance-service.');
+          this.errorMessage.set('Unable to load justifications from justification-service.');
         },
       });
   }
@@ -611,22 +621,22 @@ export class JustificationsPage {
     this.reviewComment.set(target.value);
   }
 
-  select(item: AdminJustificationDto): void {
+  select(item: JustificationDto): void {
     this.selectedId.set(item.id);
-    this.reviewComment.set(item.adminComment ?? '');
+    this.reviewComment.set(item.decisionComment ?? '');
   }
 
-  review(id: number, status: Exclude<AdminJustificationStatus, 'PENDING'>): void {
+  review(id: number, status: Exclude<JustificationStatus, 'PENDING'>): void {
     const item = this.justifications().find((candidate) => candidate.id === id);
     if (!item || item.status !== 'PENDING' || this.savingReviewId()) {
       return;
     }
 
-    const adminComment = id === this.selectedId() ? this.reviewComment().trim() : '';
+    const decisionComment = id === this.selectedId() ? this.reviewComment().trim() : '';
     this.savingReviewId.set(id);
 
     this.justificationService
-      .review(id, { status, adminComment: adminComment || null })
+      .decide(id, { status, comment: decisionComment || null })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.savingReviewId.set(null)),
@@ -637,7 +647,7 @@ export class JustificationsPage {
             items.map((candidate) => (candidate.id === updated.id ? updated : candidate)),
           );
           this.selectedId.set(updated.id);
-          this.reviewComment.set(updated.adminComment ?? '');
+          this.reviewComment.set(updated.decisionComment ?? '');
           this.toast.success(status === 'APPROVED' ? 'Justification approved' : 'Justification rejected');
         },
         error: () => {
@@ -650,19 +660,19 @@ export class JustificationsPage {
     return value === 'all' ? null : value;
   }
 
-  studentName(item: AdminJustificationDto): string {
-    return fullName(item.studentFirstName, item.studentLastName) || item.studentEmail;
+  studentName(item: JustificationDto): string {
+    return item.studentName || item.studentEmail || `Student #${item.studentId}`;
   }
 
-  avatar(item: AdminJustificationDto): string {
+  avatar(item: JustificationDto): string {
     return initials(this.studentName(item));
   }
 
-  groupLabel(groupId: number): string {
-    return `Group #${groupId}`;
+  groupLabel(groupId: number | null): string {
+    return groupId ? `Group #${groupId}` : 'Group not provided';
   }
 
-  statusLabel(status: AdminJustificationStatus): string {
+  statusLabel(status: JustificationStatus): string {
     switch (status) {
       case 'PENDING':
         return 'Pending';
@@ -673,7 +683,7 @@ export class JustificationsPage {
     }
   }
 
-  statusVariant(status: AdminJustificationStatus): 'success' | 'warning' | 'error' {
+  statusVariant(status: JustificationStatus): 'success' | 'warning' | 'error' {
     switch (status) {
       case 'PENDING':
         return 'warning';
@@ -703,7 +713,7 @@ export class JustificationsPage {
     }).format(parsed);
   }
 
-  durationLabel(item: AdminJustificationDto): string {
+  durationLabel(item: JustificationDto): string {
     if (!item.absenceEndedAt) {
       return 'Open session';
     }
@@ -726,16 +736,25 @@ export class JustificationsPage {
     return `${hours} h ${minutes} min`;
   }
 
-  private searchText(item: AdminJustificationDto): string {
+  attachmentName(url: string | null): string {
+    if (!url) {
+      return 'No attachment';
+    }
+
+    const cleanUrl = url.split('?')[0].split('#')[0];
+    return decodeURIComponent(cleanUrl.split('/').pop() || 'Attachment');
+  }
+
+  private searchText(item: JustificationDto): string {
     return [
       this.studentName(item),
       item.studentEmail,
-      item.numApogee,
+      item.studentCode,
       item.courseLabel,
       item.roomLabel,
-      item.teacherFullName,
+      item.teacherName,
       this.groupLabel(item.groupId),
-      item.motive,
+      item.reason,
     ]
       .join(' ')
       .toLowerCase();

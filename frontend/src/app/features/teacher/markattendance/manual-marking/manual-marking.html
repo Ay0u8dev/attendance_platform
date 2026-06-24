@@ -1,0 +1,170 @@
+<div class="marking-page">
+  <header class="session-header">
+    <div class="session-info">
+      <div class="session-badge">
+        <span class="session-dot"></span>
+        SESSION EN COURS
+      </div>
+      <span class="session-date">
+        <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+        {{ sessionInfo().date | date: 'EEEE dd MMMM yyyy' }}
+      </span>
+    </div>
+
+    <div class="session-main">
+      <h1 class="session-title">{{ sessionInfo().module }}</h1>
+      <button type="button" class="btn-end" [disabled]="ending()" (click)="endSession()">
+        <i class="fa-solid fa-circle-stop" aria-hidden="true"></i>
+        {{ ending() ? 'Finalisation...' : 'Terminer la session' }}
+      </button>
+    </div>
+
+    <div class="session-meta">
+      <span>
+        <i class="fa-solid fa-users" aria-hidden="true"></i>
+        {{ sessionInfo().group }}
+      </span>
+      <span>
+        <i class="fa-regular fa-clock" aria-hidden="true"></i>
+        {{ sessionInfo().time }}
+      </span>
+      <span>
+        <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+        {{ sessionInfo().location }}
+      </span>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
+      <input
+        type="search"
+        class="search-input"
+        placeholder="Rechercher un etudiant par nom ou numero apogee"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event); currentPage.set(1)"
+      />
+    </div>
+
+    <div class="counters">
+      <div class="counter present">
+        <i class="fa-regular fa-circle-check" aria-hidden="true"></i>
+        <span class="counter-value">{{ presentCount() }}</span>
+        <span class="counter-label">PRESENTS</span>
+      </div>
+      <div class="counter absent">
+        <i class="fa-regular fa-circle-xmark" aria-hidden="true"></i>
+        <span class="counter-value">{{ absentCount() }}</span>
+        <span class="counter-label">ABSENTS</span>
+      </div>
+      <div class="counter unmarked">
+        <i class="fa-regular fa-circle" aria-hidden="true"></i>
+        <span class="counter-value">{{ unmarkedCount() }}</span>
+        <span class="counter-label">A MARQUER</span>
+      </div>
+    </div>
+
+    <button type="button" class="btn-all-present" [disabled]="loading()" (click)="markAll()">
+      <i class="fa-solid fa-check-double" aria-hidden="true"></i>
+      Tous presents
+    </button>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-header">
+      <span>ETUDIANT</span>
+      <span>NUMERO APOGEE</span>
+      <span>NOTES</span>
+      <span>STATUT DE PRESENCE</span>
+    </div>
+
+    @if (error()) {
+      <div class="p-4 text-sm font-semibold text-danger">{{ error() }}</div>
+    }
+
+    @if (loading()) {
+      <div class="p-8 text-center text-sm text-secondaryText">Chargement...</div>
+    } @else if (pagedStudents().length === 0) {
+      <div class="p-8 text-center text-sm text-secondaryText">Aucun etudiant dans cette session.</div>
+    } @else {
+      @for (student of pagedStudents(); track student.id) {
+        <div
+          class="table-row"
+          [class.row-present]="student.status === 'present'"
+          [class.row-absent]="student.status === 'absent'"
+        >
+          <div class="student-cell">
+            <div class="avatar">{{ student.avatarInitials }}</div>
+            <span class="student-name">{{ student.name }}</span>
+          </div>
+
+          <span class="apogee">{{ student.apogee }}</span>
+
+          <div class="notes-cell">
+            @if (student.hasNote) {
+              <i class="fa-regular fa-file-lines note-icon has-note" aria-label="Note presente"></i>
+            } @else {
+              <i class="fa-regular fa-pen-to-square note-icon" aria-label="Ajouter une note"></i>
+            }
+          </div>
+
+          <div class="status-buttons">
+            <button
+              type="button"
+              class="btn-status present"
+              [class.active]="student.status === 'present'"
+              [disabled]="savingStudentId() === student.id"
+              (click)="setStatus(student.id, 'present')"
+            >
+              PRESENT
+            </button>
+            <button
+              type="button"
+              class="btn-status absent"
+              [class.active]="student.status === 'absent'"
+              [disabled]="savingStudentId() === student.id"
+              (click)="setStatus(student.id, 'absent')"
+            >
+              ABSENT
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+  <div class="pagination">
+    <span class="pagination-info">
+      Affichage de {{ pagedStudents().length }} sur {{ filteredStudents().length }} etudiants
+    </span>
+    <div class="page-buttons">
+      <button
+        type="button"
+        class="page-btn"
+        [disabled]="currentPage() === 1"
+        (click)="currentPage.set(currentPage() - 1)"
+      >
+        <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+      </button>
+      @for (page of pageNumbers(); track page) {
+        <button
+          type="button"
+          class="page-btn"
+          [class.active]="currentPage() === page"
+          (click)="currentPage.set(page)"
+        >
+          {{ page }}
+        </button>
+      }
+      <button
+        type="button"
+        class="page-btn"
+        [disabled]="currentPage() === totalPages()"
+        (click)="currentPage.set(currentPage() + 1)"
+      >
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+</div>

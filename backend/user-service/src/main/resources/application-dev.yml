@@ -4,9 +4,11 @@ server:
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5433/users_db
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:admin}
     driver-class-name: org.postgresql.Driver
+  config :
+    import: optional:dotenv:.env
 
   devtools:
     livereload:

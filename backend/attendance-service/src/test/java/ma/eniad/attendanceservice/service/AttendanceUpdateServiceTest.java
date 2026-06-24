@@ -4,12 +4,18 @@ import ma.eniad.attendanceservice.dto.AttendanceCounts;
 import ma.eniad.attendanceservice.dto.AttendanceUpdateEvent;
 import ma.eniad.attendanceservice.dto.AttendanceUpdateResponse;
 import ma.eniad.attendanceservice.dto.InternalAttendanceUpdateRequest;
+import ma.eniad.attendanceservice.dto.JustificationContextResponse;
+import ma.eniad.attendanceservice.dto.JustifyAbsenceRequest;
 import ma.eniad.attendanceservice.dto.LiveAttendanceSessionMeta;
 import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 import ma.eniad.attendanceservice.dto.ManualAttendanceUpdateRequest;
+import ma.eniad.attendanceservice.entity.AttendanceRecord;
+import ma.eniad.attendanceservice.entity.AttendanceSession;
 import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
 import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.repository.AttendanceRecordRepository;
+import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -29,18 +35,28 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class AttendanceUpdateServiceTest {
 
     private SimpMessagingTemplate messagingTemplate;
     private InMemoryLiveAttendanceSessionStore liveAttendanceSessionStore;
     private AttendanceUpdateService attendanceUpdateService;
+    private AttendanceRecordRepository attendanceRecordRepository;
+    private AttendanceSessionRepository attendanceSessionRepository;
 
     @BeforeEach
     void setUp() {
         messagingTemplate = mock(SimpMessagingTemplate.class);
         liveAttendanceSessionStore = new InMemoryLiveAttendanceSessionStore();
-        attendanceUpdateService = new AttendanceUpdateService(liveAttendanceSessionStore, messagingTemplate);
+        attendanceRecordRepository = mock(AttendanceRecordRepository.class);
+        attendanceSessionRepository = mock(AttendanceSessionRepository.class);
+        attendanceUpdateService = new AttendanceUpdateService(
+                liveAttendanceSessionStore,
+                messagingTemplate,
+                attendanceRecordRepository,
+                attendanceSessionRepository
+        );
     }
 
     @Test
@@ -98,6 +114,133 @@ class AttendanceUpdateServiceTest {
 
         assertThat(response.status()).isEqualTo(AttendanceStudentStatus.ABSENT);
         assertThat(response.absentCount()).isEqualTo(1);
+    }
+
+    @Test
+    void justifyFinalizedAbsenceChangesAbsentRecordToJustified() {
+        AttendanceRecord record = AttendanceRecord.builder()
+                .sessionId(100L)
+                .studentId(10L)
+                .status(AttendanceStudentStatus.ABSENT)
+                .build();
+        AttendanceSession session = AttendanceSession.builder()
+                .id(100L)
+                .absentCount(2)
+                .build();
+
+        when(attendanceRecordRepository.findBySessionIdAndStudentId(100L, 10L)).thenReturn(Optional.of(record));
+        when(attendanceSessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        when(attendanceRecordRepository.findBySessionIdOrderByStudentIdAsc(100L)).thenReturn(List.of(
+                record,
+                AttendanceRecord.builder()
+                        .sessionId(100L)
+                        .studentId(11L)
+                        .status(AttendanceStudentStatus.ABSENT)
+                        .build()
+        ));
+
+        attendanceUpdateService.justifyFinalizedAbsence(
+                "justification-service",
+                100L,
+                10L,
+                new JustifyAbsenceRequest(50L, "1", "ADMIN")
+        );
+
+        assertThat(record.getStatus()).isEqualTo(AttendanceStudentStatus.JUSTIFIED);
+        assertThat(session.getAbsentCount()).isEqualTo(1);
+        verify(attendanceRecordRepository).saveAndFlush(record);
+        verify(attendanceSessionRepository).save(session);
+    }
+
+    @Test
+    void justifyFinalizedAbsenceRejectsNonAbsentRecord() {
+        AttendanceRecord record = AttendanceRecord.builder()
+                .sessionId(100L)
+                .studentId(10L)
+                .status(AttendanceStudentStatus.PRESENT)
+                .build();
+
+        when(attendanceRecordRepository.findBySessionIdAndStudentId(100L, 10L)).thenReturn(Optional.of(record));
+
+        assertThatThrownBy(() -> attendanceUpdateService.justifyFinalizedAbsence(
+                "justification-service",
+                100L,
+                10L,
+                new JustifyAbsenceRequest(50L, "1", "ADMIN")
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting("statusCode")
+                .isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void justifyFinalizedAbsenceIsIdempotentWhenAlreadyJustified() {
+        AttendanceRecord record = AttendanceRecord.builder()
+                .sessionId(100L)
+                .studentId(10L)
+                .status(AttendanceStudentStatus.JUSTIFIED)
+                .build();
+        when(attendanceRecordRepository.findBySessionIdAndStudentId(100L, 10L))
+                .thenReturn(Optional.of(record));
+
+        attendanceUpdateService.justifyFinalizedAbsence(
+                "justification-service",
+                100L,
+                10L,
+                new JustifyAbsenceRequest(50L, "1", "ADMIN")
+        );
+
+        assertThat(record.getStatus()).isEqualTo(AttendanceStudentStatus.JUSTIFIED);
+    }
+
+    @Test
+    void justificationContextReturnsSessionOwnerAndAttendanceRecord() {
+        AttendanceRecord record = AttendanceRecord.builder()
+                .id(501L)
+                .sessionId(100L)
+                .studentId(10L)
+                .groupId(20L)
+                .firstName("Aya")
+                .lastName("Bennani")
+                .email("aya@ump.ac.ma")
+                .numApogee("A001")
+                .status(AttendanceStudentStatus.ABSENT)
+                .build();
+        AttendanceSession session = AttendanceSession.builder()
+                .id(100L)
+                .teacherId(77L)
+                .teacherFullName("Prof. Idrissi")
+                .courseLabel("Distributed Systems")
+                .roomLabel("B12")
+                .startedAt(LocalDateTime.of(2026, 6, 20, 9, 0))
+                .endsAt(LocalDateTime.of(2026, 6, 20, 10, 30))
+                .build();
+        when(attendanceRecordRepository.findBySessionIdAndStudentId(100L, 10L))
+                .thenReturn(Optional.of(record));
+        when(attendanceSessionRepository.findById(100L)).thenReturn(Optional.of(session));
+
+        JustificationContextResponse response = attendanceUpdateService.getJustificationContext(
+                "justification-service",
+                100L,
+                10L
+        );
+
+        assertThat(response.attendanceRecordId()).isEqualTo(501L);
+        assertThat(response.teacherId()).isEqualTo(77L);
+        assertThat(response.studentName()).isEqualTo("Aya Bennani");
+        assertThat(response.attendanceStatus()).isEqualTo(AttendanceStudentStatus.ABSENT);
+    }
+
+    @Test
+    void justificationContextRejectsUntrustedCaller() {
+        assertThatThrownBy(() -> attendanceUpdateService.getJustificationContext(
+                "browser",
+                100L,
+                10L
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test

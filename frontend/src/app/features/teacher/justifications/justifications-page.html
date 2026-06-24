@@ -1,0 +1,194 @@
+<section class="space-y-6">
+  <app-page-header
+    eyebrow="Espace enseignant"
+    title="Justifications d'absence"
+    description="Consultez les demandes envoyees par les etudiants, verifiez les pieces jointes et traitez chaque justification."
+    [meta]="pendingCount() + ' demande(s) en attente'"
+  ></app-page-header>
+
+  <app-data-table
+    title="Demandes de justification"
+    description="Traitez les absences justifiees avec une decision claire pour chaque etudiant."
+    searchPlaceholder="Rechercher par etudiant, module, motif..."
+    [rows]="rows()"
+    [columns]="columns"
+    [rowId]="justificationRowId"
+    [pageSizeOptions]="[5, 10]"
+    [initialPageSize]="5"
+    [emptyStateTitle]="loading() ? 'Chargement des justifications...' : 'Aucune justification'"
+    [emptyStateDescription]="
+      errorMessage() ??
+      (loading() ? 'Veuillez patienter pendant la recuperation des demandes.' : 'Les nouvelles demandes apparaitront ici.')
+    "
+  >
+    <ng-template [appDataTableCell]="'student'" let-row="row">
+      <div class="min-w-0">
+        <p class="font-semibold text-principalText">{{ row.studentName }}</p>
+        <p class="text-xs text-secondaryText">Apogee {{ row.studentCode }}</p>
+      </div>
+    </ng-template>
+
+    <ng-template [appDataTableCell]="'module'" let-row="row">
+      <div class="min-w-0">
+        <p class="font-medium text-principalText">{{ row.module }}</p>
+        <p class="truncate text-xs text-secondaryText">{{ row.attachmentName }}</p>
+      </div>
+    </ng-template>
+
+    <ng-template [appDataTableCell]="'reason'" let-row="row">
+      <p class="line-clamp-2 text-sm text-secondaryText" [title]="row.comment">
+        {{ row.reason }}
+      </p>
+    </ng-template>
+
+    <ng-template [appDataTableCell]="'status'" let-row="row">
+      <app-status-badge [label]="row.status" [variant]="row.statusVariant"></app-status-badge>
+    </ng-template>
+
+    <ng-template [appDataTableCell]="'actions'" let-row="row">
+      <div class="flex flex-wrap justify-end gap-2">
+        <button
+          type="button"
+          class="action-btn action-btn-success"
+          [disabled]="row.status !== 'En attente' || reviewingId() === row.id"
+          (click)="approve(row)"
+        >
+          <i class="fa-solid fa-check" aria-hidden="true"></i>
+          Approuver
+        </button>
+        <button
+          type="button"
+          class="action-btn action-btn-danger"
+          [disabled]="row.status !== 'En attente' || reviewingId() === row.id"
+          (click)="decline(row)"
+        >
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          Decliner
+        </button>
+        <button type="button" class="action-btn action-btn-neutral" (click)="openDetails(row)">
+          <i class="fa-regular fa-eye" aria-hidden="true"></i>
+          Voir details
+        </button>
+      </div>
+    </ng-template>
+  </app-data-table>
+</section>
+
+<app-modal
+  title="Details de la justification"
+  description="Informations envoyees par l'etudiant pour cette absence."
+  [open]="selectedJustification() !== null"
+  size="lg"
+  (closed)="closeDetails()"
+>
+  <div modal-body class="space-y-6">
+    @if (selectedJustification(); as justification) {
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p class="text-lg font-bold text-principalText">{{ justification.studentName }}</p>
+          <p class="mt-1 text-sm text-secondaryText">Apogee {{ justification.studentCode }}</p>
+        </div>
+        <app-status-badge
+          [label]="justification.status"
+          [variant]="justification.statusVariant"
+        ></app-status-badge>
+      </div>
+
+      <div class="details-grid">
+        <div class="detail-box">
+          <span class="detail-label">Module</span>
+          <p class="detail-value">{{ justification.module }}</p>
+        </div>
+        <div class="detail-box">
+          <span class="detail-label">Seance absente</span>
+          <p class="detail-value">{{ justification.sessionDate }}</p>
+        </div>
+        <div class="detail-box">
+          <span class="detail-label">Soumise le</span>
+          <p class="detail-value">{{ justification.submittedAt }}</p>
+        </div>
+        <div class="detail-box">
+          <span class="detail-label">Motif</span>
+          <p class="detail-value">{{ justification.reason }}</p>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-line bg-surface-subtle p-4">
+        <span class="detail-label">Commentaire etudiant</span>
+        <p class="mt-2 text-sm leading-6 text-secondaryText">{{ justification.comment }}</p>
+      </div>
+
+      @if (justification.attachmentPreviewUrl) {
+        <figure class="justification-preview">
+          <img
+            [src]="justification.attachmentPreviewUrl"
+            [alt]="'Apercu de ' + justification.attachmentName"
+          />
+          <figcaption>
+            <span class="detail-label">Apercu de la piece jointe</span>
+            <p>{{ justification.attachmentName }}</p>
+          </figcaption>
+        </figure>
+      }
+
+      @if (justification.reviewedBy || justification.reviewedAt) {
+        <div class="rounded-2xl border border-line bg-surface-subtle p-4">
+          <span class="detail-label">Decision</span>
+          <p class="mt-2 text-sm leading-6 text-secondaryText">
+            {{ justification.reviewComment }}
+            @if (justification.reviewedBy) {
+              <span> - {{ justification.reviewedBy }}</span>
+            }
+            @if (justification.reviewedAt) {
+              <span>, {{ justification.reviewedAt }}</span>
+            }
+          </p>
+        </div>
+      }
+
+      <div class="flex items-center justify-between gap-4 rounded-2xl border border-line bg-surface p-4">
+        <div class="min-w-0">
+          <span class="detail-label">Piece jointe</span>
+          <p class="mt-1 truncate text-sm font-semibold text-principalText">
+            {{ justification.attachmentName }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="action-btn action-btn-neutral"
+          [disabled]="!justification.attachmentPreviewUrl"
+          (click)="openAttachment(justification)"
+        >
+          <i class="fa-regular fa-file-lines" aria-hidden="true"></i>
+          Ouvrir
+        </button>
+      </div>
+    }
+  </div>
+
+  <div modal-footer class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+    @if (selectedJustification(); as justification) {
+      <button type="button" class="action-btn action-btn-neutral" (click)="closeDetails()">
+        Fermer
+      </button>
+      <button
+        type="button"
+        class="action-btn action-btn-danger"
+        [disabled]="justification.status !== 'En attente' || reviewingId() === justification.id"
+        (click)="decline(justification)"
+      >
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        Decliner
+      </button>
+      <button
+        type="button"
+        class="action-btn action-btn-success"
+        [disabled]="justification.status !== 'En attente' || reviewingId() === justification.id"
+        (click)="approve(justification)"
+      >
+        <i class="fa-solid fa-check" aria-hidden="true"></i>
+        Approuver
+      </button>
+    }
+  </div>
+</app-modal>

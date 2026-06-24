@@ -5,19 +5,28 @@ import ma.eniad.attendanceservice.dto.AttendanceCounts;
 import ma.eniad.attendanceservice.dto.AttendanceUpdateEvent;
 import ma.eniad.attendanceservice.dto.AttendanceUpdateResponse;
 import ma.eniad.attendanceservice.dto.InternalAttendanceUpdateRequest;
+import ma.eniad.attendanceservice.dto.JustificationContextResponse;
+import ma.eniad.attendanceservice.dto.JustifyAbsenceRequest;
 import ma.eniad.attendanceservice.dto.LiveAttendanceSessionMeta;
 import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 import ma.eniad.attendanceservice.dto.ManualAttendanceUpdateRequest;
+import ma.eniad.attendanceservice.entity.AttendanceRecord;
+import ma.eniad.attendanceservice.entity.AttendanceSession;
 import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
 import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.repository.AttendanceRecordRepository;
+import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AttendanceUpdateService {
 
     private static final Set<String> TRUSTED_SOURCES = Set.of("qr-service", "face-service");
+    private static final String JUSTIFICATION_SOURCE = "justification-service";
     private static final Map<String, AttendanceSessionMethod> SOURCE_METHODS = Map.of(
             "qr-service", AttendanceSessionMethod.QR_CODE,
             "face-service", AttendanceSessionMethod.FACE_ID
@@ -37,17 +47,30 @@ public class AttendanceUpdateService {
 
     private final LiveAttendanceSessionStore liveAttendanceSessionStore;
     private final SimpMessagingTemplate messagingTemplate;
+    private final AttendanceRecordRepository attendanceRecordRepository;
+    private final AttendanceSessionRepository attendanceSessionRepository;
     private final Map<Long, Object> sessionLocks = new ConcurrentHashMap<>();
 
     @Value("${attendance.self-mark.max-distance-meters:${attendance.qr.max-distance-meters:100}}")
     private double selfMarkMaxDistanceMeters = 100.0;
 
+    @Transactional
     public AttendanceUpdateResponse updateManualAttendance(Long teacherId,
                                                            Long sessionId,
                                                            ManualAttendanceUpdateRequest request) {
         if (request.status() != AttendanceStudentStatus.PRESENT
                 && request.status() != AttendanceStudentStatus.ABSENT) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Manual status must be PRESENT or ABSENT");
+        }
+
+        AttendanceSession persistedSession = attendanceSessionRepository.findById(sessionId).orElse(null);
+        if (persistedSession != null) {
+            if (!teacherId.equals(persistedSession.getTeacherId())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Teacher does not own this session");
+            }
+            if (persistedSession.getStatus() == AttendanceSessionStatus.FINALIZED) {
+                return updateFinalizedAttendance(persistedSession, request);
+            }
         }
 
         return withSessionLock(sessionId, () -> {
@@ -139,6 +162,126 @@ public class AttendanceUpdateService {
             liveAttendanceSessionStore.bindDeviceToStudent(sessionId, markData.deviceId(), request.studentId());
             return buildResponseAndBroadcast(sessionId, updatedStudent);
         });
+    }
+
+    @Transactional
+    public void justifyFinalizedAbsence(String requestSource,
+                                        Long sessionId,
+                                        Long studentId,
+                                        JustifyAbsenceRequest request) {
+        requireJustificationSource(requestSource);
+
+        AttendanceRecord record = attendanceRecordRepository.findBySessionIdAndStudentId(sessionId, studentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attendance record not found"));
+
+        if (record.getStatus() == AttendanceStudentStatus.JUSTIFIED) {
+            return;
+        }
+
+        if (record.getStatus() != AttendanceStudentStatus.ABSENT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only absent attendance records can be justified");
+        }
+
+        record.setStatus(AttendanceStudentStatus.JUSTIFIED);
+        try {
+            attendanceRecordRepository.saveAndFlush(record);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Attendance record status JUSTIFIED is not accepted by the current database schema",
+                    ex
+            );
+        }
+
+        attendanceSessionRepository.findById(sessionId).ifPresent(session -> updateSessionCounts(session, sessionId));
+    }
+
+    @Transactional(readOnly = true)
+    public JustificationContextResponse getJustificationContext(String requestSource,
+                                                                Long sessionId,
+                                                                Long studentId) {
+        requireJustificationSource(requestSource);
+
+        AttendanceRecord record = attendanceRecordRepository.findBySessionIdAndStudentId(sessionId, studentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attendance record not found"));
+        AttendanceSession session = attendanceSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attendance session not found"));
+
+        return new JustificationContextResponse(
+                record.getId(),
+                session.getId(),
+                record.getStudentId(),
+                record.getGroupId(),
+                session.getTeacherId(),
+                session.getTeacherFullName(),
+                (record.getFirstName() + " " + record.getLastName()).trim(),
+                record.getEmail(),
+                record.getNumApogee(),
+                session.getCourseLabel(),
+                session.getRoomLabel(),
+                session.getStartedAt(),
+                session.getEndedAt() != null ? session.getEndedAt() : session.getEndsAt(),
+                record.getStatus()
+        );
+    }
+
+    private AttendanceUpdateResponse updateFinalizedAttendance(AttendanceSession session,
+                                                               ManualAttendanceUpdateRequest request) {
+        AttendanceRecord record = attendanceRecordRepository.findBySessionIdAndStudentId(session.getId(), request.studentId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attendance record not found"));
+
+        LocalDateTime now = LocalDateTime.now();
+        record.setStatus(request.status());
+        record.setMarkMethod(AttendanceSessionMethod.MANUAL);
+        record.setMarkedAt(now);
+        attendanceRecordRepository.save(record);
+
+        AttendanceCounts counts = updateSessionCounts(session, session.getId());
+
+        return new AttendanceUpdateResponse(
+                session.getId(),
+                record.getStudentId(),
+                record.getStatus(),
+                record.getMarkMethod(),
+                record.getMarkedAt(),
+                counts.presentCount(),
+                counts.absentCount(),
+                counts.unknownCount()
+        );
+    }
+
+    private AttendanceCounts recalculateFinalizedCounts(Long sessionId) {
+        List<AttendanceRecord> records = attendanceRecordRepository.findBySessionIdOrderByStudentIdAsc(sessionId);
+        int presentCount = 0;
+        int absentCount = 0;
+        int unknownCount = 0;
+
+        for (AttendanceRecord record : records) {
+            if (record.getStatus() == AttendanceStudentStatus.PRESENT) {
+                presentCount++;
+            } else if (record.getStatus() == AttendanceStudentStatus.ABSENT) {
+                absentCount++;
+            } else if (record.getStatus() == AttendanceStudentStatus.UNKNOWN) {
+                unknownCount++;
+            }
+        }
+
+        return new AttendanceCounts(presentCount, absentCount, unknownCount);
+    }
+
+    private AttendanceCounts updateSessionCounts(AttendanceSession session, Long sessionId) {
+        AttendanceCounts counts = recalculateFinalizedCounts(sessionId);
+        session.setPresentCount(counts.presentCount());
+        session.setAbsentCount(counts.absentCount());
+        session.setUnknownCount(counts.unknownCount());
+        attendanceSessionRepository.save(session);
+        return counts;
+    }
+
+    private void requireJustificationSource(String requestSource) {
+        if (!JUSTIFICATION_SOURCE.equals(requestSource)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Untrusted request source");
+        }
     }
 
     private LiveAttendanceSessionMeta requireActiveSession(Long sessionId) {

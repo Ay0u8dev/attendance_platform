@@ -1,0 +1,172 @@
+package ma.eniad.justificationservice.service;
+
+import ma.eniad.justificationservice.client.AttendanceServiceClient;
+import ma.eniad.justificationservice.dto.AttendanceJustificationRequest;
+import ma.eniad.justificationservice.dto.DecisionJustificationRequest;
+import ma.eniad.justificationservice.entity.Justification;
+import ma.eniad.justificationservice.entity.JustificationStatus;
+import ma.eniad.justificationservice.repository.JustificationRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class JustificationServiceTest {
+
+    private JustificationRepository repository;
+    private AttendanceServiceClient attendanceServiceClient;
+    private JustificationService service;
+
+    @BeforeEach
+    void setUp() {
+        repository = mock(JustificationRepository.class);
+        attendanceServiceClient = mock(AttendanceServiceClient.class);
+        service = new JustificationService(repository, attendanceServiceClient);
+    }
+
+    @Test
+    void adminCanApprovePendingJustificationAndAttendanceBecomesJustified() {
+        Justification justification = pendingJustification(77L);
+        when(repository.findByIdForDecision(1L)).thenReturn(Optional.of(justification));
+        when(repository.saveAndFlush(justification)).thenReturn(justification);
+
+        var response = service.decide(
+                1L,
+                user(5L, "ADMIN"),
+                new DecisionJustificationRequest(JustificationStatus.APPROVED, "Medical document accepted")
+        );
+
+        assertThat(response.status()).isEqualTo(JustificationStatus.APPROVED);
+        assertThat(response.decidedBy()).isEqualTo("5");
+        assertThat(response.decidedByRole()).isEqualTo("ADMIN");
+        verify(attendanceServiceClient).justifyAbsence(
+                100L,
+                10L,
+                "justification-service",
+                new AttendanceJustificationRequest(1L, "5", "ADMIN")
+        );
+    }
+
+    @Test
+    void adminCanRejectAndAttendanceRecordIsNotChanged() {
+        Justification justification = pendingJustification(77L);
+        when(repository.findByIdForDecision(1L)).thenReturn(Optional.of(justification));
+        when(repository.saveAndFlush(justification)).thenReturn(justification);
+
+        var response = service.decide(
+                1L,
+                user(5L, "ADMIN"),
+                new DecisionJustificationRequest(JustificationStatus.REJECTED, "Document invalid")
+        );
+
+        assertThat(response.status()).isEqualTo(JustificationStatus.REJECTED);
+        verify(attendanceServiceClient, never()).justifyAbsence(any(), any(), any(), any());
+    }
+
+    @Test
+    void teacherCanApproveJustificationForOwnSession() {
+        Justification justification = pendingJustification(77L);
+        when(repository.findByIdForDecision(1L)).thenReturn(Optional.of(justification));
+        when(repository.saveAndFlush(justification)).thenReturn(justification);
+
+        var response = service.decide(
+                1L,
+                user(77L, "TEACHER"),
+                new DecisionJustificationRequest(JustificationStatus.APPROVED, null)
+        );
+
+        assertThat(response.decidedByRole()).isEqualTo("TEACHER");
+        verify(attendanceServiceClient).justifyAbsence(
+                100L,
+                10L,
+                "justification-service",
+                new AttendanceJustificationRequest(1L, "77", "TEACHER")
+        );
+    }
+
+    @Test
+    void teacherCannotDecideAnotherTeachersJustification() {
+        Justification justification = pendingJustification(88L);
+        when(repository.findByIdForDecision(1L)).thenReturn(Optional.of(justification));
+
+        assertThatThrownBy(() -> service.decide(
+                1L,
+                user(77L, "TEACHER"),
+                new DecisionJustificationRequest(JustificationStatus.REJECTED, null)
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+
+        verify(repository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void decidedJustificationCannotBeProcessedTwice() {
+        Justification justification = pendingJustification(77L);
+        justification.setStatus(JustificationStatus.APPROVED);
+        when(repository.findByIdForDecision(1L)).thenReturn(Optional.of(justification));
+
+        assertThatThrownBy(() -> service.decide(
+                1L,
+                user(5L, "ADMIN"),
+                new DecisionJustificationRequest(JustificationStatus.REJECTED, null)
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void teacherListIsRestrictedToAuthenticatedTeacher() {
+        when(repository.findByTeacherIdIsNullAndSessionIdIsNotNull()).thenReturn(List.of());
+        when(repository.findByTeacherIdOrderBySubmittedAtDesc(77L))
+                .thenReturn(List.of(pendingJustification(77L)));
+
+        var rows = service.findForTeacher(user(77L, "TEACHER"), JustificationStatus.PENDING);
+
+        assertThat(rows).hasSize(1);
+        verify(repository).findByTeacherIdOrderBySubmittedAtDesc(77L);
+    }
+
+    private Justification pendingJustification(Long teacherId) {
+        LocalDateTime now = LocalDateTime.of(2026, 6, 20, 9, 0);
+        return Justification.builder()
+                .id(1L)
+                .attendanceRecordId(501L)
+                .sessionId(100L)
+                .studentId(10L)
+                .groupId(20L)
+                .teacherId(teacherId)
+                .teacherName("Prof. Idrissi")
+                .studentName("Aya Bennani")
+                .studentEmail("aya@ump.ac.ma")
+                .studentCode("A001")
+                .module("Distributed Systems")
+                .roomLabel("B12")
+                .sessionDate(now)
+                .sessionEndedAt(now.plusMinutes(90))
+                .status(JustificationStatus.PENDING)
+                .reason("Medical appointment")
+                .submittedAt(now.plusHours(2))
+                .updatedAt(now.plusHours(2))
+                .build();
+    }
+
+    private RequestUser user(Long id, String role) {
+        return new RequestUser(id, role.toLowerCase() + "@ump.ac.ma", Set.of(role));
+    }
+}

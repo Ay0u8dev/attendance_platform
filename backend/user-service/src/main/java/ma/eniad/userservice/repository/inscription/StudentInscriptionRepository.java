@@ -6,8 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
-import java.util.Set;
 import java.util.Optional;
+import java.util.Set;
 
 public interface StudentInscriptionRepository extends JpaRepository<Inscription, Long> {
     @Query("select i from Inscription i " +
@@ -16,15 +16,15 @@ public interface StudentInscriptionRepository extends JpaRepository<Inscription,
             @Param("groupIds") List<Long> groupIds,
             @Param("anneeUniversitaireId") Long anneeUniversitaireId
     );
-    
+
     boolean existsByStudentIdAndAnneeUniversitaireId(Long studentId, Long anneeId);
 
     @Query("select i.student.id, i.anneeUniversitaire.id from Inscription i " +
-                   "where i.student.id in :studentIds and i.anneeUniversitaire.id in :anneeIds")
-        List<Object[]> findExistingStudentYearPairs(
-                @Param("studentIds") Set<Long> studentIds,
-                @Param("anneeIds") Set<Long> anneeIds
-        );
+            "where i.student.id in :studentIds and i.anneeUniversitaire.id in :anneeIds")
+    List<Object[]> findExistingStudentYearPairs(
+            @Param("studentIds") Set<Long> studentIds,
+            @Param("anneeIds") Set<Long> anneeIds
+    );
 
     @Query("select i.student.id, i.anneeUniversitaire.id, i.formation.id, i.groupe.id from Inscription i " +
             "where i.student.id in :studentIds " +
@@ -47,5 +47,11 @@ public interface StudentInscriptionRepository extends JpaRepository<Inscription,
     Optional<Inscription> findActiveByStudentIdAndYearId(
             @Param("studentId") Long studentId,
             @Param("anneeUniversitaireId") Long anneeUniversitaireId
+    );
+
+    boolean existsByStudentIdAndGroupeIdAndAnneeUniversitaireId(
+            Long studentId,
+            Long groupeId,
+            Long anneeUniversitaireId
     );
 }
