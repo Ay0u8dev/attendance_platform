@@ -11,6 +11,7 @@ http:
       rule: "PathPrefix(`/api/auth`)"
       middlewares: ["cors", "strip-api-auth"]
       service: auth-service
+      priority: 100
 
     user-public-profile-photos:
       entryPoints: ["web"]
@@ -24,6 +25,7 @@ http:
       rule: "PathPrefix(`/api/users`) && !PathPrefix(`/api/users/internal`)"
       middlewares: ["sanitize-auth-headers", "forward-auth", "strip-api-user"]
       service: user-service
+      priority: 100
 
     # Attendance WebSocket handshake route — no forward-auth here.
     # WebSocket/STOMP auth is handled inside attendance-service on CONNECT.
@@ -32,24 +34,28 @@ http:
       rule: "Path(`/api/ws/attendance/ws`)"
       middlewares: ["cors", "strip-api-ws-attendance"]
       service: attendance-service
+      priority: 110
 
     attendance:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/attendance`) && !PathPrefix(`/api/attendance/internal`)"
       middlewares: ["sanitize-auth-headers", "forward-auth", "strip-api-attendance"]
       service: attendance-service
+      priority: 100
 
     justification:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/justifications`)"
       middlewares: ["cors", "forward-auth", "strip-api-justification"]
       service: justification-service
+      priority: 100
 
     qr:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/qr`)"
       middlewares: ["sanitize-auth-headers", "forward-auth", "strip-api-qr"]
       service: qr-service
+      priority: 100
 
     # # Face recognition routes — protected, JWT required
     face:
@@ -57,6 +63,7 @@ http:
       rule: "PathPrefix(`/api/face`)"
       middlewares: ["sanitize-auth-headers", "forward-auth", "inject-face-internal-token", "strip-api-face"]
       service: face-service
+      priority: 100
 
     # Frontend — catches everything else, no auth needed
     # Priority is lowest because PathPrefix(/) matches everything.
@@ -66,10 +73,32 @@ http:
       entryPoints: ["web"]
       rule: "PathPrefix(`/`)"
       service: frontend-service
+      priority: 1
 
   # ── Middlewares ───────────────────────────────────────────────
   # Middlewares transform the request before it reaches the service.
   middlewares:
+    cors:
+      headers:
+        accessControlAllowCredentials: true
+        accessControlAllowHeaders:
+          - Authorization
+          - Content-Type
+          - Accept
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        accessControlAllowOriginList:
+          - "http://localhost:4200"
+          - "http://localhost"
+          - "http://attendance-platform.ma"
+          - "http://192.168.100.73:18080"
+        addVaryHeader: true
+
     sanitize-auth-headers:
       headers:
         customRequestHeaders:
