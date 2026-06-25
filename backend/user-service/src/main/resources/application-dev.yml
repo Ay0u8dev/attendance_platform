@@ -7,16 +7,6 @@ spring:
     username: ${POSTGRES_USER:postgres}
     password: ${POSTGRES_PASSWORD:admin}
     driver-class-name: org.postgresql.Driver
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-      connection-timeout: 30000
-      validation-timeout: 5000
-      idle-timeout: 300000
-      max-lifetime: 900000
-      keepalive-time: 300000
-  config :
-    import: optional:dotenv:.env
 
   devtools:
     livereload:
@@ -30,8 +20,15 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
-    
+
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+
+app:
+  profile-photos:
+    storage-dir: ${PROFILE_PHOTOS_STORAGE_DIR:uploads/profile-photos}
+    public-path: ${PROFILE_PHOTOS_PUBLIC_PATH:/api/users/public/profile-photos}
+  internal:
+    face-service-token: ${FACE_SERVICE_INTERNAL_TOKEN:replace-with-a-long-random-secret}

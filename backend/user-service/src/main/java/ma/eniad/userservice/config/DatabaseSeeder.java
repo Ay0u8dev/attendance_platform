@@ -75,7 +75,7 @@ public class DatabaseSeeder {
         ensureAdmin(userRepository, "mariamfahim@ump.ac.ma", "Mariam", "Fahim");
         ensureAdmin(userRepository, "abdelaliferhan@ump.ac.ma", "Abdelali", "Ferhan");
         ensureAdmin(userRepository, "abdelkodouselfadili@ump.ac.ma", "Abdelkodous", "Elfadili");
-        ensureTeacher(userRepository, "ayoubelebbar03@ump.ac.ma", "Ayoub", "Elebbar");
+        ensureTeacher(userRepository, "ayoubelebbar03@gmail.com", "Ayoub", "Elebbar");
 
         List<Student> students = new ArrayList<>(List.of(
                 ensureStudent(userRepository, studentRepository, "sofiane.meziane@ump.ac.ma", "Sofiane", "Meziane", "250001"),
@@ -101,8 +101,8 @@ public class DatabaseSeeder {
         ));
 
         // Add students used for GI-1 test/demo data.
-        students.add(ensureStudent(userRepository, studentRepository, "abdo.elfadili@ump.ac.ma", "Abdo", "El Fadili", "250021"));
-        students.add(ensureStudent(userRepository, studentRepository, "ayoub.elebbar15@ump.ac.ma", "Ayoub", "Elebbar", "250022"));
+        students.add(ensureStudent(userRepository, studentRepository, "abdoelfadili695@gmail.com", "Abdo", "El Fadili", "250021"));
+        students.add(ensureStudent(userRepository, studentRepository, "ayoubelebbar15@gmail.com", "Ayoub", "Elebbar", "250022"));
 
         return new SeedUsers(students);
     }
@@ -382,8 +382,8 @@ public class DatabaseSeeder {
             Student student = students.get(i);
             Groupe group;
 
-            if ("abdo.elfadili@ump.ac.ma".equals(student.getEmail())
-                    || "ayoub.elebbar15@ump.ac.ma".equals(student.getEmail())) {
+            if ("abdoelfadili695@gmail.com".equals(student.getEmail())
+                    || "ayoubelebbar15@gmail.com".equals(student.getEmail())) {
                 group = gi1Group;
             } else {
                 group = groups.get(i % groups.size());

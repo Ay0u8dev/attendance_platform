@@ -82,7 +82,7 @@ ATTENDANCE_SERVICE_URL=http://localhost:8083
 USER_SERVICE_URL=http://localhost:8082
 
 FACE_SERVICE_INTERNAL_TOKEN=replace-with-a-long-random-secret
-FACE_ATTENDANCE_INTERNAL_TOKEN=replace-with-a-different-long-random-secret
+FACE_ATTENDANCE_INTERNAL_TOKEN=replace-with-a-long-random-secret
 FACE_VALIDATION_STUB_ENABLED=false
 
 MAX_IMAGE_SIZE_BYTES=2000000
@@ -208,7 +208,7 @@ Invoke-WebRequest http://localhost:8002/face/health
 Reponse attendue:
 
 ```json
-{"status":"UP"}
+{ "status": "UP" }
 ```
 
 Attention: via Traefik, `/api/face/...` est protege par auth. Le health check direct `http://localhost:8002/face/health` est plus simple pour tester que le processus FastAPI est bien lance.

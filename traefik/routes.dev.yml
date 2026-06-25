@@ -9,61 +9,88 @@ http:
     auth:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/auth`)"
-      middlewares: ["cors", "strip-api-auth"]
+      middlewares: [
+          # "cors",
+          "strip-api-auth",
+        ]
       service: auth-service
-      priority: 100
+      # priority: 100
 
     user-public-profile-photos:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/users/public/profile-photos`)"
       middlewares: ["strip-api-user"]
       service: user-service
-      priority: 100
+      # priority: 100
 
     user:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/users`) && !PathPrefix(`/api/users/internal`)"
-      middlewares: ["sanitize-auth-headers", "forward-auth", "strip-api-user"]
+      middlewares: [
+          # "sanitize-auth-headers",
+          "forward-auth",
+          "strip-api-user",
+        ]
       service: user-service
-      priority: 100
+      # priority: 100
 
     # Attendance WebSocket handshake route — no forward-auth here.
     # WebSocket/STOMP auth is handled inside attendance-service on CONNECT.
     attendance-ws:
       entryPoints: ["web"]
       rule: "Path(`/api/ws/attendance/ws`)"
-      middlewares: ["cors", "strip-api-ws-attendance"]
+      middlewares: [
+          # "cors",
+          "strip-api-ws-attendance",
+        ]
       service: attendance-service
-      priority: 110
+      # priority: 110
 
     attendance:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/attendance`) && !PathPrefix(`/api/attendance/internal`)"
-      middlewares: ["sanitize-auth-headers", "forward-auth", "strip-api-attendance"]
+      middlewares: [
+          # "sanitize-auth-headers",
+          "forward-auth",
+          "strip-api-attendance",
+        ]
       service: attendance-service
-      priority: 100
+      # priority: 100
 
     justification:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/justifications`)"
-      middlewares: ["cors", "forward-auth", "strip-api-justification"]
+      middlewares: [
+          # "cors",
+          "forward-auth",
+          "strip-api-justification",
+        ]
       service: justification-service
-      priority: 100
+      # priority: 100
 
     qr:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/qr`)"
-      middlewares: ["sanitize-auth-headers", "forward-auth", "strip-api-qr"]
+      middlewares: [
+          # "sanitize-auth-headers",
+          "forward-auth",
+          "strip-api-qr",
+        ]
       service: qr-service
-      priority: 100
+      # priority: 100
 
     # # Face recognition routes — protected, JWT required
     face:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/face`)"
-      middlewares: ["sanitize-auth-headers", "forward-auth", "inject-face-internal-token", "strip-api-face"]
+      middlewares: [
+          # "sanitize-auth-headers",
+          "forward-auth",
+          # "inject-face-internal-token",
+          "strip-api-face",
+        ]
       service: face-service
-      priority: 100
+      # priority: 100
 
     # Frontend — catches everything else, no auth needed
     # Priority is lowest because PathPrefix(/) matches everything.
@@ -73,46 +100,46 @@ http:
       entryPoints: ["web"]
       rule: "PathPrefix(`/`)"
       service: frontend-service
-      priority: 1
+      # priority: 1
 
   # ── Middlewares ───────────────────────────────────────────────
   # Middlewares transform the request before it reaches the service.
   middlewares:
-    cors:
-      headers:
-        accessControlAllowCredentials: true
-        accessControlAllowHeaders:
-          - Authorization
-          - Content-Type
-          - Accept
-        accessControlAllowMethods:
-          - GET
-          - POST
-          - PUT
-          - DELETE
-          - PATCH
-          - OPTIONS
-        accessControlAllowOriginList:
-          - "http://localhost:4200"
-          - "http://localhost"
-          - "http://attendance-platform.ma"
-          - "http://192.168.100.73:18080"
-        addVaryHeader: true
+    # cors:
+    #   headers:
+    #     accessControlAllowCredentials: true
+    #     accessControlAllowHeaders:
+    #       - Authorization
+    #       - Content-Type
+    #       - Accept
+    #     accessControlAllowMethods:
+    #       - GET
+    #       - POST
+    #       - PUT
+    #       - DELETE
+    #       - PATCH
+    #       - OPTIONS
+    #     accessControlAllowOriginList:
+    #       - "http://localhost:4200"
+    #       - "http://localhost"
+    #       - "http://attendance-platform.ma"
+    #       - "http://192.168.100.73:18080"
+    #     addVaryHeader: true
 
-    sanitize-auth-headers:
-      headers:
-        customRequestHeaders:
-          X-User-Id: ""
-          X-User-Role: ""
-          X-User-Roles: ""
-          X-User-Email: ""
-          X-Request-Source: ""
-          X-Internal-Service-Token: ""
+    # sanitize-auth-headers:
+    #   headers:
+    #     customRequestHeaders:
+    #       X-User-Id: ""
+    #       X-User-Role: ""
+    #       X-User-Roles: ""
+    #       X-User-Email: ""
+    #       X-Request-Source: ""
+    #       X-Internal-Service-Token: ""
 
-    inject-face-internal-token:
-      headers:
-        customRequestHeaders:
-          X-Internal-Service-Token: '{{ env "FACE_SERVICE_INTERNAL_TOKEN" }}'
+    # inject-face-internal-token:
+    #   headers:
+    #     customRequestHeaders:
+    #       X-Internal-Service-Token: '{{ env "FACE_SERVICE_INTERNAL_TOKEN" }}'
 
     # StripPrefix removes the path prefix before forwarding.
     # Your Spring Boot service doesn't know it's behind a gateway,

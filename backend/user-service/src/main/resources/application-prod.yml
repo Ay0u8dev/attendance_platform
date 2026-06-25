@@ -17,3 +17,10 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+
+app:
+  profile-photos:
+    storage-dir: ${PROFILE_PHOTOS_STORAGE_DIR}
+    public-path: ${PROFILE_PHOTOS_PUBLIC_PATH}
+  internal:
+    face-service-token: ${FACE_SERVICE_INTERNAL_TOKEN}

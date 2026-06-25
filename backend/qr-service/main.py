@@ -86,6 +86,7 @@ async def create_teacher_qr_payload(
 
 @app.post("/qr/student/scan", response_model=AttendanceUpdateResponse)
 async def scan_student_qr(
+
     request: StudentQrScanRequest,
     x_user_id: str | None = Header(default=None, alias="X-User-Id"),
     x_user_roles: str | None = Header(default=None, alias="X-User-Roles"),

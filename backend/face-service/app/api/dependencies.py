@@ -33,29 +33,18 @@ def get_attendance_service_client() -> AttendanceServiceClient:
 
 
 def get_authenticated_student(
-    x_internal_service_token: str | None = Header(
-        default=None,
-        alias="X-Internal-Service-Token",
-    ),
     x_user_id: str | None = Header(default=None, alias="X-User-Id"),
     x_user_roles: str | None = Header(default=None, alias="X-User-Roles"),
     x_user_email: str | None = Header(default=None, alias="X-User-Email"),
 ) -> AuthenticatedStudent:
-    expected_token = settings.face_service_internal_token.strip()
-    supplied_token = (x_internal_service_token or "").strip()
-    if not expected_token or not compare_digest(expected_token, supplied_token):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid internal service token",
-        )
-
     if not x_user_id or not x_user_roles:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing authenticated user headers",
         )
 
-    roles = {role.strip() for role in x_user_roles.split(",") if role.strip()}
+    roles = {role.strip().upper() for role in x_user_roles.split(",") if role.strip()}
+
     if "STUDENT" not in roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -75,3 +64,18 @@ def get_authenticated_student(
         roles=roles,
         email=x_user_email,
     )
+
+def verify_internal_service_token(
+    x_internal_service_token: str | None = Header(
+        default=None,
+        alias="X-Internal-Service-Token",
+    ),
+) -> None:
+    expected_token = settings.face_service_internal_token.strip()
+    supplied_token = (x_internal_service_token or "").strip()
+
+    if not expected_token or not compare_digest(expected_token, supplied_token):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid internal service token",
+        )
