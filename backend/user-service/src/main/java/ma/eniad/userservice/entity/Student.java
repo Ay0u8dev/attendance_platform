@@ -12,6 +12,11 @@ import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @Entity
@@ -26,9 +31,21 @@ public class Student extends User {
     @Column(nullable = false, unique = true, length = 30)
     private String numApogee;
 
-    @Lob
+    @JdbcTypeCode(SqlTypes.VARBINARY)
+    @Column(name = "embeddings", columnDefinition = "bytea")
     @Basic(fetch = FetchType.LAZY)
     private byte[] embeddings;
+    @Size(max = 64)
+    @Column(length = 64)
+    private String faceEmbeddingModel;
+
+    @Size(max = 64)
+    @Column(length = 64)
+    private String faceEmbeddingFormat;
+
+    private Integer faceEmbeddingDimension;
+
+    private LocalDateTime faceEnrolledAt;
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonIgnoreProperties("student")

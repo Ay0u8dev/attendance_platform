@@ -25,7 +25,30 @@ public interface LiveAttendanceSessionStore {
 
     void bindDeviceToStudent(Long sessionId, String deviceId, Long studentId);
 
+    default void saveStudentStateAndBindDevice(
+            Long sessionId,
+            LiveAttendanceStudentState studentState,
+            String deviceId,
+            Long studentId
+    ) {
+        saveStudentState(sessionId, studentState);
+        bindDeviceToStudent(sessionId, deviceId, studentId);
+    }
+
     AttendanceCounts getAttendanceCounts(Long sessionId);
 
     void finalizeSession(LiveAttendanceSessionMeta meta, List<LiveAttendanceStudentState> students, Duration retention);
+
+    /**
+     * Atomically binds a device to a student only if the device is not already bound.
+     * Default implementation is NOT atomic and has a race condition.
+     * Implementations MUST override this method with an atomic operation.
+     */
+    default boolean bindDeviceToStudentIfAbsent(Long sessionId, String deviceId, Long studentId) {
+        if (findStudentIdByDevice(sessionId, deviceId).isPresent()) {
+            return false;
+        }
+        bindDeviceToStudent(sessionId, deviceId, studentId);
+        return true;
+    }
 }

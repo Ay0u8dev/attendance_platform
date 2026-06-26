@@ -50,13 +50,42 @@ class AttendanceUpdateServiceTest {
         liveAttendanceSessionStore = new InMemoryLiveAttendanceSessionStore();
         attendanceRecordRepository = mock(AttendanceRecordRepository.class);
         attendanceSessionRepository = mock(AttendanceSessionRepository.class);
+        AttendanceSessionLock directLock = new AttendanceSessionLock() {
+            @Override
+            public <T> T execute(Long sessionId, java.util.function.Supplier<T> operation) {
+                return operation.get();
+            }
+        };
+
         attendanceUpdateService = new AttendanceUpdateService(
                 liveAttendanceSessionStore,
                 messagingTemplate,
+                directLock,
                 attendanceRecordRepository,
                 attendanceSessionRepository
         );
+
+        // Ensure internal updates pass auth checks during unit tests
+        java.lang.reflect.Field qrTokenField;
+        java.lang.reflect.Field faceTokenField;
+        try {
+            qrTokenField = AttendanceUpdateService.class.getDeclaredField("qrServiceToken");
+            faceTokenField = AttendanceUpdateService.class.getDeclaredField("faceServiceToken");
+            qrTokenField.setAccessible(true);
+            faceTokenField.setAccessible(true);
+            qrTokenField.set(attendanceUpdateService, "test-internal-token");
+            faceTokenField.set(attendanceUpdateService, "test-internal-token");
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+
+
+
+
+
+
     }
+
 
     @Test
     void manualUpdateSucceedsForSessionOwner() {

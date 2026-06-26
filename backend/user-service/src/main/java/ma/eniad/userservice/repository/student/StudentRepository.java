@@ -54,11 +54,9 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
         @Param("apogees") Set<String> apogees
     );
 
-    @Query("""
-            SELECT DISTINCT s FROM Student s
-            JOIN s.inscriptions i
-            WHERE i.groupe.id = :groupeId
-            ORDER BY s.lastName, s.firstName, s.numApogee
-            """)
+    @Query("SELECT DISTINCT s FROM Student s " +
+       "JOIN s.inscriptions i " +
+       "WHERE i.groupe.id = :groupeId " +
+       "ORDER BY s.lastName, s.firstName, s.numApogee")
     List<Student> findByGroupeId(@Param("groupeId") Long groupeId);
 }

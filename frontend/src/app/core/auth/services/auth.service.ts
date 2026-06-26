@@ -4,8 +4,8 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { OAuthService, OAuthStorage } from 'angular-oauth2-oidc';
-import { EMPTY, of, throwError } from 'rxjs';
-import { catchError, filter, switchMap } from 'rxjs/operators';
+import { EMPTY, Observable, of, throwError } from 'rxjs';
+import { catchError, filter, map, switchMap } from 'rxjs/operators';
 
 import { getGoogleAuthConfig } from '../google-auth.config';
 import { environment } from '../../../../environments/environment';
@@ -207,6 +207,21 @@ export class AuthService {
     return this.currentUserSignal();
   }
 
+  refreshSession(): Observable<User> {
+    return this.http.post<BackendAuthResponse>(`${environment.apiBaseUrl}/auth/refresh`, {}).pipe(
+      map((response) => {
+        const user = this.decodeToken(response.accessToken);
+        if (!user) {
+          throw new Error('The server returned an invalid refreshed token.');
+        }
+
+        this.storage.setItem(this.TOKEN_KEY, response.accessToken);
+        this.currentUserSignal.set(user);
+        return user;
+      }),
+    );
+  }
+
   // handle successful authentication response from the backend
   private handleAuthSuccess(response: BackendAuthResponse): void {
     if (!this.isBrowser) {
@@ -301,7 +316,12 @@ export class AuthService {
       const email = this.normalizeString(payload['email']);
       const firstName = this.normalizeString(payload['firstName']);
       const lastName = this.normalizeString(payload['lastName']);
+      const firstLoginClaim = payload['firstLogin'];
       if (!id || !email) {
+        return null;
+      }
+
+      if (role === Role.STUDENT && typeof firstLoginClaim !== 'boolean') {
         return null;
       }
 
@@ -311,6 +331,7 @@ export class AuthService {
         role,
         firstName: firstName ?? undefined,
         lastName: lastName ?? undefined,
+        firstLogin: typeof firstLoginClaim === 'boolean' ? firstLoginClaim : false,
       };
     } catch {
       return null;
@@ -372,13 +393,20 @@ export class AuthService {
     return cleaned || null;
   }
 
-  getRoleHomeUrl(role: Role | null | undefined = this.currentUserSignal()?.role): string {
+  getRoleHomeUrl(
+    role: Role | null | undefined = this.currentUserSignal()?.role,
+    firstLogin: boolean = this.currentUserSignal()?.firstLogin ?? false,
+  ): string {
     switch (role) {
       case Role.ADMIN:
         return '/dashboard';
       case Role.TEACHER:
         return '/teacher';
       case Role.STUDENT:
+        // Step 2 must refresh the JWT after enrollment before sending the student here again.
+        if (firstLogin) {
+          return '/student/face-enrollment';
+        }
         return '/student';
       default:
         return '/';
@@ -390,7 +418,8 @@ export class AuthService {
       return;
     }
 
-    const target = this.getRoleHomeUrl(user?.role ?? this.currentUserSignal()?.role ?? null);
+    const currentUser = user ?? this.currentUserSignal();
+    const target = this.getRoleHomeUrl(currentUser?.role ?? null, currentUser?.firstLogin ?? false);
     this.router.navigateByUrl(target, { replaceUrl });
   }
 

@@ -2,10 +2,16 @@ package ma.eniad.userservice.service.student;
 
 import java.util.HashSet;
 import java.util.List;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import lombok.RequiredArgsConstructor;
 import ma.eniad.userservice.dto.student.StudentProfileDto;
@@ -16,9 +22,11 @@ import ma.eniad.userservice.entity.Student;
 import ma.eniad.userservice.entity.enums.Role;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
 import ma.eniad.userservice.entity.structure.Filiere;
+import ma.eniad.userservice.entity.structure.Formation;
 import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.exception.DuplicateResourceException;
 import ma.eniad.userservice.exception.InvalidDomainException;
+import ma.eniad.userservice.exception.InvalidInputException;
 import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.mapper.student.StudentMapper;
 import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
@@ -44,6 +52,12 @@ public class StudentService {
 
     @Value("${app.allowed-domain}")
     private String allowedDomain;
+
+    @Value("${app.profile-photos.storage-dir:uploads/profile-photos}")
+    private String profilePhotoStorageDir;
+
+    @Value("${app.profile-photos.public-path:/api/users/public/profile-photos}")
+    private String profilePhotoPublicPath;
 
     // -------------------------------------------------------------------------
     // Create
@@ -102,6 +116,39 @@ public class StudentService {
     }
 
     public StudentProfileDto getCurrentProfile() {
+        return buildCurrentProfile(findCurrentStudent());
+    }
+
+    @Transactional
+    public StudentProfileDto updateCurrentProfilePhoto(MultipartFile file) {
+        Student student = findCurrentStudent();
+        validateProfilePhoto(file);
+        String previousPfpUrl = student.getPfpUrl();
+
+        String extension = extensionForContentType(file.getContentType());
+        String filename = "student-" + student.getId() + "-" + UUID.randomUUID() + extension;
+
+        try {
+            Path directory = Paths.get(profilePhotoStorageDir).toAbsolutePath().normalize();
+            Files.createDirectories(directory);
+
+            Path target = directory.resolve(filename).normalize();
+            if (!target.startsWith(directory)) {
+                throw new InvalidInputException("Invalid profile photo path");
+            }
+
+            file.transferTo(target);
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to save profile photo");
+        }
+
+        student.setPfpUrl(normalizePublicPhotoPath() + "/" + filename);
+        studentRepository.save(student);
+        deletePreviousStoredProfilePhoto(previousPfpUrl, student.getPfpUrl());
+        return buildCurrentProfile(student);
+    }
+
+    private Student findCurrentStudent() {
         UserContext.UserInfo context = UserContext.getCurrentUser();
         if (context == null || context.getUserId() == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing user context");
@@ -114,16 +161,20 @@ public class StudentService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid user id");
         }
 
-        Student student = studentRepository.findById(studentId)
+        return studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+    }
 
+    private StudentProfileDto buildCurrentProfile(Student student) {
         StudentProfileDto.StudentProfileDtoBuilder builder = StudentProfileDto.builder()
                 .id(student.getId())
                 .email(student.getEmail())
                 .firstName(student.getFirstName())
                 .lastName(student.getLastName())
                 .pfpUrl(student.getPfpUrl())
-                .numApogee(student.getNumApogee());
+                .numApogee(student.getNumApogee())
+                .faceEnrolled(student.getFaceEnrolledAt() != null)
+                .faceEnrolledAt(student.getFaceEnrolledAt());
 
         applyEnrollmentDetails(builder, student);
 
@@ -184,6 +235,84 @@ public class StudentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
     }
 
+    private void validateProfilePhoto(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new InvalidInputException("Profile photo is required");
+        }
+
+        if (file.getSize() > 5 * 1024 * 1024) {
+            throw new InvalidInputException("Profile photo must be 5MB or less");
+        }
+
+        String contentType = file.getContentType();
+        if (!"image/jpeg".equals(contentType)
+                && !"image/png".equals(contentType)
+                && !"image/webp".equals(contentType)) {
+            throw new InvalidInputException("Profile photo must be a JPEG, PNG, or WebP image");
+        }
+    }
+
+    private String extensionForContentType(String contentType) {
+        if ("image/png".equals(contentType)) {
+            return ".png";
+        }
+        if ("image/webp".equals(contentType)) {
+            return ".webp";
+        }
+        return ".jpg";
+    }
+
+    private String normalizePublicPhotoPath() {
+        if (profilePhotoPublicPath == null || profilePhotoPublicPath.isBlank()) {
+            return "/api/users/public/profile-photos";
+        }
+
+        String normalized = profilePhotoPublicPath.trim();
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized.isEmpty() ? "/api/users/public/profile-photos" : normalized;
+    }
+
+    private void deletePreviousStoredProfilePhoto(String previousPfpUrl, String currentPfpUrl) {
+        if (previousPfpUrl == null || previousPfpUrl.isBlank() || previousPfpUrl.equals(currentPfpUrl)) {
+            return;
+        }
+
+        Path oldFile = storedProfilePhotoPath(previousPfpUrl);
+        if (oldFile == null) {
+            return;
+        }
+
+        try {
+            Files.deleteIfExists(oldFile);
+        } catch (IOException ignored) {
+            // A stale profile photo should not fail a successful profile update.
+        }
+    }
+
+    private Path storedProfilePhotoPath(String pfpUrl) {
+        String publicPath = normalizePublicPhotoPath() + "/";
+        String normalizedUrl = pfpUrl.trim();
+        if (!normalizedUrl.startsWith(publicPath)) {
+            return null;
+        }
+
+        String filename = normalizedUrl.substring(publicPath.length());
+        int queryIndex = filename.indexOf('?');
+        if (queryIndex >= 0) {
+            filename = filename.substring(0, queryIndex);
+        }
+
+        if (!filename.matches("[A-Za-z0-9._-]+")) {
+            return null;
+        }
+
+        Path directory = Paths.get(profilePhotoStorageDir).toAbsolutePath().normalize();
+        Path file = directory.resolve(filename).normalize();
+        return file.startsWith(directory) ? file : null;
+    }
+
     private void applyEnrollmentDetails(StudentProfileDto.StudentProfileDtoBuilder builder, Student student) {
         List<AnneeUniversitaire> activeYears = anneeUniversitaireRepository.findByActiveTrue();
         if (activeYears.isEmpty()) {
@@ -198,12 +327,19 @@ public class StudentService {
             return;
         }
 
+        builder.academicYear(activeYears.get(0).getName());
+
         Groupe groupe = inscription.getGroupe();
         if (groupe != null) {
             builder.groupe(groupe.getName());
 
-            if (groupe.getFormation() != null) {
-                Filiere filiere = groupe.getFormation().getFiliere();
+            Formation formation = groupe.getFormation();
+            if (formation != null) {
+                if (formation.getCycle() != null) {
+                    builder.cycle(formation.getCycle().getName());
+                }
+
+                Filiere filiere = formation.getFiliere();
                 if (filiere != null) {
                     builder.filiere(filiere.getCode());
                 }

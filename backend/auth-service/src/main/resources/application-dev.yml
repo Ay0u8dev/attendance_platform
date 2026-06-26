@@ -12,6 +12,7 @@ spring:
 
 app:
   allowed-domain: "ump.ac.ma"
+  allow-all-domains: true
   jwt:
     issuer: "auth-service"
     secret: 3d6f45a5fc12445dbac2f59c3b6c7cb1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a
@@ -23,4 +24,3 @@ google:
 services:
   user-service:
     url: http://localhost:8082
-

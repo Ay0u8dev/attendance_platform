@@ -160,6 +160,15 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'student/face-enrollment',
+    canActivate: [authGuard],
+    data: { allowedRoles: [Role.STUDENT], allowFirstLoginStudent: true },
+    loadComponent: () =>
+      import('./features/student/face-enrollment/face-enrollment-page').then(
+        (module) => module.FaceEnrollmentPage,
+      ),
+  },
+  {
     path: 'student',
     canActivate: [authGuard],
     data: { allowedRoles: [Role.STUDENT] },
@@ -183,6 +192,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/student/sessions/student-sessions-page').then(
             (module) => module.StudentSessionsPage,
+          ),
+      },
+      {
+        path: 'profile',
+        loadComponent: () =>
+          import('./features/student/profile/student-profile-page').then(
+            (module) => module.StudentProfilePage,
           ),
       },
       {

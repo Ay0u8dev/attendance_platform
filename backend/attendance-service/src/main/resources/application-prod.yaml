@@ -12,7 +12,6 @@ spring:
     redis:
       host: redis
       port: 6379
-      # password: ${REDIS_PASSWORD}
 
   jpa:
     hibernate:
@@ -26,6 +25,9 @@ services:
     url: http://user-service:8080
 
 attendance:
+  internal:
+    face-service-token: ${FACE_ATTENDANCE_INTERNAL_TOKEN}
+    qr-service-token: ${QR_ATTENDANCE_INTERNAL_TOKEN}
   session:
     auto-end-duration: PT30M
     finalized-state-retention: PT1H
@@ -34,3 +36,7 @@ attendance:
     max-distance-meters: ${ATTENDANCE_SELF_MARK_MAX_DISTANCE_METERS:100}
   websocket:
     allowed-origin-patterns: http://*
+  lock:
+    lease-duration: ${ATTENDANCE_LOCK_LEASE_DURATION:PT2M}
+    acquire-timeout: ${ATTENDANCE_LOCK_ACQUIRE_TIMEOUT:PT2S}
+    retry-interval: ${ATTENDANCE_LOCK_RETRY_INTERVAL:PT0.05S}

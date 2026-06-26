@@ -6,11 +6,14 @@ import ma.eniad.userservice.annotation.RequireRole;
 import ma.eniad.userservice.service.UserContext;
 import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
@@ -18,6 +21,13 @@ import java.util.stream.Collectors;
 
 @Component
 public class RoleCheckInterceptor implements HandlerInterceptor {
+
+    private static final String FACE_PROFILE_PATH_PREFIX = "/users/internal/students/";
+    private static final String FACE_PROFILE_PATH_SUFFIX = "/face-profile";
+    private static final String PUBLIC_PROFILE_PHOTOS_PATH_PREFIX = "/users/public/profile-photos/";
+
+    @Value("${app.internal.face-service-token:}")
+    private String faceServiceToken;
 
     @Override
     public boolean preHandle(HttpServletRequest request,
@@ -36,6 +46,28 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
 
         if (Objects.equals(source, "auth-service")) {
             return true; // Skip checks for auth-service calls
+        }
+
+        if (isPublicProfilePhotoPath(request)) {
+            return true;
+        }
+
+        if (isFaceProfilePath(request)) {
+            if (!Objects.equals(source, "face-service")) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal service source");
+            }
+            if (faceServiceToken == null || faceServiceToken.isBlank()) {
+                throw new ResponseStatusException(
+                        HttpStatus.SERVICE_UNAVAILABLE,
+                        "Face-service authentication is not configured"
+                );
+            }
+
+            String suppliedToken = request.getHeader("X-Internal-Service-Token");
+            if (suppliedToken == null || suppliedToken.isBlank() || !constantTimeEquals(faceServiceToken, suppliedToken)) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal service credentials");
+            }
+            return true;
         }
 
         if (Objects.equals(source, "attendance-service")
@@ -72,6 +104,27 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
         }
 
         return true; // Allow the request to proceed
+    }
+
+    private boolean isFaceProfilePath(HttpServletRequest request) {
+        String requestUri = request.getRequestURI();
+        return requestUri != null
+                && requestUri.startsWith(FACE_PROFILE_PATH_PREFIX)
+                && requestUri.endsWith(FACE_PROFILE_PATH_SUFFIX);
+    }
+
+    private boolean isPublicProfilePhotoPath(HttpServletRequest request) {
+        String requestUri = request.getRequestURI();
+        return "GET".equalsIgnoreCase(request.getMethod())
+                && requestUri != null
+                && requestUri.startsWith(PUBLIC_PROFILE_PHOTOS_PATH_PREFIX);
+    }
+
+    private boolean constantTimeEquals(String expected, String actual) {
+        return MessageDigest.isEqual(
+                expected.getBytes(StandardCharsets.UTF_8),
+                actual.getBytes(StandardCharsets.UTF_8)
+        );
     }
 
     @Override

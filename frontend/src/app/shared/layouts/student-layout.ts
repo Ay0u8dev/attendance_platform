@@ -210,7 +210,7 @@ type UtilityItem = {
                       aria-label="Open user menu"
                     >
                       <span
-                        class="flex h-7 w-7 overflow-hidden rounded-lg bg-primary-soft text-primary"
+                        class="flex h-9 w-9 overflow-hidden rounded-xl bg-primary-soft text-primary"
                       >
                         @if (profileImageUrl(); as imageUrl) {
                           <img
@@ -220,8 +220,8 @@ type UtilityItem = {
                             (error)="onProfileImageError()"
                           />
                         } @else {
-                          <span class="flex h-full w-full items-center justify-center">
-                            <i class="fa-solid fa-user-graduate text-xs" aria-hidden="true"></i>
+                            <span class="flex h-full w-full items-center justify-center">
+                            <i class="fa-solid fa-user-graduate text-sm" aria-hidden="true"></i>
                           </span>
                         }
                       </span>
@@ -245,7 +245,7 @@ type UtilityItem = {
                         >
                           <div class="flex items-center gap-3">
                             <span
-                              class="flex h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-surface text-primary"
+                              class="flex h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-surface text-primary"
                             >
                               @if (profileImageUrl(); as imageUrl) {
                                 <img
@@ -272,6 +272,14 @@ type UtilityItem = {
                           </div>
                         </div>
 
+                        <button
+                          type="button"
+                          class="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-secondaryText transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText"
+                          (click)="openProfile()"
+                        >
+                          <i class="fa-solid fa-user" aria-hidden="true"></i>
+                          <span>Profil</span>
+                        </button>
                         <button
                           type="button"
                           class="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-secondaryText transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText"
@@ -316,6 +324,7 @@ export class StudentLayout {
   private readonly routeTitles: Record<string, string> = {
     '/student/dashboard': 'Tableau de bord',
     '/student/sessions': 'Mes sessions',
+    '/student/profile': 'Mon profil',
     '/student/justifications': 'Justifications',
   };
 
@@ -443,6 +452,11 @@ export class StudentLayout {
 
   isActiveRoute(route: string): boolean {
     return this.router.url === route;
+  }
+
+  openProfile(): void {
+    this.isUserMenuOpen.set(false);
+    void this.router.navigateByUrl('/student/profile');
   }
 
   openSettings(): void {

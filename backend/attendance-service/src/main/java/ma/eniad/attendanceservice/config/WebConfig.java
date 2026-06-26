@@ -19,13 +19,13 @@ public class WebConfig implements WebMvcConfigurer {
                 .excludePathPatterns("/attendance/ws/**");
     }
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/attendance/**")
-                .allowedOrigins("http://localhost:4200", "http://localhost", "http://127.0.0.1:4200")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-                .allowedHeaders("*")
-                .exposedHeaders("Authorization", "X-User-Id", "X-User-Roles", "X-User-Email")
-                .allowCredentials(true);
-    }
+    // @Override
+    // public void addCorsMappings(CorsRegistry registry) {
+    //     registry.addMapping("/attendance/**")
+    //             .allowedOrigins("http://localhost:4200", "http://localhost", "http://127.0.0.1:4200")
+    //             .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
+    //             .allowedHeaders("*")
+    //             .exposedHeaders("Authorization", "X-User-Id", "X-User-Roles", "X-User-Email")
+    //             .allowCredentials(true);
+    // }
 }

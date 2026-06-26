@@ -461,7 +461,9 @@
           </div>
         } @else {
           @if (
-            attendanceFlowPhase() === 'face-captured' || attendanceFlowPhase() === 'face-validated'
+            attendanceFlowPhase() === 'face-captured' ||
+            attendanceFlowPhase() === 'face-submitting' ||
+            attendanceFlowPhase() === 'face-confirmed'
           ) {
             <div class="attendance-media-frame">
               @if (capturedFaceImage(); as faceImage) {
@@ -469,10 +471,17 @@
               }
             </div>
 
-            @if (attendanceFlowPhase() === 'face-validated') {
+            @if (attendanceFlowPhase() === 'face-submitting') {
+              <div class="rounded-2xl border border-primary-soft bg-primary-soft px-4 py-3">
+                <p class="text-sm font-semibold text-primary">Vérification de votre identité...</p>
+              </div>
+            } @else if (attendanceFlowPhase() === 'face-confirmed') {
               <div class="rounded-2xl border border-success/25 bg-success-soft px-4 py-3">
                 <p class="text-sm font-semibold text-success">
-                  Capture validée localement. L’envoi backend sera branché plus tard.
+                  {{
+                    faceConfirmationMessage() ||
+                      "Identité vérifiée. Aucune présence n'a été enregistrée."
+                  }}
                 </p>
               </div>
             }
@@ -482,11 +491,6 @@
 
               <div class="attendance-overlay">
                 <div class="face-guide" aria-hidden="true"></div>
-                <div
-                  class="absolute left-1/2 top-3 flex h-10 min-w-10 -translate-x-1/2 items-center justify-center rounded-full bg-surface px-3 text-lg font-bold text-principalText shadow-card"
-                >
-                  {{ faceCountdown() }}
-                </div>
               </div>
             </div>
           }
@@ -522,13 +526,26 @@
             Scanner à nouveau
           </button>
         }
+        @if (selectedAttendanceChoice() === 'FACE_ID' && attendanceFlowPhase() === 'face-preview') {
+          <button
+            type="button"
+            class="order-1 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-primary-strong focus:outline-none focus:ring-2 focus:ring-primary-soft focus:ring-offset-2 sm:order-3 sm:w-auto"
+            (click)="takeFacePhoto()"
+          >
+            <i class="fa-solid fa-camera" aria-hidden="true"></i>
+            Prendre la photo
+          </button>
+        }
         @if (
-          selectedAttendanceChoice() === 'FACE_ID' && attendanceFlowPhase() === 'face-captured'
+          selectedAttendanceChoice() === 'FACE_ID' &&
+          (attendanceFlowPhase() === 'face-captured' || attendanceFlowPhase() === 'face-submitting')
         ) {
           <button
             type="button"
             class="order-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft sm:order-2 sm:w-auto"
             (click)="retakeFaceCapture()"
+            [disabled]="attendanceFlowPhase() === 'face-submitting'"
+            [class.opacity-60]="attendanceFlowPhase() === 'face-submitting'"
           >
             <i class="fa-solid fa-camera-rotate" aria-hidden="true"></i>
             Reprendre
@@ -537,9 +554,22 @@
             type="button"
             class="order-1 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-primary-strong focus:outline-none focus:ring-2 focus:ring-primary-soft focus:ring-offset-2 sm:order-3 sm:w-auto"
             (click)="validateFaceCapture()"
+            [disabled]="attendanceFlowPhase() === 'face-submitting'"
+            [class.opacity-80]="attendanceFlowPhase() === 'face-submitting'"
           >
-            <i class="fa-solid fa-check" aria-hidden="true"></i>
-            Valider
+            <i
+              [class]="
+                attendanceFlowPhase() === 'face-submitting'
+                  ? 'fa-solid fa-spinner fa-spin'
+                  : 'fa-solid fa-check'
+              "
+              aria-hidden="true"
+            ></i>
+            {{
+              attendanceFlowPhase() === 'face-submitting'
+                ? 'Vérification...'
+                : 'Vérifier mon identité'
+            }}
           </button>
         }
         <button

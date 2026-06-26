@@ -11,12 +11,23 @@ services:
       - "traefik.http.middlewares.forward-auth.forwardauth.address=http://auth-service:8080/auth/validate"
       - "traefik.http.middlewares.forward-auth.forwardauth.authResponseHeaders=X-User-Id,X-User-Roles,X-User-Email"
 
+      - "traefik.http.middlewares.sanitize-auth-headers.headers.customrequestheaders.X-User-Id="
+      - "traefik.http.middlewares.sanitize-auth-headers.headers.customrequestheaders.X-User-Role="
+      - "traefik.http.middlewares.sanitize-auth-headers.headers.customrequestheaders.X-User-Roles="
+      - "traefik.http.middlewares.sanitize-auth-headers.headers.customrequestheaders.X-User-Email="
+      - "traefik.http.middlewares.sanitize-auth-headers.headers.customrequestheaders.X-Request-Source="
+      - "traefik.http.middlewares.sanitize-auth-headers.headers.customrequestheaders.X-Internal-Service-Token="
+      - "traefik.http.middlewares.inject-face-internal-token.headers.customrequestheaders.X-Internal-Service-Token=${FACE_SERVICE_INTERNAL_TOKEN}"
+
       - "traefik.http.middlewares.strip-api-auth.stripprefix.prefixes=/api"
       - "traefik.http.middlewares.strip-api-user.stripprefix.prefixes=/api"
       - "traefik.http.middlewares.strip-api-attendance.stripprefix.prefixes=/api"
       - "traefik.http.middlewares.strip-api-justification.stripprefix.prefixes=/api"
       - "traefik.http.middlewares.strip-api-qr.stripprefix.prefixes=/api"
+      - "traefik.http.middlewares.strip-api-face.stripprefix.prefixes=/api"
       - "traefik.http.middlewares.strip-api-ws-attendance.stripprefix.prefixes=/api/ws"
+    env_file:
+      - .env.prod
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.prod.yml:/etc/traefik/traefik.yml:ro
@@ -105,10 +116,14 @@ services:
       - "traefik.enable=true"
 
       # Router
-      - "traefik.http.routers.user.rule=PathPrefix(`/api/users`)"
+      - "traefik.http.routers.user-public-profile-photos.rule=PathPrefix(`/api/users/public/profile-photos`)"
+      - "traefik.http.routers.user-public-profile-photos.entrypoints=web"
+      - "traefik.http.routers.user.rule=PathPrefix(`/api/users`) && !PathPrefix(`/api/users/internal`)"
       - "traefik.http.routers.user.entrypoints=web"
 
       # Attach middlewares
+      - "traefik.http.routers.user-public-profile-photos.middlewares=strip-api-user"
+      - "traefik.http.routers.user-public-profile-photos.service=user"
       - "traefik.http.routers.user.middlewares=forward-auth,strip-api-user"
 
       # Internal port
@@ -130,13 +145,12 @@ services:
       - "traefik.enable=true"
 
       # Router
-      - "traefik.http.routers.attendance.rule=PathPrefix(`/api/attendance`)"
+      - "traefik.http.routers.attendance.rule=PathPrefix(`/api/attendance`) && !PathPrefix(`/api/attendance/internal`)"
       - "traefik.http.routers.attendance.entrypoints=web"
       - "traefik.http.routers.attendance-ws.rule=Path(`/api/ws/attendance/ws`)"
       - "traefik.http.routers.attendance-ws.entrypoints=web"
 
       # Attach middlewares
-      - "traefik.http.routers.attendance-internal.middlewares=strip-api-attendance"
       - "traefik.http.routers.attendance.middlewares=forward-auth,strip-api-attendance"
       - "traefik.http.routers.attendance-ws.middlewares=strip-api-ws-attendance"
 
@@ -159,12 +173,12 @@ services:
     container_name: justification-service
     labels:
       - "traefik.enable=true"
-      
+
       - "traefik.http.routers.justification.rule=PathPrefix(`/api/justifications`)"
       - "traefik.http.routers.justification.entrypoints=web"
-      
+
       - "traefik.http.routers.justification.middlewares=forward-auth,strip-api-justification"
-      
+
       - "traefik.http.services.justification.loadbalancer.server.port=8080"
     env_file:
       - .env.prod
@@ -183,12 +197,12 @@ services:
     container_name: qr-service
     labels:
       - "traefik.enable=true"
-      
+
       - "traefik.http.routers.qr.rule=PathPrefix(`/api/qr`)"
       - "traefik.http.routers.qr.entrypoints=web"
-      
+
       - "traefik.http.routers.qr.middlewares=forward-auth,strip-api-qr"
-      
+
       - "traefik.http.services.qr.loadbalancer.server.port=8000"
     environment:
       ATTENDANCE_SERVICE_URL: http://attendance-service:8080
@@ -196,6 +210,31 @@ services:
       - .env.prod
     depends_on:
       attendance-service:
+        condition: service_started
+
+  face-service:
+    build:
+      context: ./backend/face-service
+      dockerfile: ./Dockerfile.prod.example
+    container_name: face-service
+    labels:
+      - "traefik.enable=true"
+
+      - "traefik.http.routers.face.rule=PathPrefix(`/api/face`)"
+      - "traefik.http.routers.face.entrypoints=web"
+
+      - "traefik.http.routers.face.middlewares=forward-auth,strip-api-face"
+
+      - "traefik.http.services.face.loadbalancer.server.port=8000"
+    environment:
+      ATTENDANCE_SERVICE_URL: http://attendance-service:8080
+      USER_SERVICE_URL: http://user-service:8080
+    env_file:
+      - .env.prod
+    depends_on:
+      attendance-service:
+        condition: service_started
+      user-service:
         condition: service_started
 
 volumes:
