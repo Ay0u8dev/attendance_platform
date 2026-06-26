@@ -2,6 +2,7 @@ package ma.eniad.authservice.controllers;
 
 import feign.FeignException;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/auth")
@@ -95,8 +97,7 @@ public class AuthController {
             UserDto user;
             try {
                 user = userServiceClient.authUser(Map.of(
-                        "email", email,
-                        "pfpUrl", googleClaims.get("picture")
+                        "email", email
                 ));
             } catch (FeignException.NotFound ex) {
                 throw new AccountNotFoundException();
@@ -117,6 +118,47 @@ public class AuthController {
         } catch (RuntimeException ex) {
             // Let custom exceptions and others propagate to GlobalExceptionHandler
             log.error("[AUTH] ✗ Erreur lors de la validation: {}", ex.getMessage());
+            throw ex;
+        }
+    }
+
+    @PostMapping("/refresh")
+    @Operation(
+            summary = "Renouvellement du JWT interne",
+            description = "Valide le JWT courant, recharge l'utilisateur et émet un JWT avec ses claims à jour."
+    )
+    public ResponseEntity<?> refreshAccessToken(
+            @RequestHeader(name = "Authorization", required = false) String authorizationHeader
+    ) {
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token d'accès manquant ou mal formé");
+        }
+
+        try {
+            Claims claims = jwtService.parseAndValidateAccessToken(authorizationHeader.substring(7));
+            Long userId = Long.valueOf(jwtService.extractUserId(claims));
+            String tokenEmail = claims.get("email", String.class);
+            UserDto user = userServiceClient.findById(userId);
+
+            if (!Objects.equals(tokenEmail, user.getEmail())) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Identité du token incohérente");
+            }
+            if (!user.isEnabled()) {
+                throw new AccountDisabledException();
+            }
+
+            return ResponseEntity.ok(Map.of("accessToken", jwtService.generateToken(user)));
+        } catch (FeignException.NotFound ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur du token introuvable");
+        } catch (NumberFormatException | JwtException ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token d'accès invalide");
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (AccountDisabledException ex) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Compte utilisateur désactivé");
+        } catch (FeignException ex) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Service utilisateur indisponible", ex);
+        } catch (RuntimeException ex) {
             throw ex;
         }
     }

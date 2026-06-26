@@ -1,24 +1,21 @@
 package ma.eniad.userservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.persistence.Basic;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Lob;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.PrimaryKeyJoinColumn;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
 import java.util.List;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -34,9 +31,21 @@ public class Student extends User {
     @Column(nullable = false, unique = true, length = 30)
     private String numApogee;
 
-    @Lob
+    @JdbcTypeCode(SqlTypes.VARBINARY)
+    @Column(name = "embeddings", columnDefinition = "bytea")
     @Basic(fetch = FetchType.LAZY)
     private byte[] embeddings;
+    @Size(max = 64)
+    @Column(length = 64)
+    private String faceEmbeddingModel;
+
+    @Size(max = 64)
+    @Column(length = 64)
+    private String faceEmbeddingFormat;
+
+    private Integer faceEmbeddingDimension;
+
+    private LocalDateTime faceEnrolledAt;
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonIgnoreProperties("student")

@@ -8,7 +8,6 @@ spring:
 app:
   allowed-domain: "ump.ac.ma"
 
-
 #logging:
 #  level:
 #    root: debug

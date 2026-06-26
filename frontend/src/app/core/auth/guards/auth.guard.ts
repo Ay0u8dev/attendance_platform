@@ -11,6 +11,7 @@ import { AuthService } from '../services/auth.service';
 
 type RoleRouteData = {
   allowedRoles?: Role[];
+  allowFirstLoginStudent?: boolean;
 };
 
 function getAllowedRoles(route: ActivatedRouteSnapshot): Role[] {
@@ -30,6 +31,15 @@ function validateAccess(route: ActivatedRouteSnapshot) {
 
   if (!auth.isAuthenticated()) {
     return router.parseUrl('/');
+  }
+
+  const allowsFirstLoginStudent = [...route.pathFromRoot].some(
+    (snapshot) =>
+      (snapshot.data as RoleRouteData | undefined)?.allowFirstLoginStudent === true,
+  );
+  const user = auth.currentUser;
+  if (user?.role === Role.STUDENT && user.firstLogin && !allowsFirstLoginStudent) {
+    return router.parseUrl('/student/face-enrollment');
   }
 
   const allowedRoles = getAllowedRoles(route);

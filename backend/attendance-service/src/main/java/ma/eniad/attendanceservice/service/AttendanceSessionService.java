@@ -1,5 +1,7 @@
 package ma.eniad.attendanceservice.service;
 
+import feign.FeignException;
+import feign.RetryableException;
 import lombok.AllArgsConstructor;
 import ma.eniad.attendanceservice.client.UserServiceClient;
 import ma.eniad.attendanceservice.config.AttendanceSessionProperties;
@@ -32,9 +34,9 @@ public class AttendanceSessionService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Teacher already has an active session");
         }
 
-        InternalTeacherIdentityDto teacherIdentity = userServiceClient.getTeacherIdentity(teacherId);
+        InternalTeacherIdentityDto teacherIdentity = loadTeacherIdentity(teacherId);
         List<Long> normalizedGroupIds = request.groupIds().stream().distinct().toList();
-        List<StudentRosterDto> roster = userServiceClient.getStudentRosterByGroupIds(normalizedGroupIds);
+        List<StudentRosterDto> roster = loadStudentRoster(normalizedGroupIds);
         String teacherFullName = formatTeacherFullName(teacherIdentity);
 
         LocalDateTime startedAt = LocalDateTime.now();
@@ -123,5 +125,38 @@ public class AttendanceSessionService {
         }
 
         return fullName;
+    }
+
+    private InternalTeacherIdentityDto loadTeacherIdentity(Long teacherId) {
+        try {
+            return userServiceClient.getTeacherIdentity(teacherId);
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (FeignException ex) {
+            throw translateUserServiceFailure(ex, "Unable to load teacher identity from user-service");
+        }
+    }
+
+    private List<StudentRosterDto> loadStudentRoster(List<Long> groupIds) {
+        try {
+            return userServiceClient.getStudentRosterByGroupIds(groupIds);
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (FeignException ex) {
+            throw translateUserServiceFailure(ex, "Unable to load student roster from user-service");
+        }
+    }
+
+    private ResponseStatusException translateUserServiceFailure(FeignException ex, String message) {
+        if (ex instanceof RetryableException) {
+            return new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "User service is unavailable", ex);
+        }
+
+        HttpStatus status = HttpStatus.resolve(ex.status());
+        if (status == null || status.is5xxServerError()) {
+            status = HttpStatus.SERVICE_UNAVAILABLE;
+        }
+
+        return new ResponseStatusException(status, message, ex);
     }
 }

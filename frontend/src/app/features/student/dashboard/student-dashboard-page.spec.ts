@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { StudentAttendanceSessionSummaryDto } from '../../../core/attendance/models/student-attendance.model';
 import { QrAttendanceService } from '../../../core/attendance/services/qr-attendance.service';
+import { FaceAttendanceService } from '../../../core/attendance/services/face-attendance.service';
 import { StudentAttendanceService } from '../../../core/attendance/services/student-attendance.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { StudentProfileService } from '../../../core/student/services/student-profile.service';
@@ -24,6 +25,10 @@ describe('StudentDashboardPage QR attendance flow', () => {
   };
   let qrAttendanceService: {
     submitStudentQrScan: ReturnType<typeof vi.fn>;
+    toUserMessage: ReturnType<typeof vi.fn>;
+  };
+  let faceAttendanceService: {
+    submitStudentFaceAttendance: ReturnType<typeof vi.fn>;
     toUserMessage: ReturnType<typeof vi.fn>;
   };
   let getCurrentPosition: ReturnType<typeof vi.fn>;
@@ -74,6 +79,21 @@ describe('StudentDashboardPage QR attendance flow', () => {
       ),
       toUserMessage: vi.fn(() => 'Impossible de valider le QR code.'),
     };
+    faceAttendanceService = {
+      submitStudentFaceAttendance: vi.fn(() =>
+        of({
+          sessionId: 42,
+          studentId: 7,
+          status: 'PRESENT',
+          markMethod: 'FACE_ID',
+          markedAt: '2026-06-03T10:05:00',
+          presentCount: 1,
+          absentCount: 0,
+          unknownCount: 0,
+        }),
+      ),
+      toUserMessage: vi.fn(() => 'Impossible de valider le visage.'),
+    };
     getCurrentPosition = vi.fn();
     getUserMedia = vi.fn();
 
@@ -94,6 +114,7 @@ describe('StudentDashboardPage QR attendance flow', () => {
         { provide: StudentProfileService, useValue: { profile: signal(null).asReadonly() } },
         { provide: StudentAttendanceService, useValue: attendanceService },
         { provide: QrAttendanceService, useValue: qrAttendanceService },
+        { provide: FaceAttendanceService, useValue: faceAttendanceService },
       ],
     }).compileComponents();
 
@@ -129,23 +150,25 @@ describe('StudentDashboardPage QR attendance flow', () => {
         totalPages: 2,
       }),
     );
-    attendanceService.toSessionListItem.mockImplementation((item: StudentAttendanceSessionSummaryDto) => ({
-      id: item.sessionId,
-      teacherFullName: 'Teacher',
-      courseLabel: item.courseLabel,
-      roomLabel: item.roomLabel,
-      groupSummary: 'Groupe 1',
-      dateLabel: '03 juin 2026',
-      timeLabel: '10:00 - 11:00',
-      attendanceLabel: 'Présent',
-      attendanceVariant: 'success',
-      markMethodLabel: 'QR code',
-      startedAt: item.startedAt,
-      endedAt: item.endedAt,
-      markedAt: item.markedAt,
-      attendanceStatus: item.attendanceStatus,
-      markMethod: item.markMethod,
-    }));
+    attendanceService.toSessionListItem.mockImplementation(
+      (item: StudentAttendanceSessionSummaryDto) => ({
+        id: item.sessionId,
+        teacherFullName: 'Teacher',
+        courseLabel: item.courseLabel,
+        roomLabel: item.roomLabel,
+        groupSummary: 'Groupe 1',
+        dateLabel: '03 juin 2026',
+        timeLabel: '10:00 - 11:00',
+        attendanceLabel: 'Présent',
+        attendanceVariant: 'success',
+        markMethodLabel: 'QR code',
+        startedAt: item.startedAt,
+        endedAt: item.endedAt,
+        markedAt: item.markedAt,
+        attendanceStatus: item.attendanceStatus,
+        markMethod: item.markMethod,
+      }),
+    );
 
     attendanceService.getStudentSessions.mockClear();
     (component as unknown as { loadDashboardData: () => void }).loadDashboardData();
@@ -234,7 +257,149 @@ describe('StudentDashboardPage QR attendance flow', () => {
     expect(component.qrLocationStatus()).toBe('idle');
     expect(component.qrLocationPosition()).toBeNull();
   });
+
+  it('does not submit face attendance immediately when the face button opens the camera', async () => {
+    getUserMedia.mockResolvedValue(makeMediaStream());
+
+    component.openAttendanceCamera('FACE_ID');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await fixture.whenStable();
+
+    expect(getUserMedia).toHaveBeenCalled();
+    expect(getUserMedia).toHaveBeenCalledWith({
+      video: {
+        facingMode: 'user',
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+      audio: false,
+    });
+    expect(faceAttendanceService.submitStudentFaceAttendance).not.toHaveBeenCalled();
+    expect(component.attendanceFlowPhase()).toBe('face-preview');
+    expect(fixture.nativeElement.textContent).toContain('Prendre la photo');
+  });
+
+  it('captures the face only when the student presses the photo button', async () => {
+    getUserMedia.mockResolvedValue(makeMediaStream());
+    component.openAttendanceCamera('FACE_ID');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await fixture.whenStable();
+    const video = component.attendanceVideo()!.nativeElement;
+    Object.defineProperty(video, 'videoWidth', { configurable: true, value: 640 });
+    Object.defineProperty(video, 'videoHeight', { configurable: true, value: 480 });
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      drawImage: vi.fn(),
+    } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue(FACE_IMAGE_DATA_URL);
+
+    component.takeFacePhoto();
+
+    expect(component.capturedFaceImage()).toBe(FACE_IMAGE_DATA_URL);
+    expect(component.attendanceFlowPhase()).toBe('face-captured');
+  });
+
+  it('restarts the face camera when the student retakes a captured photo', async () => {
+    getUserMedia.mockResolvedValue(makeMediaStream());
+    component.openAttendanceCamera('FACE_ID');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await fixture.whenStable();
+
+    component.capturedFaceImage.set(FACE_IMAGE_DATA_URL);
+    component.attendanceFlowPhase.set('face-captured');
+    fixture.detectChanges();
+
+    component.retakeFaceCapture();
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await fixture.whenStable();
+
+    expect(component.capturedFaceImage()).toBeNull();
+    expect(component.attendanceFlowPhase()).toBe('face-preview');
+    expect(component.cameraError()).toBeNull();
+    expect(getUserMedia).toHaveBeenCalledTimes(2);
+  });
+
+  it('submits a captured face with GPS and a stable device id', async () => {
+    getCurrentPosition.mockImplementation((success) => success(makePosition(34, -6)));
+    component.capturedFaceImage.set(FACE_IMAGE_DATA_URL);
+    component.attendanceFlowPhase.set('face-captured');
+
+    component.validateFaceCapture();
+    await fixture.whenStable();
+
+    expect(getCurrentPosition).toHaveBeenCalledOnce();
+    expect(faceAttendanceService.submitStudentFaceAttendance).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: 42,
+        gpsLat: '34',
+        gpsLon: '-6',
+        image: expect.any(Blob),
+      }),
+    );
+  });
+
+  it('records attendance and refreshes dashboard data only after success', async () => {
+    getCurrentPosition.mockImplementation((success) => success(makePosition(34, -6)));
+    attendanceService.getActiveStudentSession.mockReturnValueOnce(
+      of({
+        sessionId: 42,
+        teacherFullName: 'Teacher',
+        courseLabel: 'Distributed Systems',
+        roomLabel: 'B12',
+        groupIds: [1],
+        startedAt: '2026-06-03T10:00:00',
+        endsAt: '2026-06-03T11:00:00',
+        attendanceStatus: 'PRESENT',
+      }),
+    );
+    component.capturedFaceImage.set(FACE_IMAGE_DATA_URL);
+    component.attendanceFlowPhase.set('face-captured');
+
+    component.validateFaceCapture();
+    await fixture.whenStable();
+
+    expect(faceAttendanceService.submitStudentFaceAttendance).toHaveBeenCalledOnce();
+    expect(component.activeAttendanceSession()?.attendanceStatus).toBe('PRESENT');
+    expect(component.faceConfirmationMessage()).toContain('Présence enregistrée');
+    expect(attendanceService.getActiveStudentSession).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the capture available when the face does not match', async () => {
+    getCurrentPosition.mockImplementation((success) => success(makePosition(34, -6)));
+    faceAttendanceService.submitStudentFaceAttendance.mockReturnValueOnce(
+      throwError(() => ({ status: 403 })),
+    );
+    faceAttendanceService.toUserMessage.mockReturnValueOnce('Visage non reconnu. Réessayez.');
+    component.capturedFaceImage.set(FACE_IMAGE_DATA_URL);
+    component.attendanceFlowPhase.set('face-captured');
+
+    component.validateFaceCapture();
+    await fixture.whenStable();
+
+    expect(component.attendanceFlowPhase()).toBe('face-captured');
+    expect(component.capturedFaceImage()).toBe(FACE_IMAGE_DATA_URL);
+    expect(component.cameraError()).toContain('Visage non reconnu');
+    expect(component.activeAttendanceSession()?.attendanceStatus).toBe('UNKNOWN');
+  });
+
+  it('keeps the face capture available when backend validation fails', async () => {
+    getCurrentPosition.mockImplementation((success) => success(makePosition(34, -6)));
+    faceAttendanceService.submitStudentFaceAttendance.mockReturnValueOnce(
+      throwError(() => new Error('backend failed')),
+    );
+    faceAttendanceService.toUserMessage.mockReturnValueOnce('Visage non valide.');
+    component.capturedFaceImage.set(FACE_IMAGE_DATA_URL);
+    component.attendanceFlowPhase.set('face-captured');
+    component.validateFaceCapture();
+    await fixture.whenStable();
+
+    expect(component.attendanceFlowPhase()).toBe('face-captured');
+    expect(component.capturedFaceImage()).toBe(FACE_IMAGE_DATA_URL);
+    expect(component.cameraError()).toBe('Visage non valide.');
+  });
 });
+
+const FACE_IMAGE_DATA_URL = 'data:image/jpeg;base64,ZmFjZQ==';
 
 function makePosition(latitude: number, longitude: number): GeolocationPosition {
   return {
@@ -251,6 +416,12 @@ function makePosition(latitude: number, longitude: number): GeolocationPosition 
     timestamp: Date.now(),
     toJSON: () => ({}),
   };
+}
+
+function makeMediaStream(): MediaStream {
+  return {
+    getTracks: () => [],
+  } as unknown as MediaStream;
 }
 
 function makeSessionSummary(sessionId: number): StudentAttendanceSessionSummaryDto {

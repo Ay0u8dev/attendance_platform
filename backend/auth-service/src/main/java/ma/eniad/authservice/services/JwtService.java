@@ -24,6 +24,7 @@ public class JwtService {
     private static final String CLAIM_ROLES = "roles";
     private static final String CLAIM_FIRST_NAME = "firstName";
     private static final String CLAIM_LAST_NAME = "lastName";
+    private static final String CLAIM_FIRST_LOGIN = "firstLogin";
 
     @Value("${app.jwt.secret}")
     private String secretKey;
@@ -38,6 +39,7 @@ public class JwtService {
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put(CLAIM_ID, user.getId());
         extraClaims.put(CLAIM_EMAIL, user.getEmail());
+        extraClaims.put(CLAIM_FIRST_LOGIN, user.isFirstLogin());
         putIfNotBlank(extraClaims, CLAIM_FIRST_NAME, user.getFirstName());
         putIfNotBlank(extraClaims, CLAIM_LAST_NAME, user.getLastName());
 
@@ -142,6 +144,9 @@ public class JwtService {
         List<String> roles = extractRoles(claims);
         if (roles.isEmpty()) {
             throw new JwtException("Missing roles");
+        }
+        if (roles.contains(Role.STUDENT.name()) && !(claims.get(CLAIM_FIRST_LOGIN) instanceof Boolean)) {
+            throw new JwtException("Missing firstLogin for student");
         }
 
         String issuer = claims.getIssuer();

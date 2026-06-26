@@ -12,9 +12,15 @@ http:
       middlewares: ["strip-api-auth"]
       service: auth-service
 
+    user-public-profile-photos:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/users/public/profile-photos`)"
+      middlewares: ["strip-api-user"]
+      service: user-service
+
     user:
       entryPoints: ["web"]
-      rule: "PathPrefix(`/api/users`)"
+      rule: "PathPrefix(`/api/users`) && !PathPrefix(`/api/users/internal`)"
       middlewares: ["forward-auth", "strip-api-user"]
       service: user-service
 
@@ -26,12 +32,21 @@ http:
       middlewares: ["strip-api-ws-attendance"]
       service: attendance-service
 
-    # Attendance routes — protected, JWT required
     attendance:
       entryPoints: ["web"]
-      rule: "PathPrefix(`/api/attendance`)"
+      rule: "PathPrefix(`/api/attendance`) && !PathPrefix(`/api/attendance/internal`)"
       middlewares: ["forward-auth", "strip-api-attendance"]
       service: attendance-service
+
+    justification:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/justifications`)"
+      middlewares: [
+          # "cors",
+          "forward-auth",
+          "strip-api-justification",
+        ]
+      service: justification-service
 
     qr:
       entryPoints: ["web"]
@@ -40,11 +55,11 @@ http:
       service: qr-service
 
     # # Face recognition routes — protected, JWT required
-    # face:
-    #   entryPoints: ["web"]
-    #   rule: "PathPrefix(`/api/face`)"
-    #   middlewares: ["forward-auth", "strip-api-face"]
-    #   service: face-service
+    face:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/face`)"
+      middlewares: ["forward-auth", "strip-api-face"]
+      service: face-service
 
     # Frontend — catches everything else, no auth needed
     # Priority is lowest because PathPrefix(/) matches everything.
@@ -70,6 +85,10 @@ http:
       stripPrefix:
         prefixes: ["/api"]
 
+    strip-api-justification:
+      stripPrefix:
+        prefixes: ["/api"]
+
     strip-api-qr:
       stripPrefix:
         prefixes: ["/api"]
@@ -78,9 +97,9 @@ http:
       stripPrefix:
         prefixes: ["/api/ws"]
 
-    # strip-api-face:
-    #   stripPrefix:
-    #     prefixes: ["/api/face"]
+    strip-api-face:
+      stripPrefix:
+        prefixes: ["/api"]
 
     strip-api-user:
       stripPrefix:
@@ -125,6 +144,11 @@ http:
         servers:
           - url: "http://host.docker.internal:8083"
 
+    justification-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8085"
+
     qr-service:
       loadBalancer:
         servers:
@@ -134,3 +158,8 @@ http:
       loadBalancer:
         servers:
           - url: "http://host.docker.internal:4200"
+
+    face-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8002"

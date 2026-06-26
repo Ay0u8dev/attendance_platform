@@ -4,6 +4,8 @@ import ma.eniad.authservice.dto.UserDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.Map;
 
@@ -14,4 +16,7 @@ public interface UserServiceClient {
     UserDto authUser(
             @RequestBody Map<String, String> userData
     );
+
+    @GetMapping("/{id}")
+    UserDto findById(@PathVariable("id") Long id);
 }

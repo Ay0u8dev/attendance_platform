@@ -28,6 +28,7 @@ import { StudentAttendanceService } from '../../../core/attendance/services/stud
 import { QrAttendanceService } from '../../../core/attendance/services/qr-attendance.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { StudentProfileService } from '../../../core/student/services/student-profile.service';
+import { FaceAttendanceService } from '../../../core/attendance/services/face-attendance.service';
 import { DataTableCellDef } from '../../../shared/components/data-table/data-table-cell-def';
 import { DataTable } from '../../../shared/components/data-table/data-table';
 import { DataTableColumn } from '../../../shared/components/data-table/data-table.types';
@@ -66,9 +67,10 @@ type AttendanceFlowPhase =
   | 'qr-detected'
   | 'qr-submitting'
   | 'qr-confirmed'
-  | 'face-countdown'
+  | 'face-preview'
   | 'face-captured'
-  | 'face-validated';
+  | 'face-submitting'
+  | 'face-confirmed';
 
 type StudentAttendanceChoice = 'QR_CODE' | 'FACE_ID';
 type QrLocationStatus = 'idle' | 'requesting' | 'ready' | 'unavailable';
@@ -94,6 +96,7 @@ export class StudentDashboardPage {
   private readonly studentProfileService = inject(StudentProfileService);
   private readonly attendanceService = inject(StudentAttendanceService);
   private readonly qrAttendanceService = inject(QrAttendanceService);
+  private readonly faceAttendanceService = inject(FaceAttendanceService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
@@ -117,8 +120,8 @@ export class StudentDashboardPage {
   readonly attendanceVideo = viewChild<ElementRef<HTMLVideoElement>>('attendanceVideo');
   readonly attendanceFlowPhase = signal<AttendanceFlowPhase>('idle');
   readonly selectedAttendanceChoice = signal<StudentAttendanceChoice>('QR_CODE');
-  readonly faceCountdown = signal(5);
   readonly capturedFaceImage = signal<string | null>(null);
+  readonly faceConfirmationMessage = signal<string | null>(null);
   readonly qrScannerEnabled = signal(false);
   readonly qrScannerDevices = signal<readonly MediaDeviceInfo[]>([]);
   readonly selectedQrDevice = signal<MediaDeviceInfo | undefined>(undefined);
@@ -129,7 +132,6 @@ export class StudentDashboardPage {
   readonly qrLocationError = signal<string | null>(null);
   readonly qrFormats = [BarcodeFormat.QR_CODE];
   private activeCameraStream: MediaStream | null = null;
-  private faceCountdownTimerId: number | null = null;
   private qrLocationRequestId = 0;
 
   readonly currentUserName = computed(() => {
@@ -283,7 +285,7 @@ export class StudentDashboardPage {
     }
 
     return this.selectedAttendanceChoice() === 'FACE_ID'
-      ? 'Utilise la caméra frontale pour préparer la vérification.'
+      ? "Vérifiez votre identité sans enregistrer de présence pour l'instant."
       : 'Utilise la caméra arrière pour viser le QR code projeté.';
   });
 
@@ -452,23 +454,75 @@ export class StudentDashboardPage {
   retakeFaceCapture(): void {
     this.capturedFaceImage.set(null);
     this.cameraError.set(null);
-    void this.startFaceCamera();
+    this.attendanceFlowPhase.set('idle');
+    window.setTimeout(() => void this.startFaceCamera(), 0);
   }
 
   validateFaceCapture(): void {
-    const session = this.activeAttendanceSession();
+    void this.submitFaceAttendance();
+  }
+
+  private async submitFaceAttendance(): Promise<void> {
     const image = this.capturedFaceImage();
-    if (!session || !image) {
+    const session = this.activeAttendanceSession();
+    if (!image || !session || this.attendanceFlowPhase() === 'face-submitting') {
       return;
     }
 
-    console.log('FACE_ID attendance payload ready:', {
-      sessionId: session.sessionId,
-      method: this.selectedAttendanceChoice(),
-      capturedAt: new Date().toISOString(),
-      imageDataUrlLength: image.length,
-    });
-    this.attendanceFlowPhase.set('face-validated');
+    this.cameraError.set(null);
+    this.faceConfirmationMessage.set(null);
+    this.attendanceFlowPhase.set('face-submitting');
+
+    let imageBlob: Blob;
+    try {
+      imageBlob = this.dataUrlToBlob(image);
+    } catch {
+      this.cameraError.set('Capture invalide. Reprends la photo puis essaie encore.');
+      this.attendanceFlowPhase.set('face-captured');
+      return;
+    }
+
+    const position = await this.getRequiredCurrentPosition();
+    if (!position) {
+      this.cameraError.set(this.requiredGpsMessage());
+      this.attendanceFlowPhase.set('face-captured');
+      return;
+    }
+
+    this.faceAttendanceService
+      .submitStudentFaceAttendance({
+        sessionId: session.sessionId,
+        deviceId: this.getOrCreateDeviceId(),
+        gpsLat: position.coords.latitude.toString(),
+        gpsLon: position.coords.longitude.toString(),
+        image: imageBlob,
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          if (response.status !== 'PRESENT' || response.markMethod !== 'FACE_ID') {
+            this.cameraError.set('Réponse de présence invalide. Réessayez.');
+            this.attendanceFlowPhase.set('face-captured');
+            return;
+          }
+
+          this.faceConfirmationMessage.set('Identité vérifiée. Présence enregistrée.');
+          this.activeAttendanceSession.update((current) =>
+            current ? { ...current, attendanceStatus: 'PRESENT' } : current,
+          );
+          this.attendanceFlowPhase.set('face-confirmed');
+          this.loadDashboardData();
+          this.loadActiveAttendanceSession();
+
+          window.setTimeout(() => {
+            this.closeAttendanceCamera();
+          }, 1500);
+        },
+        error: (error) => {
+          this.cameraError.set(this.faceAttendanceService.toUserMessage(error));
+          this.attendanceFlowPhase.set('face-captured');
+        },
+      });
   }
 
   openSessionDetails(session: StudentSessionListItem): void {
@@ -797,11 +851,8 @@ export class StudentDashboardPage {
     }
 
     this.stopCamera();
-    this.clearFaceCountdown();
     this.isStartingCamera.set(true);
     this.cameraError.set(null);
-    this.faceCountdown.set(3);
-    this.attendanceFlowPhase.set('face-countdown');
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -809,12 +860,24 @@ export class StudentDashboardPage {
         audio: false,
       });
       this.activeCameraStream = stream;
-      const video = this.attendanceVideo()?.nativeElement;
-      if (video) {
-        video.srcObject = stream;
-        await video.play();
+      // The preview video is conditionally rendered when retaking a captured photo.
+      const timeoutMs = 1000;
+      const startedAt = Date.now();
+      let video = this.attendanceVideo()?.nativeElement;
+      while (!video && Date.now() - startedAt < timeoutMs) {
+        await new Promise((resolve) => window.setTimeout(resolve, 50));
+        video = this.attendanceVideo()?.nativeElement;
       }
-      this.startFaceCountdown();
+
+      if (!video) {
+        this.stopCamera();
+        this.cameraError.set('Impossible d’initialiser l’aperçu de la caméra.');
+        this.attendanceFlowPhase.set('idle');
+        return;
+      }
+      video.srcObject = stream;
+      await video.play();
+      this.attendanceFlowPhase.set('face-preview');
     } catch {
       this.cameraError.set('Accès caméra refusé ou caméra indisponible.');
       this.attendanceFlowPhase.set('idle');
@@ -823,27 +886,14 @@ export class StudentDashboardPage {
     }
   }
 
-  private startFaceCountdown(): void {
-    this.clearFaceCountdown();
-    this.faceCountdown.set(5);
-    this.faceCountdownTimerId = window.setInterval(() => {
-      const nextValue = this.faceCountdown() - 1;
-      if (nextValue <= 0) {
-        this.clearFaceCountdown();
-        this.captureFaceImage();
-        return;
-      }
+  takeFacePhoto(): void {
+    if (this.attendanceFlowPhase() !== 'face-preview') {
+      return;
+    }
 
-      this.faceCountdown.set(nextValue);
-    }, 1000);
-  }
-
-  private captureFaceImage(): void {
     const video = this.attendanceVideo()?.nativeElement;
     if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
       this.cameraError.set('Impossible de capturer l’image. Réessaie avec une caméra active.');
-      this.stopCamera();
-      this.attendanceFlowPhase.set('idle');
       return;
     }
 
@@ -853,8 +903,6 @@ export class StudentDashboardPage {
     const context = canvas.getContext('2d');
     if (!context) {
       this.cameraError.set('Capture indisponible dans ce navigateur.');
-      this.stopCamera();
-      this.attendanceFlowPhase.set('idle');
       return;
     }
 
@@ -866,7 +914,6 @@ export class StudentDashboardPage {
 
   private releaseAttendanceCapture(): void {
     this.qrScannerEnabled.set(false);
-    this.clearFaceCountdown();
     this.stopCamera();
   }
 
@@ -886,27 +933,17 @@ export class StudentDashboardPage {
     }
   }
 
-  private clearFaceCountdown(): void {
-    if (this.faceCountdownTimerId === null) {
-      return;
-    }
-
-    window.clearInterval(this.faceCountdownTimerId);
-    this.faceCountdownTimerId = null;
-  }
-
   private resetAttendanceFlow(): void {
     this.qrLocationRequestId++;
     this.attendanceFlowPhase.set('idle');
     this.scannedQrContent.set(null);
     this.qrConfirmationMessage.set(null);
     this.capturedFaceImage.set(null);
+    this.faceConfirmationMessage.set(null);
     this.qrScannerEnabled.set(false);
     this.qrLocationStatus.set('idle');
     this.qrLocationPosition.set(null);
     this.qrLocationError.set(null);
-    this.clearFaceCountdown();
-    this.faceCountdown.set(5);
   }
 
   private pickRearCamera(devices: readonly MediaDeviceInfo[]): MediaDeviceInfo | undefined {
@@ -918,9 +955,28 @@ export class StudentDashboardPage {
 
   private cameraFacingMode(method: StudentAttendanceChoice): MediaTrackConstraints {
     if (method === 'FACE_ID') {
-      return { facingMode: 'user' };
+      return {
+        facingMode: 'user',
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      };
     }
 
     return { facingMode: { ideal: 'environment' } };
+  }
+
+  private dataUrlToBlob(dataUrl: string): Blob {
+    const [metadata, base64Data] = dataUrl.split(',');
+    const mimeMatch = /^data:(.+);base64$/.exec(metadata);
+    if (!mimeMatch || !base64Data) {
+      throw new Error('Invalid data URL');
+    }
+
+    const binary = atob(base64Data);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index++) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return new Blob([bytes], { type: mimeMatch[1] });
   }
 }

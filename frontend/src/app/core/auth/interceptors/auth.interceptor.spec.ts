@@ -1,7 +1,7 @@
-import { HttpErrorResponse, HttpHandler, HttpRequest } from '@angular/common/http';
+import { HttpErrorResponse, HttpHandler, HttpRequest, HttpResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { OAuthStorage } from 'angular-oauth2-oidc';
-import { throwError } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { AuthInterceptor } from './auth.interceptor';
 
@@ -50,6 +50,17 @@ describe('AuthInterceptor', () => {
 
     expect(storage.removeItem).not.toHaveBeenCalled();
     expect(router.navigateByUrl).not.toHaveBeenCalled();
+  });
+
+  it('attaches the current JWT to the authenticated refresh endpoint', () => {
+    const next: HttpHandler = {
+      handle: vi.fn(() => of(new HttpResponse({ status: 200 }))),
+    };
+
+    interceptor.intercept(new HttpRequest('POST', '/api/auth/refresh', {}), next).subscribe();
+
+    const forwarded = vi.mocked(next.handle).mock.calls[0][0];
+    expect(forwarded.headers.get('Authorization')).toBe('Bearer token');
   });
 });
 

@@ -3,6 +3,7 @@ server:
 
 app:
   allowed-domain: "ump.ac.ma"
+  allow-all-domains: false
   jwt:
     issuer: "auth-service"
     secret: ${JWT_SECRET}
