@@ -81,14 +81,15 @@ class AttendanceUpdateControllerWebMvcTest {
 
     @Test
     void internalUpdateRouteSucceedsForTrustedCaller() throws Exception {
-        when(attendanceUpdateService.updateInternalAttendance(anyString(), anyLong(), any()))
+        when(attendanceUpdateService.updateInternalAttendance(anyString(), anyString(), anyLong(), any()))
                 .thenReturn(new AttendanceUpdateResponse(
                         100L, 10L, AttendanceStudentStatus.PRESENT, AttendanceSessionMethod.QR_CODE,
                         LocalDateTime.of(2026, 4, 28, 12, 0), 1, 0, 1
                 ));
 
-        mockMvc.perform(post("/attendance/internal/sessions/100/attendance")
+                mockMvc.perform(post("/attendance/internal/sessions/100/attendance")
                         .with(internalSource("qr-service"))
+                        .header("X-Internal-Service-Token", "test-token")
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {
@@ -125,7 +126,7 @@ class AttendanceUpdateControllerWebMvcTest {
 
     @Test
     void internalFaceUpdateRouteAcceptsDeviceAndGpsWithoutReturningThem() throws Exception {
-        when(attendanceUpdateService.updateInternalAttendance(anyString(), anyLong(), any()))
+        when(attendanceUpdateService.updateInternalAttendance(anyString(), anyString(), anyLong(), any()))
                 .thenReturn(new AttendanceUpdateResponse(
                         100L, 10L, AttendanceStudentStatus.PRESENT, AttendanceSessionMethod.FACE_ID,
                         LocalDateTime.of(2026, 4, 28, 12, 0), 1, 0, 1
@@ -133,6 +134,7 @@ class AttendanceUpdateControllerWebMvcTest {
 
         mockMvc.perform(post("/attendance/internal/sessions/100/attendance")
                         .with(internalSource("face-service"))
+                        .header("X-Internal-Service-Token", "test-token")
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {

@@ -3,6 +3,7 @@ server:
 
 app:
   allowed-domain: "ump.ac.ma"
+  allow-all-domains: false
   jwt:
     issuer: "auth-service"
     secret: ${JWT_SECRET}
@@ -14,4 +15,3 @@ google:
 services:
   user-service:
     url: http://user-service:8080
-

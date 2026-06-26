@@ -36,6 +36,7 @@ describe('StudentLayout profile avatar', () => {
               lastName: 'Dupont',
               email: 'student@example.com',
               role: Role.STUDENT,
+              firstLogin: false,
             },
             logout: vi.fn(),
           },

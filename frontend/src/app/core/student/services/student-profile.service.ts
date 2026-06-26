@@ -1,8 +1,8 @@
 import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { finalize } from 'rxjs/operators';
-import { of } from 'rxjs';
+import { finalize, tap } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
 import { environment } from '../../../../environments/environment';
@@ -53,12 +53,38 @@ export class StudentProfileService {
       )
       .subscribe((profile) => {
         if (profile) {
-          this.profileSignal.set(profile);
+          this.profileSignal.set(this.withCacheBustedProfilePhoto(profile));
         }
       });
   }
 
+  updateProfilePhoto(file: File): Observable<StudentProfile> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.http
+      .put<StudentProfile>(`${environment.apiBaseUrl}/users/student/profile/photo`, formData)
+      .pipe(
+        tap((profile) => {
+          this.profileSignal.set(this.withCacheBustedProfilePhoto(profile));
+        }),
+      );
+  }
+
   clear(): void {
     this.profileSignal.set(null);
+  }
+
+  private withCacheBustedProfilePhoto(profile: StudentProfile): StudentProfile {
+    const pfpUrl = profile.pfpUrl?.trim();
+    if (!pfpUrl) {
+      return profile;
+    }
+
+    const separator = pfpUrl.includes('?') ? '&' : '?';
+    return {
+      ...profile,
+      pfpUrl: `${pfpUrl}${separator}v=${Date.now()}`,
+    };
   }
 }

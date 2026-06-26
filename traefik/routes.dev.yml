@@ -9,13 +9,19 @@ http:
     auth:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/auth`)"
-      middlewares: ["cors", "strip-api-auth"]
+      middlewares: ["strip-api-auth"]
       service: auth-service
+
+    user-public-profile-photos:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/users/public/profile-photos`)"
+      middlewares: ["strip-api-user"]
+      service: user-service
 
     user:
       entryPoints: ["web"]
-      rule: "PathPrefix(`/api/users`)"
-      middlewares: ["cors", "forward-auth", "strip-api-user"]
+      rule: "PathPrefix(`/api/users`) && !PathPrefix(`/api/users/internal`)"
+      middlewares: ["forward-auth", "strip-api-user"]
       service: user-service
 
     # Attendance WebSocket handshake route — no forward-auth here.
@@ -23,19 +29,23 @@ http:
     attendance-ws:
       entryPoints: ["web"]
       rule: "Path(`/api/ws/attendance/ws`)"
-      middlewares: ["cors", "strip-api-ws-attendance"]
+      middlewares: ["strip-api-ws-attendance"]
       service: attendance-service
 
     attendance:
       entryPoints: ["web"]
-      rule: "PathPrefix(`/api/attendance`)"
-      middlewares: ["cors", "forward-auth", "strip-api-attendance"]
+      rule: "PathPrefix(`/api/attendance`) && !PathPrefix(`/api/attendance/internal`)"
+      middlewares: ["forward-auth", "strip-api-attendance"]
       service: attendance-service
 
     justification:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/justifications`)"
-      middlewares: ["cors", "forward-auth", "strip-api-justification"]
+      middlewares: [
+          # "cors",
+          "forward-auth",
+          "strip-api-justification",
+        ]
       service: justification-service
 
     qr:
@@ -45,11 +55,11 @@ http:
       service: qr-service
 
     # # Face recognition routes — protected, JWT required
-    # face:
-    #   entryPoints: ["web"]
-    #   rule: "PathPrefix(`/api/face`)"
-    #   middlewares: ["forward-auth", "strip-api-face"]
-    #   service: face-service
+    face:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/face`)"
+      middlewares: ["forward-auth", "strip-api-face"]
+      service: face-service
 
     # Frontend — catches everything else, no auth needed
     # Priority is lowest because PathPrefix(/) matches everything.
@@ -63,32 +73,6 @@ http:
   # ── Middlewares ───────────────────────────────────────────────
   # Middlewares transform the request before it reaches the service.
   middlewares:
-    cors:
-      headers:
-        accessControlAllowCredentials: true
-        accessControlAllowHeaders:
-          - "Authorization"
-          - "Content-Type"
-          - "Accept"
-          - "Origin"
-          - "X-Requested-With"
-          - "X-User-Id"
-          - "X-User-Roles"
-          - "X-User-Email"
-        accessControlAllowMethods:
-          - "GET"
-          - "POST"
-          - "PUT"
-          - "PATCH"
-          - "DELETE"
-          - "OPTIONS"
-        accessControlAllowOriginList:
-          - "http://localhost:4200"
-          - "http://localhost"
-          - "http://127.0.0.1:4200"
-        accessControlMaxAge: 100
-        addVaryHeader: true
-
     # StripPrefix removes the path prefix before forwarding.
     # Your Spring Boot service doesn't know it's behind a gateway,
     # so it expects /auth/login not /api/auth/login.
@@ -113,9 +97,9 @@ http:
       stripPrefix:
         prefixes: ["/api/ws"]
 
-    # strip-api-face:
-    #   stripPrefix:
-    #     prefixes: ["/api/face"]
+    strip-api-face:
+      stripPrefix:
+        prefixes: ["/api"]
 
     strip-api-user:
       stripPrefix:
@@ -174,3 +158,8 @@ http:
       loadBalancer:
         servers:
           - url: "http://host.docker.internal:4200"
+
+    face-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8002"

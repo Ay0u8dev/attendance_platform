@@ -5,6 +5,8 @@ import ma.eniad.attendanceservice.dto.LiveAttendanceSessionMeta;
 import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
@@ -124,6 +126,32 @@ public class RedisLiveAttendanceSessionStore implements LiveAttendanceSessionSto
     }
 
     @Override
+    public void saveStudentStateAndBindDevice(
+            Long sessionId,
+            LiveAttendanceStudentState studentState,
+            String deviceId,
+            Long studentId
+    ) {
+        List<Object> results = redisTemplate.execute(new SessionCallback<>() {
+            @Override
+            @SuppressWarnings({"rawtypes", "unchecked"})
+            public List<Object> execute(RedisOperations operations) {
+                operations.multi();
+                operations.opsForHash().put(
+                        sessionStudentsKey(sessionId),
+                        studentState.studentId().toString(),
+                        studentState
+                );
+                operations.opsForHash().put(sessionDevicesKey(sessionId), deviceId, studentId);
+                return operations.exec();
+            }
+        });
+        if (results == null) {
+            throw new IllegalStateException("Redis attendance transaction did not complete");
+        }
+    }
+
+    @Override
     public AttendanceCounts getAttendanceCounts(Long sessionId) {
         List<Object> values = redisTemplate.opsForHash().values(sessionStudentsKey(sessionId));
         int present = 0;
@@ -167,6 +195,21 @@ public class RedisLiveAttendanceSessionStore implements LiveAttendanceSessionSto
         redisTemplate.expire(metaKey, retention);
         redisTemplate.expire(studentsKey, retention);
         redisTemplate.expire(devicesKey, retention);
+    }
+
+    @Override
+    public boolean bindDeviceToStudentIfAbsent(
+            Long sessionId,
+            String deviceId,
+            Long studentId
+    ) {
+        Boolean bound = redisTemplate.opsForHash().putIfAbsent(
+                sessionDevicesKey(sessionId),
+                deviceId,
+                studentId
+        );
+
+        return Boolean.TRUE.equals(bound);
     }
 
     static String sessionMetaKey(Long sessionId) {

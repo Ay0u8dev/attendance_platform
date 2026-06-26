@@ -81,6 +81,8 @@ class StudentControllerTest {
                 .firstName("Sara")
                 .lastName("Alaoui")
                 .numApogee("A123")
+                .academicYear("2025/2026")
+                .cycle("Ingenieur")
                 .filiere("GI")
                 .groupe("GI-1")
                 .build();

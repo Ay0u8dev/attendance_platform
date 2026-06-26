@@ -8,6 +8,7 @@ import ma.eniad.userservice.dto.teacher.InternalTeacherIdentityDto;
 import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Teacher;
 import ma.eniad.userservice.entity.User;
+import ma.eniad.userservice.entity.enums.Role;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
 import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -32,9 +34,21 @@ public class UserService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (user.isFirstLogin()) {
+        boolean changed = false;
+        boolean isStudent = user.getRoles().contains(Role.STUDENT);
+
+        String requestedPfpUrl = normalizeProfilePhotoUrl(request.getPfpUrl());
+        if (requestedPfpUrl != null && !Objects.equals(user.getPfpUrl(), requestedPfpUrl)) {
+            user.setPfpUrl(requestedPfpUrl);
+            changed = true;
+        }
+
+        if (user.isFirstLogin() && !isStudent) {
             user.setFirstLogin(false);
-            user.setPfpUrl(request.getPfpUrl());
+            changed = true;
+        }
+
+        if (changed) {
             user = userRepository.save(user);
         }
 
@@ -105,5 +119,14 @@ public class UserService {
                 teacher.getFirstName(),
                 teacher.getLastName()
         );
+    }
+
+    private String normalizeProfilePhotoUrl(String pfpUrl) {
+        if (pfpUrl == null) {
+            return null;
+        }
+
+        String trimmed = pfpUrl.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

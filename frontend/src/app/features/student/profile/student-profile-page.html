@@ -1,0 +1,366 @@
+<section class="space-y-8">
+  <app-page-header
+    eyebrow="Dossier étudiant"
+    title="Mon profil"
+    description="Consultez les informations associées à votre compte et à votre parcours académique."
+  ></app-page-header>
+
+  <section
+    class="rounded-[1.5rem] border border-line bg-surface p-4 shadow-card sm:p-5 lg:p-6 mt-5"
+  >
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
+        <input
+          #profilePhotoInput
+          type="file"
+          class="hidden"
+          accept="image/jpeg,image/png,image/webp"
+          (change)="onProfilePhotoSelected($event)"
+        />
+        <button
+          type="button"
+          class="group relative flex h-28 w-28 shrink-0 overflow-hidden rounded-[1.5rem] border border-primary-soft bg-primary-soft text-primary shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
+          aria-label="Changer la photo de profil"
+          (click)="triggerProfilePhotoInput()"
+          [disabled]="profilePhotoUploading()"
+        >
+          @if (profileImageUrl(); as imageUrl) {
+            <img
+              [src]="imageUrl"
+              alt=""
+              class="h-full w-full object-cover"
+              (error)="onProfileImageError()"
+            />
+          } @else {
+            <span class="flex h-full w-full items-center justify-center text-3xl font-semibold">
+              {{ initials() }}
+            </span>
+          }
+          <span
+            class="absolute inset-0 flex items-center justify-center bg-black/55 px-3 text-center text-xs font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+          >
+            @if (profilePhotoUploading()) {
+              <i class="fa-solid fa-spinner fa-spin text-base" aria-hidden="true"></i>
+            } @else {
+              Changer la photo
+            }
+          </span>
+        </button>
+
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <span
+              class="inline-flex items-center gap-2 rounded-full border border-secondary-soft bg-secondary-soft px-3 py-1 text-xs font-semibold text-secondary-strong"
+            >
+              <span class="h-2 w-2 rounded-full bg-secondary"></span>
+              Compte actif
+            </span>
+            @if (isLoading()) {
+              <span
+                class="inline-flex items-center gap-2 rounded-full border border-line bg-surface-subtle px-3 py-1 text-xs font-semibold text-secondaryText"
+              >
+                <i class="fa-solid fa-spinner fa-spin text-[0.7rem]" aria-hidden="true"></i>
+                Chargement
+              </span>
+            }
+          </div>
+
+          <h1
+            class="mt-3 truncate text-2xl font-semibold tracking-tight text-principalText sm:text-3xl"
+          >
+            {{ fullName() }}
+          </h1>
+          <p class="mt-1 text-sm text-secondaryText sm:text-base">{{ email() }}</p>
+          @if (profilePhotoMessage()) {
+            <p class="mt-2 text-sm font-medium text-success">{{ profilePhotoMessage() }}</p>
+          }
+          @if (profilePhotoError()) {
+            <p class="mt-2 text-sm font-medium text-danger">{{ profilePhotoError() }}</p>
+          }
+        </div>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2 lg:min-w-80">
+        <div class="rounded-2xl border border-primary-soft bg-primary-soft px-4 py-3">
+          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Apogée</p>
+          <p class="mt-2 text-base font-semibold text-principalText">
+            {{ profile()?.numApogee || 'Non renseigné' }}
+          </p>
+        </div>
+        @if (isFaceEnrolled()) {
+          <div class="rounded-2xl border border-secondary-soft bg-secondary-soft px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondary-strong">
+                  Identification faciale
+                </p>
+                <p class="mt-2 flex items-center gap-2 text-sm font-semibold text-principalText">
+                  <i class="fa-solid fa-circle-check text-secondary" aria-hidden="true"></i>
+                  Visage enregistré
+                </p>
+                @if (faceEnrollmentDate(); as enrollmentDate) {
+                  <p class="mt-1 text-xs text-secondaryText">Mis à jour le {{ enrollmentDate }}</p>
+                }
+              </div>
+              <span
+                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface text-secondary-strong"
+                aria-hidden="true"
+              >
+                <i class="fa-solid fa-user-shield"></i>
+              </span>
+            </div>
+            <button
+              type="button"
+              class="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-secondary/25 bg-surface px-3 py-2 text-sm font-semibold text-secondary-strong transition-colors hover:border-secondary/50 hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2"
+              aria-label="Mettre à jour mon empreinte faciale"
+              (click)="openFaceEnrollment()"
+            >
+              <i class="fa-solid fa-camera-rotate" aria-hidden="true"></i>
+              Mettre à jour mon visage
+            </button>
+          </div>
+        } @else {
+          <button
+            type="button"
+            class="group rounded-2xl border border-warning/25 bg-warning-soft px-4 py-3 text-left transition-colors hover:border-warning/40 focus:outline-none focus:ring-2 focus:ring-warning focus:ring-offset-2"
+            (click)="openFaceEnrollment()"
+          >
+            <span class="flex items-start justify-between gap-3">
+              <span>
+                <span
+                  class="block text-xs font-semibold uppercase tracking-[0.16em] text-warning-strong"
+                >
+                  Identification faciale
+                </span>
+                <span class="mt-2 block text-base font-semibold text-principalText">
+                  Enregistrer mon visage
+                </span>
+              </span>
+              <span
+                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface text-warning-strong"
+              >
+                <i class="fa-solid fa-camera" aria-hidden="true"></i>
+              </span>
+            </span>
+          </button>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    @for (item of primaryInfo(); track item.label) {
+      <article class="rounded-[1.5rem] border border-line bg-surface p-5 shadow-card">
+        <div class="flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-secondaryText">{{ item.label }}</p>
+            <p class="mt-2 break-words text-lg font-semibold text-principalText">
+              {{ item.value }}
+            </p>
+          </div>
+          <span
+            class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-base"
+            [class]="toneClasses(item.tone)"
+          >
+            <i [class]="item.icon" aria-hidden="true"></i>
+          </span>
+        </div>
+      </article>
+    }
+  </section>
+
+  <section class="grid gap-5 lg:grid-cols-[1fr_0.8fr]">
+    <article class="rounded-[1.5rem] border border-line bg-surface p-4 shadow-card sm:p-5">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold text-principalText">Identité</h2>
+          <p class="mt-1 text-sm text-secondaryText">Informations personnelles du compte.</p>
+        </div>
+        <span
+          class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary"
+        >
+          <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+        </span>
+      </div>
+
+      <div class="mt-5 grid gap-3 sm:grid-cols-3">
+        @for (row of identityRows(); track row.label) {
+          <div class="rounded-2xl bg-surface-subtle px-4 py-4">
+            <span
+              class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-sm"
+              [class]="toneClasses(row.tone)"
+            >
+              <i [class]="row.icon" aria-hidden="true"></i>
+            </span>
+            <p class="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
+              {{ row.label }}
+            </p>
+            <p class="mt-2 break-words text-base font-semibold text-principalText">
+              {{ row.value }}
+            </p>
+          </div>
+        }
+      </div>
+    </article>
+
+    <article class="rounded-[1.5rem] border border-line bg-surface p-4 shadow-card sm:p-5">
+      <div class="flex items-start gap-3">
+        <span
+          class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary-soft text-secondary-strong"
+        >
+          <i class="fa-solid fa-lock" aria-hidden="true"></i>
+        </span>
+        <div>
+          <h2 class="text-lg font-semibold text-principalText">Sécurité du compte</h2>
+          <p class="mt-1 text-sm leading-6 text-secondaryText">
+            Votre accès est protégé par l'authentification institutionnelle. Les modifications du
+            profil sont synchronisées depuis le service administratif.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-5 space-y-3">
+        <div
+          class="flex items-center justify-between gap-3 rounded-2xl bg-surface-subtle px-4 py-3"
+        >
+          <span class="text-sm font-medium text-secondaryText">Session</span>
+          <span class="text-sm font-semibold text-secondary-strong">Connectée</span>
+        </div>
+        <div
+          class="flex items-center justify-between gap-3 rounded-2xl bg-surface-subtle px-4 py-3"
+        >
+          <span class="text-sm font-medium text-secondaryText">Source du profil</span>
+          <span class="text-sm font-semibold text-principalText">Plateforme</span>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <app-modal
+    [title]="isFaceEnrolled() ? 'Mettre à jour mon visage' : 'Enregistrer mon visage'"
+    [description]="isFaceEnrolled() ? 'La nouvelle capture remplacera de manière sécurisée votre empreinte faciale actuelle.' : 'Cette capture créera votre empreinte faciale de manière sécurisée.'"
+    [open]="faceEnrollmentOpen()"
+    size="md"
+    (closed)="closeFaceEnrollment()"
+  >
+    <div modal-body class="space-y-5">
+      <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-4">
+        <div class="flex items-start gap-3">
+          <span
+            class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary-soft text-secondary-strong"
+          >
+            <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+          </span>
+          <div>
+            <p class="text-sm font-semibold text-principalText">Vérification faciale</p>
+            <p class="mt-1 text-sm leading-6 text-secondaryText">
+              Gardez le visage centré et bien éclairé. Une seule personne doit apparaître dans le
+              cadre.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      @if (
+        faceEnrollmentPhase() === 'captured' ||
+        faceEnrollmentPhase() === 'saving' ||
+        faceEnrollmentPhase() === 'saved'
+      ) {
+        <div
+          class="relative aspect-[4/5] max-h-[34rem] w-full overflow-hidden rounded-2xl border border-line bg-black sm:aspect-video"
+        >
+          @if (capturedFaceImage(); as faceImage) {
+            <img
+              [src]="faceImage"
+              alt="Aperçu de la capture faciale"
+              class="h-full w-full object-cover"
+            />
+          }
+        </div>
+      } @else {
+        <div
+          class="relative aspect-[4/5] max-h-[34rem] w-full overflow-hidden rounded-2xl border border-line bg-black sm:aspect-video"
+        >
+          <video #faceVideo autoplay muted playsinline class="h-full w-full object-cover"></video>
+
+          <div class="pointer-events-none absolute inset-0 bg-black/10">
+            <div
+              class="absolute left-1/2 top-[46%] aspect-[3/4] w-[58%] max-w-60 -translate-x-1/2 -translate-y-1/2 rounded-[45%] border-2 border-white/90 shadow-[0_0_0_999px_rgba(0,0,0,0.12)] sm:w-[38%]"
+            ></div>
+          </div>
+        </div>
+      }
+
+      @if (isStartingCamera()) {
+        <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-3">
+          <p class="text-sm text-secondaryText">Ouverture de la caméra...</p>
+        </div>
+      }
+
+      @if (enrollmentMessage()) {
+        <div class="rounded-2xl border border-success/25 bg-success-soft px-4 py-3">
+          <p class="text-sm font-semibold text-success">{{ enrollmentMessage() }}</p>
+        </div>
+      }
+
+      @if (cameraError()) {
+        <div class="rounded-2xl border border-danger/20 bg-danger-soft px-4 py-4">
+          <p class="text-sm font-medium text-danger">{{ cameraError() }}</p>
+        </div>
+      }
+    </div>
+
+    <div modal-footer class="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+      @if (faceEnrollmentPhase() === 'idle') {
+        <button
+          type="button"
+          class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          (click)="captureFaceImage()"
+          [disabled]="isStartingCamera() || !!cameraError()"
+        >
+          <i class="fa-solid fa-camera" aria-hidden="true"></i>
+          Prendre la photo
+        </button>
+      }
+
+      @if (faceEnrollmentPhase() === 'captured' || faceEnrollmentPhase() === 'saving') {
+        <button
+          type="button"
+          class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-principalText transition-colors hover:bg-surface-subtle disabled:opacity-60 sm:w-auto"
+          (click)="retakeFaceCapture()"
+          [disabled]="faceEnrollmentPhase() === 'saving'"
+        >
+          <i class="fa-solid fa-camera-rotate" aria-hidden="true"></i>
+          Reprendre la photo
+        </button>
+
+        <button
+          type="button"
+          class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-strong disabled:opacity-60 sm:w-auto"
+          (click)="saveFaceEmbedding()"
+          [disabled]="faceEnrollmentPhase() === 'saving'"
+        >
+          <i
+            [class]="
+              faceEnrollmentPhase() === 'saving'
+                ? 'fa-solid fa-spinner fa-spin'
+                : 'fa-solid fa-circle-check'
+            "
+            aria-hidden="true"
+          ></i>
+
+          {{ faceEnrollmentPhase() === 'saving' ? 'Enregistrement...' : 'Confirmer la photo' }}
+        </button>
+      }
+
+      <button
+        type="button"
+        class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-principalText transition-colors hover:bg-surface-subtle sm:w-auto"
+        (click)="closeFaceEnrollment()"
+        [disabled]="faceEnrollmentPhase() === 'saving'"
+      >
+        Fermer
+      </button>
+    </div>
+  </app-modal>
+</section>

@@ -1,6 +1,5 @@
 package ma.eniad.attendanceservice.service;
 
-import lombok.RequiredArgsConstructor;
 import ma.eniad.attendanceservice.config.AttendanceSessionProperties;
 import ma.eniad.attendanceservice.dto.*;
 import ma.eniad.attendanceservice.entity.AttendanceRecord;
@@ -10,19 +9,18 @@ import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.repository.AttendanceRecordRepository;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 @Service
-@RequiredArgsConstructor
 public class AttendanceFinalizationService {
 
     private final AttendanceSessionRepository attendanceSessionRepository;
@@ -31,11 +29,49 @@ public class AttendanceFinalizationService {
     private final AttendanceSessionReadService attendanceSessionReadService;
     private final AttendanceSessionProperties attendanceSessionProperties;
     private final SimpMessagingTemplate messagingTemplate;
-    private final Map<Long, Object> sessionLocks = new ConcurrentHashMap<>();
+    private final AttendanceSessionLock sessionLock;
+    private final TransactionTemplate transactionTemplate;
 
-    @Transactional
+    @Autowired
+    public AttendanceFinalizationService(AttendanceSessionRepository sessions,
+                                         AttendanceRecordRepository records,
+                                         LiveAttendanceSessionStore store,
+                                         AttendanceSessionReadService readService,
+                                         AttendanceSessionProperties properties,
+                                         SimpMessagingTemplate messagingTemplate,
+                                         AttendanceSessionLock sessionLock,
+                                         TransactionTemplate transactionTemplate) {
+        this.attendanceSessionRepository = sessions;
+        this.attendanceRecordRepository = records;
+        this.liveAttendanceSessionStore = store;
+        this.attendanceSessionReadService = readService;
+        this.attendanceSessionProperties = properties;
+        this.messagingTemplate = messagingTemplate;
+        this.sessionLock = sessionLock;
+        this.transactionTemplate = transactionTemplate;
+    }
+
+    AttendanceFinalizationService(AttendanceSessionRepository sessions,
+                                  AttendanceRecordRepository records,
+                                  LiveAttendanceSessionStore store,
+                                  AttendanceSessionReadService readService,
+                                  AttendanceSessionProperties properties,
+                                  SimpMessagingTemplate messagingTemplate) {
+        this(sessions, records, store, readService, properties, messagingTemplate,
+                directLock(), null);
+    }
+
+    private static AttendanceSessionLock directLock() {
+        return new AttendanceSessionLock() {
+            @Override
+            public <T> T execute(Long sessionId, Supplier<T> operation) {
+                return operation.get();
+            }
+        };
+    }
+
     public AttendanceSessionDetailsResponse finalizeSession(Long sessionId, Long teacherId) {
-        return withSessionLock(sessionId, () -> {
+        return sessionLock.execute(sessionId, () -> inTransaction(() -> {
             AttendanceSession session = attendanceSessionRepository.findByIdAndTeacherId(sessionId, teacherId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
             if (session.getStatus() == AttendanceSessionStatus.FINALIZED) {
@@ -44,11 +80,10 @@ public class AttendanceFinalizationService {
 
             finalizeSessionInternal(session);
             return attendanceSessionReadService.getSession(sessionId, teacherId);
-        });
+        }));
     }
 
     @Scheduled(fixedDelayString = "${attendance.session.auto-finalize-poll-interval}")
-    @Transactional
     public void finalizeExpiredSessions() {
         List<AttendanceSession> expiredSessions = attendanceSessionRepository.findAllByStatusAndEndsAtLessThanEqual(
                 AttendanceSessionStatus.ACTIVE,
@@ -56,14 +91,14 @@ public class AttendanceFinalizationService {
         );
 
         for (AttendanceSession session : expiredSessions) {
-            withSessionLock(session.getId(), () -> {
+            sessionLock.execute(session.getId(), () -> inTransaction(() -> {
                 AttendanceSession reloadedSession = attendanceSessionRepository.findById(session.getId()).orElse(null);
                 if (reloadedSession == null || reloadedSession.getStatus() == AttendanceSessionStatus.FINALIZED) {
                     return null;
                 }
                 finalizeSessionInternal(reloadedSession);
                 return null;
-            });
+            }));
         }
     }
 
@@ -165,19 +200,10 @@ public class AttendanceFinalizationService {
         return new AttendanceCounts(present, absent, unknown);
     }
 
-    private <T> T withSessionLock(Long sessionId, LockedOperation<T> operation) {
-        Object lock = sessionLocks.computeIfAbsent(sessionId, ignored -> new Object());
-        synchronized (lock) {
-            try {
-                return operation.execute();
-            } finally {
-                sessionLocks.remove(sessionId, lock);
-            }
-        }
+    private <T> T inTransaction(Supplier<T> operation) {
+        return transactionTemplate == null
+                ? operation.get()
+                : transactionTemplate.execute(status -> operation.get());
     }
 
-    @FunctionalInterface
-    private interface LockedOperation<T> {
-        T execute();
-    }
 }

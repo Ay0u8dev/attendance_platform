@@ -22,13 +22,11 @@ public interface FormationRepository extends JpaRepository<Formation, Long> {
     );
     List<Formation> findByNameIn(Set<String> names);
 
-    @Query("""
-            select f from Formation f
-            where f.anneeUniversitaire.id = :anneeUniversitaireId
-              and (:filiereId is null or f.filiere.id = :filiereId)
-              and (:filiereId is not null or f.filiere is null)
-              and f.cycle.id = :cycleId
-            """)
+    @Query("select f from Formation f " +
+       "where f.anneeUniversitaire.id = :anneeUniversitaireId " +
+       "  and (:filiereId is null or f.filiere.id = :filiereId) " +
+       "  and (:filiereId is not null or f.filiere is null) " +
+       "  and f.cycle.id = :cycleId")
     Optional<Formation> findSeedFormation(
             @Param("anneeUniversitaireId") Long anneeUniversitaireId,
             @Param("filiereId") Long filiereId,

@@ -54,12 +54,7 @@ export class AuthInterceptor implements HttpInterceptor {
   }
 
   private isPublicUrl(url: string): boolean {
-    const publicUrls = [
-      '/api/auth/login',
-      '/api/auth/register',
-      '/api/auth/google',
-      '/api/auth/refresh',
-    ];
+    const publicUrls = ['/api/auth/login', '/api/auth/register', '/api/auth/google'];
     return publicUrls.some((publicUrl) => url.includes(publicUrl));
   }
 

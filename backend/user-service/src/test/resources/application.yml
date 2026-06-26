@@ -22,3 +22,5 @@ logging:
 
 app:
   allowed-domain: "ump.ac.ma"
+  database-seeding:
+    enabled: false
