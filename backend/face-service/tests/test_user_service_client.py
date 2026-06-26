@@ -172,7 +172,7 @@ def test_inconsistent_success_response_is_rejected(monkeypatch):
 
 
 def configure(monkeypatch):
-    monkeypatch.setattr(settings, "face_service_internal_token", "test-token")
+    monkeypatch.setattr(settings, "internal_service_token", "test-token")
     monkeypatch.setattr(settings, "user_service_url", "http://user-service:8080")
 
 
