@@ -10,8 +10,7 @@ ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 class Settings(BaseSettings):
     attendance_service_url: str = "http://localhost:8083"
     user_service_url: str = "http://localhost:8082"
-    face_service_internal_token: str
-    face_attendance_internal_token: str = Field(min_length=1)
+    internal_service_token: str = Field(min_length=1)
     max_image_size_bytes: int = 2_000_000
     http_timeout_seconds: float = 10.0
     http_connect_timeout_seconds: float = 3.0

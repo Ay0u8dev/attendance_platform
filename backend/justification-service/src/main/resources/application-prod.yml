@@ -22,3 +22,19 @@ spring:
 services:
   attendance-service:
     url: http://attendance-service:8080
+
+app:
+  internal:
+    service-token: ${INTERNAL_SERVICE_TOKEN}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+      discovery:
+        enabled: false
+  endpoint:
+    health:
+      probes:
+        enabled: true

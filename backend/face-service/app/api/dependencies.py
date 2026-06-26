@@ -71,7 +71,7 @@ def verify_internal_service_token(
         alias="X-Internal-Service-Token",
     ),
 ) -> None:
-    expected_token = settings.face_service_internal_token.strip()
+    expected_token = settings.internal_service_token.strip()
     supplied_token = (x_internal_service_token or "").strip()
 
     if not expected_token or not compare_digest(expected_token, supplied_token):

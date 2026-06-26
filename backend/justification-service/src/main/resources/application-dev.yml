@@ -28,3 +28,7 @@ spring:
 services:
   attendance-service:
     url: http://localhost:8083
+
+app:
+  internal:
+    service-token: ${INTERNAL_SERVICE_TOKEN:replace-with-a-long-random-secret}

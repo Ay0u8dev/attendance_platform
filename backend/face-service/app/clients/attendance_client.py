@@ -30,7 +30,7 @@ class AttendanceServiceClient:
                     f"{settings.attendance_service_url.rstrip('/')}/attendance/internal/sessions/{session_id}/attendance",
                     headers={
                         "X-Request-Source": "face-service",
-                        "X-Internal-Service-Token": settings.face_attendance_internal_token,
+                        "X-Internal-Service-Token": settings.internal_service_token,
                     },
                     json=body,
                 )
