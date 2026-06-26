@@ -9,12 +9,10 @@ It allows an admin to upload an `.xlsx` file containing teacher identity data an
 Base URL:
 
 ```text
-/users/teachers/import
+/users/teacher/import
 ```
 
 This endpoint requires `ADMIN`.
-
-Important path note: teacher CRUD uses `/users/teacher`, but teacher import uses `/users/teachers/import`.
 
 ---
 
@@ -62,14 +60,14 @@ The service:
 
 | Method | URL | Role | Description |
 | --- | --- | --- | --- |
-| `POST` | `/users/teachers/import` | `ADMIN` | Import teachers and assignments from Excel |
+| `POST` | `/users/teacher/import` | `ADMIN` | Import teachers and assignments from Excel |
 
 ### Import Teachers
 
 | Item | Value |
 | --- | --- |
 | Method | `POST` |
-| URL | `/users/teachers/import` |
+| URL | `/users/teacher/import` |
 | Content type | `multipart/form-data` |
 | Request part | `file` |
 | Response body | `TeacherImportResultDTO` |
@@ -81,7 +79,7 @@ Angular example:
 const formData = new FormData();
 formData.append('file', selectedFile);
 
-this.http.post<TeacherImportResultDTO>('/users/teachers/import', formData);
+this.http.post<TeacherImportResultDTO>('/api/users/teacher/import', formData);
 ```
 
 Expected Excel columns:
@@ -180,7 +178,7 @@ The parser skips the first row as a header. Data starts from Excel row 2.
 - Email must belong to configured allowed domain.
 - If an email belongs to an existing non-teacher user, the row fails.
 - If the same teacher email appears multiple times, only one teacher is created/updated.
-- If the same email appears with different names, the first valid occurrence is used and a warning is returned.
+- If the same email appears with different names in valid rows, the teacher identity is updated in row order and a warning is returned for each name change.
 - Existing teacher names are updated when first or last name changed.
 - New teachers receive role `TEACHER`, `enabled = true`, and `firstLogin = true`.
 - Academic year must exist.
@@ -326,9 +324,9 @@ Row-level errors do not fail the HTTP request. They are returned inside `Teacher
 - `status = PARTIAL` still means the HTTP call succeeded.
 - Row numbers are Excel row numbers.
 - Duplicate assignment is a warning, not a row failure.
-- A row can create/update a teacher but fail later during assignment validation.
+- Academic relationship validation happens before teacher creation/update, so invalid year, formation, groupe, or module rows do not create or update teachers.
 - Same formation name can exist in different academic years; backend resolves by formation name plus academic year.
 - Groupe and module must both belong to the resolved formation.
-- Same teacher email with different names uses the first valid identity and returns a warning.
+- Same teacher email with different names is processed in row order; the last valid name wins and each name change returns a warning.
 - Existing non-teacher user email is a hard row error.
 - Frontend should not retry the whole file blindly after partial import, because some rows may already have been applied.

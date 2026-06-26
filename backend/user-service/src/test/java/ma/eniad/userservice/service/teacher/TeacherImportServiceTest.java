@@ -253,6 +253,121 @@ class TeacherImportServiceTest {
     }
 
     @Test
+    void updatesTeacherNameAcrossRowsAndCreatesAssignmentsWithWarnings() {
+        TeacherExcelRowDTO firstNameChanged = TeacherExcelRowDTO.builder()
+            .rowNumber(2)
+            .firstName("Ahmed New")
+            .lastName("El Amrani")
+            .email("ahmed@ump.ac.ma")
+            .academicYear("2025/2026")
+            .formationName("GI1")
+            .groupeCode("GI1-A")
+            .moduleCode("JAVA")
+            .build();
+        TeacherExcelRowDTO lastNameChanged = TeacherExcelRowDTO.builder()
+            .rowNumber(3)
+            .firstName("Ahmed New")
+            .lastName("El Amrani Final")
+            .email("ahmed@ump.ac.ma")
+            .academicYear("2025/2026")
+            .formationName("GI1")
+            .groupeCode("GI1-B")
+            .moduleCode("JAVA")
+            .build();
+        Teacher existingTeacher = new Teacher();
+        existingTeacher.setId(1L);
+        existingTeacher.setEmail("ahmed@ump.ac.ma");
+        existingTeacher.setFirstName("Ahmed");
+        existingTeacher.setLastName("El Amrani");
+
+        when(parser.parse(file)).thenReturn(List.of(firstNameChanged, lastNameChanged));
+        when(validator.validate(any())).thenReturn(List.of());
+        stubLookups(List.of(groupeA, groupeB));
+        when(teacherRepository.findByNormalizedEmailIn(anySet())).thenReturn(List.of(existingTeacher));
+        when(userRepository.findByNormalizedEmailIn(anySet())).thenReturn(List.of(existingTeacher));
+        when(assignmentMapper.toEntity(any(), any(), any(), any(), any()))
+            .thenAnswer(invocation -> new TeacherAssignment());
+
+        TeacherImportResultDTO result = service.importFromExcel(file);
+
+        assertThat(result.getTotalRows()).isEqualTo(2);
+        assertThat(result.getTeachersCreated()).isZero();
+        assertThat(result.getTeachersUpdated()).isEqualTo(1);
+        assertThat(result.getAssignmentsCreated()).isEqualTo(2);
+        assertThat(result.getRowsRejected()).isZero();
+        assertThat(result.getWarningsCount()).isEqualTo(2);
+        assertThat(result.getErrorsCount()).isZero();
+        assertThat(existingTeacher.getFirstName()).isEqualTo("Ahmed New");
+        assertThat(existingTeacher.getLastName()).isEqualTo("El Amrani Final");
+    }
+
+    @Test
+    void rejectsModuleFromAnotherFormationBeforeCreatingTeacher() {
+        TeacherExcelRowDTO row = row(2, "GI1-A");
+        Formation otherFormation = mock(Formation.class);
+        Module otherModule = mock(Module.class);
+        when(otherFormation.getId()).thenReturn(99L);
+        when(otherModule.getId()).thenReturn(41L);
+        when(otherModule.getCode()).thenReturn("JAVA");
+        when(otherModule.getFormation()).thenReturn(otherFormation);
+
+        when(parser.parse(file)).thenReturn(List.of(row));
+        when(validator.validate(row)).thenReturn(List.of());
+        when(teacherRepository.findByNormalizedEmailIn(anySet())).thenReturn(List.of());
+        when(userRepository.findByNormalizedEmailIn(anySet())).thenReturn(List.of());
+        when(yearRepository.findByNameIn(anySet())).thenReturn(List.of(year));
+        when(formationRepository.findByNameIn(anySet())).thenReturn(List.of(formation));
+        when(groupeRepository.findByNameIn(anySet())).thenReturn(List.of(groupeA));
+        when(moduleRepository.findByCodeIn(anySet())).thenReturn(List.of(otherModule));
+
+        TeacherImportResultDTO result = service.importFromExcel(file);
+
+        assertThat(result.getStatus()).isEqualTo("FAILED");
+        assertThat(result.getTeachersCreated()).isZero();
+        assertThat(result.getAssignmentsCreated()).isZero();
+        assertThat(result.getErrors())
+            .singleElement()
+            .satisfies(error -> {
+                assertThat(error.getField()).isEqualTo("moduleCode");
+                assertThat(error.getMessage()).isEqualTo("Module does not belong to specified formation.");
+            });
+        verify(teacherMapper, never()).toEntity(row);
+        verify(teacherRepository, never()).saveAll(any());
+        verify(assignmentRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void reportsExistingAndInFileDuplicateAssignmentsAsWarnings() {
+        TeacherExcelRowDTO existingDuplicate = row(2, "GI1-A");
+        TeacherExcelRowDTO duplicateInsideFile = row(3, "GI1-A");
+        Teacher existingTeacher = new Teacher();
+        existingTeacher.setId(1L);
+        existingTeacher.setEmail("ahmed@ump.ac.ma");
+        existingTeacher.setFirstName("Ahmed");
+        existingTeacher.setLastName("El Amrani");
+
+        when(parser.parse(file)).thenReturn(List.of(existingDuplicate, duplicateInsideFile));
+        when(validator.validate(any())).thenReturn(List.of());
+        stubLookups(List.of(groupeA));
+        when(teacherRepository.findByNormalizedEmailIn(anySet())).thenReturn(List.of(existingTeacher));
+        when(userRepository.findByNormalizedEmailIn(anySet())).thenReturn(List.of(existingTeacher));
+        when(assignmentRepository.findExistingAssignmentKeys(anySet(), anySet(), anySet(), anySet(), anySet()))
+            .thenReturn(List.<Object[]>of(new Object[] {1L, 10L, 20L, 30L, 40L}));
+
+        TeacherImportResultDTO result = service.importFromExcel(file);
+
+        assertThat(result.getAssignmentsCreated()).isZero();
+        assertThat(result.getDuplicatesSkipped()).isEqualTo(2);
+        assertThat(result.getWarningsCount()).isEqualTo(2);
+        assertThat(result.getErrorsCount()).isZero();
+        assertThat(result.getWarnings()).containsExactly(
+            "Row 2 -> Teacher assignment already exists.",
+            "Row 3 -> Duplicate assignment inside file."
+        );
+        verify(assignmentRepository, never()).saveAll(any());
+    }
+
+    @Test
     void rejectsEmptyFile() {
         MockMultipartFile emptyFile = new MockMultipartFile(
             "file",

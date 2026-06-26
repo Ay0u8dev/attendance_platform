@@ -144,11 +144,10 @@ public class StudentImportService {
                 .collect(Collectors.groupingBy(Formation::getName));
         }
 
-        Map<String, Groupe> groupesByCode = new HashMap<>();
+        Map<String, List<Groupe>> groupesByCode = new HashMap<>();
         if (!groupeCodes.isEmpty()) {
-            for (Groupe groupe : groupeRepository.findByNameIn(groupeCodes)) {
-                groupesByCode.put(groupe.getName(), groupe);
-            }
+            groupesByCode = groupeRepository.findByNameIn(groupeCodes).stream()
+                .collect(Collectors.groupingBy(Groupe::getName));
         }
 
         Set<Long> studentIds = new HashSet<>();
@@ -169,6 +168,7 @@ public class StudentImportService {
             .map(Formation::getId)
             .collect(Collectors.toSet());
         Set<Long> groupeIds = groupesByCode.values().stream()
+            .flatMap(List::stream)
             .map(Groupe::getId)
             .collect(Collectors.toSet());
 
@@ -223,21 +223,21 @@ public class StudentImportService {
                 continue;
             }
 
-            Groupe groupe = groupesByCode.get(row.getGroupeCode());
+            List<Groupe> groupeCandidates = groupesByCode.get(row.getGroupeCode());
+            Groupe groupe = resolveGroupe(groupeCandidates, formation);
             if (groupe == null) {
-                addRowError(row, "groupeCode", "Groupe not found.", errors, rowErrors);
-                missingGroups++;
-                continue;
-            }
-
-            if (!groupe.getFormation().getId().equals(formation.getId())) {
-                addRowError(
-                    row,
-                    "groupeCode",
-                    "Groupe does not belong to specified formation.",
-                    errors,
-                    rowErrors
-                );
+                if (groupeCandidates == null || groupeCandidates.isEmpty()) {
+                    addRowError(row, "groupeCode", "Groupe not found.", errors, rowErrors);
+                    missingGroups++;
+                } else {
+                    addRowError(
+                        row,
+                        "groupeCode",
+                        "Groupe does not belong to specified formation.",
+                        errors,
+                        rowErrors
+                    );
+                }
                 continue;
             }
 
@@ -248,6 +248,8 @@ public class StudentImportService {
             if (student == null && studentByApogee == null) {
                 resolvedStudent = mapToStudent(row);
                 studentsToCreate.add(resolvedStudent);
+                studentsByEmail.put(row.getEmail(), resolvedStudent);
+                studentsByApogee.put(row.getNumApogee(), resolvedStudent);
                 createdStudents++;
                 changes.add(buildChange(row, "CREATED", List.of("Created student")));
             } else if (student != null && studentByApogee != null) {
@@ -255,8 +257,10 @@ public class StudentImportService {
                     resolvedStudent = student;
                     List<String> nameChanges = applyNameUpdates(resolvedStudent, row);
                     if (!nameChanges.isEmpty()) {
-                        updatedStudents++;
-                        studentsToUpdate.add(resolvedStudent);
+                        if (resolvedStudent.getId() != null && !studentsToUpdate.contains(resolvedStudent)) {
+                            updatedStudents++;
+                            studentsToUpdate.add(resolvedStudent);
+                        }
                         warnings.add(buildRowWarning(row, "Student information updated."));
                         changes.add(buildChange(row, "UPDATED", nameChanges));
                     } else {
@@ -349,6 +353,18 @@ public class StudentImportService {
         return candidates.stream()
             .filter(candidate -> candidate.getAnneeUniversitaire() != null)
             .filter(candidate -> candidate.getAnneeUniversitaire().getId().equals(year.getId()))
+            .findFirst()
+            .orElse(null);
+    }
+
+    private Groupe resolveGroupe(List<Groupe> candidates, Formation formation) {
+        if (candidates == null || candidates.isEmpty()) {
+            return null;
+        }
+
+        return candidates.stream()
+            .filter(candidate -> candidate.getFormation() != null)
+            .filter(candidate -> candidate.getFormation().getId().equals(formation.getId()))
             .findFirst()
             .orElse(null);
     }

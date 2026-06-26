@@ -246,6 +246,65 @@ class StudentImportServiceTest {
     }
 
     @Test
+    void importFromExcel_processesAllPossibleWarningsWithoutRejectingRows() {
+        MockMultipartFile file = excelFile();
+        StudentExcelRowDTO firstNameChanged = row(2, "Sara New", "Alaoui", "a1001@ump.ac.ma", "A1001", "2025/2026", "GI", "GI-1");
+        StudentExcelRowDTO lastNameChanged = row(3, "Sara New", "Alaoui New", "a1001@ump.ac.ma", "A1001", "2025/2026", "GI", "GI-2");
+        StudentExcelRowDTO bothNamesChanged = row(4, "Sara Final", "Alaoui Final", "a1001@ump.ac.ma", "A1001", "2025/2026", "GI", "GI-3");
+        StudentExcelRowDTO existingDuplicate = row(5, "Omar", "Naciri", "a1002@ump.ac.ma", "A1002", "2025/2026", "GI", "GI-4");
+        StudentExcelRowDTO fileDuplicate = row(6, "Omar", "Naciri", "a1002@ump.ac.ma", "A1002", "2025/2026", "GI", "GI-4");
+
+        Student a1001 = Student.builder()
+                .id(1001L)
+                .email("a1001@ump.ac.ma")
+                .numApogee("A1001")
+                .firstName("Sara")
+                .lastName("Alaoui")
+                .build();
+        Student a1002 = Student.builder()
+                .id(1002L)
+                .email("a1002@ump.ac.ma")
+                .numApogee("A1002")
+                .firstName("Omar")
+                .lastName("Naciri")
+                .build();
+        AnneeUniversitaire year = AnneeUniversitaire.builder().id(1L).name("2025/2026").build();
+        Formation formation = Formation.builder().id(2L).name("GI").anneeUniversitaire(year).build();
+        Groupe g1 = Groupe.builder().id(11L).name("GI-1").formation(formation).build();
+        Groupe g2 = Groupe.builder().id(12L).name("GI-2").formation(formation).build();
+        Groupe g3 = Groupe.builder().id(13L).name("GI-3").formation(formation).build();
+        Groupe g4 = Groupe.builder().id(14L).name("GI-4").formation(formation).build();
+
+        when(parser.parse(file)).thenReturn(List.of(firstNameChanged, lastNameChanged, bothNamesChanged, existingDuplicate, fileDuplicate));
+        when(validator.validate(firstNameChanged)).thenReturn(List.of());
+        when(validator.validate(lastNameChanged)).thenReturn(List.of());
+        when(validator.validate(bothNamesChanged)).thenReturn(List.of());
+        when(validator.validate(existingDuplicate)).thenReturn(List.of());
+        when(validator.validate(fileDuplicate)).thenReturn(List.of());
+        when(studentRepository.findByEmailIn(anySet())).thenReturn(List.of(a1001, a1002));
+        when(userRepository.findByNormalizedEmailIn(anySet())).thenReturn(List.of(a1001, a1002));
+        when(studentRepository.findByNumApogeeIn(anySet())).thenReturn(List.of(a1001, a1002));
+        when(anneeUniversitaireRepository.findByNameIn(anySet())).thenReturn(List.of(year));
+        when(formationRepository.findByNameIn(anySet())).thenReturn(List.of(formation));
+        when(groupeRepository.findByNameIn(anySet())).thenReturn(List.of(g1, g2, g3, g4));
+        when(inscriptionRepository.findExistingEnrollmentKeys(anySet(), anySet(), anySet(), anySet()))
+                .thenReturn(List.<Object[]>of(new Object[] {1002L, 1L, 2L, 14L}));
+
+        StudentImportResultDTO result = importService.importFromExcel(file);
+
+        assertThat(result.getTotalRows()).isEqualTo(5);
+        assertThat(result.getStudentsCreated()).isZero();
+        assertThat(result.getStudentsUpdated()).isEqualTo(1);
+        assertThat(result.getInscriptionsCreated()).isEqualTo(3);
+        assertThat(result.getRowsRejected()).isZero();
+        assertThat(result.getDuplicatesSkipped()).isEqualTo(2);
+        assertThat(result.getWarningsCount()).isEqualTo(5);
+        assertThat(result.getErrorsCount()).isZero();
+        assertThat(a1001.getFirstName()).isEqualTo("Sara Final");
+        assertThat(a1001.getLastName()).isEqualTo("Alaoui Final");
+    }
+
+    @Test
     void importFromExcel_rejectsEmailOwnedByNonStudentUser() {
         MockMultipartFile file = excelFile();
         StudentExcelRowDTO row = row(2, "Sara", "Alaoui", "admin@ump.ac.ma", "A123", "2025/2026", "GI", "GI-1");
