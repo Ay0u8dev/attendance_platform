@@ -336,9 +336,6 @@ class StudentServiceTest {
     @Test
     void updateCurrentProfilePhoto_updatesOnlyCurrentStudentPhotoUrl() throws Exception {
         UserContext.setCurrentUser("1", "student@ump.ac.ma", Set.of("STUDENT"));
-        Path storageDir = Files.createTempDirectory("student-profile-photos");
-        ReflectionTestUtils.setField(studentService, "profilePhotoStorageDir", storageDir.toString());
-        ReflectionTestUtils.setField(studentService, "profilePhotoPublicPath", "/api/users/public/profile-photos");
 
         Student student = new Student();
         student.setId(1L);
@@ -347,96 +344,20 @@ class StudentServiceTest {
         student.setLastName("Alaoui");
         student.setNumApogee("A123");
 
-        MockMultipartFile file = new MockMultipartFile(
-                "file",
-                "avatar.png",
-                "image/png",
-                new byte[] {1, 2, 3}
-        );
+        String newUrl = "https://example.com/avatar.png";
 
         when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
         when(studentRepository.save(student)).thenReturn(student);
         when(anneeUniversitaireRepository.findByActiveTrue()).thenReturn(List.of());
 
-        StudentProfileDto profile = studentService.updateCurrentProfilePhoto(file);
+        StudentProfileDto profile = studentService.updateCurrentProfilePhoto(newUrl);
 
-        assertThat(student.getPfpUrl()).startsWith("/api/users/public/profile-photos/student-1-");
-        assertThat(student.getPfpUrl()).endsWith(".png");
-        assertThat(profile.getPfpUrl()).isEqualTo(student.getPfpUrl());
-        try (Stream<Path> files = Files.list(storageDir)) {
-            assertThat(files).hasSize(1);
-        }
+        assertThat(student.getPfpUrl()).isEqualTo(newUrl);
+        assertThat(profile.getPfpUrl()).isEqualTo(newUrl);
         verify(studentRepository).save(student);
     }
 
-    @Test
-    void updateCurrentProfilePhoto_deletesPreviousStoredProfilePhoto() throws Exception {
-        UserContext.setCurrentUser("1", "student@ump.ac.ma", Set.of("STUDENT"));
-        Path storageDir = Files.createTempDirectory("student-profile-photos");
-        Path oldPhoto = storageDir.resolve("student-1-old.png");
-        Files.write(oldPhoto, new byte[] {9, 9, 9});
-        ReflectionTestUtils.setField(studentService, "profilePhotoStorageDir", storageDir.toString());
-        ReflectionTestUtils.setField(studentService, "profilePhotoPublicPath", "/api/users/public/profile-photos");
 
-        Student student = new Student();
-        student.setId(1L);
-        student.setEmail("student@ump.ac.ma");
-        student.setFirstName("Sara");
-        student.setLastName("Alaoui");
-        student.setNumApogee("A123");
-        student.setPfpUrl("/api/users/public/profile-photos/student-1-old.png");
-
-        MockMultipartFile file = new MockMultipartFile(
-                "file",
-                "avatar.png",
-                "image/png",
-                new byte[] {1, 2, 3}
-        );
-
-        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
-        when(studentRepository.save(student)).thenReturn(student);
-        when(anneeUniversitaireRepository.findByActiveTrue()).thenReturn(List.of());
-
-        studentService.updateCurrentProfilePhoto(file);
-
-        assertThat(oldPhoto).doesNotExist();
-        try (Stream<Path> files = Files.list(storageDir)) {
-            assertThat(files).hasSize(1);
-        }
-    }
-
-    @Test
-    void updateCurrentProfilePhoto_doesNotDeleteExternalProfilePhotoUrl() throws Exception {
-        UserContext.setCurrentUser("1", "student@ump.ac.ma", Set.of("STUDENT"));
-        Path storageDir = Files.createTempDirectory("student-profile-photos");
-        ReflectionTestUtils.setField(studentService, "profilePhotoStorageDir", storageDir.toString());
-        ReflectionTestUtils.setField(studentService, "profilePhotoPublicPath", "/api/users/public/profile-photos");
-
-        Student student = new Student();
-        student.setId(1L);
-        student.setEmail("student@ump.ac.ma");
-        student.setFirstName("Sara");
-        student.setLastName("Alaoui");
-        student.setNumApogee("A123");
-        student.setPfpUrl("https://example.com/avatar.png");
-
-        MockMultipartFile file = new MockMultipartFile(
-                "file",
-                "avatar.png",
-                "image/png",
-                new byte[] {1, 2, 3}
-        );
-
-        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
-        when(studentRepository.save(student)).thenReturn(student);
-        when(anneeUniversitaireRepository.findByActiveTrue()).thenReturn(List.of());
-
-        studentService.updateCurrentProfilePhoto(file);
-
-        try (Stream<Path> files = Files.list(storageDir)) {
-            assertThat(files).hasSize(1);
-        }
-    }
 
     @Test
     void update_throwsWhenEmailExists() {

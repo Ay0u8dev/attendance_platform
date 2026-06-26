@@ -24,7 +24,6 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
 
     private static final String FACE_PROFILE_PATH_PREFIX = "/users/internal/students/";
     private static final String FACE_PROFILE_PATH_SUFFIX = "/face-profile";
-    private static final String PUBLIC_PROFILE_PHOTOS_PATH_PREFIX = "/users/public/profile-photos/";
 
     @Value("${app.internal.service-token:}")
     private String internalServiceToken;
@@ -48,9 +47,6 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
             return true; // Skip checks for auth-service calls
         }
 
-        if (isPublicProfilePhotoPath(request)) {
-            return true;
-        }
 
         if (isFaceProfilePath(request)) {
             if (!Objects.equals(source, "face-service")) {
@@ -105,12 +101,6 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
                 && requestUri.endsWith(FACE_PROFILE_PATH_SUFFIX);
     }
 
-    private boolean isPublicProfilePhotoPath(HttpServletRequest request) {
-        String requestUri = request.getRequestURI();
-        return "GET".equalsIgnoreCase(request.getMethod())
-                && requestUri != null
-                && requestUri.startsWith(PUBLIC_PROFILE_PHOTOS_PATH_PREFIX);
-    }
 
     private boolean constantTimeEquals(String expected, String actual) {
         return MessageDigest.isEqual(

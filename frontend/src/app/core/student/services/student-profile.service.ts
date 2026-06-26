@@ -59,11 +59,12 @@ export class StudentProfileService {
   }
 
   updateProfilePhoto(file: File): Observable<StudentProfile> {
-    const formData = new FormData();
-    formData.append('file', file);
+    // TODO: Implement actual upload to Cloudflare R2 here and get the public URL.
+    // For now, temporarily use a blob URL to validate the backend update flow locally.
+    const uploadedUrl = URL.createObjectURL(file);
 
     return this.http
-      .put<StudentProfile>(`${environment.apiBaseUrl}/users/student/profile/photo`, formData)
+      .put<StudentProfile>(`${environment.apiBaseUrl}/users/student/profile/photo`, { pfpUrl: uploadedUrl })
       .pipe(
         tap((profile) => {
           this.profileSignal.set(this.withCacheBustedProfilePhoto(profile));

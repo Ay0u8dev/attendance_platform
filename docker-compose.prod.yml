@@ -108,14 +108,12 @@ services:
       - "traefik.enable=true"
 
       # Router
-      - "traefik.http.routers.user-public-profile-photos.rule=PathPrefix(`/api/users/public/profile-photos`)"
-      - "traefik.http.routers.user-public-profile-photos.entrypoints=web"
+
       - "traefik.http.routers.user.rule=PathPrefix(`/api/users`) && !PathPrefix(`/api/users/internal`)"
       - "traefik.http.routers.user.entrypoints=web"
 
       # Attach middlewares
-      - "traefik.http.routers.user-public-profile-photos.middlewares=strip-api-user"
-      - "traefik.http.routers.user-public-profile-photos.service=user"
+
       - "traefik.http.routers.user.middlewares=forward-auth,strip-api-user"
 
       # Internal port

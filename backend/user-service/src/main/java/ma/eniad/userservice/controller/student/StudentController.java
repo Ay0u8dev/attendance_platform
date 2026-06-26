@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -26,6 +26,7 @@ import ma.eniad.userservice.annotation.RequireRole;
 import ma.eniad.userservice.dto.student.StudentProfileDto;
 import ma.eniad.userservice.dto.student.StudentRequestDTO;
 import ma.eniad.userservice.dto.student.StudentResponseDTO;
+import ma.eniad.userservice.dto.student.UpdateProfilePhotoRequest;
 import ma.eniad.userservice.service.student.StudentService;
 
 @RestController
@@ -81,10 +82,10 @@ public class StudentController {
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @RequireRole({"STUDENT"})
-    @PutMapping(value = "/profile/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/profile/photo")
     public ResponseEntity<StudentProfileDto> updateProfilePhoto(
-            @RequestPart("file") MultipartFile file) {
-        return ResponseEntity.ok(service.updateCurrentProfilePhoto(file));
+            @Valid @RequestBody UpdateProfilePhotoRequest request) {
+        return ResponseEntity.ok(service.updateCurrentProfilePhoto(request.getPfpUrl()));
     }
 
     @ApiResponses({
