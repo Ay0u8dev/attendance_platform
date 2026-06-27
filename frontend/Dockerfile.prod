@@ -17,7 +17,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+RUN addgroup -g 1001 -S nodejs \
+    && adduser -S nodejs -u 1001 -G nodejs \
+    && chown nodejs:nodejs /app
 
 COPY --chown=nodejs:nodejs --from=build /app/dist ./dist
 COPY --chown=nodejs:nodejs --from=build /app/package*.json ./
