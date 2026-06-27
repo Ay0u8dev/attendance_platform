@@ -19,11 +19,15 @@ spring:
     show-sql: true
 
 app:
-  profile-photos:
-    storage-dir: ${PROFILE_PHOTOS_STORAGE_DIR}
-    public-path: ${PROFILE_PHOTOS_PUBLIC_PATH}
   internal:
     service-token: ${INTERNAL_SERVICE_TOKEN}
+
+cloudflare:
+  r2:
+    endpoint: ${R2_ENDPOINT}
+    access-key: ${R2_ACCESS_KEY}
+    secret-key: ${R2_SECRET_KEY}
+    bucket-name: ${R2_BUCKET_NAME}
 
 management:
   endpoints:

@@ -53,12 +53,6 @@ public class StudentService {
     @Value("${app.allowed-domain}")
     private String allowedDomain;
 
-    @Value("${app.profile-photos.storage-dir:uploads/profile-photos}")
-    private String profilePhotoStorageDir;
-
-    @Value("${app.profile-photos.public-path:/api/users/public/profile-photos}")
-    private String profilePhotoPublicPath;
-
     // -------------------------------------------------------------------------
     // Create
     // -------------------------------------------------------------------------

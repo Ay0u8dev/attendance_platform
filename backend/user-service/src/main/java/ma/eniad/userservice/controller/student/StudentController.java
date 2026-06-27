@@ -27,16 +27,21 @@ import ma.eniad.userservice.dto.student.StudentProfileDto;
 import ma.eniad.userservice.dto.student.StudentRequestDTO;
 import ma.eniad.userservice.dto.student.StudentResponseDTO;
 import ma.eniad.userservice.dto.student.UpdateProfilePhotoRequest;
+import ma.eniad.userservice.controller.dto.PresignedUrlResponse;
+import ma.eniad.userservice.service.CloudflareR2Service;
 import ma.eniad.userservice.service.student.StudentService;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("users/student")
 public class StudentController {
 
     private final StudentService service;
+    private final CloudflareR2Service r2Service;
 
-    public StudentController(StudentService service) {
+    public StudentController(StudentService service, CloudflareR2Service r2Service) {
         this.service = service;
+        this.r2Service = r2Service;
     }
 
     @ApiResponses({
@@ -86,6 +91,23 @@ public class StudentController {
     public ResponseEntity<StudentProfileDto> updateProfilePhoto(
             @Valid @RequestBody UpdateProfilePhotoRequest request) {
         return ResponseEntity.ok(service.updateCurrentProfilePhoto(request.getPfpUrl()));
+    }
+
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Presigned URL generated successfully",
+                    content = @Content(schema = @Schema(implementation = PresignedUrlResponse.class)))
+    })
+    @RequireRole({"STUDENT"})
+    @GetMapping(value = "/profile/photo/presigned-url")
+    public ResponseEntity<PresignedUrlResponse> getProfilePhotoPresignedUrl(@org.springframework.web.bind.annotation.RequestParam(required = false, defaultValue = "image/jpeg") String contentType) {
+        String extension = ".jpg";
+        if ("image/png".equals(contentType)) extension = ".png";
+        else if ("image/webp".equals(contentType)) extension = ".webp";
+        else if ("image/gif".equals(contentType)) extension = ".gif";
+
+        String key = "profile-photos/" + UUID.randomUUID().toString() + extension;
+        String presignedUrl = r2Service.generatePresignedUploadUrl(key, contentType);
+        return ResponseEntity.ok(PresignedUrlResponse.builder().url(presignedUrl).key(key).build());
     }
 
     @ApiResponses({
