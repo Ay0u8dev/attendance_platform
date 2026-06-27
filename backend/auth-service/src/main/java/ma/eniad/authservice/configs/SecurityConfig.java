@@ -24,6 +24,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers(
                                 "/swagger-ui/**",
@@ -48,7 +49,11 @@ public class SecurityConfig {
                 "http://localhost:4200",
                 "http://localhost",
                 "http://attendance-platform.ma",
-                "http://192.168.100.73:18080"
+                "http://192.168.100.73:18080",
+                "https://yunoserver.tail8ea16a.ts.net",
+                "https://yunoserver.tail8ea16a.ts.net/*",
+                "http://attendance-platform.duckdns.org",
+                "https://attendance-platform.duckdns.org"
         ));
         config.setAllowedMethods(List.of(
                 "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"

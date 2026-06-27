@@ -17,7 +17,7 @@ class RoleCheckInterceptorFaceProfileTest {
     @BeforeEach
     void setUp() {
         interceptor = new RoleCheckInterceptor();
-        ReflectionTestUtils.setField(interceptor, "faceServiceToken", "test-service-token");
+        ReflectionTestUtils.setField(interceptor, "internalServiceToken", "test-service-token");
     }
 
     @Test
@@ -94,7 +94,7 @@ class RoleCheckInterceptorFaceProfileTest {
 
     @Test
     void rejectsFaceProfileEndpointWhenFaceServiceTokenIsNotConfigured() {
-        ReflectionTestUtils.setField(interceptor, "faceServiceToken", "");
+        ReflectionTestUtils.setField(interceptor, "internalServiceToken", "");
         MockHttpServletRequest request = request("test-service-token");
 
         assertThatThrownBy(() -> interceptor.preHandle(request, new MockHttpServletResponse(), new Object()))

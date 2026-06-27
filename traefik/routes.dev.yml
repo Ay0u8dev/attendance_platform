@@ -12,11 +12,6 @@ http:
       middlewares: ["strip-api-auth"]
       service: auth-service
 
-    user-public-profile-photos:
-      entryPoints: ["web"]
-      rule: "PathPrefix(`/api/users/public/profile-photos`)"
-      middlewares: ["strip-api-user"]
-      service: user-service
 
     user:
       entryPoints: ["web"]

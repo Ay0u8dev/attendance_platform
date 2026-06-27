@@ -17,21 +17,39 @@ import ma.eniad.justificationservice.dto.SubmitJustificationRequest;
 import ma.eniad.justificationservice.entity.Justification;
 import ma.eniad.justificationservice.entity.JustificationStatus;
 import ma.eniad.justificationservice.service.JustificationService;
+import ma.eniad.justificationservice.service.CloudflareR2Service;
+import ma.eniad.justificationservice.controller.dto.PresignedUrlResponse;
+import java.util.UUID;
+import org.springframework.http.ResponseEntity;
 
 @RestController
 @RequestMapping("/justifications")
 public class JustificationController {
 
     private final JustificationService service;
+    private final CloudflareR2Service r2Service;
 
-    public JustificationController(JustificationService service) {
+    public JustificationController(JustificationService service, CloudflareR2Service r2Service) {
         this.service = service;
+        this.r2Service = r2Service;
     }
 
     @GetMapping
     public List<Justification> findAll(@RequestParam(required = false) JustificationStatus status,
                                        @RequestParam(required = false) Long studentId) {
         return service.findAll(status, studentId);
+    }
+
+    @GetMapping("/presigned-url")
+    public ResponseEntity<PresignedUrlResponse> getPresignedUrl(@RequestParam(required = false, defaultValue = "application/pdf") String contentType) {
+        String extension = ".pdf";
+        if ("image/jpeg".equals(contentType) || "image/jpg".equals(contentType)) extension = ".jpg";
+        else if ("image/png".equals(contentType)) extension = ".png";
+        else if ("image/webp".equals(contentType)) extension = ".webp";
+
+        String key = "justifications/" + UUID.randomUUID().toString() + extension;
+        String presignedUrl = r2Service.generatePresignedUploadUrl(key, contentType);
+        return ResponseEntity.ok(PresignedUrlResponse.builder().url(presignedUrl).key(key).build());
     }
 
     @GetMapping("/{id}")

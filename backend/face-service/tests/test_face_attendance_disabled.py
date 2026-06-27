@@ -44,7 +44,7 @@ def test_face_attendance_matches_before_recording():
             response = client.post(
                 "/face/student/attendance",
                 headers={
-                    "X-Internal-Service-Token": settings.face_service_internal_token,
+                    "X-Internal-Service-Token": settings.internal_service_token,
                     "X-User-Id": "12",
                     "X-User-Roles": "STUDENT",
                 },

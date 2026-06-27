@@ -53,12 +53,6 @@ public class StudentService {
     @Value("${app.allowed-domain}")
     private String allowedDomain;
 
-    @Value("${app.profile-photos.storage-dir:uploads/profile-photos}")
-    private String profilePhotoStorageDir;
-
-    @Value("${app.profile-photos.public-path:/api/users/public/profile-photos}")
-    private String profilePhotoPublicPath;
-
     // -------------------------------------------------------------------------
     // Create
     // -------------------------------------------------------------------------
@@ -120,31 +114,10 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentProfileDto updateCurrentProfilePhoto(MultipartFile file) {
+    public StudentProfileDto updateCurrentProfilePhoto(String pfpUrl) {
         Student student = findCurrentStudent();
-        validateProfilePhoto(file);
-        String previousPfpUrl = student.getPfpUrl();
-
-        String extension = extensionForContentType(file.getContentType());
-        String filename = "student-" + student.getId() + "-" + UUID.randomUUID() + extension;
-
-        try {
-            Path directory = Paths.get(profilePhotoStorageDir).toAbsolutePath().normalize();
-            Files.createDirectories(directory);
-
-            Path target = directory.resolve(filename).normalize();
-            if (!target.startsWith(directory)) {
-                throw new InvalidInputException("Invalid profile photo path");
-            }
-
-            file.transferTo(target);
-        } catch (IOException ex) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to save profile photo");
-        }
-
-        student.setPfpUrl(normalizePublicPhotoPath() + "/" + filename);
+        student.setPfpUrl(pfpUrl);
         studentRepository.save(student);
-        deletePreviousStoredProfilePhoto(previousPfpUrl, student.getPfpUrl());
         return buildCurrentProfile(student);
     }
 
@@ -235,83 +208,7 @@ public class StudentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
     }
 
-    private void validateProfilePhoto(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new InvalidInputException("Profile photo is required");
-        }
 
-        if (file.getSize() > 5 * 1024 * 1024) {
-            throw new InvalidInputException("Profile photo must be 5MB or less");
-        }
-
-        String contentType = file.getContentType();
-        if (!"image/jpeg".equals(contentType)
-                && !"image/png".equals(contentType)
-                && !"image/webp".equals(contentType)) {
-            throw new InvalidInputException("Profile photo must be a JPEG, PNG, or WebP image");
-        }
-    }
-
-    private String extensionForContentType(String contentType) {
-        if ("image/png".equals(contentType)) {
-            return ".png";
-        }
-        if ("image/webp".equals(contentType)) {
-            return ".webp";
-        }
-        return ".jpg";
-    }
-
-    private String normalizePublicPhotoPath() {
-        if (profilePhotoPublicPath == null || profilePhotoPublicPath.isBlank()) {
-            return "/api/users/public/profile-photos";
-        }
-
-        String normalized = profilePhotoPublicPath.trim();
-        while (normalized.endsWith("/")) {
-            normalized = normalized.substring(0, normalized.length() - 1);
-        }
-        return normalized.isEmpty() ? "/api/users/public/profile-photos" : normalized;
-    }
-
-    private void deletePreviousStoredProfilePhoto(String previousPfpUrl, String currentPfpUrl) {
-        if (previousPfpUrl == null || previousPfpUrl.isBlank() || previousPfpUrl.equals(currentPfpUrl)) {
-            return;
-        }
-
-        Path oldFile = storedProfilePhotoPath(previousPfpUrl);
-        if (oldFile == null) {
-            return;
-        }
-
-        try {
-            Files.deleteIfExists(oldFile);
-        } catch (IOException ignored) {
-            // A stale profile photo should not fail a successful profile update.
-        }
-    }
-
-    private Path storedProfilePhotoPath(String pfpUrl) {
-        String publicPath = normalizePublicPhotoPath() + "/";
-        String normalizedUrl = pfpUrl.trim();
-        if (!normalizedUrl.startsWith(publicPath)) {
-            return null;
-        }
-
-        String filename = normalizedUrl.substring(publicPath.length());
-        int queryIndex = filename.indexOf('?');
-        if (queryIndex >= 0) {
-            filename = filename.substring(0, queryIndex);
-        }
-
-        if (!filename.matches("[A-Za-z0-9._-]+")) {
-            return null;
-        }
-
-        Path directory = Paths.get(profilePhotoStorageDir).toAbsolutePath().normalize();
-        Path file = directory.resolve(filename).normalize();
-        return file.startsWith(directory) ? file : null;
-    }
 
     private void applyEnrollmentDetails(StudentProfileDto.StudentProfileDtoBuilder builder, Student student) {
         List<AnneeUniversitaire> activeYears = anneeUniversitaireRepository.findByActiveTrue();

@@ -24,10 +24,9 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
 
     private static final String FACE_PROFILE_PATH_PREFIX = "/users/internal/students/";
     private static final String FACE_PROFILE_PATH_SUFFIX = "/face-profile";
-    private static final String PUBLIC_PROFILE_PHOTOS_PATH_PREFIX = "/users/public/profile-photos/";
 
-    @Value("${app.internal.face-service-token:}")
-    private String faceServiceToken;
+    @Value("${app.internal.service-token:}")
+    private String internalServiceToken;
 
     @Override
     public boolean preHandle(HttpServletRequest request,
@@ -48,32 +47,21 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
             return true; // Skip checks for auth-service calls
         }
 
-        if (isPublicProfilePhotoPath(request)) {
-            return true;
-        }
 
         if (isFaceProfilePath(request)) {
             if (!Objects.equals(source, "face-service")) {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal service source");
             }
-            if (faceServiceToken == null || faceServiceToken.isBlank()) {
-                throw new ResponseStatusException(
-                        HttpStatus.SERVICE_UNAVAILABLE,
-                        "Face-service authentication is not configured"
-                );
-            }
-
-            String suppliedToken = request.getHeader("X-Internal-Service-Token");
-            if (suppliedToken == null || suppliedToken.isBlank() || !constantTimeEquals(faceServiceToken, suppliedToken)) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal service credentials");
-            }
+            validateInternalToken(request);
             return true;
         }
 
-        if (Objects.equals(source, "attendance-service")
-                && request.getRequestURI() != null
-                && request.getRequestURI().startsWith("/users/internal/")) {
-            return true; // Skip checks for attendance-service internal calls
+        if (request.getRequestURI() != null && request.getRequestURI().startsWith("/users/internal/")) {
+            if (Objects.equals(source, "attendance-service") || Objects.equals(source, "face-service") || Objects.equals(source, "qr-service") || Objects.equals(source, "justification-service")) {
+                validateInternalToken(request);
+                return true; // Skip further checks for valid internal calls
+            }
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal service source");
         }
         if (userId == null || rolesHeader == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing auth headers");
@@ -113,18 +101,26 @@ public class RoleCheckInterceptor implements HandlerInterceptor {
                 && requestUri.endsWith(FACE_PROFILE_PATH_SUFFIX);
     }
 
-    private boolean isPublicProfilePhotoPath(HttpServletRequest request) {
-        String requestUri = request.getRequestURI();
-        return "GET".equalsIgnoreCase(request.getMethod())
-                && requestUri != null
-                && requestUri.startsWith(PUBLIC_PROFILE_PHOTOS_PATH_PREFIX);
-    }
 
     private boolean constantTimeEquals(String expected, String actual) {
         return MessageDigest.isEqual(
                 expected.getBytes(StandardCharsets.UTF_8),
                 actual.getBytes(StandardCharsets.UTF_8)
         );
+    }
+
+    private void validateInternalToken(HttpServletRequest request) {
+        if (internalServiceToken == null || internalServiceToken.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Internal authentication is not configured"
+            );
+        }
+
+        String suppliedToken = request.getHeader("X-Internal-Service-Token");
+        if (suppliedToken == null || suppliedToken.isBlank() || !constantTimeEquals(internalServiceToken, suppliedToken)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal service credentials");
+        }
     }
 
     @Override

@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(properties = { "app.internal.service-token=test-token" })
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class UserControllerRosterIntegrationTest {
@@ -187,6 +187,7 @@ class UserControllerRosterIntegrationTest {
     void rosterReturnsOnlyActiveYearStudents() throws Exception {
         mockMvc.perform(get("/users/internal/students/roster")
                         .header("X-Request-Source", "attendance-service")
+                        .header("X-Internal-Service-Token", "test-token")
                         .queryParam("groupIds", String.valueOf(activeGroupId))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -201,6 +202,7 @@ class UserControllerRosterIntegrationTest {
     void rosterReturnsEmptyListWhenNoActiveYearStudentsMatch() throws Exception {
         mockMvc.perform(get("/users/internal/students/roster")
                         .header("X-Request-Source", "attendance-service")
+                        .header("X-Internal-Service-Token", "test-token")
                         .queryParam("groupIds", String.valueOf(emptyGroupId))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -211,6 +213,7 @@ class UserControllerRosterIntegrationTest {
     void rosterRejectsMissingGroupIds() throws Exception {
         mockMvc.perform(get("/users/internal/students/roster")
                         .header("X-Request-Source", "attendance-service")
+                        .header("X-Internal-Service-Token", "test-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
     }
@@ -232,6 +235,7 @@ class UserControllerRosterIntegrationTest {
 
         mockMvc.perform(get("/users/internal/students/roster")
                         .header("X-Request-Source", "attendance-service")
+                        .header("X-Internal-Service-Token", "test-token")
                         .queryParam("groupIds", String.valueOf(activeGroupId))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isConflict());
@@ -250,6 +254,7 @@ class UserControllerRosterIntegrationTest {
 
         mockMvc.perform(get("/users/internal/students/roster")
                         .header("X-Request-Source", "attendance-service")
+                        .header("X-Internal-Service-Token", "test-token")
                         .queryParam("groupIds", String.valueOf(activeGroupId))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isConflict());
@@ -259,6 +264,7 @@ class UserControllerRosterIntegrationTest {
     void teacherIdentityReturnsTeacherSnapshotForTrustedCaller() throws Exception {
         mockMvc.perform(get("/users/internal/teachers/{id}/identity", teacherId)
                         .header("X-Request-Source", "attendance-service")
+                        .header("X-Internal-Service-Token", "test-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.teacherId").value(teacherId))
@@ -277,6 +283,7 @@ class UserControllerRosterIntegrationTest {
     void teacherIdentityReturnsNotFoundForUnknownTeacher() throws Exception {
         mockMvc.perform(get("/users/internal/teachers/{id}/identity", teacherId + 999)
                         .header("X-Request-Source", "attendance-service")
+                        .header("X-Internal-Service-Token", "test-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }

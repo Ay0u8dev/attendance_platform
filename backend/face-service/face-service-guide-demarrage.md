@@ -81,8 +81,7 @@ Exemple pour `backend/face-service/.env`:
 ATTENDANCE_SERVICE_URL=http://localhost:8083
 USER_SERVICE_URL=http://localhost:8082
 
-FACE_SERVICE_INTERNAL_TOKEN=replace-with-a-long-random-secret
-FACE_ATTENDANCE_INTERNAL_TOKEN=replace-with-a-long-random-secret
+INTERNAL_SERVICE_TOKEN=replace-with-a-long-random-secret
 FACE_VALIDATION_STUB_ENABLED=false
 
 MAX_IMAGE_SIZE_BYTES=2000000
@@ -98,8 +97,7 @@ HTTP_READ_TIMEOUT_SECONDS=10
 
 Important:
 
-- `FACE_SERVICE_INTERNAL_TOKEN` doit etre le meme dans `backend/face-service/.env` et dans le `.env` racine, car Traefik l'injecte dans `X-Internal-Service-Token`.
-- `FACE_ATTENDANCE_INTERNAL_TOKEN` doit etre le meme cote `face-service` et cote `attendance-service`.
+- `INTERNAL_SERVICE_TOKEN` doit etre le meme dans tous les `.env` des services, pour l'authentification interne.
 - Ne jamais mettre de vrais secrets dans Git.
 
 ## 4. Installation locale
@@ -365,7 +363,7 @@ Invoke-RestMethod `
   -Form $form
 ```
 
-Le token doit correspondre a `FACE_SERVICE_INTERNAL_TOKEN`.
+Le token doit correspondre a `INTERNAL_SERVICE_TOKEN`.
 
 ## 8. Tests automatiques
 
@@ -467,7 +465,7 @@ Verifier:
 - `.env` racine: utilise par Traefik.
 - `backend/face-service/.env`: utilise par `face-service`.
 
-La valeur de `FACE_SERVICE_INTERNAL_TOKEN` doit etre identique dans les deux.
+La valeur de `INTERNAL_SERVICE_TOKEN` doit etre identique dans les deux.
 
 ### `User service is unavailable`
 
@@ -493,7 +491,7 @@ Invoke-WebRequest http://localhost:8083/actuator/health
 
 ### `Attendance service authentication failed`
 
-Le token `FACE_ATTENDANCE_INTERNAL_TOKEN` ne correspond pas entre `face-service` et `attendance-service`.
+Le token `INTERNAL_SERVICE_TOKEN` ne correspond pas entre `face-service` et `attendance-service`.
 
 Verifier:
 
@@ -578,6 +576,5 @@ Avant de dire que le service ne marche pas, verifier:
 - `user-service` repond sur `http://localhost:8082`.
 - `attendance-service` repond sur `http://localhost:8083`.
 - Les deux modeles ONNX existent dans `backend/face-service/models`; ils ne viennent pas avec Git car `models/*.onnx` est ignore.
-- `FACE_SERVICE_INTERNAL_TOKEN` est identique dans `.env` racine et `backend/face-service/.env`.
-- `FACE_ATTENDANCE_INTERNAL_TOKEN` est identique entre `face-service` et `attendance-service`.
+- `INTERNAL_SERVICE_TOKEN` est identique partout.
 - Le frontend appelle `http://localhost/api/face/...`, pas directement `http://localhost:8002/...`.

@@ -144,7 +144,7 @@ def persisted_response() -> UserServiceFaceProfileResponse:
 
 def student_headers(student_id: int) -> dict[str, str]:
     return {
-        "X-Internal-Service-Token": settings.face_service_internal_token,
+        "X-Internal-Service-Token": settings.internal_service_token,
         "X-User-Id": str(student_id),
         "X-User-Roles": "STUDENT",
         "X-User-Email": "student@ump.ac.ma",

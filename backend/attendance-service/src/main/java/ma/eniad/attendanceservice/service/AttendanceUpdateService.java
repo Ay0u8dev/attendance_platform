@@ -50,11 +50,8 @@ public class AttendanceUpdateService {
     private final AttendanceRecordRepository attendanceRecordRepository;
     private final AttendanceSessionRepository attendanceSessionRepository;
 
-    @Value("${attendance.internal.face-service-token:}")
-    private String faceServiceToken;
-
-    @Value("${attendance.internal.qr-service-token:}")
-    private String qrServiceToken;
+    @Value("${attendance.internal.service-token:}")
+    private String internalServiceToken;
 
     @Value("${attendance.self-mark.max-distance-meters:${attendance.qr.max-distance-meters:100}}")
     private double selfMarkMaxDistanceMeters = 100.0;
@@ -78,8 +75,7 @@ public class AttendanceUpdateService {
         this.sessionLock = directLock();
         this.attendanceRecordRepository = null;
         this.attendanceSessionRepository = null;
-        this.faceServiceToken = "test-internal-token";
-        this.qrServiceToken = "test-internal-token";
+        this.internalServiceToken = "test-internal-token";
     }
 
     private static AttendanceSessionLock directLock() {
@@ -219,18 +215,20 @@ public class AttendanceUpdateService {
     AttendanceUpdateResponse updateInternalAttendance(String requestSource,
                                                       Long sessionId,
                                                       InternalAttendanceUpdateRequest request) {
-        String token = "face-service".equals(requestSource) ? faceServiceToken : qrServiceToken;
-        return updateInternalAttendance(requestSource, token, sessionId, request);
+        return updateInternalAttendance(requestSource, internalServiceToken, sessionId, request);
     }
 
     @Transactional
     public void justifyFinalizedAbsence(String requestSource,
+                                        String internalToken,
                                         Long sessionId,
                                         Long studentId,
                                         JustifyAbsenceRequest request) {
         if (!JUSTIFICATION_SOURCE.equals(requestSource)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Untrusted request source");
         }
+
+        validateInternalToken(requestSource, internalToken);
 
         AttendanceRecord record = attendanceRecordRepository.findBySessionIdAndStudentId(sessionId, studentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attendance record not found"));
@@ -388,9 +386,7 @@ public class AttendanceUpdateService {
     }
 
     private void validateInternalToken(String source, String suppliedToken) {
-        String expectedToken = "face-service".equals(source) ? faceServiceToken : qrServiceToken;
-
-        if (expectedToken == null || expectedToken.isBlank()) {
+        if (internalServiceToken == null || internalServiceToken.isBlank()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Internal authentication is not configured");
         }
 
@@ -398,7 +394,7 @@ public class AttendanceUpdateService {
                 ? new byte[0]
                 : suppliedToken.getBytes(StandardCharsets.UTF_8);
 
-        if (!MessageDigest.isEqual(expectedToken.getBytes(StandardCharsets.UTF_8), supplied)) {
+        if (!MessageDigest.isEqual(internalServiceToken.getBytes(StandardCharsets.UTF_8), supplied)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal service credentials");
         }
     }
