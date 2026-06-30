@@ -11,6 +11,8 @@ import {
   PagedResponse,
   TeacherSessionsQuery,
 } from '../models/attendance.model';
+import { StudentAttendanceSessionSummaryDto } from '../models/student-attendance.model';
+import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AttendanceService {
@@ -49,5 +51,20 @@ export class AttendanceService {
 
   endSession(sessionId: number) {
     return this.http.post<AttendanceSessionResponse>(`${this.baseUrl}/${sessionId}/end`, {});
+  }
+
+  getStudentSessions(
+    studentId: number,
+    status?: string
+  ): Observable<PagedResponse<StudentAttendanceSessionSummaryDto>> {
+    let params = new HttpParams();
+    if (status) {
+      params = params.set('status', status);
+    }
+    params = params.set('size', '1000');
+    return this.http.get<PagedResponse<StudentAttendanceSessionSummaryDto>>(
+      `${this.baseUrl}/students/${studentId}/sessions`,
+      { params }
+    );
   }
 }

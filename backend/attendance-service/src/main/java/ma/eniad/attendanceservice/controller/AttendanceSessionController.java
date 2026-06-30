@@ -8,7 +8,9 @@ import ma.eniad.attendanceservice.dto.AttendanceSessionDetailsResponse;
 import ma.eniad.attendanceservice.dto.AttendanceSessionResponse;
 import ma.eniad.attendanceservice.dto.CreateAttendanceSessionRequest;
 import ma.eniad.attendanceservice.dto.PagedResponse;
+import ma.eniad.attendanceservice.dto.StudentAttendanceSessionSummaryResponse;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.service.AttendanceFinalizationService;
 import ma.eniad.attendanceservice.service.AttendanceQueryService;
 import ma.eniad.attendanceservice.service.AttendanceSessionReadService;
@@ -77,5 +79,17 @@ public class AttendanceSessionController {
     public ResponseEntity<AttendanceSessionDetailsResponse> endSession(@PathVariable Long sessionId) {
         Long teacherId = Long.valueOf(UserContext.getCurrentUser().userId());
         return ResponseEntity.ok(attendanceFinalizationService.finalizeSession(sessionId, teacherId));
+    }
+
+    @RequireRole({"TEACHER"})
+    @GetMapping("/students/{studentId}/sessions")
+    public ResponseEntity<PagedResponse<StudentAttendanceSessionSummaryResponse>> getStudentSessions(
+            @PathVariable Long studentId,
+            @RequestParam(required = false) AttendanceStudentStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            Pageable pageable
+    ) {
+        return ResponseEntity.ok(attendanceQueryService.getStudentSessions(studentId, status, dateFrom, dateTo, pageable));
     }
 }

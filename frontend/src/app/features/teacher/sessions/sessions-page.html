@@ -1,92 +1,124 @@
-<section class="space-y-6">
+<section class="teacher-page">
   <app-page-header
     title="Attendance Sessions"
-    description="Track and manage your teaching sessions and student attendance records."
-    [meta]="totalElements() + ' sessions'"
   ></app-page-header>
 
-  <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4">
+  <section class="teacher-page-panel">
     <div>
-      <p class="text-sm font-semibold text-principalText">Historique des sessions</p>
-      <p class="text-xs text-secondaryText">{{ finalizedCount() }} sessions finalisees chargees</p>
+      <p class="teacher-page-panel-title">Historique des sessions</p>
+      <p class="teacher-page-panel-subtitle">{{ finalizedCount() }} sessions finalisees chargees</p>
     </div>
-    <div class="flex gap-3">
-      <button
-        type="button"
-        class="rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-principalText transition-all hover:bg-surface-subtle"
-        (click)="loadSessions()"
-      >
-        Actualiser
-      </button>
-      <a
-        routerLink="/teacher/mark-attendance/start-session"
-        class="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-primary/90"
-      >
-        Start New Session
-      </a>
-    </div>
-  </div>
+    <a routerLink="/teacher/mark-attendance/start-session" class="teacher-primary-btn">
+      Start New Session
+    </a>
+  </section>
 
   @if (error()) {
-    <div class="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm font-semibold text-danger">
-      {{ error() }}
-    </div>
+    <div class="teacher-page-alert">{{ error() }}</div>
   }
 
-  <div class="overflow-hidden rounded-2xl border border-line bg-surface">
-    <div class="sessions-grid border-b border-line bg-surface-subtle px-5 py-3 text-xs font-bold uppercase text-secondaryText">
-      <span>Cours</span>
-      <span>Date</span>
-      <span>Presence</span>
-      <span>Statut</span>
-      <span>Actions</span>
-    </div>
-
+  <section class="teacher-page-section">
     @if (loading()) {
-      <div class="p-8 text-center text-sm text-secondaryText">Chargement...</div>
+      <div class="teacher-page-loading">Chargement...</div>
     } @else if (sessions().length === 0) {
-      <div class="p-12 text-center">
-        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+      <div class="teacher-page-empty">
+        <div
+          class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-soft text-primary"
+        >
           <i class="fa-regular fa-calendar-check text-2xl"></i>
         </div>
         <h3 class="mt-6 text-xl font-bold text-principalText">Aucune session</h3>
         <p class="mt-2 text-secondaryText">Demarrez une session pour voir l historique ici.</p>
       </div>
     } @else {
-      @for (session of sessions(); track session.sessionId) {
-        <div class="sessions-grid items-center border-b border-line px-5 py-4 last:border-b-0">
-          <div class="min-w-0">
-            <p class="truncate font-semibold text-principalText">{{ session.courseLabel }}</p>
-            <p class="truncate text-xs text-secondaryText">
-              {{ session.roomLabel || 'Salle non renseignee' }} | Groupes {{ session.groupIds.join(', ') }}
-            </p>
-          </div>
-          <span class="text-sm text-secondaryText">{{ session.startedAt | date: 'dd/MM/yyyy HH:mm' }}</span>
-          <div class="text-sm text-secondaryText">
-            <span class="font-bold text-principalText">{{ attendanceRate(session) }}%</span>
-            <span> ({{ session.presentCount }} presents)</span>
-          </div>
-          <div class="status-cell">
-            <app-status-badge
-              [label]="session.status"
-              [variant]="statusVariant(session)"
-            ></app-status-badge>
-          </div>
-          <div class="actions-cell flex justify-end">
+      <div class="teacher-page-section-header md:hidden">
+        <h2>Historique</h2>
+        <p>{{ sessions().length }} session(s)</p>
+      </div>
+
+      <section class="space-y-3 md:hidden">
+        <div class="space-y-3">
+          @for (session of sessions(); track session.sessionId) {
             <button
               type="button"
-              class="action-btn action-btn-neutral"
-              [disabled]="loadingDetails()"
+              class="block w-full rounded-2xl border border-line bg-surface px-4 py-4 text-left shadow-sm transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft/25"
               (click)="openDetails(session)"
             >
-              <i class="fa-regular fa-eye" aria-hidden="true"></i>
-              Voir details
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-principalText">{{ session.courseLabel }}</p>
+                  <p class="mt-1 truncate text-xs text-secondaryText">
+                    {{ session.roomLabel || 'Salle non renseignee' }} · Groupes
+                    {{ session.groupIds.join(', ') }}
+                  </p>
+                </div>
+                <app-status-badge
+                  [label]="sessionStatusLabel(session)"
+                  [variant]="statusVariant(session)"
+                ></app-status-badge>
+              </div>
+
+              <div class="mt-4 grid gap-2 text-xs text-secondaryText">
+                <span class="inline-flex items-center gap-2">
+                  <i class="fa-regular fa-calendar text-muted" aria-hidden="true"></i>
+                  {{ sessionDateLabel(session) }} · {{ sessionTimeLabel(session) }}
+                </span>
+                <span class="inline-flex items-center gap-2">
+                  <i class="fa-solid fa-location-dot text-muted" aria-hidden="true"></i>
+                  {{ session.roomLabel || 'Salle non renseignee' }} · {{ methodLabel(session.method) }}
+                </span>
+              </div>
+
+              <div class="mt-4 flex items-center justify-between gap-3">
+                <app-status-badge
+                  [label]="attendanceRate(session) + '% · ' + session.presentCount + ' presents'"
+                  variant="neutral"
+                ></app-status-badge>
+                <span class="text-xs font-semibold text-primary">Détails</span>
+              </div>
             </button>
-          </div>
+          }
         </div>
-      }
+      </section>
+
+      <div class="teacher-table-shell hidden md:block">
+        <div class="teacher-table-grid teacher-table-grid--sessions teacher-table-head">
+          <span>Cours</span>
+          <span>Date</span>
+          <span>Presence</span>
+          <span>Statut</span>
+        </div>
+
+        @for (session of sessions(); track session.sessionId) {
+          <div
+            class="teacher-table-grid teacher-table-grid--sessions teacher-table-row clickable"
+            (click)="openDetails(session)"
+          >
+            <div class="min-w-0">
+              <p class="truncate font-semibold text-principalText">{{ session.courseLabel }}</p>
+              <p class="truncate text-xs text-secondaryText">
+                {{ session.roomLabel || 'Salle non renseignee' }} | Groupes
+                {{ session.groupIds.join(', ') }}
+              </p>
+            </div>
+            <span class="text-sm text-secondaryText">{{
+              session.startedAt | date: 'dd/MM/yyyy HH:mm'
+            }}</span>
+            <div class="text-sm text-secondaryText">
+              <span class="font-bold text-principalText">{{ attendanceRate(session) }}%</span>
+              <span> ({{ session.presentCount }} presents)</span>
+            </div>
+            <div class="teacher-table-status-cell">
+              <app-status-badge
+                [label]="sessionStatusLabel(session)"
+                [variant]="statusVariant(session)"
+              ></app-status-badge>
+            </div>
+          </div>
+        }
+      </div>
     }
-  </div>
+  </section>
 </section>
 
 @if (selectedSession(); as session) {
@@ -124,9 +156,7 @@
       }
 
       @if (detailError()) {
-        <div class="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm font-semibold text-danger">
-          {{ detailError() }}
-        </div>
+        <div class="teacher-page-alert">{{ detailError() }}</div>
       }
 
       <div class="students-list">
@@ -138,7 +168,9 @@
               </div>
               <div class="min-w-0">
                 <p class="student-name">{{ student.firstName }} {{ student.lastName }}</p>
-                <p class="student-meta">Apogee {{ student.numApogee }} - Groupe {{ student.groupId }}</p>
+                <p class="student-meta">
+                  Apogee {{ student.numApogee }} - Groupe {{ student.groupId }}
+                </p>
               </div>
             </div>
 
@@ -152,7 +184,7 @@
                 type="button"
                 class="status-btn present"
                 [class.active]="student.status === 'PRESENT'"
-                [disabled]="updatingStudentId() === student.studentId"
+                [disabled]="updatingStudentId() === student.studentId || isSaving()"
                 (click)="updateStudentStatus(student, 'PRESENT')"
               >
                 Present
@@ -161,7 +193,7 @@
                 type="button"
                 class="status-btn absent"
                 [class.active]="student.status === 'ABSENT'"
-                [disabled]="updatingStudentId() === student.studentId"
+                [disabled]="updatingStudentId() === student.studentId || isSaving()"
                 (click)="updateStudentStatus(student, 'ABSENT')"
               >
                 Absent
@@ -170,6 +202,40 @@
           </div>
         } @empty {
           <div class="empty-students">Aucun etudiant dans cette session.</div>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="btn-cancel"
+            [disabled]="isSaving()"
+            (click)="cancelChanges()"
+          >
+            <i class="fa-solid fa-times" aria-hidden="true"></i>
+            Annuler
+          </button>
+          <button
+            type="button"
+            class="btn-confirm"
+            [disabled]="!hasChanges() || isSaving()"
+            (click)="confirmChanges()"
+          >
+            @if (isSaving()) {
+              <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+              Sauvegarde...
+            } @else {
+              <i class="fa-solid fa-check" aria-hidden="true"></i>
+              Confirmer
+            }
+          </button>
+        </div>
+        @if (pendingChangesCount() > 0) {
+          <div class="pending-changes">
+            <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+            {{ pendingChangesCount() }} modification{{ pendingChangesCount() > 1 ? 's' : '' }} en attente
+          </div>
         }
       </div>
     </div>

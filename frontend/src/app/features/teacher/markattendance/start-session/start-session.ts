@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { finalize } from 'rxjs';
 
 import { AttendanceSessionResponse } from '../../../../core/attendance/models/attendance.model';
 import { AttendanceService } from '../../../../core/attendance/services/attendance.service';
+import { TeacherPreferencesService } from '../../../../core/teacher/services/teacher-preferences.service';
 import { Groupe } from '../../../../core/structure/models/groupe.model';
 import { Module } from '../../../../core/structure/models/module.model';
 import { GroupeService } from '../../../../core/structure/services/groupe.service';
@@ -27,7 +28,7 @@ interface LocationOption {
 
 @Component({
   selector: 'app-start-session',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   templateUrl: './start-session.html',
   styleUrl: './start-session.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,6 +39,7 @@ export class StartSession implements OnInit {
   private readonly groupeService = inject(GroupeService);
   private readonly moduleService = inject(ModuleService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly teacherPreferences = inject(TeacherPreferencesService);
 
   readonly groups = signal<Groupe[]>([]);
   readonly modules = signal<Module[]>([]);
@@ -78,6 +80,10 @@ export class StartSession implements OnInit {
   );
 
   readonly roomLabel = computed(() => this.selectedRoomLabel());
+  readonly sessionDurationLabel = this.teacherPreferences.sessionDurationLabel;
+  readonly sessionSchedulePreview = computed(() =>
+    this.teacherPreferences.formatScheduleRange(new Date()),
+  );
   readonly gpsMapUrl = computed<SafeResourceUrl | null>(() => {
     const position = this.gpsPosition();
     if (!position) {

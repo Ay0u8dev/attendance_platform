@@ -61,6 +61,7 @@ public interface StudentMapper {
      * Lazy-loaded fields (inscriptions, embeddings) are not included
      * to prevent LazyInitializationException and avoid data exposure.
      */
+    @Mapping(target = "groupeName", ignore = true)
     StudentResponseDTO toResponse(Student student);
 
     /**

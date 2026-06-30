@@ -1,0 +1,493 @@
+.teacher-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.teacher-page-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.teacher-page-section-header h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-principalText);
+}
+
+.teacher-page-section-header p {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-secondaryText);
+}
+
+.teacher-page-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-radius: 1rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  padding: 1rem;
+}
+
+.teacher-page-panel-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-principalText);
+}
+
+.teacher-page-panel-subtitle {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--color-secondaryText);
+}
+
+.teacher-page-alert {
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent);
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+  padding: 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+.teacher-page-loading {
+  border-radius: 1rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  padding: 2rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-secondaryText);
+}
+
+.teacher-page-empty {
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  padding: 3rem;
+  text-align: center;
+}
+
+.teacher-search-field {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.teacher-search-field i {
+  pointer-events: none;
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.875rem;
+  color: var(--color-muted);
+}
+
+.teacher-search-input {
+  height: 2.75rem;
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  padding: 0 1rem 0 2.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-principalText);
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.teacher-search-input::placeholder {
+  color: var(--color-muted);
+}
+
+.teacher-search-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-soft);
+}
+
+.teacher-table-shell {
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+
+.teacher-table-grid {
+  display: grid;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.teacher-table-grid--justifications {
+  grid-template-columns: 1.2fr 1.4fr 1.2fr 2.2fr 0.9fr;
+}
+
+.teacher-table-grid--sessions {
+  grid-template-columns: 1.4fr 1fr 1fr 0.9fr;
+}
+
+.teacher-table-grid--students {
+  grid-template-columns: 2fr 2fr 1fr 1fr;
+}
+
+.teacher-table-grid--dashboard {
+  grid-template-columns: 0.9fr 1fr 1.3fr 0.7fr 0.9fr;
+}
+
+.teacher-table-grid.teacher-table-head {
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface-subtle);
+  padding: 0.5rem 1rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-secondaryText);
+}
+
+.teacher-table-grid.teacher-table-row {
+  padding: 0.5rem 1rem;
+  min-height: 3.5rem;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.teacher-table-grid.teacher-table-row:last-child {
+  border-bottom: 0;
+}
+
+.teacher-table-grid .font-semibold {
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--color-principalText);
+}
+
+.teacher-table-grid .text-xs {
+  font-size: 0.68rem;
+  line-height: 1.3;
+  margin-top: 0.15rem;
+  color: var(--color-secondaryText);
+}
+
+.teacher-table-grid .font-medium {
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--color-principalText);
+}
+
+.teacher-table-grid span.text-sm {
+  font-size: 0.78rem;
+  color: var(--color-secondaryText);
+}
+
+.teacher-table-grid .line-clamp-2 {
+  display: block;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--color-secondaryText);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.teacher-table-row.clickable {
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.teacher-table-row.clickable:hover {
+  background-color: var(--color-surface-subtle);
+}
+
+.teacher-table-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.teacher-table-icon-btn {
+  display: inline-flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-secondaryText);
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.teacher-table-icon-btn:hover {
+  border-color: var(--color-primary-soft);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.teacher-table-status-cell {
+  justify-self: start;
+}
+
+.teacher-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 0.75rem;
+  background: var(--color-primary);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  transition: background 160ms ease;
+}
+
+.teacher-primary-btn:hover {
+  background: color-mix(in srgb, var(--color-primary) 90%, black);
+}
+
+.teacher-request-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  padding: 0.45rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.teacher-request-btn:hover {
+  border-color: var(--color-primary-soft);
+  background: var(--color-primary-soft);
+}
+
+.teacher-summary-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+}
+
+.teacher-summary-item {
+  border-radius: 0.9rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface-subtle);
+  padding: 0.85rem 1rem;
+}
+
+.teacher-summary-label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-secondaryText);
+}
+
+.teacher-summary-value {
+  margin-top: 0.35rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--color-principalText);
+}
+
+.teacher-summary-hint {
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--color-secondaryText);
+}
+
+.teacher-resource-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  padding: 1rem;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.teacher-resource-card:hover {
+  border-color: var(--color-primary-soft);
+  box-shadow: var(--shadow-card);
+}
+
+.teacher-resource-card.at-risk {
+  border-color: color-mix(in srgb, var(--color-warning) 35%, var(--color-line));
+  background: color-mix(in srgb, var(--color-warning-soft) 35%, var(--color-surface));
+}
+
+.teacher-resource-meta {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.teacher-resource-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+}
+
+.teacher-resource-meta-row span:first-child {
+  color: var(--color-secondaryText);
+}
+
+.teacher-resource-meta-row strong {
+  color: var(--color-principalText);
+  font-weight: 700;
+}
+
+.teacher-resource-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.teacher-resource-actions .teacher-primary-btn,
+.teacher-resource-actions .teacher-secondary-btn {
+  flex: 1;
+  min-height: 2.25rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.teacher-secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface-subtle);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-principalText);
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.teacher-secondary-btn:hover {
+  border-color: var(--color-primary-soft);
+  background: var(--color-primary-soft);
+}
+
+.teacher-dropdown-list {
+  max-height: 16rem;
+  overflow-y: auto;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 20%, var(--color-line));
+  border-radius: 1rem;
+  background: var(--color-surface);
+  padding: 0.35rem;
+  box-shadow:
+    0 18px 38px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.teacher-dropdown-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.7rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: transparent;
+  padding: 0.68rem 0.75rem;
+  color: var(--color-principalText);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+
+.teacher-dropdown-option:hover {
+  background: var(--color-primary-soft);
+}
+
+.teacher-dropdown-option.selected {
+  background: color-mix(in srgb, var(--color-primary-soft) 70%, white);
+  color: var(--color-primary-strong);
+}
+
+.teacher-dropdown-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.teacher-dropdown-option .option-icon {
+  display: inline-flex;
+  height: 2rem;
+  width: 2rem;
+  flex: 0 0 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  background: var(--color-surface-subtle);
+  color: var(--color-secondary);
+  font-size: 0.78rem;
+}
+
+.teacher-dropdown-option.selected .option-icon {
+  background: var(--color-secondary-soft);
+}
+
+.teacher-dropdown-option .option-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.teacher-dropdown-option .option-label {
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.teacher-dropdown-option .option-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-secondaryText);
+}
+
+.teacher-modal-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.teacher-modal-actions .teacher-secondary-btn,
+.teacher-modal-actions .teacher-primary-btn {
+  flex: 1;
+  min-height: 2.5rem;
+}

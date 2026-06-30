@@ -5,9 +5,6 @@ import { finalize } from 'rxjs/operators';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { JustificationDto } from '../../../core/justifications/justification.model';
 import { JustificationService } from '../../../core/justifications/justification.service';
-import { DataTableCellDef } from '../../../shared/components/data-table/data-table-cell-def';
-import { DataTable } from '../../../shared/components/data-table/data-table';
-import { DataTableColumn } from '../../../shared/components/data-table/data-table.types';
 import { Modal } from '../../../shared/components/modal/modal';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
@@ -59,7 +56,7 @@ function createAttachmentPreview(title: string, subtitle: string, color: string)
 @Component({
   selector: 'app-teacher-justifications-page',
   standalone: true,
-  imports: [PageHeader, DataTable, DataTableCellDef, StatusBadge, Modal],
+  imports: [PageHeader, StatusBadge, Modal],
   templateUrl: './justifications-page.html',
   styleUrl: './justifications-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -78,50 +75,6 @@ export class TeacherJustificationsPage implements OnInit {
   readonly pendingCount = computed(
     () => this.rows().filter((row) => row.status === 'En attente').length,
   );
-
-  readonly justificationRowId = (row: TeacherJustificationRow) => String(row.id);
-
-  readonly columns: readonly DataTableColumn<TeacherJustificationRow>[] = [
-    {
-      id: 'student',
-      header: 'Etudiant',
-      accessor: (row) => row.studentName,
-      width: '16rem',
-    },
-    {
-      id: 'module',
-      header: 'Module',
-      accessor: (row) => row.module,
-      width: '15rem',
-    },
-    {
-      id: 'sessionDate',
-      header: 'Seance',
-      accessor: (row) => row.sessionDate,
-      width: '13rem',
-    },
-    {
-      id: 'reason',
-      header: 'Motif',
-      accessor: (row) => row.reason,
-      width: '14rem',
-    },
-    {
-      id: 'status',
-      header: 'Statut',
-      accessor: (row) => row.status,
-      width: '10rem',
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      accessor: () => '',
-      align: 'end',
-      sortable: false,
-      searchable: false,
-      width: '18rem',
-    },
-  ];
 
   ngOnInit(): void {
     this.loadJustifications();

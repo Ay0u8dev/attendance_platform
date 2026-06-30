@@ -28,4 +28,5 @@ public class StudentResponseDTO {
     private boolean firstLogin;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String groupeName;
 }

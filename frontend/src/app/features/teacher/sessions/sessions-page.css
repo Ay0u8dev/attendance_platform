@@ -1,49 +1,17 @@
-.sessions-grid {
-  display: grid;
-  grid-template-columns: minmax(15rem, 1.8fr) minmax(9rem, 0.9fr) minmax(8rem, 0.85fr) minmax(8rem, 0.75fr) max-content;
-  column-gap: 1.5rem;
-  row-gap: 0.75rem;
-}
-
-.sessions-grid > * {
-  min-width: 0;
-}
-
-.actions-cell {
-  justify-self: end;
-  margin-left: 0.5rem;
-}
-
-.status-cell {
-  justify-self: center;
-}
-
-.sessions-grid > span {
-  display: flex;
-  align-items: center;
-}
-
-.sessions-grid > .status-cell {
-  justify-content: center;
-}
-
-.sessions-grid > .actions-cell {
-  justify-content: flex-end;
-}
+@import '../teacher-page.css';
 
 .action-btn {
   display: inline-flex;
-  min-height: 2.25rem;
+  min-height: 1.75rem;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
-  border-radius: 0.75rem;
+  gap: 0.3rem;
+  border-radius: 0.5rem;
   border: 1px solid var(--color-line);
-  padding: 0.5rem 0.8rem;
-  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.65rem;
   font-weight: 700;
   line-height: 1;
-  white-space: nowrap;
   transition:
     background 160ms ease,
     border-color 160ms ease,
@@ -53,17 +21,7 @@
 
 .action-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.action-btn-neutral {
-  background: var(--color-surface);
-  color: var(--color-principalText);
-}
-
-.action-btn-neutral:not(:disabled):hover {
-  border-color: var(--color-primary-soft);
-  background: var(--color-primary-soft);
+  opacity: 0.48;
 }
 
 .modal-backdrop {
@@ -164,31 +122,23 @@
 
 .resume-session-btn {
   display: inline-flex;
-  width: fit-content;
   align-items: center;
-  justify-content: center;
   gap: 0.5rem;
-  border-radius: 0.7rem;
-  background: var(--color-primary);
-  color: #fff;
-  padding: 0.65rem 0.9rem;
-  font-size: 0.82rem;
-  font-weight: 800;
-  text-decoration: none;
-  transition:
-    background 160ms ease,
-    box-shadow 160ms ease;
-}
-
-.resume-session-btn:hover {
-  background: var(--color-primary-hover, var(--color-primary));
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.18);
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-primary-soft);
+  background: var(--color-primary-soft);
+  padding: 0.65rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-primary);
 }
 
 .students-list {
   overflow-y: auto;
   border: 1px solid var(--color-line);
   border-radius: 0.75rem;
+  flex: 1;
+  min-height: 0;
 }
 
 .student-row {
@@ -295,21 +245,93 @@
   font-weight: 700;
 }
 
+.modal-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-line);
+  flex-shrink: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.pending-changes {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-secondaryText);
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface-subtle);
+  border-radius: 0.5rem;
+}
+
+.pending-changes i {
+  color: var(--color-primary);
+}
+
+.btn-cancel,
+.btn-confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.5rem;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 120px;
+}
+
+.btn-cancel {
+  background: var(--color-surface-subtle);
+  color: var(--color-secondaryText);
+  border: 1px solid var(--color-line);
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: var(--color-surface);
+  border-color: var(--color-secondaryText);
+}
+
+.btn-cancel:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.btn-confirm {
+  background: var(--color-success);
+  color: white;
+  border: 1px solid var(--color-success);
+}
+
+.btn-confirm:hover:not(:disabled) {
+  background: var(--color-success-strong);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+}
+
+.btn-confirm:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+}
+
+.btn-confirm:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 @media (max-width: 900px) {
-  .sessions-grid {
-    grid-template-columns: minmax(14rem, 1fr);
-  }
-
-  .sessions-grid > span:not(:first-child) {
-    display: none;
-  }
-
-  .sessions-grid > div,
-  .sessions-grid > span {
-    justify-content: flex-start;
-    text-align: left;
-  }
-
   .student-row {
     grid-template-columns: 1fr;
     align-items: stretch;
@@ -321,5 +343,19 @@
 
   .status-btn {
     flex: 1;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .btn-cancel,
+  .btn-confirm {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .pending-changes {
+    justify-content: center;
   }
 }
