@@ -73,7 +73,7 @@
             </div>
 
             <div class="teacher-resource-actions">
-              <a routerLink="/teacher/sessions" class="teacher-secondary-btn">Voir sessions</a>
+              <a [routerLink]="['/teacher/sessions']" [queryParams]="{ moduleName: module.name }" class="teacher-secondary-btn">Voir sessions</a>
 
             </div>
           </article>

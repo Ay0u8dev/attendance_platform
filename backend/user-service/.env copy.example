@@ -1,7 +1,7 @@
 POSTGRES_USER=
 POSTGRES_PASSWORD=
 
-INTERNAL_SERVICE_TOKEN=internal_service_token_abdoelfadili
+INTERNAL_SERVICE_TOKEN=dummy-token-for-dev
 
 R2_ENDPOINT=
 R2_ACCESS_KEY=

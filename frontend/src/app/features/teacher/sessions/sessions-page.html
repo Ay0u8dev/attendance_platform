@@ -6,7 +6,13 @@
   <section class="teacher-page-panel">
     <div>
       <p class="teacher-page-panel-title">Historique des sessions</p>
-      <p class="teacher-page-panel-subtitle">{{ finalizedCount() }} sessions finalisees chargees</p>
+      <p class="teacher-page-panel-subtitle">
+        @if (courseFilter()) {
+          {{ filteredSessions().length }} session(s) trouvée(s) pour ce module
+        } @else {
+          {{ finalizedCount() }} sessions finalisées chargées
+        }
+      </p>
     </div>
     <a routerLink="/teacher/mark-attendance/start-session" class="teacher-primary-btn">
       Start New Session
@@ -18,6 +24,22 @@
   }
 
   <section class="teacher-page-section">
+    @if (courseFilter()) {
+      <div class="mb-4 flex items-center justify-between rounded-2xl border border-primary-soft bg-primary-soft/10 px-4 py-3 text-sm text-principalText">
+        <span class="inline-flex items-center gap-2">
+          <i class="fa-solid fa-filter text-primary"></i>
+          <span>Sessions filtrées par le module : <strong>{{ courseFilter() }}</strong></span>
+        </span>
+        <button
+          type="button"
+          class="font-semibold text-primary hover:text-primary-dark transition-colors"
+          (click)="clearFilter()"
+        >
+          Effacer le filtre
+        </button>
+      </div>
+    }
+
     @if (loading()) {
       <div class="teacher-page-loading">Chargement...</div>
     } @else if (sessions().length === 0) {
@@ -38,7 +60,7 @@
 
       <section class="space-y-3 md:hidden">
         <div class="space-y-3">
-          @for (session of sessions(); track session.sessionId) {
+          @for (session of filteredSessions(); track session.sessionId) {
             <button
               type="button"
               class="block w-full rounded-2xl border border-line bg-surface px-4 py-4 text-left shadow-sm transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft/25"
@@ -89,7 +111,7 @@
           <span>Statut</span>
         </div>
 
-        @for (session of sessions(); track session.sessionId) {
+        @for (session of filteredSessions(); track session.sessionId) {
           <div
             class="teacher-table-grid teacher-table-grid--sessions teacher-table-row clickable"
             (click)="openDetails(session)"

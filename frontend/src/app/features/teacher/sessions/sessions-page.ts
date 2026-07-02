@@ -7,7 +7,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import {
@@ -36,6 +36,8 @@ interface PendingChange {
 })
 export class TeacherSessionsPage implements OnInit {
   private readonly attendanceService = inject(AttendanceService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly sessions = signal<AttendanceSessionSummary[]>([]);
   readonly loading = signal(false);
@@ -49,6 +51,16 @@ export class TeacherSessionsPage implements OnInit {
   readonly pendingChanges = signal<PendingChange[]>([]);
   readonly isSaving = signal(false);
   readonly selectedSessionId = signal<number | null>(null); // Pour suivre la session sélectionnée
+  readonly courseFilter = signal<string | null>(null);
+
+  readonly filteredSessions = computed(() => {
+    const filter = this.courseFilter();
+    const allSessions = this.sessions();
+    if (!filter) {
+      return allSessions;
+    }
+    return allSessions.filter((session) => session.courseLabel === filter);
+  });
 
   readonly finalizedCount = computed(
     () => this.sessions().filter((session) => session.status === 'FINALIZED').length,
@@ -59,6 +71,10 @@ export class TeacherSessionsPage implements OnInit {
   readonly hasChanges = computed(() => this.pendingChanges().length > 0);
 
   ngOnInit(): void {
+    this.route.queryParams.subscribe((params) => {
+      const filter = params['moduleName'] || null;
+      this.courseFilter.set(filter);
+    });
     this.loadSessions();
   }
 
@@ -162,6 +178,15 @@ export class TeacherSessionsPage implements OnInit {
     } else {
       this.resetModal();
     }
+  }
+
+  clearFilter(): void {
+    this.courseFilter.set(null);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { moduleName: null },
+      queryParamsHandling: 'merge',
+    });
   }
 
   private resetModal(): void {
