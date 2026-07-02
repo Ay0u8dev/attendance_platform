@@ -1,7 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { forkJoin } from 'rxjs';
 
+import { environment } from '../../../../environments/environment';
+import { JustificationService } from '../../../core/justifications/justification.service';
+import { StudentProfileService } from '../../../core/student/services/student-profile.service';
+import { StudentAttendanceService } from '../../../core/attendance/services/student-attendance.service';
+import { ToastService } from '../../../shared/components/toast/toast.service';
+import { JustificationDto } from '../../../core/justifications/justification.model';
 import { Button } from '../../../shared/components/button/button';
 import { DataTableCellDef } from '../../../shared/components/data-table/data-table-cell-def';
 import { DataTable } from '../../../shared/components/data-table/data-table';
@@ -14,11 +22,7 @@ import {
   StatusFilterTabs,
 } from '../../../shared/components/status-filter-tabs/status-filter-tabs';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
-import {
-  STUDENT_JUSTIFICATIONS,
-  STUDENT_SESSIONS,
-  StudentJustificationRow,
-} from '../student-demo.data';
+import { StudentJustificationRow } from '../student-demo.data';
 
 type JustificationFilter = 'all' | 'En attente' | 'Acceptée' | 'Refusée';
 
@@ -40,23 +44,46 @@ type JustificationFilter = 'all' | 'En attente' | 'Acceptée' | 'Refusée';
 })
 export class StudentJustificationsPage {
   private readonly router = inject(Router);
+  private readonly profileService = inject(StudentProfileService);
+  private readonly justificationService = inject(JustificationService);
+  private readonly attendanceService = inject(StudentAttendanceService);
+  private readonly toastService = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  readonly rows = STUDENT_JUSTIFICATIONS;
-  readonly tabs: readonly StatusFilterTab[] = [
-    { value: 'all', label: 'Toutes', count: STUDENT_JUSTIFICATIONS.length },
-    { value: 'En attente', label: 'En attente', count: 1 },
-    { value: 'Acceptée', label: 'Acceptées', count: 1 },
-    { value: 'Refusée', label: 'Refusées', count: 1 },
-  ];
+  readonly justifications = signal<readonly JustificationDto[]>([]);
+  readonly absentSessions = signal<readonly {
+    id: string;
+    module: string;
+    date: string;
+    time: string;
+    teacherFullName: string;
+    startedAt: string;
+  }[]>([]);
+
+  readonly rows = computed(() =>
+    this.justifications().map((dto) => this.mapJustificationDto(dto)),
+  );
+
+  readonly tabs = computed<readonly StatusFilterTab[]>(() => {
+    const list = this.rows();
+    return [
+      { value: 'all', label: 'Toutes', count: list.length },
+      { value: 'En attente', label: 'En attente', count: list.filter((r) => r.status === 'En attente').length },
+      { value: 'Acceptée', label: 'Acceptées', count: list.filter((r) => r.status === 'Acceptée').length },
+      { value: 'Refusée', label: 'Refusées', count: list.filter((r) => r.status === 'Refusée').length },
+    ];
+  });
+
   readonly selectedFilter = signal<JustificationFilter>('all');
   readonly searchQuery = signal('');
   readonly dateFrom = signal('');
   readonly dateTo = signal('');
+
   readonly filteredRows = computed(() => {
     const filter = this.selectedFilter();
     const query = this.searchQuery().trim().toLowerCase();
 
-    return this.rows.filter((row) => {
+    return this.rows().filter((row) => {
       if (filter !== 'all' && row.status !== filter) {
         return false;
       }
@@ -79,18 +106,19 @@ export class StudentJustificationsPage {
       return haystack.includes(query);
     });
   });
+
   readonly justificationRowId = (row: StudentJustificationRow) => row.id;
   readonly isModalOpen = signal(false);
-  readonly absentSessions = STUDENT_SESSIONS.filter((row) => row.attendanceStatus === 'Absent');
   readonly selectedSessionIds = signal<Set<string>>(new Set());
   readonly selectedSessionCount = computed(() => this.selectedSessionIds().size);
+
   readonly filteredAbsentSessions = computed(() => {
     const fromDate = this.dateFrom() ? new Date(`${this.dateFrom()}T00:00:00`) : null;
     const toDate = this.dateTo() ? new Date(`${this.dateTo()}T23:59:59`) : null;
 
-    return [...this.absentSessions]
+    return [...this.absentSessions()]
       .filter((row) => {
-        const sessionDate = this.parseSessionDate(row.date);
+        const sessionDate = row.startedAt ? new Date(row.startedAt) : null;
         if (!sessionDate) {
           return true;
         }
@@ -105,15 +133,20 @@ export class StudentJustificationsPage {
 
         return true;
       })
-      .sort((a, b) => this.getSessionTimestamp(b.date) - this.getSessionTimestamp(a.date));
+      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
   });
+
+  readonly selectedFile = signal<File | null>(null);
   readonly selectedFileName = signal('');
   readonly commentDraft = signal('');
+  readonly isSubmitting = signal(false);
+
   readonly canSubmit = computed(
     () =>
       this.selectedSessionIds().size > 0 &&
       this.selectedFileName().length > 0 &&
-      this.commentDraft().trim().length > 0,
+      this.commentDraft().trim().length > 0 &&
+      !this.isSubmitting(),
   );
 
   readonly columns: readonly DataTableColumn<StudentJustificationRow>[] = [
@@ -144,12 +177,60 @@ export class StudentJustificationsPage {
     },
   ];
 
+  constructor() {
+    this.profileService.ensureLoaded();
+
+    effect(() => {
+      const profile = this.profileService.profile();
+      if (profile) {
+        this.loadData(profile.id);
+      }
+    });
+  }
+
+  private loadData(studentId: number): void {
+    this.justificationService
+      .getJustifications(undefined, studentId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (list) => {
+          this.justifications.set(list);
+        },
+      });
+
+    this.attendanceService
+      .getStudentSessions({
+        status: 'ABSENT',
+        page: 0,
+        size: 100,
+        sort: 'startedAt,desc',
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          const items = response.items.map((item) => {
+            const listItem = this.attendanceService.toSessionListItem(item);
+            return {
+              id: listItem.id.toString(),
+              module: listItem.courseLabel,
+              date: listItem.dateLabel,
+              time: listItem.timeLabel,
+              teacherFullName: listItem.teacherFullName,
+              startedAt: listItem.startedAt,
+            };
+          });
+          this.absentSessions.set(items);
+        },
+      });
+  }
+
   openSubmissionModal(): void {
     this.isModalOpen.set(true);
   }
 
   closeSubmissionModal(): void {
     this.isModalOpen.set(false);
+    this.selectedFile.set(null);
     this.selectedFileName.set('');
     this.commentDraft.set('');
     this.selectedSessionIds.set(new Set());
@@ -158,11 +239,78 @@ export class StudentJustificationsPage {
   }
 
   handleFileSelection(file: File | null): void {
+    this.selectedFile.set(file);
     this.selectedFileName.set(file?.name ?? '');
   }
 
   submitDraft(): void {
-    this.closeSubmissionModal();
+    const file = this.selectedFile();
+    const comment = this.commentDraft().trim();
+    const selectedIds = Array.from(this.selectedSessionIds());
+    const profile = this.profileService.profile();
+
+    if (!file || !comment || selectedIds.length === 0 || !profile) {
+      return;
+    }
+
+    this.isSubmitting.set(true);
+
+    this.justificationService
+      .getPresignedUrl(file.type || 'application/octet-stream')
+      .subscribe({
+        next: (presignedData) => {
+          this.justificationService
+            .uploadToPresignedUrl(presignedData.url, file)
+            .subscribe({
+              next: () => {
+                const documentUrl = `${environment.r2PublicUrl}/${presignedData.key}`;
+                const studentName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Étudiant';
+                const studentCode = profile.numApogee || '';
+
+                const submissions = selectedIds.map((sessionIdStr) => {
+                  const sessionId = parseInt(sessionIdStr, 10);
+                  const session = this.absentSessions().find((s) => s.id === sessionIdStr);
+                  const payload = {
+                    sessionId,
+                    studentId: profile.id,
+                    studentName,
+                    studentCode,
+                    module: session?.module || 'N/A',
+                    sessionDate: session?.startedAt || new Date().toISOString(),
+                    reason: comment,
+                    documentUrl,
+                  };
+
+                  return this.justificationService.submitJustification(payload);
+                });
+
+                forkJoin(submissions).subscribe({
+                  next: () => {
+                    this.toastService.success('Succès', 'Justificatif soumis avec succès.');
+                    this.loadData(profile.id);
+                    this.closeSubmissionModal();
+                    this.isSubmitting.set(false);
+                  },
+                  error: (err) => {
+                    console.error('Failed to submit justification details', err);
+                    this.toastService.error('Erreur', 'Impossible de valider la demande de justification.');
+                    this.isSubmitting.set(false);
+                  },
+                });
+              },
+              error: (err) => {
+                console.error('Failed to upload file to presigned URL', err);
+                this.toastService.error('Erreur', 'Impossible de téléverser la pièce jointe.');
+                this.isSubmitting.set(false);
+              },
+            });
+        },
+        error: (err) => {
+          console.error('Failed to retrieve presigned URL', err);
+          this.toastService.error('Erreur', 'Impossible d’obtenir l’autorisation de téléversement.');
+          this.isSubmitting.set(false);
+        },
+      });
   }
 
   toggleSession(sessionId: string): void {
@@ -214,71 +362,56 @@ export class StudentJustificationsPage {
     void this.router.navigate(['/student/justifications', id]);
   }
 
-  private parseSessionDate(label: string): Date | null {
-    const match = label.match(/^(\d{1,2})\s+([A-Za-zÀ-ÿ.]+)\s+(\d{4})$/);
-    if (!match) {
-      return null;
+  private readonly dateFormatter = new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+
+  private formatDateString(dateStr: string): string {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      return this.dateFormatter.format(date);
+    } catch {
+      return dateStr;
     }
-
-    const day = Number.parseInt(match[1], 10);
-    const monthKey = match[2].toLowerCase().replace('.', '');
-    const year = Number.parseInt(match[3], 10);
-    const monthIndex = this.getMonthIndex(monthKey);
-
-    if (Number.isNaN(day) || Number.isNaN(year) || monthIndex === null) {
-      return null;
-    }
-
-    return new Date(year, monthIndex, day);
   }
 
-  private getSessionTimestamp(label: string): number {
-    return this.parseSessionDate(label)?.getTime() ?? 0;
-  }
+  private mapJustificationDto(dto: JustificationDto): StudentJustificationRow {
+    const statusMap: Record<string, 'En attente' | 'Acceptée' | 'Refusée'> = {
+      PENDING: 'En attente',
+      APPROVED: 'Acceptée',
+      REJECTED: 'Refusée',
+    };
+    const variantMap: Record<string, 'warning' | 'success' | 'error'> = {
+      PENDING: 'warning',
+      APPROVED: 'success',
+      REJECTED: 'error',
+    };
 
-  private getMonthIndex(month: string): number | null {
-    switch (month) {
-      case 'janv':
-      case 'jan':
-        return 0;
-      case 'fev':
-      case 'fevr':
-      case 'fevrier':
-      case 'févr':
-      case 'février':
-        return 1;
-      case 'mars':
-        return 2;
-      case 'avr':
-      case 'avril':
-        return 3;
-      case 'mai':
-        return 4;
-      case 'juin':
-        return 5;
-      case 'juil':
-      case 'juillet':
-        return 6;
-      case 'aout':
-      case 'août':
-        return 7;
-      case 'sept':
-      case 'sep':
-      case 'septembre':
-        return 8;
-      case 'oct':
-      case 'octobre':
-        return 9;
-      case 'nov':
-      case 'novembre':
-        return 10;
-      case 'dec':
-      case 'déc':
-      case 'decembre':
-      case 'décembre':
-        return 11;
-      default:
-        return null;
+    let attachmentName = 'document';
+    if (dto.documentUrl) {
+      try {
+        const parts = dto.documentUrl.split('/');
+        attachmentName = parts[parts.length - 1];
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i;
+        attachmentName = attachmentName.replace(uuidRegex, '');
+      } catch {
+        attachmentName = 'document';
+      }
     }
+
+    return {
+      id: dto.id.toString(),
+      sessionId: dto.sessionId ?? undefined,
+      submittedAt: this.formatDateString(dto.submittedAt),
+      module: dto.module,
+      sessionSlot: this.formatDateString(dto.sessionDate),
+      status: statusMap[dto.status] ?? 'En attente',
+      statusVariant: variantMap[dto.status] ?? 'warning',
+      attachmentName,
+      reason: dto.reason || 'Aucun motif renseigné',
+    };
   }
 }

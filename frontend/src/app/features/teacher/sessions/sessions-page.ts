@@ -53,6 +53,21 @@ export class TeacherSessionsPage implements OnInit {
   readonly selectedSessionId = signal<number | null>(null); // Pour suivre la session sélectionnée
   readonly courseFilter = signal<string | null>(null);
 
+  readonly exportColumns = signal<{ id: string; label: string; selected: boolean }[]>([
+    { id: 'numApogee', label: 'Code Apogée', selected: true },
+    { id: 'lastName', label: 'Nom', selected: true },
+    { id: 'firstName', label: 'Prénom', selected: true },
+    { id: 'email', label: 'Email', selected: true },
+    { id: 'groupId', label: 'Groupe', selected: true },
+    { id: 'status', label: 'Statut', selected: true },
+    { id: 'markedAt', label: 'Date de pointage', selected: false },
+    { id: 'markMethod', label: 'Méthode de pointage', selected: false },
+    { id: 'deviceId', label: 'ID Appareil', selected: false },
+    { id: 'markedGpsLat', label: 'GPS Latitude', selected: false },
+    { id: 'markedGpsLon', label: 'GPS Longitude', selected: false },
+  ]);
+  readonly showExportConfig = signal(false);
+
   readonly filteredSessions = computed(() => {
     const filter = this.courseFilter();
     const allSessions = this.sessions();
@@ -362,5 +377,122 @@ export class TeacherSessionsPage implements OnInit {
       default:
         return 'neutral';
     }
+  }
+
+  toggleColumnSelection(id: string): void {
+    this.exportColumns.update((cols) =>
+      cols.map((col) => (col.id === id ? { ...col, selected: !col.selected } : col)),
+    );
+  }
+
+  exportToExcel(): void {
+    const session = this.selectedSession();
+    if (!session) return;
+
+    const cols = this.exportColumns();
+    const selectedCols = cols.filter((col) => col.selected);
+
+    if (selectedCols.length === 0) {
+      alert('Veuillez sélectionner au moins une colonne à exporter.');
+      return;
+    }
+
+    const students = session.students ?? [];
+    const formattedDate = session.startedAt ? new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(session.startedAt)) : '';
+    const sessionStatusText = session.status === 'FINALIZED' ? 'Finalisée' : 'En cours';
+
+    let html = `
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <!--[if gte mso 9]>
+  <xml>
+    <x:ExcelWorkbook>
+      <x:ExcelWorksheets>
+        <x:ExcelWorksheet>
+          <x:Name>Émargement</x:Name>
+          <x:WorksheetOptions>
+            <x:DisplayGridlines/>
+          </x:WorksheetOptions>
+        </x:ExcelWorksheet>
+      </x:ExcelWorksheets>
+    </x:ExcelWorkbook>
+  </xml>
+  <![endif]-->
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <style>
+    th { background-color: #1e3a8a; color: #ffffff; font-weight: bold; border: 1px solid #cbd5e1; padding: 10px; text-align: left; font-family: sans-serif; }
+    td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; font-family: sans-serif; }
+    .title { font-size: 16px; font-weight: bold; color: #1e3a8a; font-family: sans-serif; }
+    .meta { font-size: 12px; color: #475569; font-family: sans-serif; }
+  </style>
+</head>
+<body>
+  <table>
+    <tr>
+      <td colspan="${selectedCols.length}" class="title">Rapport d'Émargement - ${session.courseLabel}</td>
+    </tr>
+    <tr>
+      <td colspan="${selectedCols.length}" class="meta">Date : ${formattedDate} | Salle : ${session.roomLabel || 'Non renseignée'} | Statut : ${sessionStatusText}</td>
+    </tr>
+    <tr>
+      <td colspan="${selectedCols.length}"></td>
+    </tr>
+    <tr>
+`;
+
+    // Add headers
+    selectedCols.forEach((col) => {
+      html += `      <th>${col.label}</th>\n`;
+    });
+    html += `    </tr>\n`;
+
+    // Add student data
+    students.forEach((student) => {
+      html += `    <tr>\n`;
+      selectedCols.forEach((col) => {
+        let val = '';
+        if (col.id === 'status') {
+          val = this.studentStatusLabel(student.status);
+        } else if (col.id === 'markMethod') {
+          val = student.markMethod ? this.methodLabel(student.markMethod as any) : 'N/A';
+        } else if (col.id === 'markedAt') {
+          val = student.markedAt ? new Intl.DateTimeFormat('fr-FR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          }).format(new Date(student.markedAt)) : 'N/A';
+        } else {
+          val = (student as any)[col.id]?.toString() ?? '';
+        }
+        html += `      <td>${val}</td>\n`;
+      });
+      html += `    </tr>\n`;
+    });
+
+    html += `
+  </table>
+</body>
+</html>
+`;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const safeCourseName = session.courseLabel.replace(/[^a-zA-Z0-9]/g, '_');
+    link.href = url;
+    link.download = `emargement_${safeCourseName}_${session.sessionId}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 }

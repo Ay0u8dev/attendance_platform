@@ -5,6 +5,7 @@ import {
   ElementRef,
   PLATFORM_ID,
   computed,
+  effect,
   inject,
   signal,
   viewChild,
@@ -29,6 +30,8 @@ import { QrAttendanceService } from '../../../core/attendance/services/qr-attend
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { StudentProfileService } from '../../../core/student/services/student-profile.service';
 import { FaceAttendanceService } from '../../../core/attendance/services/face-attendance.service';
+import { JustificationService } from '../../../core/justifications/justification.service';
+import { JustificationDto } from '../../../core/justifications/justification.model';
 import { DataTableCellDef } from '../../../shared/components/data-table/data-table-cell-def';
 import { DataTable } from '../../../shared/components/data-table/data-table';
 import { DataTableColumn } from '../../../shared/components/data-table/data-table.types';
@@ -97,12 +100,15 @@ export class StudentDashboardPage {
   private readonly attendanceService = inject(StudentAttendanceService);
   private readonly qrAttendanceService = inject(QrAttendanceService);
   private readonly faceAttendanceService = inject(FaceAttendanceService);
+  private readonly justificationService = inject(JustificationService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
 
   readonly overview = signal<StudentSessionsOverviewViewModel | null>(null);
   readonly recentSessions = signal<readonly StudentSessionListItem[]>([]);
+  readonly justifications = signal<readonly JustificationDto[]>([]);
+  private readonly allAbsentSessions = signal<readonly StudentAttendanceSessionSummaryDto[]>([]);
   readonly errorMessage = signal<string | null>(null);
   readonly isLoading = signal(false);
   readonly selectedSessionId = signal<number | null>(null);
@@ -177,8 +183,8 @@ export class StudentDashboardPage {
 
   readonly quickCards = computed<readonly DashboardQuickCard[]>(() => {
     const overview = this.overview();
-    const pendingJustifications = STUDENT_JUSTIFICATIONS.filter(
-      (row) => row.status === 'En attente',
+    const pendingJustifications = this.justifications().filter(
+      (row) => row.status === 'PENDING',
     ).length;
 
     return [
@@ -367,6 +373,13 @@ export class StudentDashboardPage {
       return;
     }
 
+    effect(() => {
+      const profile = this.studentProfileService.profile();
+      if (profile) {
+        this.loadJustifications(profile.id);
+      }
+    });
+
     this.loadDashboardData();
     this.loadAbsenceWarning();
     this.loadActiveAttendanceSession();
@@ -547,6 +560,7 @@ export class StudentDashboardPage {
         next: (detailDto) => {
           const detail = enrichSessionDetail(
             this.attendanceService.toSessionDetailViewModel(detailDto),
+            this.justifications(),
           );
           this.detailCache.update((current) => ({ ...current, [detail.sessionId]: detail }));
           this.activeSessionDetail.set(detail);
@@ -595,6 +609,7 @@ export class StudentDashboardPage {
       )
       .subscribe({
         next: (absentSessions) => {
+          this.allAbsentSessions.set(absentSessions);
           this.absenceWarning.set(this.buildAbsenceWarning(absentSessions));
         },
         error: () => {
@@ -736,7 +751,7 @@ export class StudentDashboardPage {
   private buildAbsenceWarning(
     sessions: readonly StudentAttendanceSessionSummaryDto[],
   ): AbsenceWarning | null {
-    const eligibleSessions = sessions.filter((session) => !isAbsenceJustified(session.sessionId));
+    const eligibleSessions = sessions.filter((session) => !isAbsenceJustified(session.sessionId, this.justifications()));
 
     if (eligibleSessions.length === 0) {
       return null;
@@ -830,11 +845,26 @@ export class StudentDashboardPage {
           this.recentSessions.set(
             sessions
               .map((item) => this.attendanceService.toSessionListItem(item))
-              .map((row) => enrichSessionListItem(row)),
+              .map((row) => enrichSessionListItem(row, this.justifications())),
           );
         },
         error: () => {
           this.errorMessage.set('Impossible de charger les dernières séances.');
+        },
+      });
+  }
+
+  private loadJustifications(studentId: number): void {
+    this.justificationService
+      .getJustifications(undefined, studentId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (list) => {
+          this.justifications.set(list);
+          this.recentSessions.update((sessions) =>
+            sessions.map((row) => enrichSessionListItem(row, list))
+          );
+          this.absenceWarning.set(this.buildAbsenceWarning(this.allAbsentSessions()));
         },
       });
   }

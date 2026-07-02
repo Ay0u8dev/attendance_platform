@@ -1,5 +1,16 @@
 package ma.eniad.justificationservice.service;
 
+import java.net.URI;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import ma.eniad.justificationservice.client.AttendanceServiceClient;
@@ -9,16 +20,6 @@ import ma.eniad.justificationservice.dto.SubmitJustificationRequest;
 import ma.eniad.justificationservice.entity.Justification;
 import ma.eniad.justificationservice.entity.JustificationStatus;
 import ma.eniad.justificationservice.repository.JustificationRepository;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-
 @Service
 @RequiredArgsConstructor
 public class JustificationService {
@@ -46,7 +47,7 @@ public class JustificationService {
                 .status(JustificationStatus.PENDING)
                 .reason(request.reason().trim())
                 .submittedAt(LocalDateTime.now())
-                .documentUrl(normalizeOptional(request.documentUrl()))
+                .documentUrl(normalizeDocumentUrl(request.documentUrl()))
                 .build();
 
         return repository.save(justification);
@@ -154,6 +155,31 @@ public class JustificationService {
             return request.reviewerName().trim();
         }
         return request.reviewerName().trim() + " (" + reviewerId + ")";
+    }
+
+    private String normalizeDocumentUrl(String documentUrl) {
+        String normalized = normalizeOptional(documentUrl);
+        if (normalized == null) {
+            return null;
+        }
+
+        try {
+            URI uri = new URI(normalized);
+            String path = uri.getPath();
+            if (path == null || path.isBlank()) {
+                return normalized;
+            }
+            if (path.startsWith("/")) {
+                path = path.substring(1);
+            }
+            int index = path.indexOf("/justifications/");
+            if (index >= 0) {
+                return normalizeOptional(path.substring(index + 1));
+            }
+            return normalizeOptional(path);
+        } catch (Exception ex) {
+            return normalized;
+        }
     }
 
     private String normalizeOptional(String value) {

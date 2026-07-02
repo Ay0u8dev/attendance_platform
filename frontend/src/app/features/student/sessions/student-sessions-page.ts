@@ -4,6 +4,7 @@ import {
   DestroyRef,
   PLATFORM_ID,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -25,6 +26,9 @@ import {
   StudentSessionsOverviewViewModel,
 } from '../../../core/attendance/models/student-attendance.model';
 import { StudentAttendanceService } from '../../../core/attendance/services/student-attendance.service';
+import { JustificationService } from '../../../core/justifications/justification.service';
+import { StudentProfileService } from '../../../core/student/services/student-profile.service';
+import { JustificationDto } from '../../../core/justifications/justification.model';
 import {
   canOpenJustification,
   enrichSessionDetail,
@@ -43,10 +47,14 @@ type SessionPreset = 'all' | 'present-only' | 'absent-only';
 export class StudentSessionsPage {
   private readonly router = inject(Router);
   private readonly attendanceService = inject(StudentAttendanceService);
+  private readonly profileService = inject(StudentProfileService);
+  private readonly justificationService = inject(JustificationService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
   private readonly backendPageSize = 20;
+
+  readonly justifications = signal<readonly JustificationDto[]>([]);
 
   readonly selectedPreset = signal<SessionPreset>('all');
   readonly localSearchQuery = signal('');
@@ -182,8 +190,30 @@ export class StudentSessionsPage {
       return;
     }
 
+    this.profileService.ensureLoaded();
+    effect(() => {
+      const profile = this.profileService.profile();
+      if (profile) {
+        this.loadJustifications(profile.id);
+      }
+    });
+
     this.loadOverview();
     this.reloadSessions();
+  }
+
+  private loadJustifications(studentId: number): void {
+    this.justificationService
+      .getJustifications(undefined, studentId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (list) => {
+          this.justifications.set(list);
+          this.loadedSessions.update((sessions) =>
+            sessions.map((row) => enrichSessionListItem(row, list))
+          );
+        },
+      });
   }
 
   selectPreset(value: string): void {
@@ -244,6 +274,7 @@ export class StudentSessionsPage {
         next: (detailDto) => {
           const detail = enrichSessionDetail(
             this.attendanceService.toSessionDetailViewModel(detailDto),
+            this.justifications(),
           );
           this.detailCache.update((current) => ({ ...current, [detail.sessionId]: detail }));
           this.activeSessionDetail.set(detail);
@@ -325,7 +356,7 @@ export class StudentSessionsPage {
         next: (response) => {
           const mappedItems = response.items
             .map((item) => this.attendanceService.toSessionListItem(item))
-            .map((row) => enrichSessionListItem(row));
+            .map((row) => enrichSessionListItem(row, this.justifications()));
 
           this.loadedSessions.update((current) =>
             page === 0 ? mappedItems : this.mergeSessions(current, mappedItems),

@@ -1,21 +1,28 @@
 package ma.eniad.justificationservice.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-
-import jakarta.annotation.PostConstruct;
-import java.net.URI;
-import java.time.Duration;
 
 @Slf4j
 @Service
@@ -59,6 +66,11 @@ public class CloudflareR2Service {
     }
 
     public String generatePresignedUploadUrl(String objectKey, String contentType) {
+        if (!isR2Configured()) {
+            String encodedKey = URLEncoder.encode(objectKey, StandardCharsets.UTF_8);
+            return "/api/justifications/upload?key=" + encodedKey;
+        }
+
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key(objectKey)
@@ -72,5 +84,29 @@ public class CloudflareR2Service {
 
         PresignedPutObjectRequest presignedRequest = presigner.presignPutObject(presignRequest);
         return presignedRequest.url().toString();
+    }
+
+    public void storeLocalUpload(String key, org.springframework.web.multipart.MultipartFile file) throws IOException {
+        storeLocalUpload(key, file.getBytes());
+    }
+
+    public void storeLocalUpload(String key, byte[] content) throws IOException {
+        Path uploadDir = Paths.get("uploads");
+        Files.createDirectories(uploadDir);
+        Path targetPath = uploadDir.resolve(key).normalize();
+
+        if (!targetPath.startsWith(uploadDir)) {
+            throw new IllegalArgumentException("Invalid upload key");
+        }
+
+        Files.createDirectories(targetPath.getParent());
+        Files.write(targetPath, content);
+    }
+
+    public boolean isR2Configured() {
+        return !("https://dummy.r2.cloudflarestorage.com".equals(endpoint)
+                && "dummy-access-key".equals(accessKey)
+                && "dummy-secret-key".equals(secretKey)
+                && "dummy-bucket".equals(bucketName));
     }
 }

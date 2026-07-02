@@ -4,19 +4,7 @@ import {
   StudentSessionJustificationInfo,
   StudentSessionListItem,
 } from '../../core/attendance/models/student-attendance.model';
-import { STUDENT_JUSTIFICATIONS } from './student-demo.data';
-
-const JUSTIFICATION_ROUTES_BY_SESSION_ID: Record<number, string> = {
-  1: '/student/justifications/just-001',
-  4: '/student/justifications/just-002',
-  6: '/student/justifications/just-003',
-};
-
-const JUSTIFICATION_BY_SESSION_ID = new Map(
-  STUDENT_JUSTIFICATIONS.filter(
-    (item): item is typeof item & { readonly sessionId: number } => item.sessionId !== undefined,
-  ).map((item) => [item.sessionId, item]),
-);
+import { JustificationDto } from '../../core/justifications/justification.model';
 
 function emptyJustification(): StudentSessionJustificationInfo {
   return {
@@ -26,19 +14,23 @@ function emptyJustification(): StudentSessionJustificationInfo {
   };
 }
 
-export function enrichSessionListItem(row: StudentSessionListItem): StudentSessionListItem {
+export function enrichSessionListItem(
+  row: StudentSessionListItem,
+  justifications: readonly JustificationDto[] = [],
+): StudentSessionListItem {
   return {
     ...row,
-    ...resolveJustification(row.id, row.attendanceStatus),
+    ...resolveJustification(row.id, row.attendanceStatus, justifications),
   };
 }
 
 export function enrichSessionDetail(
   detail: StudentSessionDetailViewModel,
+  justifications: readonly JustificationDto[] = [],
 ): StudentSessionDetailViewModel {
   return {
     ...detail,
-    ...resolveJustification(detail.sessionId, detail.raw.attendanceStatus),
+    ...resolveJustification(detail.sessionId, detail.raw.attendanceStatus, justifications),
   };
 }
 
@@ -54,27 +46,47 @@ export function canOpenJustification(
   return session.raw.attendanceStatus === 'ABSENT' && !!session.justificationRoute;
 }
 
-export function isAbsenceJustified(sessionId: number): boolean {
-  const justification = JUSTIFICATION_BY_SESSION_ID.get(sessionId);
-  return justification?.status === 'Acceptée';
+export function isAbsenceJustified(
+  sessionId: number,
+  justifications: readonly JustificationDto[] = [],
+): boolean {
+  if (justifications && justifications.length > 0) {
+    const justification = justifications.find((j) => j.sessionId === sessionId);
+    return justification?.status === 'APPROVED';
+  }
+  return false;
 }
 
 function resolveJustification(
   sessionId: number,
   attendanceStatus: AttendanceStudentStatus,
+  justifications: readonly JustificationDto[] = [],
 ): StudentSessionJustificationInfo {
   if (attendanceStatus !== 'ABSENT') {
     return emptyJustification();
   }
 
-  const justification = JUSTIFICATION_BY_SESSION_ID.get(sessionId);
-  if (!justification) {
-    return emptyJustification();
+  if (justifications && justifications.length > 0) {
+    const justification = justifications.find((j) => j.sessionId === sessionId);
+    if (justification) {
+      const statusMap: Record<string, 'En attente' | 'Acceptée' | 'Refusée'> = {
+        PENDING: 'En attente',
+        APPROVED: 'Acceptée',
+        REJECTED: 'Refusée',
+      };
+      const variantMap: Record<string, 'neutral' | 'warning' | 'success' | 'error'> = {
+        PENDING: 'warning',
+        APPROVED: 'success',
+        REJECTED: 'error',
+      };
+
+      return {
+        justificationStatus: statusMap[justification.status] ?? 'En attente',
+        justificationVariant: variantMap[justification.status] ?? 'neutral',
+        justificationRoute: `/student/justifications/${justification.id}`,
+      };
+    }
   }
 
-  return {
-    justificationStatus: justification.status,
-    justificationVariant: justification.statusVariant,
-    justificationRoute: JUSTIFICATION_ROUTES_BY_SESSION_ID[sessionId] ?? null,
-  };
+  return emptyJustification();
 }
