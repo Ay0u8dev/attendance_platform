@@ -64,6 +64,8 @@ class RedisLiveAttendanceSessionStoreTest {
                 "aya@ump.ac.ma",
                 "https://cdn.example.com/aya.jpg",
                 "A001",
+                "GI",
+                "GI-1",
                 AttendanceStudentStatus.PRESENT,
                 LocalDateTime.of(2026, 5, 2, 15, 10),
                 ma.eniad.attendanceservice.entity.AttendanceSessionMethod.QR_CODE,

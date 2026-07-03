@@ -60,6 +60,12 @@ public class AttendanceRecord {
     @Column(nullable = false)
     private String numApogee;
 
+    @Column(nullable = true)
+    private String filiere;
+
+    @Column(nullable = true)
+    private String groupeName;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AttendanceStudentStatus status;

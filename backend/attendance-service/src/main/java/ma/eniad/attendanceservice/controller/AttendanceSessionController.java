@@ -9,6 +9,7 @@ import ma.eniad.attendanceservice.dto.AttendanceSessionResponse;
 import ma.eniad.attendanceservice.dto.CreateAttendanceSessionRequest;
 import ma.eniad.attendanceservice.dto.PagedResponse;
 import ma.eniad.attendanceservice.dto.StudentAttendanceSessionSummaryResponse;
+import ma.eniad.attendanceservice.dto.TeacherAttendanceReportResponse;
 import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
 import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.service.AttendanceFinalizationService;
@@ -58,6 +59,17 @@ public class AttendanceSessionController {
     ) {
         Long teacherId = Long.valueOf(UserContext.getCurrentUser().userId());
         return ResponseEntity.ok(attendanceQueryService.getTeacherSessions(teacherId, status, dateFrom, dateTo, pageable));
+    }
+
+    @RequireRole({"TEACHER"})
+    @GetMapping("/export-report")
+    public ResponseEntity<TeacherAttendanceReportResponse> exportTeacherReport(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(required = false) String courseLabel
+    ) {
+        Long teacherId = Long.valueOf(UserContext.getCurrentUser().userId());
+        return ResponseEntity.ok(attendanceQueryService.getTeacherExportReport(teacherId, dateFrom, dateTo, courseLabel));
     }
 
     @RequireRole({"TEACHER"})
