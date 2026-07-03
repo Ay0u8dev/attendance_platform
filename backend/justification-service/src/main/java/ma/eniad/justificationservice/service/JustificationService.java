@@ -169,13 +169,16 @@ public class JustificationService {
             if (path == null || path.isBlank()) {
                 return normalized;
             }
+
             if (path.startsWith("/")) {
                 path = path.substring(1);
             }
-            int index = path.indexOf("/justifications/");
+
+            int index = path.indexOf("justifications/");
             if (index >= 0) {
-                return normalizeOptional(path.substring(index + 1));
+                return normalizeOptional(path.substring(index));
             }
+
             return normalizeOptional(path);
         } catch (Exception ex) {
             return normalized;

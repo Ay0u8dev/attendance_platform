@@ -1,5 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 
 import { environment } from '../../../environments/environment';
 import {
@@ -29,18 +31,29 @@ export class JustificationService {
     return this.http.get<JustificationDto>(`${this.baseUrl}/${id}`);
   }
 
-  getPresignedUrl(contentType: string) {
-    return this.http.get<{ url: string; key: string }>(`${this.baseUrl}/presigned-url`, {
-      params: new HttpParams().set('contentType', contentType)
-    });
-  }
+  uploadDocument(file: File, studentName?: string, moduleName?: string): Observable<string> {
+    const contentType = file.type || 'application/octet-stream';
+    let params = new HttpParams().set('contentType', contentType);
+    if (studentName) {
+      params = params.set('studentName', studentName);
+    }
+    if (moduleName) {
+      params = params.set('moduleName', moduleName);
+    }
 
-  uploadToPresignedUrl(url: string, file: File) {
-    return this.http.put(url, file, {
-      headers: {
-        'Content-Type': file.type || 'application/octet-stream'
-      }
-    });
+    return this.http
+      .get<{ url: string; key: string }>(`${this.baseUrl}/presigned-url`, { params })
+      .pipe(
+        switchMap((presignedData) =>
+          this.http
+            .put(presignedData.url, file, {
+              headers: {
+                'Content-Type': contentType,
+              },
+            })
+            .pipe(map(() => `${environment.r2PublicUrl}/${presignedData.key}`)),
+        ),
+      );
   }
 
   submitJustification(payload: any) {
@@ -53,5 +66,18 @@ export class JustificationService {
 
   declineJustification(id: number, payload: ReviewJustificationRequest) {
     return this.http.patch<JustificationDto>(`${this.baseUrl}/${id}/decline`, payload);
+  }
+
+  resolveDocumentUrl(documentUrl: string | null | undefined): string | null {
+    const trimmed = documentUrl?.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed;
+    }
+
+    return `${environment.r2PublicUrl}/${trimmed.replace(/^\/+/, '')}`;
   }
 }

@@ -1,12 +1,6 @@
 package ma.eniad.justificationservice.service;
 
-import java.io.IOException;
 import java.net.URI;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -19,9 +13,12 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 @Slf4j
@@ -29,7 +26,9 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 @RequiredArgsConstructor
 public class CloudflareR2Service {
 
-    @Value("${cloudflare.r2.endpoint:https://dummy.r2.cloudflarestorage.com}")
+    private static final String DUMMY_ENDPOINT = "https://dummy.r2.cloudflarestorage.com";
+
+    @Value("${cloudflare.r2.endpoint:" + DUMMY_ENDPOINT + "}")
     private String endpoint;
 
     @Value("${cloudflare.r2.access-key:dummy-access-key}")
@@ -48,9 +47,9 @@ public class CloudflareR2Service {
         AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
 
         // Defensive fix: Cloudflare R2 dashboard gives an S3 API URL that includes the bucket name.
-        // If the user pasted that into the .env, the SDK with pathStyleAccessEnabled(true) will append 
+        // If the user pasted that into the .env, the SDK with pathStyleAccessEnabled(true) will append
         // the bucket name a second time, creating a folder named after the bucket inside the bucket.
-        String finalEndpoint = endpoint.replaceAll("/+$", "");
+        String finalEndpoint = endpointForPresigner();
         if (finalEndpoint.endsWith("/" + bucketName)) {
             finalEndpoint = finalEndpoint.substring(0, finalEndpoint.length() - bucketName.length() - 1);
         }
@@ -63,14 +62,47 @@ public class CloudflareR2Service {
                         .pathStyleAccessEnabled(true)
                         .build())
                 .build();
+
+        logR2ConfigurationStatus();
+    }
+
+    private String endpointForPresigner() {
+        if (isPlaceholderEndpoint(endpoint)) {
+            return DUMMY_ENDPOINT;
+        }
+
+        return endpoint.replaceAll("/+$", "");
+    }
+
+    private void logR2ConfigurationStatus() {
+        if (isUsingPlaceholderCredentials()) {
+            log.warn(
+                    "R2 upload is not configured. Set R2_ENDPOINT, R2_ACCESS_KEY, R2_SECRET_KEY and R2_BUCKET_NAME in backend/justification-service/.env"
+            );
+            return;
+        }
+
+        log.info("R2 upload configured for bucket '{}'.", bucketName);
+    }
+
+    private boolean isUsingPlaceholderCredentials() {
+        return isPlaceholderEndpoint(endpoint)
+                || "dummy-access-key".equals(accessKey)
+                || "dummy-secret-key".equals(secretKey)
+                || "dummy-bucket".equals(bucketName);
+    }
+
+    public boolean isR2Configured() {
+        return !isUsingPlaceholderCredentials();
+    }
+
+    private boolean isPlaceholderEndpoint(String value) {
+        return DUMMY_ENDPOINT.equals(value)
+                || value.contains("<")
+                || value.contains(">");
     }
 
     public String generatePresignedUploadUrl(String objectKey, String contentType) {
-        if (!isR2Configured()) {
-            String encodedKey = URLEncoder.encode(objectKey, StandardCharsets.UTF_8);
-            return "/api/justifications/upload?key=" + encodedKey;
-        }
-
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key(objectKey)
@@ -86,27 +118,18 @@ public class CloudflareR2Service {
         return presignedRequest.url().toString();
     }
 
-    public void storeLocalUpload(String key, org.springframework.web.multipart.MultipartFile file) throws IOException {
-        storeLocalUpload(key, file.getBytes());
-    }
+    public String generatePresignedDownloadUrl(String objectKey) {
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(bucketName)
+                .key(objectKey)
+                .build();
 
-    public void storeLocalUpload(String key, byte[] content) throws IOException {
-        Path uploadDir = Paths.get("uploads");
-        Files.createDirectories(uploadDir);
-        Path targetPath = uploadDir.resolve(key).normalize();
+        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofMinutes(15))
+                .getObjectRequest(getObjectRequest)
+                .build();
 
-        if (!targetPath.startsWith(uploadDir)) {
-            throw new IllegalArgumentException("Invalid upload key");
-        }
-
-        Files.createDirectories(targetPath.getParent());
-        Files.write(targetPath, content);
-    }
-
-    public boolean isR2Configured() {
-        return !("https://dummy.r2.cloudflarestorage.com".equals(endpoint)
-                && "dummy-access-key".equals(accessKey)
-                && "dummy-secret-key".equals(secretKey)
-                && "dummy-bucket".equals(bucketName));
+        PresignedGetObjectRequest presignedRequest = presigner.presignGetObject(presignRequest);
+        return presignedRequest.url().toString();
     }
 }

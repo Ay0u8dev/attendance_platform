@@ -1,10 +1,17 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin } from 'rxjs';
 
-import { environment } from '../../../../environments/environment';
 import { JustificationService } from '../../../core/justifications/justification.service';
 import { StudentProfileService } from '../../../core/student/services/student-profile.service';
 import { StudentAttendanceService } from '../../../core/attendance/services/student-attendance.service';
@@ -51,26 +58,38 @@ export class StudentJustificationsPage {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly justifications = signal<readonly JustificationDto[]>([]);
-  readonly absentSessions = signal<readonly {
-    id: string;
-    module: string;
-    date: string;
-    time: string;
-    teacherFullName: string;
-    startedAt: string;
-  }[]>([]);
+  readonly absentSessions = signal<
+    readonly {
+      id: string;
+      module: string;
+      date: string;
+      time: string;
+      teacherFullName: string;
+      startedAt: string;
+    }[]
+  >([]);
 
-  readonly rows = computed(() =>
-    this.justifications().map((dto) => this.mapJustificationDto(dto)),
-  );
+  readonly rows = computed(() => this.justifications().map((dto) => this.mapJustificationDto(dto)));
 
   readonly tabs = computed<readonly StatusFilterTab[]>(() => {
     const list = this.rows();
     return [
       { value: 'all', label: 'Toutes', count: list.length },
-      { value: 'En attente', label: 'En attente', count: list.filter((r) => r.status === 'En attente').length },
-      { value: 'Acceptée', label: 'Acceptées', count: list.filter((r) => r.status === 'Acceptée').length },
-      { value: 'Refusée', label: 'Refusées', count: list.filter((r) => r.status === 'Refusée').length },
+      {
+        value: 'En attente',
+        label: 'En attente',
+        count: list.filter((r) => r.status === 'En attente').length,
+      },
+      {
+        value: 'Acceptée',
+        label: 'Acceptées',
+        count: list.filter((r) => r.status === 'Acceptée').length,
+      },
+      {
+        value: 'Refusée',
+        label: 'Refusées',
+        count: list.filter((r) => r.status === 'Refusée').length,
+      },
     ];
   });
 
@@ -255,62 +274,54 @@ export class StudentJustificationsPage {
 
     this.isSubmitting.set(true);
 
-    this.justificationService
-      .getPresignedUrl(file.type || 'application/octet-stream')
-      .subscribe({
-        next: (presignedData) => {
-          this.justificationService
-            .uploadToPresignedUrl(presignedData.url, file)
-            .subscribe({
-              next: () => {
-                const documentUrl = `${environment.r2PublicUrl}/${presignedData.key}`;
-                const studentName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Étudiant';
-                const studentCode = profile.numApogee || '';
+    const firstSessionId = selectedIds[0];
+    const firstSession = this.absentSessions().find((s) => s.id === firstSessionId.toString());
+    const moduleParam = firstSession?.module || 'Module';
+    const studentParam = `${profile.lastName || ''}${profile.firstName || ''}`.trim() || 'Etudiant';
 
-                const submissions = selectedIds.map((sessionIdStr) => {
-                  const sessionId = parseInt(sessionIdStr, 10);
-                  const session = this.absentSessions().find((s) => s.id === sessionIdStr);
-                  const payload = {
-                    sessionId,
-                    studentId: profile.id,
-                    studentName,
-                    studentCode,
-                    module: session?.module || 'N/A',
-                    sessionDate: session?.startedAt || new Date().toISOString(),
-                    reason: comment,
-                    documentUrl,
-                  };
+    this.justificationService.uploadDocument(file, studentParam, moduleParam).subscribe({
+      next: (documentUrl) => {
+        const dbStudentName =
+          `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Étudiant';
+        const studentCode = profile.numApogee || '';
 
-                  return this.justificationService.submitJustification(payload);
-                });
+        const submissions = selectedIds.map((sessionIdStr) => {
+          const sessionId = parseInt(sessionIdStr, 10);
+          const session = this.absentSessions().find((s) => s.id === sessionIdStr);
+          const payload = {
+            sessionId,
+            studentId: profile.id,
+            studentName: dbStudentName,
+            studentCode,
+            module: session?.module || 'N/A',
+            sessionDate: session?.startedAt || new Date().toISOString(),
+            reason: comment,
+            documentUrl,
+          };
 
-                forkJoin(submissions).subscribe({
-                  next: () => {
-                    this.toastService.success('Succès', 'Justificatif soumis avec succès.');
-                    this.loadData(profile.id);
-                    this.closeSubmissionModal();
-                    this.isSubmitting.set(false);
-                  },
-                  error: (err) => {
-                    console.error('Failed to submit justification details', err);
-                    this.toastService.error('Erreur', 'Impossible de valider la demande de justification.');
-                    this.isSubmitting.set(false);
-                  },
-                });
-              },
-              error: (err) => {
-                console.error('Failed to upload file to presigned URL', err);
-                this.toastService.error('Erreur', 'Impossible de téléverser la pièce jointe.');
-                this.isSubmitting.set(false);
-              },
-            });
-        },
-        error: (err) => {
-          console.error('Failed to retrieve presigned URL', err);
-          this.toastService.error('Erreur', 'Impossible d’obtenir l’autorisation de téléversement.');
-          this.isSubmitting.set(false);
-        },
-      });
+          return this.justificationService.submitJustification(payload);
+        });
+
+        forkJoin(submissions).subscribe({
+          next: () => {
+            this.toastService.success('Succès', 'Justificatif soumis avec succès.');
+            this.loadData(profile.id);
+            this.closeSubmissionModal();
+            this.isSubmitting.set(false);
+          },
+          error: (err) => {
+            console.error('Failed to submit justification details', err);
+            this.toastService.error('Erreur', 'Impossible de valider la demande de justification.');
+            this.isSubmitting.set(false);
+          },
+        });
+      },
+      error: (err) => {
+        console.error('Failed to upload justification document', err);
+        this.toastService.error('Erreur', 'Impossible de téléverser la pièce jointe.');
+        this.isSubmitting.set(false);
+      },
+    });
   }
 
   toggleSession(sessionId: string): void {

@@ -1,7 +1,15 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
+import { environment } from '../../../../environments/environment';
 import { JustificationService } from '../../../core/justifications/justification.service';
 import { StudentProfileService } from '../../../core/student/services/student-profile.service';
 import { StudentAttendanceService } from '../../../core/attendance/services/student-attendance.service';
@@ -130,14 +138,32 @@ export class StudentJustificationDetailPage {
     return [{ label: 'Motif', value: d.reason || 'Aucun motif renseigné' }];
   });
 
+  readonly previewUrl = computed(() => {
+    const d = this.detail();
+    if (!d) return null;
+    return this.justificationService.resolveDocumentUrl(d.documentUrl);
+  });
+
+  readonly downloadUrl = computed(() => {
+    const d = this.detail();
+    if (!d || !d.id) return null;
+    return `${environment.apiBaseUrl}/justifications/${d.id}/download`;
+  });
+
   readonly attachmentName = computed(() => {
     const d = this.detail();
-    if (!d || !d.documentUrl) return 'justificatif.pdf';
+    if (!d) return 'justificatif.pdf';
+    if (d.documentName) return d.documentName;
+    if (!d.documentUrl) return 'justificatif.pdf';
     try {
       const parts = d.documentUrl.split('/');
-      const name = parts[parts.length - 1];
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i;
-      return name.replace(uuidRegex, '');
+      let name = parts[parts.length - 1];
+      name = name.replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[_-]/i, '');
+      name = name.replace(
+        /[_-][0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\.[a-zA-Z0-9]+$|$)/i,
+        '',
+      );
+      return name;
     } catch {
       return 'justificatif.pdf';
     }
@@ -187,7 +213,8 @@ export class StudentJustificationDetailPage {
         },
         {
           title: 'Justification refusée',
-          description: d.teacherComment || 'Le document fourni ne permet pas de justifier l’absence.',
+          description:
+            d.teacherComment || 'Le document fourni ne permet pas de justifier l’absence.',
           meta: 'Décision finale',
           state: 'current' as const,
         },

@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs/operators';
 
@@ -9,7 +16,7 @@ import { Modal } from '../../../shared/components/modal/modal';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
 import { ToastService } from '../../../shared/components/toast/toast.service';
-
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 type TeacherJustificationStatus = 'En attente' | 'Approuvee' | 'Declinee';
 type TeacherJustificationVariant = 'warning' | 'success' | 'error' | 'neutral';
 
@@ -65,7 +72,7 @@ export class TeacherJustificationsPage implements OnInit {
   private readonly justificationService = inject(JustificationService);
   private readonly authService = inject(AuthService);
   private readonly toastService = inject(ToastService);
-
+  private readonly sanitizer = inject(DomSanitizer);
   readonly rows = signal<readonly TeacherJustificationRow[]>([]);
   readonly selectedJustification = signal<TeacherJustificationRow | null>(null);
   readonly loading = signal(false);
@@ -183,7 +190,7 @@ export class TeacherJustificationsPage implements OnInit {
 
   private toRow(justification: JustificationDto): TeacherJustificationRow {
     const statusData = this.statusData(justification.status);
-    const documentUrl = justification.documentUrl?.trim() || null;
+    const documentUrl = this.justificationService.resolveDocumentUrl(justification.documentUrl);
 
     return {
       id: justification.id,
@@ -193,7 +200,7 @@ export class TeacherJustificationsPage implements OnInit {
       sessionDate: this.formatDateTime(justification.sessionDate),
       submittedAt: this.formatDate(justification.submittedAt),
       reason: justification.reason || 'Motif non renseigne',
-      attachmentName: this.attachmentName(documentUrl),
+      attachmentName: this.attachmentName(justification, documentUrl),
       attachmentPreviewUrl:
         documentUrl ??
         createAttachmentPreview('Justificatif', 'Piece jointe non disponible', '#64748b'),
@@ -220,13 +227,22 @@ export class TeacherJustificationsPage implements OnInit {
     }
   }
 
-  private attachmentName(documentUrl: string | null): string {
-    if (!documentUrl) {
+  private attachmentName(justification: JustificationDto, resolvedUrl: string | null): string {
+    if (justification.documentName) {
+      return justification.documentName;
+    }
+    if (!resolvedUrl) {
       return 'Aucune piece jointe';
     }
 
-    const cleanUrl = documentUrl.split('?')[0].split('#')[0];
-    return decodeURIComponent(cleanUrl.split('/').pop() || 'Piece jointe');
+    const cleanUrl = resolvedUrl.split('?')[0].split('#')[0];
+    let name = decodeURIComponent(cleanUrl.split('/').pop() || 'Piece jointe');
+    name = name.replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[_-]/i, '');
+    name = name.replace(
+      /[_-][0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\.[a-zA-Z0-9]+$|$)/i,
+      '',
+    );
+    return name;
   }
 
   private formatDate(value: string): string {
@@ -249,8 +265,19 @@ export class TeacherJustificationsPage implements OnInit {
 
   private errorLabel(error: HttpErrorResponse): string {
     const message = error.error?.message || error.error?.error || error.message;
-    return typeof message === 'string' && message.trim()
-      ? message
-      : 'Une erreur est survenue.';
+    return typeof message === 'string' && message.trim() ? message : 'Une erreur est survenue.';
+  }
+  getAttachmentType(url: string | null): 'pdf' | 'image' | 'other' {
+    if (!url) return 'other';
+    const lower = url.toLowerCase();
+    if (lower.startsWith('data:image')) return 'image';
+    if (lower.includes('.pdf')) return 'pdf';
+    if (/\.(png|jpe?g|gif|webp|bmp|svg)(\?|$)/.test(lower)) return 'image';
+    return 'other';
+  }
+
+  getSafeUrl(url: string): SafeResourceUrl {
+    const cleanUrl = `${url}#toolbar=0&navpanes=0&scrollbar=0`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(cleanUrl);
   }
 }

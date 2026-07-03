@@ -27,7 +27,8 @@ class JustificationServiceTest {
     }
 
     @Test
-    void submitStoresJustificationPathWhenDocumentUrlIsPresignedUploadUrl() {
+    void submitStoresDocumentUrlAsProvided() {
+        String documentUrl = "https://pub-example.r2.dev/justifications/ceebfcf0-4a33-4d09-ae13-3a95a63400a6.pdf";
         SubmitJustificationRequest request = new SubmitJustificationRequest(
                 123L,
                 456L,
@@ -36,7 +37,7 @@ class JustificationServiceTest {
                 "Math",
                 LocalDateTime.now(),
                 "Illness",
-                "https://dummy.r2.cloudflarestorage.com/dummy-bucket/justifications/ceebfcf0-4a33-4d09-ae13-3a95a63400a6.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256"
+                documentUrl
         );
 
         when(repository.existsBySessionIdAndStudentId(123L, 456L)).thenReturn(false);
@@ -44,7 +45,7 @@ class JustificationServiceTest {
 
         Justification justification = justificationService.submit(request);
 
-        assertThat(justification.getDocumentUrl()).isEqualTo("justifications/ceebfcf0-4a33-4d09-ae13-3a95a63400a6.pdf");
+        assertThat(justification.getDocumentUrl()).isEqualTo(documentUrl);
     }
 
     @Test

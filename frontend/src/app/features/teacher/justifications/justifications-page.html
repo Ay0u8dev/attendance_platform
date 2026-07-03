@@ -148,18 +148,36 @@
         <p class="mt-2 text-sm leading-6 text-secondaryText">{{ justification.comment }}</p>
       </div>
 
-      @if (justification.attachmentPreviewUrl) {
-        <figure class="justification-preview">
+@if (justification.attachmentPreviewUrl) {
+  <figure class="justification-preview">
+    <div class="attachment-preview-section">
+      <span class="detail-label">Apercu de la piece jointe</span>
+
+      @switch (getAttachmentType(justification.attachmentPreviewUrl)) {
+        @case ('pdf') {
+          <iframe
+            [src]="getSafeUrl(justification.attachmentPreviewUrl)"
+            class="attachment-frame"
+            title="Apercu du justificatif"
+          ></iframe>
+        }
+        @case ('image') {
           <img
             [src]="justification.attachmentPreviewUrl"
             [alt]="'Apercu de ' + justification.attachmentName"
+            class="attachment-image"
           />
-          <figcaption>
-            <span class="detail-label">Apercu de la piece jointe</span>
-            <p>{{ justification.attachmentName }}</p>
-          </figcaption>
-        </figure>
+        }
+        @default {
+          <div class="attachment-fallback">{{ justification.attachmentName }}</div>
+        }
       }
+    </div>
+    <figcaption>
+      <p>{{ justification.attachmentName }}</p>
+    </figcaption>
+  </figure>
+}
 
       @if (justification.reviewedBy || justification.reviewedAt) {
         <div class="rounded-2xl border border-line bg-surface-subtle p-4">
