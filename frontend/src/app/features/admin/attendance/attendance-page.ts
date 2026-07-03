@@ -6,6 +6,7 @@ import {
   AdminAttendanceSessionDetailsDto,
   AdminAttendanceSessionSummaryDto,
   AdminAttendanceStudentViewDto,
+  AdminStudentAttendanceSummaryDto,
   AttendanceStudentStatus,
 } from '../../../core/admin/models/admin-attendance.model';
 import { AdminAttendanceService } from '../../../core/admin/services/admin-attendance.service';
@@ -35,16 +36,9 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
           <div>
             <p class="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Academic attendance</p>
             <h1 class="mt-2 text-3xl font-semibold tracking-tight text-principalText">Attendance</h1>
-            <p class="mt-2 max-w-3xl text-sm leading-6 text-secondaryText">
-              Track sessions, inspect rosters, and verify attendance quality across groups.
-            </p>
           </div>
 
           <div class="flex flex-wrap items-center gap-3">
-            <span class="inline-flex items-center gap-2 rounded-2xl border border-primary-soft bg-primary-soft px-4 py-3 text-sm font-semibold text-primary">
-              <span class="h-2 w-2 rounded-full bg-secondary"></span>
-              {{ overviewMeta() }}
-            </span>
             <app-button
               label="Refresh"
               icon="fa-solid fa-rotate"
@@ -70,7 +64,6 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Session registry</p>
             <h2 class="mt-1 text-2xl font-semibold text-principalText">Registered sessions</h2>
           </div>
-          <p class="text-sm text-secondaryText">Open one session at a time to inspect its roster.</p>
         </div>
 
         <div class="space-y-4">
@@ -201,19 +194,22 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                             }
                           </div>
 
-                          <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                            @for (item of sessionContextItems(detail); track item.label) {
-                              <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-3">
-                                <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted">{{ item.label }}</p>
-                                <p class="mt-1 truncate text-sm font-semibold text-principalText">{{ item.value }}</p>
-                              </div>
-                            }
+                          <div class="mt-5 flex flex-wrap items-center gap-2 text-xs font-semibold text-secondaryText">
+                            <span class="rounded-full border border-line bg-surface-subtle px-3 py-1">
+                              {{ detail.students.length }} student(s)
+                            </span>
+                            <span class="rounded-full border border-line bg-surface-subtle px-3 py-1">
+                              {{ groupLabel(detail.groupIds) }}
+                            </span>
+                            <span class="rounded-full border border-line bg-surface-subtle px-3 py-1">
+                              {{ attendanceRateValue(detail) }}% attendance
+                            </span>
                           </div>
                         </div>
 
-                        <div class="max-h-[34rem] overflow-y-auto p-4">
+                        <div class="p-4">
                           <div class="space-y-3">
-                            @for (student of filteredRoster(); track student.studentId) {
+                            @for (student of paginatedRoster(); track student.studentId) {
                               <button
                                 type="button"
                                 class="group w-full rounded-2xl border border-line bg-surface p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary-soft hover:bg-primary-soft/20 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
@@ -221,9 +217,17 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                               >
                                 <div class="grid gap-4 xl:grid-cols-[minmax(16rem,1fr)_minmax(18rem,1fr)_auto] xl:items-center">
                                   <div class="flex min-w-0 items-center gap-4">
-                                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary-soft bg-gradient-to-br from-primary-soft to-surface text-sm font-semibold text-primary shadow-sm">
-                                      {{ studentInitials(student) }}
-                                    </span>
+                                    @if (hasProfileImage(student)) {
+                                      <img
+                                        [src]="student.pfpUrl!"
+                                        [alt]="student.firstName + ' ' + student.lastName"
+                                        class="h-12 w-12 shrink-0 rounded-2xl border border-primary-soft object-cover shadow-sm"
+                                      />
+                                    } @else {
+                                      <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary-soft bg-gradient-to-br from-primary-soft to-surface text-sm font-semibold text-primary shadow-sm">
+                                        {{ studentInitials(student) }}
+                                      </span>
+                                    }
                                     <div class="min-w-0">
                                       <p class="truncate text-[0.95rem] font-semibold text-principalText">
                                         {{ student.firstName }} {{ student.lastName }}
@@ -269,6 +273,35 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                               </div>
                             }
                           </div>
+
+                          @if (filteredRoster().length > rosterPageSize) {
+                            <div class="mt-4 flex flex-col gap-3 rounded-2xl border border-line bg-surface-subtle px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                              <p class="text-sm font-semibold text-secondaryText">
+                                Page {{ normalizedRosterPage() }} of {{ rosterTotalPages() }}
+                                <span class="font-normal">- {{ filteredRoster().length }} student(s)</span>
+                              </p>
+                              <div class="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  class="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-principalText transition hover:border-primary-soft hover:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-40"
+                                  [disabled]="normalizedRosterPage() <= 1"
+                                  (click)="previousRosterPage()"
+                                >
+                                  <i class="fa-solid fa-chevron-left text-xs" aria-hidden="true"></i>
+                                  Previous
+                                </button>
+                                <button
+                                  type="button"
+                                  class="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-principalText transition hover:border-primary-soft hover:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-40"
+                                  [disabled]="normalizedRosterPage() >= rosterTotalPages()"
+                                  (click)="nextRosterPage()"
+                                >
+                                  Next
+                                  <i class="fa-solid fa-chevron-right text-xs" aria-hidden="true"></i>
+                                </button>
+                              </div>
+                            </div>
+                          }
                         </div>
                       </div>
                     } @else {
@@ -305,41 +338,157 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
       >
         <div modal-body>
           @if (selectedStudent(); as student) {
-            <div class="space-y-6">
-              <section class="flex flex-col gap-4 rounded-3xl border border-line bg-surface-subtle p-5 sm:flex-row sm:items-center">
-                <span class="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl border border-primary-soft bg-gradient-to-br from-primary-soft to-surface text-lg font-semibold text-primary shadow-sm">
-                  {{ studentInitials(student) }}
-                </span>
-                <div class="min-w-0 flex-1">
-                  <h3 class="truncate text-2xl font-semibold text-principalText">{{ student.firstName }} {{ student.lastName }}</h3>
-                  <p class="mt-1 text-sm text-secondaryText">{{ student.email }}</p>
+            <div class="space-y-5">
+              <section class="rounded-[1.5rem] border border-line bg-linear-to-br from-primary-soft/70 via-surface to-secondary-soft/40 p-5 shadow-card">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div class="flex min-w-0 items-center gap-4">
+                @if (hasProfileImage(student)) {
+                  <img
+                    [src]="student.pfpUrl!"
+                    [alt]="student.firstName + ' ' + student.lastName"
+                    class="h-16 w-16 shrink-0 rounded-2xl border border-primary-soft object-cover shadow-card"
+                  />
+                } @else {
+                  <span class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-primary-soft bg-surface text-lg font-semibold text-primary shadow-card">
+                    {{ studentInitials(student) }}
+                  </span>
+                }
+                    <div class="min-w-0">
+                      <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Student profile</p>
+                      <h3 class="mt-1 truncate text-2xl font-semibold text-principalText">{{ student.firstName }} {{ student.lastName }}</h3>
+                      <p class="mt-1 truncate text-sm text-secondaryText">{{ student.email }}</p>
+                    </div>
+                  </div>
+                  <app-status-badge
+                    [label]="studentStatusLabel(student.status)"
+                    [variant]="studentStatusVariant(student.status)"
+                  ></app-status-badge>
                 </div>
-                <app-status-badge
-                  [label]="studentStatusLabel(student.status)"
-                  [variant]="studentStatusVariant(student.status)"
-                ></app-status-badge>
               </section>
 
               <section class="grid gap-3 sm:grid-cols-2">
-                <div class="rounded-2xl border border-line bg-surface p-4">
-                  <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Apogee</p>
-                  <p class="mt-1 font-semibold text-principalText">{{ student.numApogee }}</p>
+                <div class="rounded-2xl border border-line bg-surface p-4 shadow-sm">
+                  <div class="flex items-center gap-3">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-xl border border-primary-soft bg-primary-soft text-primary">
+                      <i class="fa-solid fa-id-card text-sm" aria-hidden="true"></i>
+                    </span>
+                    <div>
+                      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Apogee</p>
+                      <p class="mt-1 font-semibold text-principalText">{{ student.numApogee }}</p>
+                    </div>
+                  </div>
                 </div>
-                <div class="rounded-2xl border border-line bg-surface p-4">
-                  <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Group</p>
-                  <p class="mt-1 font-semibold text-principalText">{{ groupName(student.groupId) }}</p>
+                <div class="rounded-2xl border border-line bg-surface p-4 shadow-sm">
+                  <div class="flex items-center gap-3">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-xl border border-primary-soft bg-primary-soft text-primary">
+                      <i class="fa-solid fa-users text-sm" aria-hidden="true"></i>
+                    </span>
+                    <div>
+                      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Group</p>
+                      <p class="mt-1 font-semibold text-principalText">{{ groupName(student.groupId) }}</p>
+                    </div>
+                  </div>
                 </div>
-                <div class="rounded-2xl border border-line bg-surface p-4">
-                  <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Attendance method</p>
-                  <p class="mt-1 font-semibold text-principalText">{{ methodLabel(student.markMethod) }}</p>
+                <div class="rounded-2xl border border-line bg-surface p-4 shadow-sm">
+                  <div class="flex items-center gap-3">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-xl border border-secondary-soft bg-secondary-soft text-secondary-strong">
+                      <i class="fa-solid fa-fingerprint text-sm" aria-hidden="true"></i>
+                    </span>
+                    <div>
+                      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Attendance method</p>
+                      <p class="mt-1 font-semibold text-principalText">{{ methodLabel(student.markMethod) }}</p>
+                    </div>
+                  </div>
                 </div>
                 @if (student.markedAt) {
-                  <div class="rounded-2xl border border-line bg-surface p-4">
-                    <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Marked time</p>
-                    <p class="mt-1 font-semibold text-principalText">{{ formatDateTime(student.markedAt) }}</p>
+                  <div class="rounded-2xl border border-line bg-surface p-4 shadow-sm">
+                    <div class="flex items-center gap-3">
+                      <span class="flex h-10 w-10 items-center justify-center rounded-xl border border-warning-soft bg-warning-soft text-warning">
+                        <i class="fa-regular fa-clock text-sm" aria-hidden="true"></i>
+                      </span>
+                      <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Marked time</p>
+                        <p class="mt-1 font-semibold text-principalText">{{ formatDateTime(student.markedAt) }}</p>
+                      </div>
+                    </div>
                   </div>
                 }
               </section>
+
+              @if (studentSummaryLoading()) {
+                <section class="rounded-3xl border border-line bg-surface p-5 text-sm font-medium text-secondaryText">
+                  Loading academic attendance summary...
+                </section>
+              } @else if (selectedStudentSummary(); as summary) {
+                <section class="rounded-[1.5rem] border border-line bg-surface p-5 shadow-card">
+                  <div>
+                    <div>
+                      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Academic year summary</p>
+                      <h4 class="mt-1 text-lg font-semibold text-principalText">Absence analytics</h4>
+                    </div>
+                  </div>
+
+                  <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div class="rounded-2xl border border-line bg-surface-subtle p-4">
+                      <div class="flex items-center gap-3">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-surface text-primary shadow-sm">
+                          <i class="fa-regular fa-calendar-xmark" aria-hidden="true"></i>
+                        </span>
+                        <div>
+                          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Total absences</p>
+                          <p class="mt-1 text-2xl font-semibold text-principalText">{{ summary.totalAbsences }}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rounded-2xl border border-success/20 bg-secondary-soft p-4">
+                      <div class="flex items-center gap-3">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-surface text-secondary-strong shadow-sm">
+                          <i class="fa-solid fa-check" aria-hidden="true"></i>
+                        </span>
+                        <div>
+                          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-secondary-strong">Justified</p>
+                          <p class="mt-1 text-2xl font-semibold text-secondary-strong">{{ summary.justifiedAbsences }}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rounded-2xl border border-danger/20 bg-danger-soft p-4">
+                      <div class="flex items-center gap-3">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-surface text-danger shadow-sm">
+                          <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                        </span>
+                        <div>
+                          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-danger">Unjustified</p>
+                          <p class="mt-1 text-2xl font-semibold text-danger">{{ summary.unjustifiedAbsences }}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rounded-2xl border border-line bg-surface-subtle p-4">
+                      <div class="flex items-center gap-3">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-surface text-warning shadow-sm">
+                          <i class="fa-regular fa-hourglass-half" aria-hidden="true"></i>
+                        </span>
+                        <div>
+                          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Absence hours</p>
+                          <p class="mt-1 text-2xl font-semibold text-principalText">{{ formatHours(summary.totalAbsenceHours) }}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rounded-2xl border border-line bg-surface-subtle p-4">
+                      <div class="flex items-center gap-3">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-surface text-secondaryText shadow-sm">
+                          <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+                        </span>
+                        <div>
+                          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Last absence</p>
+                          <p class="mt-1 text-sm font-semibold text-principalText">
+                            {{ summary.lastAbsenceAt ? formatDateTime(summary.lastAbsenceAt) : 'No absence recorded' }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              }
 
             </div>
           }
@@ -370,6 +519,7 @@ export class AttendancePage {
   readonly selectedSessionId = signal<number | null>(null);
   readonly selectedDetail = signal<AdminAttendanceSessionDetailsDto | null>(null);
   readonly selectedStudent = signal<AdminAttendanceStudentViewDto | null>(null);
+  readonly selectedStudentSummary = signal<AdminStudentAttendanceSummaryDto | null>(null);
   readonly academicYears = signal<readonly AnneeUniversitaire[]>([]);
   readonly formations = signal<readonly Formation[]>([]);
   readonly groups = signal<readonly Groupe[]>([]);
@@ -377,14 +527,13 @@ export class AttendancePage {
   readonly filieres = signal<readonly Filiere[]>([]);
   readonly rosterStatusFilter = signal<RosterFilter>('ALL');
   readonly rosterSearchQuery = signal('');
+  readonly rosterPage = signal(1);
+  readonly rosterPageSize = 8;
   readonly isLoading = signal(false);
   readonly detailLoading = signal(false);
+  readonly studentSummaryLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
-  readonly overviewMeta = computed(() => {
-    const overview = this.overview();
-    return overview ? `${overview.totalSessions} total sessions` : 'Attendance tracking';
-  });
   readonly filteredRoster = computed(() => {
     const detail = this.selectedDetail();
     if (!detail) {
@@ -414,13 +563,21 @@ export class AttendancePage {
         .includes(search);
     });
   });
+  readonly rosterTotalPages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredRoster().length / this.rosterPageSize)),
+  );
+  readonly normalizedRosterPage = computed(() =>
+    Math.min(this.rosterPage(), this.rosterTotalPages()),
+  );
+  readonly paginatedRoster = computed(() => {
+    const start = (this.normalizedRosterPage() - 1) * this.rosterPageSize;
+    return this.filteredRoster().slice(start, start + this.rosterPageSize);
+  });
   readonly studentProfileOpen = computed(() => this.selectedStudent() !== null);
   readonly selectedStudentName = computed(() => {
     const student = this.selectedStudent();
     return student ? `${student.firstName} ${student.lastName}` : 'Student profile';
   });
-  // TODO: Add yearly attendance statistics when an admin endpoint exposes student attendance history by academic year.
-
   constructor() {
     this.loadData();
   }
@@ -468,8 +625,10 @@ export class AttendancePage {
     this.selectedSessionId.set(session.sessionId);
     this.selectedDetail.set(null);
     this.selectedStudent.set(null);
+    this.selectedStudentSummary.set(null);
     this.rosterStatusFilter.set('ALL');
     this.rosterSearchQuery.set('');
+    this.rosterPage.set(1);
     this.detailLoading.set(true);
     this.attendanceService
       .getSession(session.sessionId)
@@ -484,8 +643,10 @@ export class AttendancePage {
     this.selectedSessionId.set(null);
     this.selectedDetail.set(null);
     this.selectedStudent.set(null);
+    this.selectedStudentSummary.set(null);
     this.rosterStatusFilter.set('ALL');
     this.rosterSearchQuery.set('');
+    this.rosterPage.set(1);
   }
 
   isSelected(session: AdminAttendanceSessionSummaryDto): boolean {
@@ -494,21 +655,42 @@ export class AttendancePage {
 
   openStudentProfile(student: AdminAttendanceStudentViewDto): void {
     this.selectedStudent.set(student);
+    this.selectedStudentSummary.set(null);
+    this.studentSummaryLoading.set(true);
+    const range = this.summaryRangeForGroup(student.groupId);
+    this.attendanceService
+      .getStudentSummary(student.studentId, range)
+      .pipe(finalize(() => this.studentSummaryLoading.set(false)))
+      .subscribe({
+        next: (summary) => this.selectedStudentSummary.set(summary),
+        error: () => this.selectedStudentSummary.set(null),
+      });
   }
 
   closeStudentProfile(): void {
     this.selectedStudent.set(null);
+    this.selectedStudentSummary.set(null);
   }
 
   setRosterStatus(status: RosterFilter): void {
     this.rosterStatusFilter.set(status);
+    this.rosterPage.set(1);
   }
 
   onRosterSearchInput(event: Event): void {
     const target = event.target;
     if (target instanceof HTMLInputElement) {
       this.rosterSearchQuery.set(target.value);
+      this.rosterPage.set(1);
     }
+  }
+
+  previousRosterPage(): void {
+    this.rosterPage.update((page) => Math.max(1, page - 1));
+  }
+
+  nextRosterPage(): void {
+    this.rosterPage.update((page) => Math.min(this.rosterTotalPages(), page + 1));
   }
 
   countRosterStatus(status: RosterFilter): number {
@@ -605,6 +787,18 @@ export class AttendancePage {
     return `${student.firstName?.[0] ?? ''}${student.lastName?.[0] ?? ''}`.toUpperCase() || 'ST';
   }
 
+  hasProfileImage(student: AdminAttendanceStudentViewDto): boolean {
+    return Boolean(student.pfpUrl?.trim());
+  }
+
+  formatPercent(value: number): string {
+    return `${Math.round(value)}%`;
+  }
+
+  formatHours(value: number): string {
+    return `${Number(value.toFixed(1))} h`;
+  }
+
   formatDate(value: string): string {
     return new Intl.DateTimeFormat('fr-FR', {
       day: '2-digit',
@@ -671,5 +865,17 @@ export class AttendancePage {
       return null;
     }
     return this.formations().find((formation) => formation.id === group.formationId) ?? null;
+  }
+
+  private summaryRangeForGroup(groupId: number): { readonly dateFrom?: string | null; readonly dateTo?: string | null } {
+    const group = this.groups().find((item) => item.id === groupId);
+    const formation = group ? this.formations().find((item) => item.id === group.formationId) : null;
+    const year = formation
+      ? this.academicYears().find((item) => item.id === formation.anneeUniversitaireId)
+      : null;
+    return {
+      dateFrom: year?.startDate ?? null,
+      dateTo: year?.endDate ?? null,
+    };
   }
 }

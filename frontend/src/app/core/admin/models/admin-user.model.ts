@@ -1,4 +1,4 @@
-export type AdminDirectoryStatus = 'Active' | 'Pending' | 'Suspended';
+export type AdminDirectoryStatus = 'Enabled' | 'Suspended';
 export type StatusVariant = 'success' | 'warning' | 'error' | 'neutral';
 
 export interface AdminStudentDto {
@@ -91,15 +91,13 @@ export function accountStatus(enabled: boolean, firstLogin: boolean): AdminDirec
     return 'Suspended';
   }
 
-  return firstLogin ? 'Pending' : 'Active';
+  return 'Enabled';
 }
 
 export function accountState(status: AdminDirectoryStatus): { enabled: boolean; firstLogin: boolean } {
   switch (status) {
-    case 'Active':
+    case 'Enabled':
       return { enabled: true, firstLogin: false };
-    case 'Pending':
-      return { enabled: true, firstLogin: true };
     case 'Suspended':
       return { enabled: false, firstLogin: false };
   }
@@ -107,10 +105,8 @@ export function accountState(status: AdminDirectoryStatus): { enabled: boolean; 
 
 export function statusVariant(status: AdminDirectoryStatus): StatusVariant {
   switch (status) {
-    case 'Active':
+    case 'Enabled':
       return 'success';
-    case 'Pending':
-      return 'warning';
     case 'Suspended':
       return 'error';
   }

@@ -26,6 +26,7 @@ import { FiliereService } from '../../../../core/structure/services/filiere.serv
 import { FormationService } from '../../../../core/structure/services/formation.service';
 import { GroupeService } from '../../../../core/structure/services/groupe.service';
 import { ModuleService } from '../../../../core/structure/services/module.service';
+import { DropdownFilter } from '../../../../shared/components/dropdown-filter/dropdown-filter';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { StatusBadge } from '../../../../shared/components/status-badge/status-badge';
 import {
@@ -35,7 +36,7 @@ import {
 
 type DashboardVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral';
 type AlertSeverity = 'critical' | 'warning' | 'info' | 'success';
-type AnalyticsRange = '14' | '30' | 'month' | 'year';
+type AnalyticsRange = '14' | 'month' | 'year';
 type AnalyticsMode = 'day' | 'time';
 
 interface KpiCard {
@@ -54,12 +55,16 @@ interface DistributionSegment {
 }
 
 interface PerformanceRow {
+  readonly id: string;
   readonly label: string;
   readonly meta: string;
   readonly rate: number;
   readonly present: number;
   readonly absent: number;
   readonly variant: DashboardVariant;
+  readonly formationId?: number | null;
+  readonly filiereId?: number | null;
+  readonly moduleIds?: readonly number[];
 }
 
 interface AlertItem {
@@ -72,7 +77,7 @@ interface AlertItem {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, Modal, StatusBadge, AbsenceLineChart],
+  imports: [RouterLink, DropdownFilter, Modal, StatusBadge, AbsenceLineChart],
   templateUrl: './dashboard.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -104,14 +109,15 @@ export class Dashboard {
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly lastUpdated = signal<Date | null>(null);
-  readonly analyticsRange = signal<AnalyticsRange>('30');
+  readonly analyticsRange = signal<AnalyticsRange>('14');
   readonly analyticsMode = signal<AnalyticsMode>('day');
   readonly analyticsExpanded = signal(false);
+  readonly groupFiliereFilter = signal('all');
+  readonly groupModuleFilter = signal('all');
 
   readonly analyticsRanges: ReadonlyArray<{ readonly value: AnalyticsRange; readonly label: string }> = [
     { value: '14', label: '14 days' },
-    { value: '30', label: '30 days' },
-    { value: 'month', label: 'Month' },
+    { value: 'month', label: 'This month' },
     { value: 'year', label: 'Year' },
   ];
   readonly analyticsModes: ReadonlyArray<{ readonly value: AnalyticsMode; readonly label: string }> = [
@@ -211,8 +217,33 @@ export class Dashboard {
     this.analyticsMode() === 'time' ? this.buildTimeAnalytics() : this.buildTimelineAnalytics(),
   );
   readonly markedToday = computed(() => this.todayPresent() + this.todayAbsent() + this.todayOpen());
-  readonly groupPerformance = computed(() => this.performanceByGroup().slice(0, 6));
-  readonly teacherPerformance = computed(() => this.performanceByTeacher().slice(0, 5));
+  readonly groupFiliereOptions = computed(() =>
+    this.filieres()
+      .map((filiere) => ({ value: String(filiere.id), label: `${filiere.code} - ${filiere.name}` }))
+      .sort((left, right) => left.label.localeCompare(right.label)),
+  );
+  readonly groupModuleOptions = computed(() => {
+    const selectedFiliere = this.groupFiliereFilter();
+    return this.modules()
+      .filter((module) => {
+        if (selectedFiliere === 'all') {
+          return true;
+        }
+        const formation = this.formations().find((item) => item.id === module.formationId);
+        return formation?.filiereId === Number(selectedFiliere);
+      })
+      .map((module) => ({ value: String(module.id), label: `${module.code} - ${module.name}` }))
+      .sort((left, right) => left.label.localeCompare(right.label));
+  });
+  readonly groupPerformance = computed(() => {
+    const filiere = this.groupFiliereFilter();
+    const module = this.groupModuleFilter();
+    return this.performanceByGroup()
+      .filter((row) => filiere === 'all' || row.filiereId === Number(filiere))
+      .filter((row) => module === 'all' || row.moduleIds?.includes(Number(module)))
+      .slice(0, 6);
+  });
+  readonly teacherPerformance = computed(() => this.performanceByTeacher().slice(0, 6));
   readonly recentSessions = computed(() => this.sessions().slice(0, 6));
 
   readonly alerts = computed<readonly AlertItem[]>(() => {
@@ -341,7 +372,7 @@ export class Dashboard {
     if (!value) {
       return 'Not refreshed yet';
     }
-    return new Intl.DateTimeFormat('fr-FR', {
+    return new Intl.DateTimeFormat('en-US', {
       day: '2-digit',
       month: 'short',
       hour: '2-digit',
@@ -350,7 +381,7 @@ export class Dashboard {
   }
 
   formatTimeRange(session: AdminAttendanceSessionSummaryDto): string {
-    const formatter = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const formatter = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit' });
     const start = formatter.format(new Date(session.startedAt));
     const end = formatter.format(new Date(session.endedAt ?? session.endsAt));
     return `${start} - ${end}`;
@@ -413,6 +444,15 @@ export class Dashboard {
     this.analyticsMode.set(mode);
   }
 
+  setGroupFiliereFilter(value: string | null): void {
+    this.groupFiliereFilter.set(value ?? 'all');
+    this.groupModuleFilter.set('all');
+  }
+
+  setGroupModuleFilter(value: string | null): void {
+    this.groupModuleFilter.set(value ?? 'all');
+  }
+
   openAnalytics(): void {
     this.analyticsExpanded.set(true);
   }
@@ -421,20 +461,41 @@ export class Dashboard {
     this.analyticsExpanded.set(false);
   }
 
+  radialDash(rate: number): string {
+    const normalized = Math.max(0, Math.min(100, Math.round(rate)));
+    return `${normalized} ${100 - normalized}`;
+  }
+
   private performanceByGroup(): readonly PerformanceRow[] {
-    const byGroup = new Map<number, { present: number; absent: number; sessions: number }>();
+    const byGroup = new Map<number, { present: number; absent: number; sessions: number; moduleIds: Set<number> }>();
     for (const session of this.sessions()) {
       for (const groupId of session.groupIds) {
-        const current = byGroup.get(groupId) ?? { present: 0, absent: 0, sessions: 0 };
+        const current = byGroup.get(groupId) ?? { present: 0, absent: 0, sessions: 0, moduleIds: new Set<number>() };
         current.present += session.presentCount;
         current.absent += session.absentCount;
         current.sessions += 1;
+        const matchedModule = this.moduleForGroupSession(groupId, session.courseLabel);
+        if (matchedModule) {
+          current.moduleIds.add(matchedModule.id);
+        }
         byGroup.set(groupId, current);
       }
     }
 
     return Array.from(byGroup.entries())
-      .map(([groupId, value]) => this.toPerformanceRow(this.groupName(groupId), `${value.sessions} session(s)`, value))
+      .map(([groupId, value]) => {
+        const group = this.groups().find((item) => item.id === groupId);
+        const formation = group ? this.formations().find((item) => item.id === group.formationId) : null;
+        return this.toPerformanceRow(
+          String(groupId),
+          this.groupName(groupId),
+          `${value.sessions} session(s)`,
+          value,
+          formation?.id ?? null,
+          formation?.filiereId ?? null,
+          [...value.moduleIds],
+        );
+      })
       .sort((left, right) => left.rate - right.rate);
   }
 
@@ -450,28 +511,52 @@ export class Dashboard {
     }
 
     return Array.from(byTeacher.entries())
-      .map(([teacher, value]) => this.toPerformanceRow(teacher, `${value.sessions} session(s)`, value))
+      .map(([teacher, value]) => this.toPerformanceRow(teacher, teacher, `${value.sessions} session(s)`, value))
       .sort((left, right) => left.rate - right.rate);
   }
 
   private toPerformanceRow(
+    id: string,
     label: string,
     meta: string,
     value: { present: number; absent: number },
+    formationId: number | null = null,
+    filiereId: number | null = null,
+    moduleIds: readonly number[] = [],
   ): PerformanceRow {
     const rate = this.rate(value.present, value.absent);
     return {
+      id,
       label,
       meta,
       rate,
       present: value.present,
       absent: value.absent,
       variant: this.healthVariant(rate),
+      formationId,
+      filiereId,
+      moduleIds,
     };
   }
 
   private groupName(groupId: number): string {
     return this.groups().find((group) => group.id === groupId)?.name ?? `Group #${groupId}`;
+  }
+
+  private moduleForGroupSession(groupId: number, courseLabel: string): Module | null {
+    const group = this.groups().find((item) => item.id === groupId);
+    if (!group) {
+      return null;
+    }
+    const normalizedCourse = courseLabel.trim().toLowerCase();
+    return (
+      this.modules().find(
+        (module) =>
+          module.formationId === group.formationId &&
+          (module.name.trim().toLowerCase() === normalizedCourse ||
+            module.code.trim().toLowerCase() === normalizedCourse),
+      ) ?? null
+    );
   }
 
   private rate(present: number, absent: number): number {
@@ -498,10 +583,14 @@ export class Dashboard {
 
   private buildTimelineAnalytics(): readonly AbsenceAnalyticsPoint[] {
     if (this.analyticsRange() === 'year') {
-      return this.monthBuckets().map((month) => this.toAnalyticsPoint(month.label, month.detail, month.sessions));
+      return this.monthBuckets()
+        .filter((month) => month.sessions.length > 0)
+        .map((month) => this.toAnalyticsPoint(month.label, month.detail, month.sessions));
     }
 
-    return this.dayBuckets().map((day) => this.toAnalyticsPoint(day.label, day.detail, day.sessions));
+      return this.dayBuckets()
+        .filter((day) => day.sessions.length > 0)
+        .map((day) => this.toAnalyticsPoint(day.label, day.detail, day.sessions));
   }
 
   private buildTimeAnalytics(): readonly AbsenceAnalyticsPoint[] {
@@ -516,16 +605,18 @@ export class Dashboard {
       { label: '18-20', detail: '18:00 - 20:00', from: 18, to: 20 },
     ];
 
-    return buckets.map((bucket) =>
-      this.toAnalyticsPoint(
-        bucket.label,
-        bucket.detail,
-        sessions.filter((session) => {
-          const hour = new Date(session.startedAt).getHours();
-          return hour >= bucket.from && hour < bucket.to;
-        }),
-      ),
-    );
+    return buckets
+      .map((bucket) =>
+        this.toAnalyticsPoint(
+          bucket.label,
+          bucket.detail,
+          sessions.filter((session) => {
+            const hour = new Date(session.startedAt).getHours();
+            return hour >= bucket.from && hour < bucket.to;
+          }),
+        ),
+      )
+      .filter((point) => point.sessions > 0);
   }
 
   private dayBuckets(): ReadonlyArray<{
@@ -533,14 +624,14 @@ export class Dashboard {
     readonly detail: string;
     readonly sessions: readonly AdminAttendanceSessionSummaryDto[];
   }> {
-    const days = this.analyticsRange() === '14' ? 14 : this.analyticsRange() === 'month' ? this.currentMonthDayCount() : 30;
+    const days = this.analyticsRange() === '14' ? 14 : this.currentMonthDayCount();
     return Array.from({ length: days }, (_, index) => {
       const date = new Date();
       date.setHours(0, 0, 0, 0);
       date.setDate(date.getDate() - (days - 1 - index));
       return {
-        label: new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short' }).format(date),
-        detail: new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(date),
+        label: new Intl.DateTimeFormat('en-US', { day: '2-digit', month: 'short' }).format(date),
+        detail: new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(date),
         sessions: this.sessions().filter((session) => this.sameDay(session.startedAt, date)),
       };
     });
@@ -557,8 +648,8 @@ export class Dashboard {
       date.setHours(0, 0, 0, 0);
       date.setMonth(date.getMonth() - (11 - index));
       return {
-        label: new Intl.DateTimeFormat('fr-FR', { month: 'short' }).format(date),
-        detail: new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(date),
+        label: new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date),
+        detail: new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(date),
         sessions: this.sessions().filter((session) => {
           const startedAt = new Date(session.startedAt);
           return startedAt.getFullYear() === date.getFullYear() && startedAt.getMonth() === date.getMonth();
@@ -576,7 +667,7 @@ export class Dashboard {
       return this.sessions().filter((session) => new Date(session.startedAt) >= oldestMonth);
     }
 
-    const days = this.analyticsRange() === '14' ? 14 : this.analyticsRange() === 'month' ? this.currentMonthDayCount() : 30;
+    const days = this.analyticsRange() === '14' ? 14 : this.currentMonthDayCount();
     const from = new Date();
     from.setHours(0, 0, 0, 0);
     from.setDate(from.getDate() - (days - 1));

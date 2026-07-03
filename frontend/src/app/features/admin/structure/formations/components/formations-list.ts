@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-import { Button } from '../../../../../shared/components/button/button';
 import { IconButton } from '../../../../../shared/components/button/icon-button';
 import { DataTable } from '../../../../../shared/components/data-table/data-table';
 import { DataTableCellDef } from '../../../../../shared/components/data-table/data-table-cell-def';
@@ -23,34 +22,25 @@ export interface FormationItem {
 @Component({
   selector: 'app-formations-list',
   standalone: true,
-  imports: [CommonModule, Button, DataTable, DataTableCellDef, IconButton, FormationsFilters],
+  imports: [CommonModule, DataTable, DataTableCellDef, IconButton, FormationsFilters],
   template: `
-    <div class="mt-4 flex justify-end mb-4">
-      <app-button
-        label="Ajouter une formation"
-        icon="fa-solid fa-plus"
-        variant="primary"
-        [fullWidth]="false"
-        (clicked)="createClicked.emit()"
-      ></app-button>
-    </div>
-
     <app-formations-filters
       [cycles]="cycleOptions()"
       [fields]="fieldOptions()"
       [searchValue]="searchQuery()"
       [cycleValue]="selectedCycle()"
       [fieldValue]="selectedField()"
+      createLabel="Ajouter une formation"
       (searchChange)="searchQuery.set($event)"
       (cycleFilterChange)="selectedCycle.set($event)"
       (fieldFilterChange)="selectedField.set($event)"
       (resetFilters)="resetFilters()"
+      (createClicked)="createClicked.emit()"
     ></app-formations-filters>
 
     <app-data-table
       title="Formations"
       description="Associations entre années, cycles et filières."
-      [caption]="filteredFormations().length + ' Formation(s)'"
       [rows]="filteredFormations()"
       [columns]="columns"
       [rowId]="formationRowId"
@@ -95,7 +85,6 @@ export interface FormationItem {
 })
 export class FormationsList {
   readonly formations = input.required<FormationItem[]>();
-  readonly totalFormations = input.required<number>();
   readonly createClicked = output<void>();
   readonly manageClicked = output<FormationItem>();
   readonly deleteClicked = output<FormationItem>();

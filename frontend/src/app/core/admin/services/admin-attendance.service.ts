@@ -6,6 +6,7 @@ import {
   AdminAttendanceOverviewDto,
   AdminAttendanceSessionDetailsDto,
   AdminAttendanceSessionSummaryDto,
+  AdminStudentAttendanceSummaryDto,
   PagedResponseDto,
 } from '../models/admin-attendance.model';
 
@@ -42,6 +43,24 @@ export class AdminAttendanceService {
   getSession(sessionId: number) {
     return this.http.get<AdminAttendanceSessionDetailsDto>(
       `${this.baseUrl}/sessions/${sessionId}`,
+    );
+  }
+
+  getStudentSummary(
+    studentId: number,
+    query: { readonly dateFrom?: string | null; readonly dateTo?: string | null } = {},
+  ) {
+    let params = new HttpParams();
+    if (query.dateFrom) {
+      params = params.set('dateFrom', query.dateFrom);
+    }
+    if (query.dateTo) {
+      params = params.set('dateTo', query.dateTo);
+    }
+
+    return this.http.get<AdminStudentAttendanceSummaryDto>(
+      `${this.baseUrl}/students/${studentId}/summary`,
+      { params },
     );
   }
 }

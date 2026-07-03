@@ -1,7 +1,6 @@
 <section class="space-y-5">
   <app-formations-list
     [formations]="filteredFormations()"
-    [totalFormations]="formationViews().length"
     (createClicked)="openCreate()"
     (manageClicked)="openEdit($event)"
     (deleteClicked)="openDelete($event)"

@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, input, output, signal } f
 
 import { type Cycle } from '../../../../../core/structure/models/cycle.model';
 import { IconButton } from '../../../../../shared/components/button/icon-button';
-import { Button } from '../../../../../shared/components/button/button';
 import { DataTable } from '../../../../../shared/components/data-table/data-table';
 import { DataTableCellDef } from '../../../../../shared/components/data-table/data-table-cell-def';
 import { DataTableColumn } from '../../../../../shared/components/data-table/data-table.types';
@@ -12,30 +11,21 @@ import { CyclesFilters } from './cycles-filters';
 @Component({
   selector: 'app-cycles-list',
   standalone: true,
-  imports: [Button, DataTable, DataTableCellDef, IconButton, StatusBadge, CyclesFilters],
+  imports: [DataTable, DataTableCellDef, IconButton, StatusBadge, CyclesFilters],
   template: `
-    <div class="mt-4 flex justify-end mb-4">
-      <app-button
-        label="Ajouter un cycle"
-        icon="fa-solid fa-plus"
-        variant="primary"
-        [fullWidth]="false"
-        (clicked)="createClicked.emit()"
-      ></app-button>
-    </div>
-
     <app-cycles-filters
       [searchValue]="searchQuery()"
       [typeValue]="selectedType()"
+      createLabel="Ajouter un cycle"
       (searchChange)="searchQuery.set($event)"
       (typeFilterChange)="selectedType.set($event)"
       (resetFilters)="resetFilters()"
+      (createClicked)="createClicked.emit()"
     ></app-cycles-filters>
 
     <app-data-table
       title="Cycles"
       description="Socle académique des formations et filières."
-      [caption]="filteredCycles().length + ' cycle(s)'"
       [rows]="filteredCycles()"
       [columns]="columns"
       [rowId]="cycleRowId"

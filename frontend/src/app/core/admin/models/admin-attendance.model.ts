@@ -53,3 +53,15 @@ export interface AdminAttendanceSessionDetailsDto extends AdminAttendanceSession
   readonly gpsLon: string | null;
   readonly students: readonly AdminAttendanceStudentViewDto[];
 }
+
+export interface AdminStudentAttendanceSummaryDto {
+  readonly studentId: number;
+  readonly totalSessions: number;
+  readonly totalPresents: number;
+  readonly totalAbsences: number;
+  readonly justifiedAbsences: number;
+  readonly unjustifiedAbsences: number;
+  readonly totalAbsenceHours: number;
+  readonly attendanceRate: number;
+  readonly lastAbsenceAt: string | null;
+}

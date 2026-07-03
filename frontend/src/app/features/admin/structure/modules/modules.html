@@ -1,7 +1,6 @@
 <section class="space-y-5">
   <app-modules-list
     [modules]="filteredModules()"
-    [totalModules]="moduleViews().length"
     (createClicked)="openCreate()"
     (editClicked)="openEdit($event)"
     (deleteClicked)="openDelete($event)"

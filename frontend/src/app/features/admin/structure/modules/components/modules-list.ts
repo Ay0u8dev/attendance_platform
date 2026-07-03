@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-import { Button } from '../../../../../shared/components/button/button';
 import { IconButton } from '../../../../../shared/components/button/icon-button';
 import { ModulesFilters } from './modules-filters';
 
@@ -18,21 +17,13 @@ export interface ModuleItem {
 @Component({
   selector: 'app-modules-list',
   standalone: true,
-  imports: [CommonModule, Button, IconButton, ModulesFilters],
+  imports: [CommonModule, IconButton, ModulesFilters],
   template: `
     <!-- Header -->
     <div class="mt-4 flex flex-wrap items-center justify-between gap-4 mb-6">
       <div>
         <h2 class="text-xl font-bold text-principalText tracking-tight">Modules d'enseignement</h2>
       </div>
-      <app-button
-        label="Ajouter un module"
-        icon="fa-solid fa-plus"
-        variant="primary"
-        [fullWidth]="false"
-        (clicked)="createClicked.emit()"
-        class="shadow-lg shadow-primary/20"
-      ></app-button>
     </div>
 
     <!-- Filtres -->
@@ -42,20 +33,13 @@ export interface ModuleItem {
       [searchValue]="searchQuery()"
       [formationValue]="selectedFormation()"
       [semesterValue]="selectedSemester()"
+      createLabel="Ajouter un module"
       (searchChange)="searchQuery.set($event)"
       (formationFilterChange)="selectedFormation.set($event)"
       (semesterFilterChange)="selectedSemester.set($event)"
       (resetFilters)="resetFilters()"
+      (createClicked)="createClicked.emit()"
     ></app-modules-filters>
-
-    <div class="-mt-2 mb-4 flex items-center justify-end gap-2">
-      <p
-        class="inline-flex items-center gap-2 rounded-2xl border border-primary-soft bg-primary-soft px-4 py-2 text-sm font-medium text-primary"
-      >
-        <span class="h-2 w-2 rounded-full bg-secondary"></span>
-        {{ filteredCount() }} module(s)
-      </p>
-    </div>
 
     @if (selectedCount() > 0) {
       <div class="-mt-2 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-3">
@@ -173,7 +157,6 @@ export interface ModuleItem {
 export class ModulesList {
   // --- Inputs & Outputs ---
   readonly modules = input.required<ModuleItem[]>();
-  readonly totalModules = input.required<number>();
   readonly createClicked = output<void>();
   readonly editClicked = output<ModuleItem>();
   readonly deleteClicked = output<ModuleItem>();
@@ -246,7 +229,6 @@ export class ModulesList {
       }));
   });
 
-  readonly filteredCount = computed(() => this.filteredModules().length);
   readonly selectedCount = computed(() => this.selectedIds().length);
 
   // --- Méthodes ---

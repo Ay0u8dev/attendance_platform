@@ -13,7 +13,14 @@ export interface AbsenceAnalyticsPoint {
 interface ChartPoint extends AbsenceAnalyticsPoint {
   readonly index: number;
   readonly x: number;
-  readonly y: number;
+  readonly labelX: number;
+  readonly presentY: number;
+  readonly absentY: number;
+  readonly openY: number;
+  readonly presentHeight: number;
+  readonly absentHeight: number;
+  readonly openHeight: number;
+  readonly tooltipY: number;
   readonly isPeak: boolean;
 }
 
@@ -35,40 +42,60 @@ export class AbsenceLineChart {
 
   readonly activePointIndex = signal<number | null>(null);
 
-  readonly plotTop = 28;
-  readonly plotBottom = computed(() => (this.expanded() ? 312 : 252));
+  readonly plotTop = 34;
+  readonly plotBottom = computed(() => (this.expanded() ? 380 : 310));
   readonly xTickStart = computed(() => this.plotBottom() + 6);
-  readonly xTickEnd = computed(() => this.plotBottom() + 12);
-  readonly xLabelY = computed(() => this.plotBottom() + 32);
-  private readonly plotLeft = 58;
-  private readonly plotRight = 30;
-  private readonly pointSpacing = 76;
+  readonly xTickEnd = computed(() => this.plotBottom() + 14);
+  readonly xLabelY = computed(() => this.plotBottom() + 40);
+  readonly axisTitleX = 26;
+  readonly axisTitleY = computed(() => this.plotTop + (this.plotBottom() - this.plotTop) / 2);
+  readonly plotLeft = 126;
+  readonly plotRight = 44;
+  private readonly pointSpacing = 118;
+  private readonly firstGroupOffset = 72;
+  readonly barWidth = computed(() => (this.expanded() ? 24 : 21));
+  readonly barGap = 6;
 
-  readonly hasData = computed(() => this.points().some((point) => point.absent > 0));
+  readonly hasData = computed(() => this.points().some((point) => point.sessions > 0));
   readonly width = computed(() =>
-    Math.max(this.expanded() ? 1120 : 900, this.plotLeft + this.plotRight + (this.points().length - 1) * this.pointSpacing),
+    Math.max(
+      this.expanded() ? 1240 : 1040,
+      this.plotLeft + this.firstGroupOffset + this.plotRight + (this.points().length - 1) * this.pointSpacing + 96,
+    ),
   );
-  readonly height = computed(() => (this.expanded() ? 390 : 340));
-  readonly yMax = computed(() => this.niceMaximum(Math.max(0, ...this.points().map((point) => point.absent))));
+  readonly height = computed(() => (this.expanded() ? 470 : 400));
+  readonly yMax = computed(() =>
+    this.niceMaximum(
+      Math.max(
+        0,
+        ...this.points().flatMap((point) => [point.present, point.absent, point.open]),
+      ),
+    ),
+  );
   readonly chartPoints = computed<readonly ChartPoint[]>(() => {
     const maximum = this.yMax();
     const peak = Math.max(0, ...this.points().map((point) => point.absent));
+    const plotHeight = this.plotBottom() - this.plotTop;
 
+    const barWidth = this.barWidth();
     return this.points().map((point, index) => ({
       ...point,
       index,
-      x: this.plotLeft + index * this.pointSpacing,
-      y: this.plotBottom() - (point.absent / maximum) * (this.plotBottom() - this.plotTop),
+      x: this.plotLeft + this.firstGroupOffset + index * this.pointSpacing,
+      labelX: this.plotLeft + this.firstGroupOffset + index * this.pointSpacing + barWidth / 2,
+      presentY: this.plotBottom() - (point.present / maximum) * plotHeight,
+      absentY: this.plotBottom() - (point.absent / maximum) * plotHeight,
+      openY: this.plotBottom() - (point.open / maximum) * plotHeight,
+      presentHeight: (point.present / maximum) * plotHeight,
+      absentHeight: (point.absent / maximum) * plotHeight,
+      openHeight: (point.open / maximum) * plotHeight,
+      tooltipY: Math.min(
+        this.plotBottom(),
+        this.plotBottom() -
+          (Math.max(point.present, point.absent, point.open) / maximum) * plotHeight,
+      ),
       isPeak: point.absent === peak && peak > 0,
     }));
-  });
-  readonly linePath = computed(() => this.buildLinePath(this.chartPoints()));
-  readonly areaPath = computed(() => {
-    const points = this.chartPoints();
-    if (!points.length) {
-      return '';
-    }
-    return `${this.linePath()} L ${points.at(-1)?.x ?? this.plotLeft} ${this.plotBottom()} L ${points[0].x} ${this.plotBottom()} Z`;
   });
   readonly yTicks = computed<readonly AxisTick[]>(() =>
     Array.from({ length: 5 }, (_, index) => {
@@ -88,19 +115,19 @@ export class AbsenceLineChart {
     if (!point) {
       return 0;
     }
-    return Math.min(Math.max(point.x - 105, this.plotLeft), this.width() - 230);
+    return Math.min(Math.max(point.labelX - 110, this.plotLeft), this.width() - 230);
   });
   readonly tooltipY = computed(() => {
     const point = this.activePoint();
-    return point ? Math.max(8, point.y - 92) : 0;
+    return point ? Math.max(8, point.tooltipY - 96) : 0;
   });
   readonly labelStep = computed(() => Math.max(1, Math.ceil(this.points().length / (this.expanded() ? 18 : 12))));
   readonly accessibleSummary = computed(() => {
     const total = this.points().reduce((sum, point) => sum + point.absent, 0);
     const peak = this.chartPoints().find((point) => point.isPeak);
     return peak
-      ? `${total} absences in this period. Highest point: ${peak.absent} on ${peak.detail}.`
-      : 'No absences recorded in this period.';
+      ? `${total} absences in this period. Highest absence bar: ${peak.absent} on ${peak.detail}.`
+      : 'No attendance marks recorded in this period.';
   });
 
   showPoint(index: number): void {
@@ -125,25 +152,6 @@ export class AbsenceLineChart {
 
   formatRate(rate: number): string {
     return `${Math.round(rate)}%`;
-  }
-
-  private buildLinePath(points: readonly ChartPoint[]): string {
-    if (!points.length) {
-      return '';
-    }
-    if (points.length === 1) {
-      return `M ${points[0].x} ${points[0].y}`;
-    }
-
-    return points.reduce((path, point, index) => {
-      if (index === 0) {
-        return `M ${point.x} ${point.y}`;
-      }
-
-      const previous = points[index - 1];
-      const controlOffset = (point.x - previous.x) * 0.42;
-      return `${path} C ${previous.x + controlOffset} ${previous.y}, ${point.x - controlOffset} ${point.y}, ${point.x} ${point.y}`;
-    }, '');
   }
 
   private niceMaximum(value: number): number {

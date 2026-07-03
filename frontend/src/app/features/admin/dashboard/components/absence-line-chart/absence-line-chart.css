@@ -27,11 +27,15 @@
 }
 
 .chart-scroll {
-  min-height: 21.25rem;
+  min-height: 25rem;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-color: var(--color-line-strong) var(--color-surface-subtle);
   scrollbar-width: thin;
+}
+
+.chart-scroll-expanded {
+  min-height: 29.375rem;
 }
 
 .chart {
@@ -52,12 +56,15 @@
 
 .axis-label {
   fill: var(--color-muted);
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .axis-label-y {
   text-anchor: end;
+  paint-order: stroke;
+  stroke: var(--color-surface);
+  stroke-width: 3px;
 }
 
 .axis-label-x {
@@ -68,58 +75,53 @@
 
 .axis-title {
   fill: var(--color-secondaryText);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
+  paint-order: stroke;
+  stroke: var(--color-surface);
+  stroke-width: 3px;
   text-transform: uppercase;
 }
 
-.area-path {
-  fill: color-mix(in srgb, var(--color-danger) 10%, transparent);
-}
-
-.line-path {
-  fill: none;
-  stroke: var(--color-danger);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 3;
-}
-
-.line-glow {
-  stroke: color-mix(in srgb, var(--color-danger) 20%, transparent);
-  stroke-width: 10;
-}
-
-.data-point {
+.bar-group {
   outline: none;
 }
 
-.point-hit-area {
+.bar-hit-area {
   fill: transparent;
   cursor: crosshair;
 }
 
-.point-marker {
-  fill: var(--color-surface);
-  stroke: var(--color-danger);
-  stroke-width: 3;
-  transition: r 120ms ease;
+.chart-bar {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  transition:
+    filter 140ms ease,
+    opacity 140ms ease,
+    transform 140ms ease;
 }
 
-.data-point:hover .point-marker {
-  r: 6px;
-  filter: drop-shadow(0 3px 3px color-mix(in srgb, var(--color-danger) 22%, transparent));
+.chart-bar-present {
+  fill: var(--color-secondary);
 }
 
-.peak-halo {
-  fill: var(--color-danger-soft);
-  stroke: color-mix(in srgb, var(--color-danger) 35%, transparent);
-}
-
-.data-point-peak .point-marker {
+.chart-bar-absent {
   fill: var(--color-danger);
-  stroke: var(--color-surface);
+}
+
+.chart-bar-open {
+  fill: var(--color-line-strong);
+}
+
+.bar-group:hover .chart-bar {
+  filter: drop-shadow(0 7px 9px color-mix(in srgb, var(--color-primary-strong) 18%, transparent));
+  opacity: 0.94;
+  transform: scaleY(1.025);
+}
+
+.chart-bar-peak {
+  filter: drop-shadow(0 7px 10px color-mix(in srgb, var(--color-danger) 26%, transparent));
 }
 
 .cursor-line {
@@ -141,19 +143,27 @@
 
 .tooltip-title {
   fill: var(--color-secondaryText);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
 }
 
 .tooltip-value {
   fill: var(--color-principalText);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
+}
+
+.tooltip-present {
+  fill: var(--color-secondary-strong);
+}
+
+.tooltip-absent {
+  fill: var(--color-danger);
 }
 
 .tooltip-meta {
   fill: var(--color-muted);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
 }
 
@@ -177,11 +187,26 @@
   gap: 0.5rem;
 }
 
-.chart-legend span {
-  width: 1.5rem;
-  height: 0.18rem;
+.chart-legend {
+  color: var(--color-muted);
+}
+
+.chart-legend .legend-dot {
+  width: 0.6rem;
+  height: 0.6rem;
   border-radius: 999px;
+}
+
+.legend-present {
+  background: var(--color-secondary);
+}
+
+.legend-absent {
   background: var(--color-danger);
+}
+
+.legend-open {
+  background: var(--color-line-strong);
 }
 
 .empty-state {
@@ -225,7 +250,7 @@
 @media (max-width: 640px) {
   .chart-scroll,
   .empty-state {
-    min-height: 19rem;
+    min-height: 22rem;
   }
 
   .chart-footer {
@@ -236,7 +261,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .chart-shell-interactive,
-  .point-marker {
+  .chart-bar {
     transition: none;
   }
 }

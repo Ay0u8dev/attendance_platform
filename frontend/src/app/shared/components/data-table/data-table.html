@@ -36,6 +36,7 @@
       [filteredCount]="filteredRows().length"
       [totalCount]="allRows().length"
       [selectedCount]="selectedFilteredRowCount()"
+      [showResultSummary]="showResultSummary()"
       (searchValueChange)="updateSearchQuery($event)"
       (filterValueChange)="updateColumnFilter($event)"
       (columnVisibilityChange)="updateColumnVisibility($event)"
@@ -63,6 +64,25 @@
         </button>
       </div>
     </div>
+  }
+
+  @if (paginationPlacement() === 'top') {
+    <app-data-table-pagination
+      [currentPage]="currentPage()"
+      [pageCount]="pageCount()"
+      [pageSize]="pageSize()"
+      [totalItems]="filteredRows().length"
+      [startIndex]="pageStartIndex()"
+      [endIndex]="pageEndIndex()"
+      [selectedCount]="selectedFilteredRowCount()"
+      [canGoPrevious]="currentPage() > 1"
+      [canGoNext]="currentPage() < pageCount()"
+      [pageSizeOptions]="pageSizeOptions()"
+      menuDirection="down"
+      (pageChange)="goToPage($event)"
+      (pageSizeChange)="updatePageSize($event)"
+      (deleteSelected)="requestBulkDelete()"
+    ></app-data-table-pagination>
   }
 
   <div class="bg-surface px-3 py-4 sm:px-5">
@@ -165,21 +185,24 @@
     </table>
     </div>
   </div>
-  <app-data-table-pagination
-    [currentPage]="currentPage()"
-    [pageCount]="pageCount()"
-    [pageSize]="pageSize()"
-    [totalItems]="filteredRows().length"
-    [startIndex]="pageStartIndex()"
-    [endIndex]="pageEndIndex()"
-    [selectedCount]="selectedFilteredRowCount()"
-    [canGoPrevious]="currentPage() > 1"
-    [canGoNext]="currentPage() < pageCount()"
-    [pageSizeOptions]="pageSizeOptions()"
-    (pageChange)="goToPage($event)"
-    (pageSizeChange)="updatePageSize($event)"
-    (deleteSelected)="requestBulkDelete()"
-  ></app-data-table-pagination>
+  @if (paginationPlacement() === 'bottom') {
+    <app-data-table-pagination
+      [currentPage]="currentPage()"
+      [pageCount]="pageCount()"
+      [pageSize]="pageSize()"
+      [totalItems]="filteredRows().length"
+      [startIndex]="pageStartIndex()"
+      [endIndex]="pageEndIndex()"
+      [selectedCount]="selectedFilteredRowCount()"
+      [canGoPrevious]="currentPage() > 1"
+      [canGoNext]="currentPage() < pageCount()"
+      [pageSizeOptions]="pageSizeOptions()"
+      menuDirection="up"
+      (pageChange)="goToPage($event)"
+      (pageSizeChange)="updatePageSize($event)"
+      (deleteSelected)="requestBulkDelete()"
+    ></app-data-table-pagination>
+  }
 </section>
 
 <ng-template #defaultCell let-value="value">

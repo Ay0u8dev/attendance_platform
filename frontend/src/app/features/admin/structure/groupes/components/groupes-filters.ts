@@ -51,6 +51,19 @@ import { SearchInput } from '../../../../../shared/components/search-input/searc
               (clicked)="resetFilters.emit()"
             ></app-button>
           </div>
+
+          @if (createLabel(); as label) {
+            <div class="flex items-center pb-0.5">
+              <button
+                type="button"
+                class="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-primary px-5 text-sm font-semibold text-white shadow-card transition hover:-translate-y-0.5 hover:bg-primary-strong hover:shadow-card-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                (click)="createClicked.emit()"
+              >
+                <i class="fa-solid fa-plus text-sm" aria-hidden="true"></i>
+                <span>{{ label }}</span>
+              </button>
+            </div>
+          }
         </div>
       </div>
     </section>
@@ -62,9 +75,11 @@ export class GroupesFilters {
   readonly formations = input.required<DropdownOption[]>();
   readonly searchValue = input('');
   readonly formationValue = input<string | null>(null);
+  readonly createLabel = input<string | null>(null);
 
   // --- Outputs ---
   readonly searchChange = output<string>();
   readonly formationFilterChange = output<string | null>();
   readonly resetFilters = output<void>();
+  readonly createClicked = output<void>();
 }

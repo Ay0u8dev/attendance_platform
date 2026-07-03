@@ -2,6 +2,7 @@ package ma.eniad.attendanceservice.controller;
 
 import lombok.AllArgsConstructor;
 import ma.eniad.attendanceservice.annotation.RequireRole;
+import ma.eniad.attendanceservice.dto.AdminStudentAttendanceSummaryResponse;
 import ma.eniad.attendanceservice.dto.AdminOverviewResponse;
 import ma.eniad.attendanceservice.dto.AttendanceSessionDetailsResponse;
 import ma.eniad.attendanceservice.dto.AttendanceSessionSummaryResponse;
@@ -48,5 +49,15 @@ public class AttendanceAdminController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
     ) {
         return ResponseEntity.ok(attendanceQueryService.getAdminOverview(dateFrom, dateTo));
+    }
+
+    @RequireRole({"ADMIN"})
+    @GetMapping("/students/{studentId}/summary")
+    public ResponseEntity<AdminStudentAttendanceSummaryResponse> getStudentSummary(
+            @PathVariable Long studentId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
+    ) {
+        return ResponseEntity.ok(attendanceQueryService.getAdminStudentSummary(studentId, dateFrom, dateTo));
     }
 }

@@ -49,11 +49,13 @@ export class DataTable<T extends object> {
   readonly pageSizeOptions = input<readonly number[]>([5, 10, 20, 50]);
   readonly initialPageSize = input(10);
   readonly showToolbar = input(true);
+  readonly showResultSummary = input(true);
   readonly showColumnFilters = input(true);
   readonly showColumnVisibility = input(true);
   readonly enableRowSelection = input(false);
   readonly rowId = input<((row: T, index: number) => string) | undefined>(undefined);
   readonly rowClickable = input(false);
+  readonly paginationPlacement = input<'top' | 'bottom'>('bottom');
 
   readonly selectionChange = output<readonly T[]>();
   readonly bulkDeleteRequested = output<readonly T[]>();

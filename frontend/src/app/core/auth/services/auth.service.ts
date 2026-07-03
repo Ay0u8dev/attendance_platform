@@ -316,6 +316,7 @@ export class AuthService {
       const email = this.normalizeString(payload['email']);
       const firstName = this.normalizeString(payload['firstName']);
       const lastName = this.normalizeString(payload['lastName']);
+      const profileImageUrl = this.normalizeString(payload['profileImageUrl'] ?? payload['pfpUrl'] ?? payload['picture']);
       const firstLoginClaim = payload['firstLogin'];
       if (!id || !email) {
         return null;
@@ -331,6 +332,7 @@ export class AuthService {
         role,
         firstName: firstName ?? undefined,
         lastName: lastName ?? undefined,
+        profileImageUrl: profileImageUrl ?? undefined,
         firstLogin: typeof firstLoginClaim === 'boolean' ? firstLoginClaim : false,
       };
     } catch {

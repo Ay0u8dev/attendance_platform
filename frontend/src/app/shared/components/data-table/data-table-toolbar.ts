@@ -102,21 +102,25 @@ import { DataTableColumnVisibilityOption, DataTableToolbarFilter } from './data-
         }
       </div>
 
-      <div
-        class="flex flex-col gap-2 rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-secondaryText shadow-sm sm:flex-row sm:items-center sm:justify-between"
-      >
-        <p>
-          Showing <span class="font-semibold text-principalText">{{ filteredCount() }}</span> of
-          {{ totalCount() }} rows
-        </p>
+      @if (showResultSummary() || selectedCount() > 0) {
+        <div
+          class="flex flex-col gap-2 rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-secondaryText shadow-sm sm:flex-row sm:items-center sm:justify-between"
+        >
+          @if (showResultSummary()) {
+            <p>
+              Showing <span class="font-semibold text-principalText">{{ filteredCount() }}</span> of
+              {{ totalCount() }} rows
+            </p>
+          }
 
-        @if (selectedCount() > 0) {
-          <p>
-            <span class="font-semibold text-principalText">{{ selectedCount() }}</span> row(s)
-            selected
-          </p>
-        }
-      </div>
+          @if (selectedCount() > 0) {
+            <p>
+              <span class="font-semibold text-principalText">{{ selectedCount() }}</span> row(s)
+              selected
+            </p>
+          }
+        </div>
+      }
     </div>
   `,
   styleUrl: './data-table.css',
@@ -130,6 +134,7 @@ export class DataTableToolbar {
   readonly filteredCount = input(0);
   readonly totalCount = input(0);
   readonly selectedCount = input(0);
+  readonly showResultSummary = input(true);
 
   readonly searchValueChange = output<string>();
   readonly filterValueChange = output<{ columnId: string; value: string }>();

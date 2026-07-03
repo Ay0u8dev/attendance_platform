@@ -4,7 +4,7 @@
   [class.chart-shell-interactive]="!expanded()"
   [attr.tabindex]="expanded() ? null : 0"
   [attr.role]="expanded() ? null : 'button'"
-  [attr.aria-label]="expanded() ? null : 'Expand absence analytics chart'"
+  [attr.aria-label]="expanded() ? null : 'Expand attendance analytics chart'"
   (click)="requestExpand()"
   (keydown.enter)="requestExpand()"
   (keydown.space)="$event.preventDefault(); requestExpand()"
@@ -21,72 +21,108 @@
         [attr.aria-label]="accessibleSummary()"
       >
         @for (tick of yTicks(); track tick.value) {
-          <line class="grid-line" [attr.x1]="58" [attr.x2]="width() - 30" [attr.y1]="tick.y" [attr.y2]="tick.y"></line>
-          <text class="axis-label axis-label-y" [attr.x]="46" [attr.y]="tick.y + 4">{{ tick.value }}</text>
+          <line class="grid-line" [attr.x1]="plotLeft" [attr.x2]="width() - plotRight" [attr.y1]="tick.y" [attr.y2]="tick.y"></line>
+          <text class="axis-label axis-label-y" [attr.x]="plotLeft - 16" [attr.y]="tick.y + 4">{{ tick.value }}</text>
         }
 
-        <text class="axis-title" x="18" y="142" transform="rotate(-90 18 142)">Absences</text>
-        <path class="area-path" [attr.d]="areaPath()"></path>
-        <path class="line-path line-glow" [attr.d]="linePath()"></path>
-        <path class="line-path" [attr.d]="linePath()"></path>
+        <text
+          class="axis-title"
+          [attr.x]="axisTitleX"
+          [attr.y]="axisTitleY()"
+          [attr.transform]="'rotate(-90 ' + axisTitleX + ' ' + axisTitleY() + ')'"
+        >
+          Marks
+        </text>
 
         @for (point of chartPoints(); track point.detail; let index = $index) {
           @if (shouldShowLabel(index)) {
             <line
               class="x-tick"
-              [attr.x1]="point.x"
-              [attr.x2]="point.x"
+              [attr.x1]="point.labelX"
+              [attr.x2]="point.labelX"
               [attr.y1]="xTickStart()"
               [attr.y2]="xTickEnd()"
             ></line>
-            <text class="axis-label axis-label-x" [attr.x]="point.x" [attr.y]="xLabelY()">{{ point.label }}</text>
+            <text class="axis-label axis-label-x" [attr.x]="point.labelX" [attr.y]="xLabelY()">{{ point.label }}</text>
           }
 
           <g
-            class="data-point"
-            [class.data-point-peak]="point.isPeak"
+            class="bar-group"
+            [class.bar-group-peak]="point.isPeak"
             aria-hidden="true"
             (mouseenter)="showPoint(index)"
             (mouseleave)="hidePoint(index)"
           >
-            @if (point.isPeak) {
-              <circle class="peak-halo" [attr.cx]="point.x" [attr.cy]="point.y" r="12"></circle>
-            }
-            <circle class="point-hit-area" [attr.cx]="point.x" [attr.cy]="point.y" r="14"></circle>
-            <circle class="point-marker" [attr.cx]="point.x" [attr.cy]="point.y" [attr.r]="point.isPeak ? 5.5 : 4"></circle>
+            <rect
+              class="bar-hit-area"
+              [attr.x]="point.x - barWidth() - barGap - 12"
+              [attr.y]="plotTop"
+              [attr.width]="barWidth() * 3 + barGap * 2 + 24"
+              [attr.height]="plotBottom() - plotTop"
+              rx="12"
+            ></rect>
+            <rect
+              class="chart-bar chart-bar-present"
+              [attr.x]="point.x - barWidth() - barGap"
+              [attr.y]="point.presentY"
+              [attr.width]="barWidth()"
+              [attr.height]="point.presentHeight"
+              rx="6"
+            ></rect>
+            <rect
+              class="chart-bar chart-bar-absent"
+              [class.chart-bar-peak]="point.isPeak"
+              [attr.x]="point.x"
+              [attr.y]="point.absentY"
+              [attr.width]="barWidth()"
+              [attr.height]="point.absentHeight"
+              rx="6"
+            ></rect>
+            <rect
+              class="chart-bar chart-bar-open"
+              [attr.x]="point.x + barWidth() + barGap"
+              [attr.y]="point.openY"
+              [attr.width]="barWidth()"
+              [attr.height]="point.openHeight"
+              rx="6"
+            ></rect>
           </g>
         }
 
         @if (activePoint(); as point) {
           <line
             class="cursor-line"
-            [attr.x1]="point.x"
-            [attr.x2]="point.x"
+            [attr.x1]="point.labelX"
+            [attr.x2]="point.labelX"
             [attr.y1]="plotTop"
             [attr.y2]="plotBottom()"
           ></line>
           <g class="chart-tooltip" [attr.transform]="'translate(' + tooltipX() + ' ' + tooltipY() + ')'">
-            <rect width="210" height="76" rx="10"></rect>
+            <rect width="220" height="92" rx="12"></rect>
             <text class="tooltip-title" x="13" y="21">{{ point.detail }}</text>
-            <text class="tooltip-value" x="13" y="43">{{ point.absent }} absent</text>
-            <text class="tooltip-meta" x="13" y="62">
-              {{ point.sessions }} session(s) · {{ formatRate(point.rate) }} attendance
-            </text>
+            <text class="tooltip-value tooltip-present" x="13" y="43">{{ point.present }} present</text>
+            <text class="tooltip-value tooltip-absent" x="112" y="43">{{ point.absent }} absent</text>
+            <text class="tooltip-meta" x="13" y="65">{{ point.open }} open mark(s)</text>
+            <text class="tooltip-meta" x="13" y="82">{{ point.sessions }} session(s) - {{ formatRate(point.rate) }} attendance</text>
           </g>
         }
       </svg>
     </div>
 
     <div class="chart-footer" aria-hidden="true">
-      <span><i class="fa-solid fa-arrow-left-long"></i> Scroll to inspect the timeline</span>
-      <span class="chart-legend"><span></span> Absence evolution</span>
+      <span><i class="fa-solid fa-arrow-left-long"></i> Scroll to inspect captured days</span>
+      <span class="chart-legend">
+        <span class="legend-dot legend-present"></span> Present
+        <span class="legend-dot legend-absent"></span> Absent
+        <span class="legend-dot legend-open"></span> Open
+      </span>
     </div>
   } @else {
     <div class="empty-state">
-      <span class="empty-state-icon"><i class="fa-solid fa-chart-line" aria-hidden="true"></i></span>
+      <span class="empty-state-icon"><i class="fa-solid fa-chart-column" aria-hidden="true"></i></span>
       <div>
-        <p>No absences in this period</p>
-        <span>Choose another range or time view to inspect historical attendance.</span>
+        <p>No attendance data in this period</p>
+        <span>Days without captured sessions are hidden from this chart.</span>
       </div>
     </div>
   }

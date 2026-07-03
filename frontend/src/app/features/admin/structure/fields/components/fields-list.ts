@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 
 import { type Filiere } from '../../../../../core/structure/models/filiere.model';
-import { Button } from '../../../../../shared/components/button/button';
 import { IconButton } from '../../../../../shared/components/button/icon-button';
 import { DataTable } from '../../../../../shared/components/data-table/data-table';
 import { DataTableCellDef } from '../../../../../shared/components/data-table/data-table-cell-def';
@@ -11,30 +10,20 @@ import { FieldsFilters } from './fields-filters';
 @Component({
   selector: 'app-fields-list',
   standalone: true,
-  imports: [Button, DataTable, DataTableCellDef, IconButton, FieldsFilters],
+  imports: [DataTable, DataTableCellDef, IconButton, FieldsFilters],
   template: `
-
-    
-    <div class="mt-4 flex justify-end mb-4">
-      <app-button
-        label="Ajouter une filière"
-        icon="fa-solid fa-plus"
-        variant="primary"
-        [fullWidth]="false"
-        (clicked)="createClicked.emit()"
-      ></app-button>
-    </div>
 
     <app-fields-filters
       [searchValue]="searchQuery()"
+      createLabel="Ajouter une filière"
       (searchChange)="searchQuery.set($event)"
       (resetFilters)="resetFilters()"
+      (createClicked)="createClicked.emit()"
     ></app-fields-filters>
 
     <app-data-table
       title="Filières"
       description="Parcours rattachés aux cycles lorsque la formation le requiert."
-      [caption]="filteredFields().length + ' filière(s)'"
       [rows]="filteredFields()"
       [columns]="columns"
       [rowId]="fieldRowId"

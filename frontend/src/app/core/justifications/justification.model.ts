@@ -11,6 +11,7 @@ export interface JustificationDto {
   readonly studentName: string;
   readonly studentEmail: string | null;
   readonly studentCode: string | null;
+  readonly studentProfileImageUrl?: string | null;
   readonly courseLabel: string;
   readonly roomLabel: string | null;
   readonly absenceStartedAt: string;

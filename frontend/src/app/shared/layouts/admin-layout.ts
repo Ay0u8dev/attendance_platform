@@ -10,8 +10,9 @@ import {
   viewChild,
 } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 
+import { User } from '../../core/auth/models/auth.model';
 import { AuthService } from '../../core/auth/services/auth.service';
 import { AcademicYearContextService } from '../../core/structure/services/academic-year-context.service';
 
@@ -272,13 +273,21 @@ type UtilityItem = {
                       aria-haspopup="menu"
                       aria-label="Open user menu"
                     >
-                      <span
-                        class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary"
-                      >
-                        <i class="fa-solid fa-user-shield text-xs" aria-hidden="true"></i>
-                      </span>
+                      @if (userProfileImageUrl(); as imageUrl) {
+                        <img
+                          [src]="imageUrl"
+                          [alt]="userDisplayName()"
+                          class="h-7 w-7 rounded-lg border border-primary-soft object-cover"
+                        />
+                      } @else {
+                        <span
+                          class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-xs font-semibold text-primary"
+                        >
+                          {{ userInitials() }}
+                        </span>
+                      }
                       <span class="hidden text-sm font-medium text-principalText md:inline"
-                        >Prof. Anderson</span
+                        >{{ userDisplayName() }}</span
                       >
                       <!-- <i
                       class="fa-solid text-[0.6rem] text-secondaryText"
@@ -292,6 +301,11 @@ type UtilityItem = {
                       <div
                         class="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-line bg-surface p-2 shadow-shell"
                       >
+                        <div class="rounded-xl bg-surface-subtle px-3 py-3">
+                          <p class="truncate text-sm font-semibold text-principalText">{{ userDisplayName() }}</p>
+                          <p class="mt-0.5 truncate text-xs text-secondaryText">{{ userEmail() }}</p>
+                        </div>
+
                         <button
                           type="button"
                           class="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-secondaryText transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText"
@@ -333,6 +347,7 @@ type UtilityItem = {
           </div>
         </div>
       </div>
+
     </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -352,7 +367,6 @@ export class AdminLayout {
     { label: 'Justifications', route: '/justifications', icon: 'fa-regular fa-file-lines' },
     { label: 'Students', route: '/students', icon: 'fa-solid fa-user-graduate' },
     { label: 'Teachers', route: '/teachers', icon: 'fa-solid fa-chalkboard-user' },
-    { label: 'Inscription', route: '/inscription', icon: 'fa-solid fa-clipboard-list' },
     { label: 'Structure', route: '/structure', icon: 'fa-solid fa-sitemap' },
   ];
 
@@ -362,6 +376,13 @@ export class AdminLayout {
   readonly isSidebarCollapsed = signal(false);
   readonly isUserMenuOpen = signal(false);
   readonly isAcademicYearMenuOpen = signal(false);
+  readonly currentUser = toSignal(this.authService.currentUser$, {
+    initialValue: this.authService.currentUser,
+  });
+  readonly userDisplayName = computed(() => this.formatUserName(this.currentUser()));
+  readonly userEmail = computed(() => this.currentUser()?.email ?? 'admin@ump.ac.ma');
+  readonly userProfileImageUrl = computed(() => this.currentUser()?.profileImageUrl?.trim() || null);
+  readonly userInitials = computed(() => this.computeInitials(this.userDisplayName()));
   readonly activeAcademicYears = this.academicYearContext.activeAcademicYears;
   readonly selectedAcademicYearId = this.academicYearContext.selectedAcademicYearId;
   readonly selectedAcademicYearLabel = computed(
@@ -468,5 +489,30 @@ export class AdminLayout {
   logout(): void {
     this.isUserMenuOpen.set(false);
     this.authService.logout();
+  }
+
+  private formatUserName(user: User | null): string {
+    if (!user) {
+      return 'Admin';
+    }
+
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+    if (fullName) {
+      return fullName;
+    }
+
+    return user.email.split('@')[0] || user.email;
+  }
+
+  private computeInitials(value: string): string {
+    const initials = value
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase();
+
+    return initials || 'AD';
   }
 }

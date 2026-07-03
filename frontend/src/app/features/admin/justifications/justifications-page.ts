@@ -10,7 +10,6 @@ import { JustificationService } from '../../../core/justifications/justification
 import { initials } from '../../../core/admin/models/admin-user.model';
 import { Button } from '../../../shared/components/button/button';
 import { DropdownFilter } from '../../../shared/components/dropdown-filter/dropdown-filter';
-import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
 import { ToastService } from '../../../shared/components/toast/toast.service';
 
@@ -20,23 +19,47 @@ type Option = { readonly value: string; readonly label: string };
 
 @Component({
   selector: 'app-justifications-page',
-  imports: [Button, DropdownFilter, PageHeader, StatusBadge],
+  imports: [Button, DropdownFilter, StatusBadge],
   template: `
     <section class="space-y-6">
-      <app-page-header
-        title="Justifications"
-        description="Review absence justifications, inspect the related session, and keep admin decisions traceable."
-        [meta]="pendingCount() + ' pending'"
-      ></app-page-header>
+      <header class="rounded-[1.75rem] border border-line bg-surface px-5 py-6 shadow-card sm:px-7">
+        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Academic attendance</p>
+        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-principalText">Justifications</h1>
+      </header>
 
       <div class="grid gap-3 md:grid-cols-4">
         @for (metric of metrics(); track metric.label) {
-          <article class="rounded-2xl border border-line bg-surface p-4 shadow-card">
-            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-              {{ metric.label }}
-            </p>
-            <p class="mt-2 text-2xl font-semibold text-principalText">{{ metric.value }}</p>
-            <p class="mt-1 text-sm text-secondaryText">{{ metric.caption }}</p>
+          <article
+            class="rounded-[1.35rem] border bg-surface p-4 shadow-card transition hover:-translate-y-0.5 hover:shadow-card-strong"
+            [class.border-primary-soft]="metric.variant === 'info'"
+            [class.border-warning-soft]="metric.variant === 'warning'"
+            [class.border-success/20]="metric.variant === 'success'"
+            [class.border-danger/20]="metric.variant === 'error'"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border"
+                [class.border-primary-soft]="metric.variant === 'info'"
+                [class.bg-primary-soft]="metric.variant === 'info'"
+                [class.text-primary]="metric.variant === 'info'"
+                [class.border-warning-soft]="metric.variant === 'warning'"
+                [class.bg-warning-soft]="metric.variant === 'warning'"
+                [class.text-warning]="metric.variant === 'warning'"
+                [class.border-success/20]="metric.variant === 'success'"
+                [class.bg-secondary-soft]="metric.variant === 'success'"
+                [class.text-secondary-strong]="metric.variant === 'success'"
+                [class.border-danger/20]="metric.variant === 'error'"
+                [class.bg-danger-soft]="metric.variant === 'error'"
+                [class.text-danger]="metric.variant === 'error'"
+              >
+                <i [class]="metric.icon" aria-hidden="true"></i>
+              </span>
+              <div class="min-w-0">
+                <p class="text-2xl font-semibold leading-none text-principalText">{{ metric.value }}</p>
+                <p class="mt-1 text-sm font-semibold text-principalText">{{ metric.label }}</p>
+                <p class="mt-0.5 truncate text-xs text-secondaryText">{{ metric.caption }}</p>
+              </div>
+            </div>
           </article>
         }
       </div>
@@ -184,12 +207,20 @@ type Option = { readonly value: string; readonly label: string };
                       class="flex min-w-0 flex-1 items-center gap-3 text-left"
                       (click)="select(item)"
                     >
-                      <span
-                        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-sm font-semibold text-primary"
-                        aria-hidden="true"
-                      >
-                        {{ avatar(item) }}
-                      </span>
+                      @if (studentImageUrl(item); as imageUrl) {
+                        <img
+                          [src]="imageUrl"
+                          [alt]="studentName(item)"
+                          class="h-12 w-12 shrink-0 rounded-2xl border border-primary-soft object-cover shadow-sm"
+                        />
+                      } @else {
+                        <span
+                          class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-sm font-semibold text-primary"
+                          aria-hidden="true"
+                        >
+                          {{ avatar(item) }}
+                        </span>
+                      }
                       <span class="min-w-0">
                         <span class="block truncate font-semibold text-principalText">
                           {{ studentName(item) }}
@@ -273,12 +304,20 @@ type Option = { readonly value: string; readonly label: string };
 
             <div class="space-y-5 px-5 py-5">
               <div class="flex items-center gap-3">
-                <span
-                  class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-lg font-semibold text-primary"
-                  aria-hidden="true"
-                >
-                  {{ avatar(detail) }}
-                </span>
+                @if (studentImageUrl(detail); as imageUrl) {
+                  <img
+                    [src]="imageUrl"
+                    [alt]="studentName(detail)"
+                    class="h-16 w-16 shrink-0 rounded-2xl border border-primary-soft object-cover shadow-sm"
+                  />
+                } @else {
+                  <span
+                    class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-lg font-semibold text-primary"
+                    aria-hidden="true"
+                  >
+                    {{ avatar(detail) }}
+                  </span>
+                }
                 <div class="min-w-0">
                   <p class="truncate font-semibold text-principalText">
                     {{ detail.studentEmail || 'Email not provided' }}
@@ -350,6 +389,16 @@ type Option = { readonly value: string; readonly label: string };
                       {{ detail.attachmentUrl ? 'Student-provided attachment' : 'No attachment provided' }}
                     </p>
                   </div>
+                  @if (detail.attachmentUrl) {
+                    <a
+                      class="ml-auto inline-flex h-10 items-center rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-primary transition hover:border-primary-soft hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                      [href]="detail.attachmentUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Open
+                    </a>
+                  }
                 </div>
               </section>
 
@@ -444,21 +493,29 @@ export class JustificationsPage {
       label: 'Total',
       value: this.justifications().length,
       caption: 'requests in database',
+      variant: 'info' as const,
+      icon: 'fa-regular fa-folder-open',
     },
     {
       label: 'Pending',
       value: this.countFor('PENDING'),
       caption: 'waiting for admin review',
+      variant: 'warning' as const,
+      icon: 'fa-regular fa-clock',
     },
     {
       label: 'Approved',
       value: this.countFor('APPROVED'),
       caption: 'accepted absences',
+      variant: 'success' as const,
+      icon: 'fa-solid fa-check',
     },
     {
       label: 'Rejected',
       value: this.countFor('REJECTED'),
       caption: 'refused requests',
+      variant: 'error' as const,
+      icon: 'fa-solid fa-xmark',
     },
   ]);
 
@@ -503,8 +560,6 @@ export class JustificationsPage {
       return this.searchText(item).includes(search);
     });
   });
-
-  readonly pendingCount = computed(() => this.countFor('PENDING'));
 
   readonly selected = computed<JustificationDto | null>(() => {
     const id = this.selectedId();
@@ -666,6 +721,10 @@ export class JustificationsPage {
 
   avatar(item: JustificationDto): string {
     return initials(this.studentName(item));
+  }
+
+  studentImageUrl(item: JustificationDto): string | null {
+    return item.studentProfileImageUrl?.trim() || null;
   }
 
   groupLabel(groupId: number | null): string {
