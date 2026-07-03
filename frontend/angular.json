@@ -36,7 +36,10 @@
                 "localhost",
                 "host.docker.internal",
                 "attendance-platform.ma",
-                "192.168.100.73"
+                "192.168.100.73",
+                "yunoserver.tail8ea16a.ts.net/*",
+                "yunoserver.tail8ea16a.ts.net",
+                "attendance-platform.duckdns.org"
               ]
             },
             "ssr": {
@@ -59,8 +62,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "16kB",
+                  "maximumError": "32kB"
                 }
               ],
               "outputHashing": "all"
@@ -82,7 +85,10 @@
               "host.docker.internal",
               "localhost",
               "attendance-platform.ma",
-              "192.168.100.73"
+              "192.168.100.73",
+              "yunoserver.tail8ea16a.ts.net/*",
+              "yunoserver.tail8ea16a.ts.net",
+              "attendance-platform.duckdns.org"
             ]
           },
           "configurations": {
@@ -91,7 +97,10 @@
                 "host.docker.internal",
                 "localhost",
                 "attendance-platform.ma",
-                "192.168.100.73"
+                "192.168.100.73",
+                "yunoserver.tail8ea16a.ts.net/*",
+                "yunoserver.tail8ea16a.ts.net",
+                "attendance-platform.duckdns.org"
               ]
             },
             "production": {

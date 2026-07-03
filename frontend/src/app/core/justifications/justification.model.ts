@@ -21,15 +21,33 @@ export interface JustificationDto {
   readonly status: JustificationStatus;
   readonly decisionComment: string | null;
   readonly decidedBy: string | null;
-  readonly decidedByRole: 'ADMIN' | 'TEACHER' | null;
+  readonly decidedByRole: 'ADMIN' | 'TEACHER' | string | null;
   readonly decidedAt: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+
+  readonly module: string;
+  readonly sessionDate: string;
+  readonly submittedAt: string;
+  readonly documentUrl: string | null;
+  readonly documentName: string | null;
+  readonly downloadUrl: string | null;
+  readonly teacherComment: string | null;
+  readonly reviewedBy: string | null;
+  readonly reviewerRole: string | null;
+  readonly reviewedAt: string | null;
 }
 
 export interface DecisionJustificationRequest {
   readonly status: Exclude<JustificationStatus, 'PENDING'>;
   readonly comment?: string | null;
+}
+
+export interface ReviewJustificationRequest {
+  readonly reviewerId?: string;
+  readonly reviewerName: string;
+  readonly reviewerRole: 'TEACHER' | 'ADMIN';
+  readonly comment?: string;
 }
 
 export interface SubmitJustificationRequest {

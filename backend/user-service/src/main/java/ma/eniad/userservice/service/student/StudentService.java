@@ -53,12 +53,6 @@ public class StudentService {
     @Value("${app.allowed-domain}")
     private String allowedDomain;
 
-    @Value("${app.profile-photos.storage-dir:uploads/profile-photos}")
-    private String profilePhotoStorageDir;
-
-    @Value("${app.profile-photos.public-path:/api/users/public/profile-photos}")
-    private String profilePhotoPublicPath;
-
     // -------------------------------------------------------------------------
     // Create
     // -------------------------------------------------------------------------
@@ -79,7 +73,9 @@ public class StudentService {
         student.getRoles().add(Role.STUDENT);
         applyAccountState(request, student, true, true);
         try {
-            return studentMapper.toResponse(studentRepository.save(student));
+            StudentResponseDTO dto = studentMapper.toResponse(studentRepository.save(student));
+            populateGroupName(dto);
+            return dto;
         } catch (DataIntegrityViolationException ex) {
             if (normalizedEmail != null && userRepository.existsByEmail(normalizedEmail)) {
                 throw new DuplicateResourceException("Email already exists");
@@ -95,13 +91,17 @@ public class StudentService {
     // Read
     // -------------------------------------------------------------------------
     public StudentResponseDTO getById(Long id) {
-        return studentMapper.toResponse(findStudentById(id));
+        StudentResponseDTO dto = studentMapper.toResponse(findStudentById(id));
+        populateGroupName(dto);
+        return dto;
     }
 
     public List<StudentResponseDTO> getAll() {
-        return studentRepository.findAll().stream()
+        List<StudentResponseDTO> dtos = studentRepository.findAll().stream()
                 .map(studentMapper::toResponse)
                 .toList();
+        populateGroupNames(dtos);
+        return dtos;
     }
 
     public List<StudentResponseDTO> getByGroupeId(Long groupeId) {
@@ -109,9 +109,11 @@ public class StudentService {
             throw new ResourceNotFoundException("Groupe not found");
         }
 
-        return studentRepository.findByGroupeId(groupeId).stream()
+        List<StudentResponseDTO> dtos = studentRepository.findByGroupeId(groupeId).stream()
                 .map(studentMapper::toResponse)
                 .toList();
+        populateGroupNames(dtos);
+        return dtos;
     }
 
     public StudentProfileDto getCurrentProfile() {
@@ -119,31 +121,10 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentProfileDto updateCurrentProfilePhoto(MultipartFile file) {
+    public StudentProfileDto updateCurrentProfilePhoto(String pfpUrl) {
         Student student = findCurrentStudent();
-        validateProfilePhoto(file);
-        String previousPfpUrl = student.getPfpUrl();
-
-        String extension = extensionForContentType(file.getContentType());
-        String filename = "student-" + student.getId() + "-" + UUID.randomUUID() + extension;
-
-        try {
-            Path directory = Paths.get(profilePhotoStorageDir).toAbsolutePath().normalize();
-            Files.createDirectories(directory);
-
-            Path target = directory.resolve(filename).normalize();
-            if (!target.startsWith(directory)) {
-                throw new InvalidInputException("Invalid profile photo path");
-            }
-
-            file.transferTo(target);
-        } catch (IOException ex) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to save profile photo");
-        }
-
-        student.setPfpUrl(normalizePublicPhotoPath() + "/" + filename);
+        student.setPfpUrl(pfpUrl);
         studentRepository.save(student);
-        deletePreviousStoredProfilePhoto(previousPfpUrl, student.getPfpUrl());
         return buildCurrentProfile(student);
     }
 
@@ -199,7 +180,9 @@ public class StudentService {
         studentMapper.updateEntity(request, student);
         applyAccountState(request, student, student.isEnabled(), student.isFirstLogin());
         try {
-            return studentMapper.toResponse(studentRepository.save(student));
+            StudentResponseDTO dto = studentMapper.toResponse(studentRepository.save(student));
+            populateGroupName(dto);
+            return dto;
         } catch (DataIntegrityViolationException ex) {
             if (request.getEmail() != null) {
                 userRepository.findByEmail(request.getEmail())
@@ -235,83 +218,7 @@ public class StudentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
     }
 
-    private void validateProfilePhoto(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new InvalidInputException("Profile photo is required");
-        }
 
-        if (file.getSize() > 5 * 1024 * 1024) {
-            throw new InvalidInputException("Profile photo must be 5MB or less");
-        }
-
-        String contentType = file.getContentType();
-        if (!"image/jpeg".equals(contentType)
-                && !"image/png".equals(contentType)
-                && !"image/webp".equals(contentType)) {
-            throw new InvalidInputException("Profile photo must be a JPEG, PNG, or WebP image");
-        }
-    }
-
-    private String extensionForContentType(String contentType) {
-        if ("image/png".equals(contentType)) {
-            return ".png";
-        }
-        if ("image/webp".equals(contentType)) {
-            return ".webp";
-        }
-        return ".jpg";
-    }
-
-    private String normalizePublicPhotoPath() {
-        if (profilePhotoPublicPath == null || profilePhotoPublicPath.isBlank()) {
-            return "/api/users/public/profile-photos";
-        }
-
-        String normalized = profilePhotoPublicPath.trim();
-        while (normalized.endsWith("/")) {
-            normalized = normalized.substring(0, normalized.length() - 1);
-        }
-        return normalized.isEmpty() ? "/api/users/public/profile-photos" : normalized;
-    }
-
-    private void deletePreviousStoredProfilePhoto(String previousPfpUrl, String currentPfpUrl) {
-        if (previousPfpUrl == null || previousPfpUrl.isBlank() || previousPfpUrl.equals(currentPfpUrl)) {
-            return;
-        }
-
-        Path oldFile = storedProfilePhotoPath(previousPfpUrl);
-        if (oldFile == null) {
-            return;
-        }
-
-        try {
-            Files.deleteIfExists(oldFile);
-        } catch (IOException ignored) {
-            // A stale profile photo should not fail a successful profile update.
-        }
-    }
-
-    private Path storedProfilePhotoPath(String pfpUrl) {
-        String publicPath = normalizePublicPhotoPath() + "/";
-        String normalizedUrl = pfpUrl.trim();
-        if (!normalizedUrl.startsWith(publicPath)) {
-            return null;
-        }
-
-        String filename = normalizedUrl.substring(publicPath.length());
-        int queryIndex = filename.indexOf('?');
-        if (queryIndex >= 0) {
-            filename = filename.substring(0, queryIndex);
-        }
-
-        if (!filename.matches("[A-Za-z0-9._-]+")) {
-            return null;
-        }
-
-        Path directory = Paths.get(profilePhotoStorageDir).toAbsolutePath().normalize();
-        Path file = directory.resolve(filename).normalize();
-        return file.startsWith(directory) ? file : null;
-    }
 
     private void applyEnrollmentDetails(StudentProfileDto.StudentProfileDtoBuilder builder, Student student) {
         List<AnneeUniversitaire> activeYears = anneeUniversitaireRepository.findByActiveTrue();
@@ -398,5 +305,49 @@ public class StudentService {
 
         student.setEnabled(enabled);
         student.setFirstLogin(enabled && firstLogin);
+    }
+
+    private void populateGroupName(StudentResponseDTO dto) {
+        if (dto == null) {
+            return;
+        }
+        List<AnneeUniversitaire> activeYears = anneeUniversitaireRepository.findByActiveTrue();
+        if (activeYears == null || activeYears.isEmpty()) {
+            return;
+        }
+        Long activeYearId = activeYears.get(0).getId();
+        inscriptionRepository.findActiveByStudentIdAndYearId(dto.getId(), activeYearId)
+                .ifPresent(inscription -> {
+                    if (inscription.getGroupe() != null) {
+                        dto.setGroupeName(inscription.getGroupe().getName());
+                    }
+                });
+    }
+
+    private void populateGroupNames(List<StudentResponseDTO> dtos) {
+        if (dtos == null || dtos.isEmpty()) {
+            return;
+        }
+        List<AnneeUniversitaire> activeYears = anneeUniversitaireRepository.findByActiveTrue();
+        if (activeYears == null || activeYears.isEmpty()) {
+            return;
+        }
+        Long activeYearId = activeYears.get(0).getId();
+        List<Inscription> inscriptions = inscriptionRepository.findActiveByYearId(activeYearId);
+        if (inscriptions == null) {
+            return;
+        }
+
+        java.util.Map<Long, String> studentGroupMap = inscriptions.stream()
+                .filter(i -> i.getStudent() != null && i.getGroupe() != null)
+                .collect(java.util.stream.Collectors.toMap(
+                        i -> i.getStudent().getId(),
+                        i -> i.getGroupe().getName(),
+                        (existing, replacement) -> existing
+                ));
+
+        for (StudentResponseDTO dto : dtos) {
+            dto.setGroupeName(studentGroupMap.get(dto.getId()));
+        }
     }
 }

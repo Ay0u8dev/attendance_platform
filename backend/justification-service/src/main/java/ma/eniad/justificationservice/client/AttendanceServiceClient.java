@@ -1,9 +1,9 @@
 package ma.eniad.justificationservice.client;
 
-import ma.eniad.justificationservice.dto.AttendanceJustificationRequest;
 import ma.eniad.justificationservice.dto.AttendanceJustificationContext;
-import org.springframework.web.bind.annotation.GetMapping;
+import ma.eniad.justificationservice.dto.AttendanceJustificationRequest;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;

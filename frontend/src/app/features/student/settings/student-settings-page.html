@@ -1,0 +1,105 @@
+<section class="settings-page">
+  <app-page-header
+    eyebrow="Espace etudiant"
+    title="Parametres"
+    description="Gerez votre compte, la securite et vos preferences d utilisation."
+  ></app-page-header>
+
+  <section class="settings-account-card">
+    <div class="settings-account-header">
+      <span class="settings-avatar">{{ initials() }}</span>
+      <div class="min-w-0">
+        <h2 class="settings-account-name">{{ fullName() }}</h2>
+        <p class="settings-account-email">{{ email() }}</p>
+        <span class="settings-account-role">
+          <span class="h-2 w-2 rounded-full bg-secondary"></span>
+          Compte etudiant
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <div class="settings-grid settings-grid--split">
+    <app-settings-section-card
+      title="Compte"
+      description="Informations principales liees a votre session."
+      icon="fa-solid fa-user"
+    >
+      <div class="settings-info-row">
+        <span class="settings-info-label">Nom affiche</span>
+        <span class="settings-info-value">{{ fullName() }}</span>
+      </div>
+      <div class="settings-info-row">
+        <span class="settings-info-label">Adresse e-mail</span>
+        <span class="settings-info-value">{{ email() }}</span>
+      </div>
+      <div class="settings-info-row">
+        <span class="settings-info-label">Role</span>
+        <span class="settings-info-value">Etudiant</span>
+      </div>
+    </app-settings-section-card>
+
+    <app-settings-section-card
+      title="Securite"
+      description="Etat de votre connexion et source d authentification."
+      icon="fa-solid fa-lock"
+    >
+      <div class="settings-info-row">
+        <span class="settings-info-label">Session</span>
+        <span class="settings-info-value">Connecte</span>
+      </div>
+      <div class="settings-info-row">
+        <span class="settings-info-label">Authentification</span>
+        <span class="settings-info-value">Institutionnelle</span>
+      </div>
+      <div class="settings-info-row">
+        <span class="settings-info-label">Profil</span>
+        <span class="settings-info-value">Synchronise</span>
+      </div>
+    </app-settings-section-card>
+  </div>
+
+  <app-settings-section-card
+    title="Preferences"
+    description="Ajustez les notifications utiles pour votre suivi d assiduite."
+    icon="fa-solid fa-sliders"
+  >
+    <div class="settings-toggle-row">
+      <div class="settings-toggle-copy">
+        <p class="settings-toggle-title">Notifications par e-mail</p>
+        <p class="settings-toggle-description">
+          Recevoir un rappel lorsqu une justification est traitee.
+        </p>
+      </div>
+      <button
+        type="button"
+        class="settings-toggle"
+        role="switch"
+        [attr.aria-checked]="emailNotifications()"
+        [attr.aria-label]="'Notifications par e-mail'"
+        (click)="toggleEmailNotifications()"
+      >
+        <span class="settings-toggle-thumb"></span>
+      </button>
+    </div>
+
+    <div class="settings-toggle-row mt-3">
+      <div class="settings-toggle-copy">
+        <p class="settings-toggle-title">Rappels de seance</p>
+        <p class="settings-toggle-description">
+          Afficher les alertes liees aux absences recentes sur le tableau de bord.
+        </p>
+      </div>
+      <button
+        type="button"
+        class="settings-toggle"
+        role="switch"
+        [attr.aria-checked]="sessionReminders()"
+        [attr.aria-label]="'Rappels de seance'"
+        (click)="toggleSessionReminders()"
+      >
+        <span class="settings-toggle-thumb"></span>
+      </button>
+    </div>
+  </app-settings-section-card>
+</section>

@@ -62,8 +62,9 @@ public class AttendanceUpdateController {
     public ResponseEntity<Void> justifyAbsenceInternally(@PathVariable Long sessionId,
                                                          @PathVariable Long studentId,
                                                          @RequestHeader(value = "X-Request-Source", required = false) String requestSource,
+                                                         @RequestHeader(value = "X-Internal-Service-Token", required = false) String internalToken,
                                                          @Valid @RequestBody JustifyAbsenceRequest request) {
-        attendanceUpdateService.justifyFinalizedAbsence(requestSource, sessionId, studentId, request);
+        attendanceUpdateService.justifyFinalizedAbsence(requestSource, internalToken, sessionId, studentId, request);
         return ResponseEntity.noContent().build();
     }
 

@@ -3,14 +3,14 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://attendance-db:5432/attendance_db
+    url: ${DATABASE_URL:jdbc:postgresql://attendance-db:5432/attendance_db}
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   data:
     redis:
-      host: redis
+      host: ${REDIS_HOST:redis}
       port: 6379
 
   jpa:
@@ -26,8 +26,7 @@ services:
 
 attendance:
   internal:
-    face-service-token: ${FACE_ATTENDANCE_INTERNAL_TOKEN}
-    qr-service-token: ${QR_ATTENDANCE_INTERNAL_TOKEN}
+    service-token: ${INTERNAL_SERVICE_TOKEN}
   session:
     auto-end-duration: PT30M
     finalized-state-retention: PT1H
@@ -40,3 +39,15 @@ attendance:
     lease-duration: ${ATTENDANCE_LOCK_LEASE_DURATION:PT2M}
     acquire-timeout: ${ATTENDANCE_LOCK_ACQUIRE_TIMEOUT:PT2S}
     retry-interval: ${ATTENDANCE_LOCK_RETRY_INTERVAL:PT0.05S}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+      discovery:
+        enabled: false
+  endpoint:
+    health:
+      probes:
+        enabled: true

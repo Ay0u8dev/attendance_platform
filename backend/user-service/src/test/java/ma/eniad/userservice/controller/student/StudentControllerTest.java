@@ -19,6 +19,7 @@ import ma.eniad.userservice.dto.student.StudentProfileDto;
 import ma.eniad.userservice.dto.student.StudentRequestDTO;
 import ma.eniad.userservice.dto.student.StudentResponseDTO;
 import ma.eniad.userservice.entity.enums.Role;
+import ma.eniad.userservice.service.CloudflareR2Service;
 import ma.eniad.userservice.service.student.StudentService;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,9 +30,12 @@ class StudentControllerTest {
         @Mock
         private StudentService studentService;
 
+        @Mock
+        private CloudflareR2Service r2Service;
+
         @BeforeEach
         void setUp() {
-                controller = new StudentController(studentService);
+                controller = new StudentController(studentService, r2Service);
         }
 
     @Test

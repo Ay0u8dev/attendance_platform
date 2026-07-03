@@ -11,14 +11,6 @@ services:
       - "traefik.http.middlewares.forward-auth.forwardauth.address=http://auth-service:8080/auth/validate"
       - "traefik.http.middlewares.forward-auth.forwardauth.authResponseHeaders=X-User-Id,X-User-Roles,X-User-Email"
 
-      - "traefik.http.middlewares.sanitize-auth-headers.headers.customrequestheaders.X-User-Id="
-      - "traefik.http.middlewares.sanitize-auth-headers.headers.customrequestheaders.X-User-Role="
-      - "traefik.http.middlewares.sanitize-auth-headers.headers.customrequestheaders.X-User-Roles="
-      - "traefik.http.middlewares.sanitize-auth-headers.headers.customrequestheaders.X-User-Email="
-      - "traefik.http.middlewares.sanitize-auth-headers.headers.customrequestheaders.X-Request-Source="
-      - "traefik.http.middlewares.sanitize-auth-headers.headers.customrequestheaders.X-Internal-Service-Token="
-      - "traefik.http.middlewares.inject-face-internal-token.headers.customrequestheaders.X-Internal-Service-Token=${FACE_SERVICE_INTERNAL_TOKEN}"
-
       - "traefik.http.middlewares.strip-api-auth.stripprefix.prefixes=/api"
       - "traefik.http.middlewares.strip-api-user.stripprefix.prefixes=/api"
       - "traefik.http.middlewares.strip-api-attendance.stripprefix.prefixes=/api"
@@ -116,14 +108,12 @@ services:
       - "traefik.enable=true"
 
       # Router
-      - "traefik.http.routers.user-public-profile-photos.rule=PathPrefix(`/api/users/public/profile-photos`)"
-      - "traefik.http.routers.user-public-profile-photos.entrypoints=web"
+
       - "traefik.http.routers.user.rule=PathPrefix(`/api/users`) && !PathPrefix(`/api/users/internal`)"
       - "traefik.http.routers.user.entrypoints=web"
 
       # Attach middlewares
-      - "traefik.http.routers.user-public-profile-photos.middlewares=strip-api-user"
-      - "traefik.http.routers.user-public-profile-photos.service=user"
+
       - "traefik.http.routers.user.middlewares=forward-auth,strip-api-user"
 
       # Internal port
@@ -193,7 +183,7 @@ services:
   qr-service:
     build:
       context: ./backend/qr-service
-      dockerfile: ./Dockerfile.prod.example
+      dockerfile: ./Dockerfile.prod
     container_name: qr-service
     labels:
       - "traefik.enable=true"

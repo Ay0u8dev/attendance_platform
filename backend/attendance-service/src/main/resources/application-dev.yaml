@@ -32,8 +32,7 @@ services:
 
 attendance:
   internal:
-    face-service-token: ${FACE_ATTENDANCE_INTERNAL_TOKEN:replace-with-a-long-random-secret}
-    qr-service-token: ${QR_ATTENDANCE_INTERNAL_TOKEN:replace-with-another-long-random-secret}
+    service-token: ${INTERNAL_SERVICE_TOKEN:internal_service_token_abdoelfadili}
   session:
     auto-end-duration: PT30M
     finalized-state-retention: PT1H

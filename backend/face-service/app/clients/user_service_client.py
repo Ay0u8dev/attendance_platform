@@ -21,7 +21,7 @@ class UserServiceClient:
         student_id: int,
         request: FaceProfilePersistenceRequest,
     ) -> UserServiceFaceProfileResponse:
-        service_token = settings.face_service_internal_token.strip()
+        service_token = settings.internal_service_token.strip()
         if not service_token:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -76,7 +76,7 @@ class UserServiceClient:
         return result
 
     async def get_face_profile(self, student_id: int) -> StoredFaceProfileResponse:
-        service_token = settings.face_service_internal_token.strip()
+        service_token = settings.internal_service_token.strip()
         if not service_token:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

@@ -11,3 +11,10 @@ spring:
 app:
   database-seeding:
     enabled: false
+
+cloudflare:
+  r2:
+    endpoint: https://dummy.r2.test
+    access-key: dummy-access-key
+    secret-key: dummy-secret-key
+    bucket-name: dummy-bucket

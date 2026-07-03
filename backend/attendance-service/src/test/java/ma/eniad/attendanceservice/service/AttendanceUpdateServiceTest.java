@@ -67,15 +67,11 @@ class AttendanceUpdateServiceTest {
         );
 
         // Ensure internal updates pass auth checks during unit tests
-        java.lang.reflect.Field qrTokenField;
-        java.lang.reflect.Field faceTokenField;
+        java.lang.reflect.Field internalTokenField;
         try {
-            qrTokenField = AttendanceUpdateService.class.getDeclaredField("qrServiceToken");
-            faceTokenField = AttendanceUpdateService.class.getDeclaredField("faceServiceToken");
-            qrTokenField.setAccessible(true);
-            faceTokenField.setAccessible(true);
-            qrTokenField.set(attendanceUpdateService, "test-internal-token");
-            faceTokenField.set(attendanceUpdateService, "test-internal-token");
+            internalTokenField = AttendanceUpdateService.class.getDeclaredField("internalServiceToken");
+            internalTokenField.setAccessible(true);
+            internalTokenField.set(attendanceUpdateService, "test-internal-token");
         } catch (NoSuchFieldException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
@@ -170,6 +166,7 @@ class AttendanceUpdateServiceTest {
 
         attendanceUpdateService.justifyFinalizedAbsence(
                 "justification-service",
+                "test-internal-token",
                 100L,
                 10L,
                 new JustifyAbsenceRequest(50L, "1", "ADMIN")
@@ -193,6 +190,7 @@ class AttendanceUpdateServiceTest {
 
         assertThatThrownBy(() -> attendanceUpdateService.justifyFinalizedAbsence(
                 "justification-service",
+                "test-internal-token",
                 100L,
                 10L,
                 new JustifyAbsenceRequest(50L, "1", "ADMIN")

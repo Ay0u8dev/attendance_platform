@@ -10,14 +10,22 @@ import org.springframework.stereotype.Component;
 public class FeignUserContextInterceptor implements RequestInterceptor {
 
     private final String applicationName;
+    private final String internalServiceToken;
 
-    public FeignUserContextInterceptor(@Value("${spring.application.name:unknown-service}") String applicationName) {
+    public FeignUserContextInterceptor(
+            @Value("${spring.application.name:unknown-service}") String applicationName,
+            @Value("${attendance.internal.service-token:}") String internalServiceToken) {
         this.applicationName = applicationName;
+        this.internalServiceToken = internalServiceToken;
     }
 
     @Override
     public void apply(RequestTemplate template) {
         template.header("X-Request-Source", applicationName);
+
+        if (internalServiceToken != null && !internalServiceToken.isBlank()) {
+            template.header("X-Internal-Service-Token", internalServiceToken);
+        }
 
         UserContext.UserInfo user = UserContext.getCurrentUser();
         if (user == null || user.userId() == null) {

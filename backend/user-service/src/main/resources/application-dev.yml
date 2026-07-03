@@ -27,8 +27,12 @@ spring:
       max-request-size: 10MB
 
 app:
-  profile-photos:
-    storage-dir: ${PROFILE_PHOTOS_STORAGE_DIR:uploads/profile-photos}
-    public-path: ${PROFILE_PHOTOS_PUBLIC_PATH:/api/users/public/profile-photos}
   internal:
-    face-service-token: ${FACE_SERVICE_INTERNAL_TOKEN:replace-with-a-long-random-secret}
+    service-token: ${INTERNAL_SERVICE_TOKEN:internal_service_token_abdoelfadili}
+
+cloudflare:
+  r2:
+    endpoint: ${R2_ENDPOINT:https://dummy.r2.cloudflarestorage.com}
+    access-key: ${R2_ACCESS_KEY:dummy-access-key}
+    secret-key: ${R2_SECRET_KEY:dummy-secret-key}
+    bucket-name: ${R2_BUCKET_NAME:dummy-bucket}

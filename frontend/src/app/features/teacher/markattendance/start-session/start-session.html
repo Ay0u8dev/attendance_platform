@@ -169,6 +169,18 @@
         </div>
       </div>
 
+      <div class="config-field duration-field">
+        <label class="field-label">DUREE PREVUE</label>
+        <div class="duration-preview-card">
+          <i class="fa-regular fa-clock" aria-hidden="true"></i>
+          <div>
+            <p class="duration-preview-value">{{ sessionDurationLabel() }}</p>
+            <p class="duration-preview-meta">{{ sessionSchedulePreview() }}</p>
+          </div>
+          <a routerLink="/teacher/settings" class="duration-preview-link">Modifier</a>
+        </div>
+      </div>
+
       <div class="config-field gps-config-field">
         <div class="map-header">
           <label class="field-label">CARTE GPS</label>
@@ -216,7 +228,7 @@
       {{ starting() ? 'Demarrage...' : 'Demarrer la session' }}
     </button>
     <p class="start-notice">
-      En demarrant la session, les donnees seront synchronisees avec le serveur academique.
+      Duree configuree : {{ sessionDurationLabel() }}. Les donnees seront synchronisees avec le serveur academique.
     </p>
   </div>
 </div>
@@ -241,6 +253,14 @@
         <div class="detail-row">
           <span class="detail-key">Groupes</span>
           <span class="detail-val">{{ selectedGroups().length }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">Duree</span>
+          <span class="detail-val">{{ sessionDurationLabel() }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">Horaire prevu</span>
+          <span class="detail-val">{{ sessionSchedulePreview() }}</span>
         </div>
         <div class="detail-row">
           <span class="detail-key">Methode</span>

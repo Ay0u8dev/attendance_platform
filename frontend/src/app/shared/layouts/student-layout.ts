@@ -326,6 +326,7 @@ export class StudentLayout {
     '/student/sessions': 'Mes sessions',
     '/student/profile': 'Mon profil',
     '/student/justifications': 'Justifications',
+    '/student/settings': 'Parametres',
   };
 
   readonly navItems: NavItem[] = [
@@ -461,6 +462,7 @@ export class StudentLayout {
 
   openSettings(): void {
     this.isUserMenuOpen.set(false);
+    void this.router.navigateByUrl('/student/settings');
   }
 
   onProfileImageError(): void {

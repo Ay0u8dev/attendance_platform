@@ -8,7 +8,7 @@ spring:
         enabled: true
 
   datasource:
-    url: jdbc:postgresql://attendance-db:5432/attendance_db
+    url: ${DATABASE_URL:jdbc:postgresql://attendance-db:5432/attendance_db}
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
@@ -22,3 +22,26 @@ spring:
 services:
   attendance-service:
     url: http://attendance-service:8080
+
+app:
+  internal:
+    service-token: ${INTERNAL_SERVICE_TOKEN}
+
+cloudflare:
+  r2:
+    endpoint: ${R2_ENDPOINT}
+    access-key: ${R2_ACCESS_KEY}
+    secret-key: ${R2_SECRET_KEY}
+    bucket-name: ${R2_BUCKET_NAME}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+      discovery:
+        enabled: false
+  endpoint:
+    health:
+      probes:
+        enabled: true

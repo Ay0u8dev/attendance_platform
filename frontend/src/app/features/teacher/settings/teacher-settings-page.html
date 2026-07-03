@@ -1,0 +1,175 @@
+<section class="settings-page">
+  <app-page-header
+    eyebrow="Espace enseignant"
+    title="Parametres"
+    description="Gerez votre compte, la securite et vos preferences de cours."
+  ></app-page-header>
+
+  <section class="settings-account-card">
+    <div class="settings-account-header">
+      <span class="settings-avatar">{{ initials() }}</span>
+      <div class="min-w-0">
+        <h2 class="settings-account-name">{{ fullName() }}</h2>
+        <p class="settings-account-email">{{ email() }}</p>
+        <span class="settings-account-role">
+          <span class="h-2 w-2 rounded-full bg-secondary"></span>
+          Compte enseignant
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <div class="settings-grid settings-grid--split">
+    <app-settings-section-card
+      title="Compte"
+      description="Informations principales liees a votre session."
+      icon="fa-solid fa-user"
+    >
+      <div class="settings-info-row">
+        <span class="settings-info-label">Nom affiche</span>
+        <span class="settings-info-value">{{ fullName() }}</span>
+      </div>
+      <div class="settings-info-row">
+        <span class="settings-info-label">Adresse e-mail</span>
+        <span class="settings-info-value">{{ email() }}</span>
+      </div>
+      <div class="settings-info-row">
+        <span class="settings-info-label">Role</span>
+        <span class="settings-info-value">Enseignant</span>
+      </div>
+    </app-settings-section-card>
+
+    <app-settings-section-card
+      title="Securite"
+      description="Etat de votre connexion et source d authentification."
+      icon="fa-solid fa-lock"
+    >
+      <div class="settings-info-row">
+        <span class="settings-info-label">Session</span>
+        <span class="settings-info-value">Connecte</span>
+      </div>
+      <div class="settings-info-row">
+        <span class="settings-info-label">Authentification</span>
+        <span class="settings-info-value">Institutionnelle</span>
+      </div>
+      <div class="settings-info-row">
+        <span class="settings-info-label">Profil</span>
+        <span class="settings-info-value">Synchronise</span>
+      </div>
+    </app-settings-section-card>
+  </div>
+
+  <app-settings-section-card
+    title="Preferences"
+    description="Ajustez les notifications utiles pour votre activite pedagogique."
+    icon="fa-solid fa-sliders"
+  >
+    <div class="settings-toggle-row">
+      <div class="settings-toggle-copy">
+        <p class="settings-toggle-title">Notifications par e-mail</p>
+        <p class="settings-toggle-description">
+          Recevoir un resume lorsqu une justification est soumise.
+        </p>
+      </div>
+      <button
+        type="button"
+        class="settings-toggle"
+        role="switch"
+        [attr.aria-checked]="emailNotifications()"
+        [attr.aria-label]="'Notifications par e-mail'"
+        (click)="toggleEmailNotifications()"
+      >
+        <span class="settings-toggle-thumb"></span>
+      </button>
+    </div>
+
+    <div class="settings-toggle-row mt-3">
+      <div class="settings-toggle-copy">
+        <p class="settings-toggle-title">Alertes justifications</p>
+        <p class="settings-toggle-description">
+          Mettre en avant les demandes en attente sur le tableau de bord.
+        </p>
+      </div>
+      <button
+        type="button"
+        class="settings-toggle"
+        role="switch"
+        [attr.aria-checked]="justificationAlerts()"
+        [attr.aria-label]="'Alertes justifications'"
+        (click)="toggleJustificationAlerts()"
+      >
+        <span class="settings-toggle-thumb"></span>
+      </button>
+    </div>
+  </app-settings-section-card>
+
+  <app-settings-section-card
+    title="Preferences de cours"
+    description="Parametres institutionnels appliques a vos futures seances."
+    icon="fa-solid fa-chalkboard-user"
+  >
+    <div class="settings-duration-field">
+      <label class="settings-duration-label" id="session-duration-label">Duree de la seance</label>
+
+      <div
+        class="settings-dropdown-shell"
+        [class.open]="durationDropdownOpen()"
+        (keydown.escape)="closeDurationDropdown()"
+      >
+        <i class="fa-regular fa-clock settings-dropdown-icon" aria-hidden="true"></i>
+        <button
+          type="button"
+          id="session-duration"
+          class="settings-dropdown-trigger"
+          aria-labelledby="session-duration-label session-duration"
+          [attr.aria-expanded]="durationDropdownOpen()"
+          aria-haspopup="listbox"
+          (click)="toggleDurationDropdown()"
+        >
+          {{ selectedDurationLabel() }}
+        </button>
+        <i class="fa-solid fa-chevron-down settings-dropdown-chevron" aria-hidden="true"></i>
+
+        @if (durationDropdownOpen()) {
+          <div class="settings-dropdown-menu" role="listbox" aria-labelledby="session-duration-label">
+            @for (option of durationOptions; track option.value) {
+              <button
+                type="button"
+                class="settings-dropdown-option"
+                [class.selected]="draftDurationMinutes() === option.value"
+                role="option"
+                [attr.aria-selected]="draftDurationMinutes() === option.value"
+                (click)="selectDuration(option.value)"
+              >
+                <div>
+                  <p class="settings-dropdown-option-label">{{ option.label }}</p>
+                  <p class="settings-dropdown-option-meta">{{ option.value }} minutes</p>
+                </div>
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- <div class="settings-duration-preview">
+        <p>Plage horaire estimee pour une seance demarree maintenant</p>
+        <strong>{{ schedulePreview() }}</strong>
+      </div> -->
+    </div>
+
+    <div class="settings-save-row">
+      <button
+        type="button"
+        class="teacher-primary-btn"
+        [disabled]="!hasUnsavedDuration()"
+        (click)="saveClassPreferences()"
+      >
+        Enregistrer les preferences
+      </button>
+    </div>
+
+    @if (savedMessage()) {
+      <p class="settings-save-message">{{ savedMessage() }}</p>
+    }
+  </app-settings-section-card>
+</section>

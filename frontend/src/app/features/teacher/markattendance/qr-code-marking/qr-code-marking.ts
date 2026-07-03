@@ -585,12 +585,10 @@ export class QrCodeMarking implements OnInit, OnDestroy {
   private scheduleQrRefresh(payload: QrPayloadResponse): void {
     this.clearQrTimers();
     const expiresAt = new Date(payload.expiresAt).getTime();
-    this.maxSeconds.set(Math.max(1, Math.ceil((expiresAt - Date.now()) / 1000)));
-    this.updateQrCountdown(expiresAt);
 
+    // Planifier le prochain rafraîchissement
     if (!this.isBrowser) return;
 
-    this.qrCountdownTimer = window.setInterval(() => this.updateQrCountdown(expiresAt), 1000);
     const refreshDelayMs = Math.max(1000, (payload.refreshAfterSeconds - 2) * 1000);
     this.qrRefreshTimer = window.setTimeout(() => this.refreshQrPayload(), refreshDelayMs);
   }
@@ -609,10 +607,6 @@ export class QrCodeMarking implements OnInit, OnDestroy {
     if (this.qrRefreshTimer !== undefined) {
       window.clearTimeout(this.qrRefreshTimer);
       this.qrRefreshTimer = undefined;
-    }
-    if (this.qrCountdownTimer !== undefined) {
-      window.clearInterval(this.qrCountdownTimer);
-      this.qrCountdownTimer = undefined;
     }
   }
 

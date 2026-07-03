@@ -3,11 +3,13 @@ package ma.eniad.justificationservice.service;
 import ma.eniad.justificationservice.client.AttendanceServiceClient;
 import ma.eniad.justificationservice.dto.AttendanceJustificationRequest;
 import ma.eniad.justificationservice.dto.DecisionJustificationRequest;
+import ma.eniad.justificationservice.dto.SubmitJustificationRequest;
 import ma.eniad.justificationservice.entity.Justification;
 import ma.eniad.justificationservice.entity.JustificationStatus;
 import ma.eniad.justificationservice.repository.JustificationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -140,6 +142,48 @@ class JustificationServiceTest {
 
         assertThat(rows).hasSize(1);
         verify(repository).findByTeacherIdOrderBySubmittedAtDesc(77L);
+    }
+
+    @Test
+    void submitStoresDocumentUrlAsProvided() {
+        String documentUrl = "https://pub-example.r2.dev/justifications/ceebfcf0-4a33-4d09-ae13-3a95a63400a6.pdf";
+        SubmitJustificationRequest request = new SubmitJustificationRequest(
+                123L,
+                456L,
+                "Student Name",
+                "STU001",
+                "Math",
+                LocalDateTime.now(),
+                "Illness",
+                documentUrl
+        );
+
+        when(repository.existsBySessionIdAndStudentId(123L, 456L)).thenReturn(false);
+        when(repository.save(Mockito.any(Justification.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Justification justification = service.submit(request);
+
+        assertThat(justification.getDocumentUrl()).isEqualTo("justifications/ceebfcf0-4a33-4d09-ae13-3a95a63400a6.pdf");
+    }
+
+    @Test
+    void submitRejectsDuplicateJustification() {
+        SubmitJustificationRequest request = new SubmitJustificationRequest(
+                123L,
+                456L,
+                "Student Name",
+                "STU001",
+                "Math",
+                LocalDateTime.now(),
+                "Illness",
+                "justifications/123.pdf"
+        );
+
+        when(repository.existsBySessionIdAndStudentId(123L, 456L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.submit(request))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("A justification already exists for this absence");
     }
 
     private Justification pendingJustification(Long teacherId) {
