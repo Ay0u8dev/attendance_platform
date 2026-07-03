@@ -41,6 +41,15 @@ public class Justification {
     @Column(length = 64)
     private String studentCode;
 
+    @Column(length = 128)
+    private String studentFormation;
+
+    @Column(length = 128)
+    private String studentClass;
+
+    @Column(length = 128)
+    private String studentGroup;
+
     @Column(nullable = false)
     private String module;
 

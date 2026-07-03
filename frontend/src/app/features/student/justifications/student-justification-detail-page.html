@@ -1,12 +1,5 @@
 <section class="space-y-6">
   <div class="space-y-4">
-    <app-page-header
-      eyebrow="Justifications"
-      title="Détail de la demande"
-      description="Dossier, justificatif et historique de traitement."
-      meta="Suivi détaillé"
-    ></app-page-header>
-
     @if (detail(); as d) {
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <app-status-badge [label]="statusLabel()" [variant]="statusVariant()"></app-status-badge>
@@ -22,12 +15,7 @@
       </div>
 
       <div class="grid gap-4 xl:grid-cols-[0.95fr_1.35fr] xl:gap-6">
-        <div class="space-y-4 xl:space-y-6">
-          <app-justification-summary-card
-            label="Étudiant"
-            [items]="studentSummary()"
-          ></app-justification-summary-card>
-
+        <div class="grid gap-4 xl:gap-6">
           <app-justification-summary-card
             label="Séance concernée"
             [items]="sessionSummary()"
@@ -37,15 +25,6 @@
             label="Motif déclaré"
             [items]="reasonSummary()"
           ></app-justification-summary-card>
-        </div>
-
-        <div class="space-y-4 xl:space-y-6">
-          <app-document-preview-panel
-            [fileName]="attachmentName()"
-            [previewUrl]="previewUrl()"
-            [downloadUrl]="downloadUrl()"
-            previewDescription="Aperçu indisponible. Téléchargez le fichier pour le consulter."
-          ></app-document-preview-panel>
 
           <section
             class="rounded-[1.5rem] border border-line bg-surface p-4 shadow-card sm:rounded-[1.75rem] sm:p-5"
@@ -59,6 +38,15 @@
           </section>
 
           <app-justification-timeline [items]="history()"></app-justification-timeline>
+        </div>
+
+        <div class="grid content-start gap-4 xl:gap-6">
+          <app-document-preview-panel
+            [fileName]="attachmentName()"
+            [previewUrl]="previewUrl()"
+            [downloadUrl]="downloadUrl()"
+            previewDescription="Aperçu indisponible. Téléchargez le fichier pour le consulter."
+          ></app-document-preview-panel>
         </div>
       </div>
     } @else {

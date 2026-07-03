@@ -6,6 +6,9 @@ import { Button } from '../button/button';
 @Component({
   selector: 'app-document-preview-panel',
   imports: [Button],
+  host: {
+    class: 'block',
+  },
   template: `
     <section class="rounded-[1.75rem] border border-line bg-surface p-5 shadow-card">
       <div class="flex items-center justify-between gap-3">

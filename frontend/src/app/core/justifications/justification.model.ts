@@ -6,6 +6,9 @@ export interface JustificationDto {
   readonly studentId: number;
   readonly studentName: string;
   readonly studentCode: string | null;
+  readonly studentFormation: string | null;
+  readonly studentClass: string | null;
+  readonly studentGroup: string | null;
   readonly module: string;
   readonly sessionDate: string;
   readonly status: JustificationStatus;

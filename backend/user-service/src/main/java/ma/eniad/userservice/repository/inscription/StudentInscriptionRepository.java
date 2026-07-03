@@ -39,6 +39,10 @@ public interface StudentInscriptionRepository extends JpaRepository<Inscription,
 
     @Query("select i from Inscription i " +
             "join fetch i.student s " +
+            "join fetch i.anneeUniversitaire ay " +
+            "join fetch i.formation f " +
+            "join fetch f.cycle c " +
+            "left join fetch f.filiere fi " +
             "join fetch i.groupe g " +
             "where i.anneeUniversitaire.id = :anneeUniversitaireId")
     List<Inscription> findActiveByYearId(@Param("anneeUniversitaireId") Long anneeUniversitaireId);

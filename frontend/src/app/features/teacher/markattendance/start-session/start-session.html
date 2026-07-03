@@ -2,7 +2,9 @@
   <h1 class="page-title">Nouvelle Session d'Appel</h1>
 
   @if (error()) {
-    <div class="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm font-semibold text-danger">
+    <div
+      class="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm font-semibold text-danger"
+    >
       {{ error() }}
     </div>
   }
@@ -64,7 +66,9 @@
                 [attr.aria-selected]="selectedModuleId() === null"
                 (click)="updateModule('')"
               >
-                <span class="option-icon"><i class="fa-solid fa-list-check" aria-hidden="true"></i></span>
+                <span class="option-icon"
+                  ><i class="fa-solid fa-list-check" aria-hidden="true"></i
+                ></span>
                 <span class="option-content">
                   <span class="option-label">Choisir un module</span>
                   <span class="option-meta">Selection obligatoire</span>
@@ -79,7 +83,9 @@
                   [attr.aria-selected]="selectedModuleId() === module.id"
                   (click)="updateModule(module.id)"
                 >
-                  <span class="option-icon"><i class="fa-solid fa-book" aria-hidden="true"></i></span>
+                  <span class="option-icon"
+                    ><i class="fa-solid fa-book" aria-hidden="true"></i
+                  ></span>
                   <span class="option-content">
                     <span class="option-label">{{ module.name }}</span>
                     <span class="option-meta">Module disponible</span>
@@ -118,7 +124,9 @@
                   [attr.aria-selected]="selectedLocationType() === type"
                   (click)="updateLocationType(type)"
                 >
-                  <span class="option-icon"><i class="fa-solid fa-location-dot" aria-hidden="true"></i></span>
+                  <span class="option-icon"
+                    ><i class="fa-solid fa-location-dot" aria-hidden="true"></i
+                  ></span>
                   <span class="option-content">
                     <span class="option-label">{{ type }}</span>
                     <span class="option-meta">Filtre les salles disponibles</span>
@@ -157,7 +165,9 @@
                   [attr.aria-selected]="roomLabel() === location.label"
                   (click)="updateRoom(location.label)"
                 >
-                  <span class="option-icon"><i class="fa-solid fa-door-open" aria-hidden="true"></i></span>
+                  <span class="option-icon"
+                    ><i class="fa-solid fa-door-open" aria-hidden="true"></i
+                  ></span>
                   <span class="option-content">
                     <span class="option-label">{{ location.label }}</span>
                     <span class="option-meta">{{ location.type }}</span>
@@ -228,7 +238,8 @@
       {{ starting() ? 'Demarrage...' : 'Demarrer la session' }}
     </button>
     <p class="start-notice">
-      Duree configuree : {{ sessionDurationLabel() }}. Les donnees seront synchronisees avec le serveur academique.
+      Duree configuree : {{ sessionDurationLabel() }}. Les donnees seront synchronisees avec le
+      serveur academique.
     </p>
   </div>
 </div>
@@ -274,21 +285,16 @@
           <span class="detail-key">Lieu</span>
           <span class="detail-val">{{ roomLabel() }}</span>
         </div>
-        <div class="detail-row">
-          <span class="detail-key">GPS</span>
-          <span class="detail-val">
-            @if (gpsPosition()) {
-              {{ gpsPosition()?.lat }}, {{ gpsPosition()?.lon }}
-            } @else {
-              A recuperer
-            }
-          </span>
-        </div>
       </div>
 
       <div class="modal-actions">
         <button type="button" class="btn-cancel" (click)="cancelModal()">Annuler</button>
-        <button type="button" class="btn-confirm" [disabled]="starting()" (click)="confirmAndStart()">
+        <button
+          type="button"
+          class="btn-confirm"
+          [disabled]="starting()"
+          (click)="confirmAndStart()"
+        >
           Confirmer et demarrer
         </button>
       </div>
@@ -300,13 +306,15 @@
   <div class="modal-backdrop" (click)="cancelActiveSession()">
     <div class="modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <i class="fa-solid fa-triangle-exclamation modal-icon" style="color: #dc2626;" aria-hidden="true"></i>
+        <i
+          class="fa-solid fa-triangle-exclamation modal-icon"
+          style="color: #dc2626"
+          aria-hidden="true"
+        ></i>
         <h3 class="modal-title">Session active détectée</h3>
       </div>
 
-      <p class="modal-body">
-        Vous avez déjà une session active. Que souhaitez-vous faire ?
-      </p>
+      <p class="modal-body">Vous avez déjà une session active. Que souhaitez-vous faire ?</p>
 
       <div class="modal-details">
         <div class="detail-row">
@@ -319,15 +327,20 @@
         </div>
         <div class="detail-row">
           <span class="detail-key">Présents</span>
-          <span class="detail-val">{{ activeSessionInfo()?.presentCount }}/{{ activeSessionInfo()?.studentCount }}</span>
+          <span class="detail-val"
+            >{{ activeSessionInfo()?.presentCount }}/{{ activeSessionInfo()?.studentCount }}</span
+          >
         </div>
       </div>
 
-      <div class="modal-actions" style="gap: 0.75rem;">
-        <button type="button" class="btn-cancel" (click)="cancelActiveSession()">
-          Annuler
-        </button>
-        <button type="button" class="btn-cancel" style="background: #fef3c7; border-color: #f59e0b; color: #d97706;" (click)="endActiveAndCreateNew()">
+      <div class="modal-actions" style="gap: 0.75rem">
+        <button type="button" class="btn-cancel" (click)="cancelActiveSession()">Annuler</button>
+        <button
+          type="button"
+          class="btn-cancel"
+          style="background: #fef3c7; border-color: #f59e0b; color: #d97706"
+          (click)="endActiveAndCreateNew()"
+        >
           Terminer et créer
         </button>
         <button type="button" class="btn-confirm" (click)="goToActiveSession()">

@@ -21,6 +21,7 @@ type StudentRow = {
   readonly variant: StudentStatusVariant;
   readonly joinedDate: string;
   readonly raw: StudentUser;
+  readonly formation?: string | null;
   readonly groupName?: string | null;
 };
 
@@ -191,6 +192,7 @@ export class TeacherStudentsPage implements OnInit {
       variant: student.enabled ? (isActive ? 'success' : 'warning') : 'error',
       joinedDate,
       raw: student,
+      formation: student.filiere || null,
       groupName: student.groupeName || null
     };
   }
