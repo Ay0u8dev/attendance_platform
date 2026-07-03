@@ -3,6 +3,7 @@ export interface StudentUser {
   email: string;
   firstName: string;
   lastName: string;
+  groupeName?: string | null;
   pfpUrl?: string | null;
   numApogee: string;
   roles: string[];

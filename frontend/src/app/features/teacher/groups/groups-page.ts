@@ -13,11 +13,12 @@ import { PageHeader } from '../../../shared/components/page-header/page-header';
 type GroupItem = {
   readonly id: number;
   readonly name: string;
-  readonly type: string;
   readonly module: string;
   readonly students: number;
-  readonly nextSession: string;
+  readonly sessions: number;
   readonly attendanceRate: number;
+  readonly lastSessionLabel: string;
+  readonly needsAttention: boolean;
 };
 
 @Component({
@@ -42,17 +43,47 @@ export class TeacherGroupsPage implements OnInit {
   readonly groupItems = computed<GroupItem[]>(() =>
     this.groups().map((group) => {
       const module = this.modules().find((item) => item.formationId === group.formationId);
+      const groupSessions = this.sessions().filter((session) => session.groupIds.includes(group.id));
+      const present = groupSessions.reduce((sum, session) => sum + session.presentCount, 0);
+      const total = groupSessions.reduce(
+        (sum, session) => sum + session.presentCount + session.absentCount + session.unknownCount,
+        0,
+      );
+      const attendanceRate = total ? Math.round((present / total) * 100) : 0;
+      const lastSession = groupSessions[0];
+
       return {
         id: group.id,
         name: group.name,
-        type: 'Active cohort',
         module: module?.name ?? 'Module non renseigne',
         students: this.studentCountFor(group.name),
-        nextSession: 'A planifier',
-        attendanceRate: this.attendanceRateFor(group.id),
+        sessions: groupSessions.length,
+        attendanceRate,
+        lastSessionLabel: lastSession
+          ? new Date(lastSession.startedAt).toLocaleDateString('fr-FR', {
+              day: '2-digit',
+              month: 'short',
+            })
+          : 'Aucune',
+        needsAttention: attendanceRate > 0 && attendanceRate < 75,
       };
     }),
   );
+
+  readonly summary = computed(() => {
+    const items = this.groupItems();
+    const totalStudents = items.reduce((sum, item) => sum + item.students, 0);
+    const averageAttendance = items.length
+      ? Math.round(items.reduce((sum, item) => sum + item.attendanceRate, 0) / items.length)
+      : 0;
+    const atRisk = items.filter((item) => item.needsAttention).length;
+
+    return {
+      totalStudents,
+      averageAttendance,
+      atRisk,
+    };
+  });
 
   ngOnInit(): void {
     this.loadData();
@@ -79,16 +110,6 @@ export class TeacherGroupsPage implements OnInit {
       next: (page) => this.sessions.set(page.items),
       error: () => undefined,
     });
-  }
-
-  private attendanceRateFor(groupId: number): number {
-    const sessions = this.sessions().filter((session) => session.groupIds.includes(groupId));
-    const present = sessions.reduce((sum, session) => sum + session.presentCount, 0);
-    const total = sessions.reduce(
-      (sum, session) => sum + session.presentCount + session.absentCount + session.unknownCount,
-      0,
-    );
-    return total ? Math.round((present / total) * 100) : 0;
   }
 
   private studentCountFor(groupName: string): number {

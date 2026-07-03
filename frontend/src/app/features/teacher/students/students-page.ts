@@ -1,14 +1,14 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { StudentUser } from '../../../core/users/models/student.model';
 import { StudentUserService } from '../../../core/users/services/student-user.service';
-import { DataTableCellDef } from '../../../shared/components/data-table/data-table-cell-def';
-import { DataTable } from '../../../shared/components/data-table/data-table';
-import { DataTableColumn } from '../../../shared/components/data-table/data-table.types';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
+import { Modal } from '../../../shared/components/modal/modal';
+import { AttendanceService } from '../../../core/attendance/services/attendance.service';
+import { StudentAttendanceSessionSummaryDto } from '../../../core/attendance/models/student-attendance.model';
 
 type StudentStatusVariant = 'success' | 'warning' | 'error';
 
@@ -19,12 +19,15 @@ type StudentRow = {
   readonly lastSeen: string;
   readonly status: string;
   readonly variant: StudentStatusVariant;
+  readonly joinedDate: string;
+  readonly raw: StudentUser;
+  readonly groupName?: string | null;
 };
 
 @Component({
   selector: 'app-teacher-students-page',
   standalone: true,
-  imports: [PageHeader, DataTable, DataTableCellDef, StatusBadge],
+  imports: [PageHeader, StatusBadge, Modal],
   templateUrl: './students-page.html',
   styleUrl: './students-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,13 +36,55 @@ export class TeacherStudentsPage implements OnInit {
   private readonly studentService = inject(StudentUserService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly attendanceService = inject(AttendanceService);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly students = signal<StudentRow[]>([]);
   readonly selectedGroupName = signal<string | null>(null);
+  readonly searchQuery = signal('');
+  readonly selectedStudent = signal<StudentRow | null>(null);
 
-  readonly studentRowId = (student: StudentRow) => student.email;
+  readonly absentSessions = signal<StudentAttendanceSessionSummaryDto[]>([]);
+  readonly selectedModuleFilter = signal<string>('');
+  readonly loadingAbsences = signal<boolean>(false);
+
+  readonly modulesWithAbsencesCount = computed(() => {
+    const sessions = this.absentSessions();
+    const counts: { [module: string]: number } = {};
+    for (const session of sessions) {
+      counts[session.courseLabel] = (counts[session.courseLabel] || 0) + 1;
+    }
+    return Object.entries(counts).map(([name, count]) => ({ name, count }));
+  });
+
+  readonly filteredAbsentSessions = computed(() => {
+    const filter = this.selectedModuleFilter();
+    const sessions = this.absentSessions();
+    if (!filter) {
+      return sessions;
+    }
+    return sessions.filter((session) => session.courseLabel === filter);
+  });
+
+  readonly filteredStudents = computed(() => {
+    const query = this.searchQuery().trim().toLowerCase();
+    if (!query) {
+      return this.students();
+    }
+
+    return this.students().filter(
+      (student) =>
+        student.name.toLowerCase().includes(query) ||
+        student.email.toLowerCase().includes(query) ||
+        student.apogee.toLowerCase().includes(query) ||
+        student.groupName?.toLowerCase().includes(query) || false
+    );
+  });
+
+  updateSearchQuery(value: string): void {
+    this.searchQuery.set(value);
+  }
 
   ngOnInit(): void {
     this.route.queryParamMap.subscribe((params) => {
@@ -96,6 +141,36 @@ export class TeacherStudentsPage implements OnInit {
       .toUpperCase();
   }
 
+  selectStudent(row: StudentRow): void {
+    this.selectedStudent.set(row);
+    this.selectedModuleFilter.set('');
+    this.loadStudentAbsences(row.raw.id);
+  }
+
+  closeStudentDetails(): void {
+    this.selectedStudent.set(null);
+    this.absentSessions.set([]);
+  }
+
+  loadStudentAbsences(studentId: number): void {
+    this.loadingAbsences.set(true);
+    this.absentSessions.set([]);
+    this.attendanceService.getStudentSessions(studentId, 'ABSENT')
+      .pipe(finalize(() => this.loadingAbsences.set(false)))
+      .subscribe({
+        next: (response) => {
+          this.absentSessions.set(response.items);
+        },
+        error: () => {
+          // ignore or handle error
+        }
+      });
+  }
+
+  onModuleFilterChange(value: string): void {
+    this.selectedModuleFilter.set(value);
+  }
+
   private toRow(student: StudentUser): StudentRow {
     const lastSeen = student.updatedAt
       ? new Date(student.updatedAt).toLocaleDateString()
@@ -103,6 +178,9 @@ export class TeacherStudentsPage implements OnInit {
     const isActive = student.updatedAt
       ? Date.now() - new Date(student.updatedAt).getTime() < 1000 * 60 * 60 * 24 * 30
       : false;
+    const joinedDate = student.createdAt
+      ? new Date(student.createdAt).toLocaleDateString()
+      : 'Inconnu';
 
     return {
       name: `${student.firstName} ${student.lastName}`.trim(),
@@ -111,53 +189,33 @@ export class TeacherStudentsPage implements OnInit {
       lastSeen,
       status: student.enabled ? (isActive ? 'Actif' : 'Inactif') : 'Désactivé',
       variant: student.enabled ? (isActive ? 'success' : 'warning') : 'error',
+      joinedDate,
+      raw: student,
+      groupName: student.groupeName || null
     };
   }
 
-  readonly columns: readonly DataTableColumn<StudentRow>[] = [
-    {
-      id: 'student',
-      header: 'Étudiant',
-      accessor: (student) => student.name,
-      sortValue: (student) => student.name,
-      filterValue: (student) => [student.name, student.email, student.apogee],
-      width: '18rem',
-    },
-    {
-      id: 'email',
-      header: 'Email',
-      accessor: (student) => student.email,
-      sortValue: (student) => student.email,
-      width: '15rem',
-    },
-    {
-      id: 'apogee',
-      header: 'Numéro Apogée',
-      accessor: (student) => student.apogee,
-      width: '12rem',
-    },
-    {
-      id: 'lastSeen',
-      header: 'Dernière activité',
-      accessor: (student) => student.lastSeen,
-      width: '12rem',
-    },
-    {
-      id: 'status',
-      header: 'Statut',
-      accessor: (student) => student.status,
-      align: 'end',
-      width: '10rem',
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      accessor: () => '',
-      sortable: false,
-      searchable: false,
-      hideable: false,
-      align: 'end',
-      width: '8rem',
-    },
-  ];
+  private readonly dateFormatter = new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+
+  private readonly timeFormatter = new Intl.DateTimeFormat('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  formatDate(value: string): string {
+    return this.dateFormatter.format(new Date(value));
+  }
+
+  formatTimeRange(startedAt: string, endedAt: string | null): string {
+    const start = this.timeFormatter.format(new Date(startedAt));
+    if (!endedAt) {
+      return start;
+    }
+    return `${start} - ${this.timeFormatter.format(new Date(endedAt))}`;
+  }
 }
+  

@@ -22,7 +22,9 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class CloudflareR2Service {
 
-    @Value("${cloudflare.r2.endpoint:https://dummy.r2.cloudflarestorage.com}")
+    private static final String DUMMY_ENDPOINT = "https://dummy.r2.cloudflarestorage.com";
+
+    @Value("${cloudflare.r2.endpoint:" + DUMMY_ENDPOINT + "}")
     private String endpoint;
 
     @Value("${cloudflare.r2.access-key:dummy-access-key}")
@@ -43,7 +45,7 @@ public class CloudflareR2Service {
         // Defensive fix: Cloudflare R2 dashboard gives an S3 API URL that includes the bucket name.
         // If the user pasted that into the .env, the SDK with pathStyleAccessEnabled(true) will append 
         // the bucket name a second time, creating a folder named after the bucket inside the bucket.
-        String finalEndpoint = endpoint.replaceAll("/+$", "");
+        String finalEndpoint = endpointForPresigner();
         if (finalEndpoint.endsWith("/" + bucketName)) {
             finalEndpoint = finalEndpoint.substring(0, finalEndpoint.length() - bucketName.length() - 1);
         }
@@ -56,6 +58,40 @@ public class CloudflareR2Service {
                         .pathStyleAccessEnabled(true)
                         .build())
                 .build();
+
+        logR2ConfigurationStatus();
+    }
+
+    private String endpointForPresigner() {
+        if (isPlaceholderEndpoint(endpoint)) {
+            return DUMMY_ENDPOINT;
+        }
+
+        return endpoint.replaceAll("/+$", "");
+    }
+
+    private void logR2ConfigurationStatus() {
+        if (isUsingPlaceholderCredentials()) {
+            log.warn(
+                    "R2 upload is not configured. Set R2_ENDPOINT, R2_ACCESS_KEY, R2_SECRET_KEY and R2_BUCKET_NAME in backend/user-service/.env"
+            );
+            return;
+        }
+
+        log.info("R2 upload configured for bucket '{}'.", bucketName);
+    }
+
+    private boolean isUsingPlaceholderCredentials() {
+        return isPlaceholderEndpoint(endpoint)
+                || "dummy-access-key".equals(accessKey)
+                || "dummy-secret-key".equals(secretKey)
+                || "dummy-bucket".equals(bucketName);
+    }
+
+    private boolean isPlaceholderEndpoint(String value) {
+        return DUMMY_ENDPOINT.equals(value)
+                || value.contains("<")
+                || value.contains(">");
     }
 
     public String generatePresignedUploadUrl(String objectKey, String contentType) {

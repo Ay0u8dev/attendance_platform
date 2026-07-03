@@ -5,6 +5,7 @@ import ma.eniad.attendanceservice.config.WebConfig;
 import ma.eniad.attendanceservice.dto.AttendanceSessionDetailsResponse;
 import ma.eniad.attendanceservice.dto.AttendanceSessionResponse;
 import ma.eniad.attendanceservice.dto.AttendanceSessionSummaryResponse;
+import ma.eniad.attendanceservice.dto.StudentAttendanceSessionSummaryResponse;
 import ma.eniad.attendanceservice.dto.AttendanceStudentView;
 import ma.eniad.attendanceservice.dto.CreateAttendanceSessionRequest;
 import ma.eniad.attendanceservice.dto.PagedResponse;
@@ -190,13 +191,47 @@ class AttendanceSessionControllerWebMvcTest {
                 .andExpect(jsonPath("$.unknownCount").value(0));
     }
 
+    @Test
+    void getStudentSessionsSucceedsForTeacher() throws Exception {
+        when(attendanceQueryService.getStudentSessions(eq(10L), eq(AttendanceStudentStatus.ABSENT),
+                eq(null), eq(null), any(Pageable.class)))
+                .thenReturn(new PagedResponse<>(
+                        List.of(new StudentAttendanceSessionSummaryResponse(
+                                100L, "Ayoub Elebbar", "Distributed Systems", "Room B12", List.of(1L),
+                                AttendanceSessionStatus.FINALIZED, LocalDateTime.of(2026, 4, 28, 12, 0),
+                                LocalDateTime.of(2026, 4, 28, 12, 30), AttendanceStudentStatus.ABSENT,
+                                null, null
+                        )),
+                        0, 10, 1, 1
+                ));
+
+        mockMvc.perform(get("/attendance/sessions/students/10/sessions")
+                        .with(teacherUser())
+                        .param("status", "ABSENT")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].sessionId").value(100))
+                .andExpect(jsonPath("$.items[0].courseLabel").value("Distributed Systems"))
+                .andExpect(jsonPath("$.items[0].attendanceStatus").value("ABSENT"));
+
+        verify(attendanceQueryService).getStudentSessions(
+                eq(10L),
+                eq(AttendanceStudentStatus.ABSENT),
+                eq(null),
+                eq(null),
+                any(Pageable.class)
+        );
+    }
+
     private static Stream<RequestSpec> teacherProtectedRequests() {
         return Stream.of(
                 new RequestSpec(post("/attendance/sessions").contentType(APPLICATION_JSON).content(validCreateRequestJson())),
                 new RequestSpec(get("/attendance/sessions")),
                 new RequestSpec(get("/attendance/sessions/active")),
                 new RequestSpec(get("/attendance/sessions/100")),
-                new RequestSpec(post("/attendance/sessions/100/end"))
+                new RequestSpec(post("/attendance/sessions/100/end")),
+                new RequestSpec(get("/attendance/sessions/students/10/sessions"))
         );
     }
 

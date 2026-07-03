@@ -37,7 +37,7 @@
 
       <app-status-filter-tabs
         class="w-full md:w-auto"
-        [tabs]="tabs"
+        [tabs]="tabs()"
         [selected]="selectedFilter()"
         (selectedChange)="selectFilter($event)"
       ></app-status-filter-tabs>

@@ -12,6 +12,8 @@ export interface JustificationDto {
   readonly reason: string | null;
   readonly submittedAt: string;
   readonly documentUrl: string | null;
+  readonly documentName: string | null;
+  readonly downloadUrl: string | null;
   readonly teacherComment: string | null;
   readonly reviewedBy: string | null;
   readonly reviewerRole: string | null;

@@ -74,7 +74,9 @@ public class StudentService {
         student.setEnabled(true);
         student.setFirstLogin(true);
         try {
-            return studentMapper.toResponse(studentRepository.save(student));
+            StudentResponseDTO dto = studentMapper.toResponse(studentRepository.save(student));
+            populateGroupName(dto);
+            return dto;
         } catch (DataIntegrityViolationException ex) {
             if (normalizedEmail != null && userRepository.existsByEmail(normalizedEmail)) {
                 throw new DuplicateResourceException("Email already exists");
@@ -90,13 +92,17 @@ public class StudentService {
     // Read
     // -------------------------------------------------------------------------
     public StudentResponseDTO getById(Long id) {
-        return studentMapper.toResponse(findStudentById(id));
+        StudentResponseDTO dto = studentMapper.toResponse(findStudentById(id));
+        populateGroupName(dto);
+        return dto;
     }
 
     public List<StudentResponseDTO> getAll() {
-        return studentRepository.findAll().stream()
+        List<StudentResponseDTO> dtos = studentRepository.findAll().stream()
                 .map(studentMapper::toResponse)
                 .toList();
+        populateGroupNames(dtos);
+        return dtos;
     }
 
     public List<StudentResponseDTO> getByGroupeId(Long groupeId) {
@@ -104,9 +110,11 @@ public class StudentService {
             throw new ResourceNotFoundException("Groupe not found");
         }
 
-        return studentRepository.findByGroupeId(groupeId).stream()
+        List<StudentResponseDTO> dtos = studentRepository.findByGroupeId(groupeId).stream()
                 .map(studentMapper::toResponse)
                 .toList();
+        populateGroupNames(dtos);
+        return dtos;
     }
 
     public StudentProfileDto getCurrentProfile() {
@@ -172,7 +180,9 @@ public class StudentService {
 
         studentMapper.updateEntity(request, student);
         try {
-            return studentMapper.toResponse(studentRepository.save(student));
+            StudentResponseDTO dto = studentMapper.toResponse(studentRepository.save(student));
+            populateGroupName(dto);
+            return dto;
         } catch (DataIntegrityViolationException ex) {
             if (request.getEmail() != null) {
                 userRepository.findByEmail(request.getEmail())
@@ -284,5 +294,49 @@ public class StudentService {
         }
 
         return email.trim().toLowerCase();
+    }
+
+    private void populateGroupName(StudentResponseDTO dto) {
+        if (dto == null) {
+            return;
+        }
+        List<AnneeUniversitaire> activeYears = anneeUniversitaireRepository.findByActiveTrue();
+        if (activeYears == null || activeYears.isEmpty()) {
+            return;
+        }
+        Long activeYearId = activeYears.get(0).getId();
+        inscriptionRepository.findActiveByStudentIdAndYearId(dto.getId(), activeYearId)
+                .ifPresent(inscription -> {
+                    if (inscription.getGroupe() != null) {
+                        dto.setGroupeName(inscription.getGroupe().getName());
+                    }
+                });
+    }
+
+    private void populateGroupNames(List<StudentResponseDTO> dtos) {
+        if (dtos == null || dtos.isEmpty()) {
+            return;
+        }
+        List<AnneeUniversitaire> activeYears = anneeUniversitaireRepository.findByActiveTrue();
+        if (activeYears == null || activeYears.isEmpty()) {
+            return;
+        }
+        Long activeYearId = activeYears.get(0).getId();
+        List<Inscription> inscriptions = inscriptionRepository.findActiveByYearId(activeYearId);
+        if (inscriptions == null) {
+            return;
+        }
+        
+        java.util.Map<Long, String> studentGroupMap = inscriptions.stream()
+                .filter(i -> i.getStudent() != null && i.getGroupe() != null)
+                .collect(java.util.stream.Collectors.toMap(
+                        i -> i.getStudent().getId(),
+                        i -> i.getGroupe().getName(),
+                        (existing, replacement) -> existing
+                ));
+
+        for (StudentResponseDTO dto : dtos) {
+            dto.setGroupeName(studentGroupMap.get(dto.getId()));
+        }
     }
 }

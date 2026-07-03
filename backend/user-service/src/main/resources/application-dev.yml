@@ -28,7 +28,7 @@ spring:
 
 app:
   internal:
-    service-token: ${INTERNAL_SERVICE_TOKEN:dummy-token-for-dev}
+    service-token: ${INTERNAL_SERVICE_TOKEN:internal_service_token_abdoelfadili}
 
 cloudflare:
   r2:
