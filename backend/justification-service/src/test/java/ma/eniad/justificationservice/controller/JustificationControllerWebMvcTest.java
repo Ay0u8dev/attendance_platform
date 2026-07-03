@@ -2,6 +2,7 @@ package ma.eniad.justificationservice.controller;
 
 import ma.eniad.justificationservice.dto.JustificationResponse;
 import ma.eniad.justificationservice.entity.JustificationStatus;
+import ma.eniad.justificationservice.service.CloudflareR2Service;
 import ma.eniad.justificationservice.service.JustificationService;
 import ma.eniad.justificationservice.service.RequestUser;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,9 @@ class JustificationControllerWebMvcTest {
 
     @MockitoBean
     private JustificationService service;
+
+    @MockitoBean
+    private CloudflareR2Service r2Service;
 
     @Test
     void adminEndpointUsesTrustedForwardAuthHeaders() throws Exception {
