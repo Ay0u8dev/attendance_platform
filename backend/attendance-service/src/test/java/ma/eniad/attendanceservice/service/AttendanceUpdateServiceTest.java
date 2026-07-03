@@ -212,6 +212,7 @@ class AttendanceUpdateServiceTest {
 
         attendanceUpdateService.justifyFinalizedAbsence(
                 "justification-service",
+                "test-internal-token",
                 100L,
                 10L,
                 new JustifyAbsenceRequest(50L, "1", "ADMIN")

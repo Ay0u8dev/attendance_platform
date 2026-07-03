@@ -184,6 +184,7 @@ class AttendanceUpdateControllerWebMvcTest {
     void justifyRouteAllowsCanonicalService() throws Exception {
         doNothing().when(attendanceUpdateService).justifyFinalizedAbsence(
                 anyString(),
+                anyString(),
                 anyLong(),
                 anyLong(),
                 any()
