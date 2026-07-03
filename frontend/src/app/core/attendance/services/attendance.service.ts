@@ -9,6 +9,7 @@ import {
   CreateAttendanceSessionRequest,
   ManualAttendanceUpdateRequest,
   PagedResponse,
+  TeacherAttendanceReportDto,
   TeacherSessionsQuery,
 } from '../models/attendance.model';
 import { StudentAttendanceSessionSummaryDto } from '../models/student-attendance.model';
@@ -40,6 +41,17 @@ export class AttendanceService {
     });
 
     return this.http.get<PagedResponse<AttendanceSessionSummary>>(this.baseUrl, { params });
+  }
+
+  getTeacherExportReport(query: { dateFrom?: string; dateTo?: string; courseLabel?: string } = {}) {
+    let params = new HttpParams();
+    Object.entries(query).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params = params.set(key, String(value));
+      }
+    });
+
+    return this.http.get<TeacherAttendanceReportDto>(`${this.baseUrl}/export-report`, { params });
   }
 
   updateAttendance(sessionId: number, payload: ManualAttendanceUpdateRequest) {

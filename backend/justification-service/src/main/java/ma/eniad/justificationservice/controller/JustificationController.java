@@ -49,24 +49,45 @@ public class JustificationController {
     public ResponseEntity<PresignedUrlResponse> getPresignedUrl(
             @RequestParam(required = false, defaultValue = "application/pdf") String contentType,
             @RequestParam(required = false) String studentName,
-            @RequestParam(required = false) String moduleName) {
+            @RequestParam(required = false) String moduleName,
+            @RequestParam(required = false) String sessionMonth,
+            @RequestParam(required = false) String sessionDay,
+            @RequestParam(required = false) String sessionStartTime,
+            @RequestParam(required = false) String sessionEndTime) {
         String extension = ".pdf";
         if ("image/jpeg".equals(contentType) || "image/jpg".equals(contentType)) extension = ".jpg";
         else if ("image/png".equals(contentType)) extension = ".png";
         else if ("image/webp".equals(contentType)) extension = ".webp";
 
         String baseName = null;
+        boolean hasSessionParts = false;
         if (studentName != null && !studentName.isBlank() && moduleName != null && !moduleName.isBlank()) {
             String cleanStudent = sanitizeForFilename(studentName);
             String cleanModule = sanitizeForFilename(moduleName);
+            String cleanMonth = sanitizeForFilename(sessionMonth);
+            String cleanDay = sanitizeForFilename(sessionDay);
+            String cleanStartTime = sanitizeForFilename(sessionStartTime);
+            String cleanEndTime = sanitizeForFilename(sessionEndTime);
             if (!cleanStudent.isEmpty() && !cleanModule.isEmpty()) {
-                baseName = cleanStudent + "_" + cleanModule;
+                hasSessionParts = !cleanMonth.isEmpty()
+                        && !cleanDay.isEmpty()
+                        && !cleanStartTime.isEmpty()
+                        && !cleanEndTime.isEmpty();
+
+                if (hasSessionParts) {
+                    baseName = cleanStudent + "_" + cleanModule + "_" + cleanMonth + "_" + cleanDay
+                            + "_" + cleanStartTime + "-" + cleanEndTime;
+                } else {
+                    baseName = cleanStudent + "_" + cleanModule;
+                }
             }
         }
 
         String key;
         if (baseName != null && !baseName.isEmpty()) {
-            key = "justifications/" + baseName + "_" + UUID.randomUUID().toString() + extension;
+            key = "justifications/" + baseName
+                    + (hasSessionParts ? "" : "_" + UUID.randomUUID().toString())
+                    + extension;
         } else {
             key = "justifications/" + UUID.randomUUID().toString() + extension;
         }
@@ -146,6 +167,9 @@ public class JustificationController {
                 .studentId(justification.getStudentId())
                 .studentName(justification.getStudentName())
                 .studentCode(justification.getStudentCode())
+                .studentFormation(justification.getStudentFormation())
+                .studentClass(justification.getStudentClass())
+                .studentGroup(justification.getStudentGroup())
                 .module(justification.getModule())
                 .sessionDate(justification.getSessionDate())
                 .status(justification.getStatus())

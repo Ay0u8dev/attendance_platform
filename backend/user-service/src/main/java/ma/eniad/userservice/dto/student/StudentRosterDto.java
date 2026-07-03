@@ -8,6 +8,8 @@ public class StudentRosterDto {
         private final String email;
         private final String pfpUrl;
         private final String numApogee;
+        private final String filiere;
+        private final String groupeName;
 
         public StudentRosterDto(
                         Long studentId,
@@ -16,7 +18,9 @@ public class StudentRosterDto {
                         String lastName,
                         String email,
                         String pfpUrl,
-                        String numApogee
+                        String numApogee,
+                        String filiere,
+                        String groupeName
         ) {
                 this.studentId = studentId;
                 this.groupId = groupId;
@@ -25,6 +29,8 @@ public class StudentRosterDto {
                 this.email = email;
                 this.pfpUrl = pfpUrl;
                 this.numApogee = numApogee;
+                this.filiere = filiere;
+                this.groupeName = groupeName;
         }
 
         public Long getStudentId() {
@@ -53,5 +59,13 @@ public class StudentRosterDto {
 
         public String getNumApogee() {
                 return numApogee;
+        }
+
+        public String getFiliere() {
+                return filiere;
+        }
+
+        public String getGroupeName() {
+                return groupeName;
         }
 }

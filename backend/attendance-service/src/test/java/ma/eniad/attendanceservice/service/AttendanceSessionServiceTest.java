@@ -61,8 +61,8 @@ class AttendanceSessionServiceTest {
         when(attendanceSessionRepository.existsByTeacherIdAndStatus(77L, AttendanceSessionStatus.ACTIVE)).thenReturn(false);
         when(userServiceClient.getTeacherIdentity(77L)).thenReturn(new InternalTeacherIdentityDto(77L, "Ayoub", "Elebbar"));
         when(userServiceClient.getStudentRosterByGroupIds(List.of(1L, 2L))).thenReturn(List.of(
-                new StudentRosterDto(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001"),
-                new StudentRosterDto(11L, 2L, "Yassine", "Fassi", "yassine@ump.ac.ma", "https://cdn.example.com/yassine.jpg", "A002")
+                new StudentRosterDto(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001", "GI", "GI-1"),
+                new StudentRosterDto(11L, 2L, "Yassine", "Fassi", "yassine@ump.ac.ma", "https://cdn.example.com/yassine.jpg", "A002", "IDS", "IDS-1")
         ));
         when(attendanceSessionRepository.saveAndFlush(any(AttendanceSession.class))).thenAnswer(invocation -> {
             AttendanceSession session = invocation.getArgument(0);
@@ -108,6 +108,8 @@ class AttendanceSessionServiceTest {
         assertThat(metaCaptor.getValue().status()).isEqualTo(AttendanceSessionStatus.ACTIVE);
         assertThat(studentsCaptor.getValue()).hasSize(2);
         assertThat(studentsCaptor.getValue().getFirst().email()).isEqualTo("aya@ump.ac.ma");
+        assertThat(studentsCaptor.getValue().getFirst().filiere()).isEqualTo("GI");
+        assertThat(studentsCaptor.getValue().getFirst().groupeName()).isEqualTo("GI-1");
         assertThat(studentsCaptor.getValue())
                 .allMatch(student -> student.status() == AttendanceStudentStatus.UNKNOWN
                         && student.markedAt() == null
@@ -151,7 +153,7 @@ class AttendanceSessionServiceTest {
         when(attendanceSessionRepository.existsByTeacherIdAndStatus(77L, AttendanceSessionStatus.ACTIVE)).thenReturn(false);
         when(userServiceClient.getTeacherIdentity(77L)).thenReturn(new InternalTeacherIdentityDto(77L, "Ayoub", "Elebbar"));
         when(userServiceClient.getStudentRosterByGroupIds(List.of(1L, 2L))).thenReturn(List.of(
-                new StudentRosterDto(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001")
+                new StudentRosterDto(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001", "GI", "GI-1")
         ));
         AttendanceSession savedSession = AttendanceSession.builder()
                 .id(100L)

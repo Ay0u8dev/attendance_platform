@@ -10,6 +10,15 @@ import {
   ReviewJustificationRequest,
 } from './justification.model';
 
+type JustificationUploadNameParts = {
+  readonly studentName?: string;
+  readonly moduleName?: string;
+  readonly sessionMonth?: string;
+  readonly sessionDay?: string;
+  readonly sessionStartTime?: string;
+  readonly sessionEndTime?: string;
+};
+
 @Injectable({ providedIn: 'root' })
 export class JustificationService {
   private readonly http = inject(HttpClient);
@@ -31,14 +40,14 @@ export class JustificationService {
     return this.http.get<JustificationDto>(`${this.baseUrl}/${id}`);
   }
 
-  uploadDocument(file: File, studentName?: string, moduleName?: string): Observable<string> {
+  uploadDocument(file: File, nameParts: JustificationUploadNameParts = {}): Observable<string> {
     const contentType = file.type || 'application/octet-stream';
     let params = new HttpParams().set('contentType', contentType);
-    if (studentName) {
-      params = params.set('studentName', studentName);
-    }
-    if (moduleName) {
-      params = params.set('moduleName', moduleName);
+
+    for (const [key, value] of Object.entries(nameParts)) {
+      if (value) {
+        params = params.set(key, value);
+      }
     }
 
     return this.http

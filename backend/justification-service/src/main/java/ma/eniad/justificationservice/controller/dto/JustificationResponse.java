@@ -18,6 +18,9 @@ public class JustificationResponse {
     private Long studentId;
     private String studentName;
     private String studentCode;
+    private String studentFormation;
+    private String studentClass;
+    private String studentGroup;
     private String module;
     private LocalDateTime sessionDate;
     private JustificationStatus status;

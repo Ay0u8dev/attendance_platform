@@ -14,9 +14,25 @@
         }
       </p>
     </div>
-    <a routerLink="/teacher/mark-attendance/start-session" class="teacher-primary-btn">
-      Start New Session
-    </a>
+    <div class="sessions-panel-actions">
+      <button
+        type="button"
+        class="teacher-secondary-btn report-export-btn"
+        [disabled]="exportLoading()"
+        (click)="exportFullReport()"
+      >
+        @if (exportLoading()) {
+          <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+          Export...
+        } @else {
+          <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+          Exporter le rapport
+        }
+      </button>
+      <a routerLink="/teacher/mark-attendance/start-session" class="teacher-primary-btn">
+        Start New Session
+      </a>
+    </div>
   </section>
 
   @if (error()) {
@@ -176,47 +192,6 @@
           Continuer et terminer la session
         </a>
       }
-
-      <!-- Section Export Excel -->
-      <div class="export-excel-container">
-        <button
-          type="button"
-          class="export-excel-trigger-btn"
-          (click)="showExportConfig.set(!showExportConfig())"
-        >
-          <span class="inline-flex items-center">
-            <i class="fa-solid fa-file-excel" aria-hidden="true" style="color: #16a34a; margin-right: 0.5rem; font-size: 1.1rem;"></i>
-            Exporter la liste vers Excel
-          </span>
-          <i class="fa-solid" [class.fa-chevron-down]="!showExportConfig()" [class.fa-chevron-up]="showExportConfig()" aria-hidden="true"></i>
-        </button>
-
-        @if (showExportConfig()) {
-          <div class="export-excel-config-panel">
-            <p class="export-config-title">Configurer les colonnes à exporter :</p>
-            <div class="export-columns-grid">
-              @for (col of exportColumns(); track col.id) {
-                <label class="export-column-label">
-                  <input
-                    type="checkbox"
-                    [checked]="col.selected"
-                    (change)="toggleColumnSelection(col.id)"
-                  />
-                  <span>{{ col.label }}</span>
-                </label>
-              }
-            </div>
-            <button
-              type="button"
-              class="export-excel-download-btn"
-              (click)="exportToExcel()"
-            >
-              <i class="fa-solid fa-download" aria-hidden="true"></i>
-              Télécharger le fichier .xls
-            </button>
-          </div>
-        }
-      </div>
 
       @if (detailError()) {
         <div class="teacher-page-alert">{{ detailError() }}</div>

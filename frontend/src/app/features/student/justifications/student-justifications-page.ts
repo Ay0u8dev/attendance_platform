@@ -66,6 +66,7 @@ export class StudentJustificationsPage {
       time: string;
       teacherFullName: string;
       startedAt: string;
+      endedAt: string | null;
     }[]
   >([]);
 
@@ -97,6 +98,14 @@ export class StudentJustificationsPage {
   readonly searchQuery = signal('');
   readonly dateFrom = signal('');
   readonly dateTo = signal('');
+  readonly justifiedSessionIds = computed(
+    () =>
+      new Set(
+        this.justifications()
+          .map((justification) => justification.sessionId)
+          .filter((sessionId): sessionId is number => typeof sessionId === 'number'),
+      ),
+  );
 
   readonly filteredRows = computed(() => {
     const filter = this.selectedFilter();
@@ -134,9 +143,15 @@ export class StudentJustificationsPage {
   readonly filteredAbsentSessions = computed(() => {
     const fromDate = this.dateFrom() ? new Date(`${this.dateFrom()}T00:00:00`) : null;
     const toDate = this.dateTo() ? new Date(`${this.dateTo()}T23:59:59`) : null;
+    const justifiedSessionIds = this.justifiedSessionIds();
 
     return [...this.absentSessions()]
       .filter((row) => {
+        const sessionId = Number(row.id);
+        if (Number.isFinite(sessionId) && justifiedSessionIds.has(sessionId)) {
+          return false;
+        }
+
         const sessionDate = row.startedAt ? new Date(row.startedAt) : null;
         if (!sessionDate) {
           return true;
@@ -236,6 +251,7 @@ export class StudentJustificationsPage {
               time: listItem.timeLabel,
               teacherFullName: listItem.teacherFullName,
               startedAt: listItem.startedAt,
+              endedAt: listItem.endedAt,
             };
           });
           this.absentSessions.set(items);
@@ -277,9 +293,14 @@ export class StudentJustificationsPage {
     const firstSessionId = selectedIds[0];
     const firstSession = this.absentSessions().find((s) => s.id === firstSessionId.toString());
     const moduleParam = firstSession?.module || 'Module';
-    const studentParam = `${profile.lastName || ''}${profile.firstName || ''}`.trim() || 'Etudiant';
+    const studentParam =
+      `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Etudiant';
 
-    this.justificationService.uploadDocument(file, studentParam, moduleParam).subscribe({
+    this.justificationService.uploadDocument(file, {
+      studentName: studentParam,
+      moduleName: moduleParam,
+      ...this.sessionFilenameParts(firstSession),
+    }).subscribe({
       next: (documentUrl) => {
         const dbStudentName =
           `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Étudiant';
@@ -293,6 +314,9 @@ export class StudentJustificationsPage {
             studentId: profile.id,
             studentName: dbStudentName,
             studentCode,
+            studentFormation: profile.filiere || null,
+            studentClass: profile.cycle || profile.academicYear || null,
+            studentGroup: profile.groupe || null,
             module: session?.module || 'N/A',
             sessionDate: session?.startedAt || new Date().toISOString(),
             reason: comment,
@@ -387,6 +411,45 @@ export class StudentJustificationsPage {
     } catch {
       return dateStr;
     }
+  }
+
+  private sessionFilenameParts(
+    session:
+      | {
+          readonly startedAt: string;
+          readonly endedAt: string | null;
+        }
+      | undefined,
+  ): {
+    readonly sessionMonth?: string;
+    readonly sessionDay?: string;
+    readonly sessionStartTime?: string;
+    readonly sessionEndTime?: string;
+  } {
+    if (!session?.startedAt) {
+      return {};
+    }
+
+    const startedAt = new Date(session.startedAt);
+    const endedAt = session.endedAt ? new Date(session.endedAt) : null;
+    if (Number.isNaN(startedAt.getTime()) || !endedAt || Number.isNaN(endedAt.getTime())) {
+      return {};
+    }
+
+    return {
+      sessionMonth: this.twoDigit(startedAt.getMonth() + 1),
+      sessionDay: this.twoDigit(startedAt.getDate()),
+      sessionStartTime: this.timeForFilename(startedAt),
+      sessionEndTime: this.timeForFilename(endedAt),
+    };
+  }
+
+  private twoDigit(value: number): string {
+    return value.toString().padStart(2, '0');
+  }
+
+  private timeForFilename(value: Date): string {
+    return `${this.twoDigit(value.getHours())}${this.twoDigit(value.getMinutes())}`;
   }
 
   private mapJustificationDto(dto: JustificationDto): StudentJustificationRow {

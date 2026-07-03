@@ -15,6 +15,10 @@ import {
   AttendanceSessionSummary,
   AttendanceStudentStatus,
   AttendanceStudentView,
+  TeacherAttendanceReportDto,
+  TeacherAttendanceReportFiliereDto,
+  TeacherAttendanceReportSessionDto,
+  TeacherAttendanceReportStudentDto,
 } from '../../../core/attendance/models/attendance.model';
 import { AttendanceService } from '../../../core/attendance/services/attendance.service';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
@@ -26,6 +30,21 @@ interface PendingChange {
   newStatus: 'PRESENT' | 'ABSENT';
 }
 
+interface XlsxCell {
+  value: string;
+  style?: number;
+}
+
+interface XlsxSheet {
+  name: string;
+  rows: XlsxCell[][];
+}
+
+interface ZipEntry {
+  path: string;
+  data: Uint8Array;
+}
+
 @Component({
   selector: 'app-teacher-sessions-page',
   standalone: true,
@@ -35,6 +54,9 @@ interface PendingChange {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TeacherSessionsPage implements OnInit {
+  private static readonly textEncoder = new TextEncoder();
+  private static readonly crc32Table = TeacherSessionsPage.buildCrc32Table();
+
   private readonly attendanceService = inject(AttendanceService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -52,21 +74,7 @@ export class TeacherSessionsPage implements OnInit {
   readonly isSaving = signal(false);
   readonly selectedSessionId = signal<number | null>(null); // Pour suivre la session sélectionnée
   readonly courseFilter = signal<string | null>(null);
-
-  readonly exportColumns = signal<{ id: string; label: string; selected: boolean }[]>([
-    { id: 'numApogee', label: 'Code Apogée', selected: true },
-    { id: 'lastName', label: 'Nom', selected: true },
-    { id: 'firstName', label: 'Prénom', selected: true },
-    { id: 'email', label: 'Email', selected: true },
-    { id: 'groupId', label: 'Groupe', selected: true },
-    { id: 'status', label: 'Statut', selected: true },
-    { id: 'markedAt', label: 'Date de pointage', selected: false },
-    { id: 'markMethod', label: 'Méthode de pointage', selected: false },
-    { id: 'deviceId', label: 'ID Appareil', selected: false },
-    { id: 'markedGpsLat', label: 'GPS Latitude', selected: false },
-    { id: 'markedGpsLon', label: 'GPS Longitude', selected: false },
-  ]);
-  readonly showExportConfig = signal(false);
+  readonly exportLoading = signal(false);
 
   readonly filteredSessions = computed(() => {
     const filter = this.courseFilter();
@@ -379,120 +387,430 @@ export class TeacherSessionsPage implements OnInit {
     }
   }
 
-  toggleColumnSelection(id: string): void {
-    this.exportColumns.update((cols) =>
-      cols.map((col) => (col.id === id ? { ...col, selected: !col.selected } : col)),
-    );
-  }
-
-  exportToExcel(): void {
-    const session = this.selectedSession();
-    if (!session) return;
-
-    const cols = this.exportColumns();
-    const selectedCols = cols.filter((col) => col.selected);
-
-    if (selectedCols.length === 0) {
-      alert('Veuillez sélectionner au moins une colonne à exporter.');
+  exportFullReport(): void {
+    if (this.exportLoading()) {
       return;
     }
 
-    const students = session.students ?? [];
-    const formattedDate = session.startedAt ? new Intl.DateTimeFormat('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(session.startedAt)) : '';
-    const sessionStatusText = session.status === 'FINALIZED' ? 'Finalisée' : 'En cours';
+    this.exportLoading.set(true);
+    this.error.set(null);
 
-    let html = `
-<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-<head>
-  <!--[if gte mso 9]>
-  <xml>
-    <x:ExcelWorkbook>
-      <x:ExcelWorksheets>
-        <x:ExcelWorksheet>
-          <x:Name>Émargement</x:Name>
-          <x:WorksheetOptions>
-            <x:DisplayGridlines/>
-          </x:WorksheetOptions>
-        </x:ExcelWorksheet>
-      </x:ExcelWorksheets>
-    </x:ExcelWorkbook>
-  </xml>
-  <![endif]-->
-  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-  <style>
-    th { background-color: #1e3a8a; color: #ffffff; font-weight: bold; border: 1px solid #cbd5e1; padding: 10px; text-align: left; font-family: sans-serif; }
-    td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; font-family: sans-serif; }
-    .title { font-size: 16px; font-weight: bold; color: #1e3a8a; font-family: sans-serif; }
-    .meta { font-size: 12px; color: #475569; font-family: sans-serif; }
-  </style>
-</head>
-<body>
-  <table>
-    <tr>
-      <td colspan="${selectedCols.length}" class="title">Rapport d'Émargement - ${session.courseLabel}</td>
-    </tr>
-    <tr>
-      <td colspan="${selectedCols.length}" class="meta">Date : ${formattedDate} | Salle : ${session.roomLabel || 'Non renseignée'} | Statut : ${sessionStatusText}</td>
-    </tr>
-    <tr>
-      <td colspan="${selectedCols.length}"></td>
-    </tr>
-    <tr>
-`;
-
-    // Add headers
-    selectedCols.forEach((col) => {
-      html += `      <th>${col.label}</th>\n`;
-    });
-    html += `    </tr>\n`;
-
-    // Add student data
-    students.forEach((student) => {
-      html += `    <tr>\n`;
-      selectedCols.forEach((col) => {
-        let val = '';
-        if (col.id === 'status') {
-          val = this.studentStatusLabel(student.status);
-        } else if (col.id === 'markMethod') {
-          val = student.markMethod ? this.methodLabel(student.markMethod as any) : 'N/A';
-        } else if (col.id === 'markedAt') {
-          val = student.markedAt ? new Intl.DateTimeFormat('fr-FR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-          }).format(new Date(student.markedAt)) : 'N/A';
-        } else {
-          val = (student as any)[col.id]?.toString() ?? '';
-        }
-        html += `      <td>${val}</td>\n`;
+    this.attendanceService
+      .getTeacherExportReport({ courseLabel: this.courseFilter() ?? undefined })
+      .pipe(finalize(() => this.exportLoading.set(false)))
+      .subscribe({
+        next: (report) => {
+          if (!report.filieres.length) {
+            this.error.set('Aucune session finalisee a exporter.');
+            return;
+          }
+          this.downloadReportWorkbook(report);
+        },
+        error: () => this.error.set('Impossible de generer le rapport de presence.'),
       });
-      html += `    </tr>\n`;
-    });
+  }
 
-    html += `
-  </table>
-</body>
-</html>
-`;
-
-    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  private downloadReportWorkbook(report: TeacherAttendanceReportDto): void {
+    const blob = this.buildXlsxBlob(report);
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    const safeCourseName = session.courseLabel.replace(/[^a-zA-Z0-9]/g, '_');
     link.href = url;
-    link.download = `emargement_${safeCourseName}_${session.sessionId}.xls`;
+    link.download = `rapport_presence_${this.fileDateLabel(report.generatedAt)}.xlsx`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  }
+
+  private buildXlsxBlob(report: TeacherAttendanceReportDto): Blob {
+    const sheets = report.filieres.map((filiere) => this.toXlsxSheet(filiere));
+    const entries = this.buildXlsxEntries(sheets);
+    const zip = this.createZip(entries);
+    const arrayBuffer = new ArrayBuffer(zip.byteLength);
+    new Uint8Array(arrayBuffer).set(zip);
+    return new Blob([arrayBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+  }
+
+  private toXlsxSheet(filiere: TeacherAttendanceReportFiliereDto): XlsxSheet {
+    const header = [
+      'Code Apogée',
+      'Nom',
+      'Prénom',
+      'Email',
+      'Groupe',
+      ...filiere.sessions.map((session) => this.sessionExportLabel(session)),
+    ].map((value) => ({ value, style: 2 }));
+
+    const rows: XlsxCell[][] = [
+      [{ value: `Rapport de présence - ${filiere.filiere}`, style: 1 }],
+      [{ value: `Généré le ${this.displayDateLabel(new Date())}` }],
+      header,
+      ...filiere.students.map((student) => this.toStudentReportRow(student, filiere.sessions)),
+    ];
+
+    return {
+      name: this.sheetName(filiere.filiere),
+      rows,
+    };
+  }
+
+  private toStudentReportRow(
+    student: TeacherAttendanceReportStudentDto,
+    sessions: TeacherAttendanceReportSessionDto[],
+  ): XlsxCell[] {
+    const infoCells: XlsxCell[] = [
+      { value: student.numApogee },
+      { value: student.lastName },
+      { value: student.firstName },
+      { value: student.email },
+      { value: student.groupeName || String(student.groupId || '') },
+    ];
+
+    const statusCells = sessions.map((session) => {
+      const status = student.statusesBySessionId[String(session.sessionId)];
+      return {
+        value: this.reportStatusLabel(status),
+        style: this.statusExportStyle(status),
+      };
+    });
+
+    return [...infoCells, ...statusCells];
+  }
+
+  private sessionExportLabel(session: TeacherAttendanceReportSessionDto): string {
+    return `${session.courseLabel} - ${this.displayDateLabel(new Date(session.startedAt))}`;
+  }
+
+  private reportStatusLabel(status: AttendanceStudentStatus | undefined): string {
+    switch (status) {
+      case 'PRESENT':
+        return 'Présent';
+      case 'ABSENT':
+        return 'Absent';
+      case 'JUSTIFIED':
+        return 'Justifié';
+      case 'UNKNOWN':
+        return 'Inconnu';
+      default:
+        return '';
+    }
+  }
+
+  private statusExportStyle(status: AttendanceStudentStatus | undefined): number | undefined {
+    switch (status) {
+      case 'PRESENT':
+        return 3;
+      case 'ABSENT':
+        return 4;
+      case 'JUSTIFIED':
+        return 5;
+      case 'UNKNOWN':
+        return 6;
+      default:
+        return undefined;
+    }
+  }
+
+  private buildXlsxEntries(sheets: XlsxSheet[]): ZipEntry[] {
+    return [
+      {
+        path: '[Content_Types].xml',
+        data: this.encodeXml(this.contentTypesXml(sheets.length)),
+      },
+      {
+        path: '_rels/.rels',
+        data: this.encodeXml(this.rootRelsXml()),
+      },
+      {
+        path: 'xl/workbook.xml',
+        data: this.encodeXml(this.workbookXml(sheets)),
+      },
+      {
+        path: 'xl/_rels/workbook.xml.rels',
+        data: this.encodeXml(this.workbookRelsXml(sheets.length)),
+      },
+      {
+        path: 'xl/styles.xml',
+        data: this.encodeXml(this.stylesXml()),
+      },
+      ...sheets.map((sheet, index) => ({
+        path: `xl/worksheets/sheet${index + 1}.xml`,
+        data: this.encodeXml(this.worksheetXml(sheet)),
+      })),
+    ];
+  }
+
+  private contentTypesXml(sheetCount: number): string {
+    const sheetOverrides = Array.from({ length: sheetCount }, (_, index) =>
+      `<Override PartName="/xl/worksheets/sheet${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`,
+    ).join('');
+
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+  ${sheetOverrides}
+</Types>`;
+  }
+
+  private rootRelsXml(): string {
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+  }
+
+  private workbookXml(sheets: XlsxSheet[]): string {
+    const sheetEntries = sheets
+      .map(
+        (sheet, index) =>
+          `<sheet name="${this.escapeXml(sheet.name)}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`,
+      )
+      .join('');
+
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets>${sheetEntries}</sheets>
+</workbook>`;
+  }
+
+  private workbookRelsXml(sheetCount: number): string {
+    const sheetRels = Array.from({ length: sheetCount }, (_, index) =>
+      `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index + 1}.xml"/>`,
+    ).join('');
+
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  ${sheetRels}
+  <Relationship Id="rId${sheetCount + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+  }
+
+  private stylesXml(): string {
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="3">
+    <font><sz val="11"/><name val="Calibri"/></font>
+    <font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font>
+    <font><b/><color rgb="FF173B78"/><sz val="16"/><name val="Calibri"/></font>
+  </fonts>
+  <fills count="7">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF173B78"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFDCFCE7"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFEE2E2"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFDBEAFE"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFF1F5F9"/><bgColor indexed="64"/></patternFill></fill>
+  </fills>
+  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs count="7">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+    <xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+    <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
+    <xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0" applyFill="1"/>
+    <xf numFmtId="0" fontId="0" fillId="4" borderId="0" xfId="0" applyFill="1"/>
+    <xf numFmtId="0" fontId="0" fillId="5" borderId="0" xfId="0" applyFill="1"/>
+    <xf numFmtId="0" fontId="0" fillId="6" borderId="0" xfId="0" applyFill="1"/>
+  </cellXfs>
+  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`;
+  }
+
+  private worksheetXml(sheet: XlsxSheet): string {
+    const maxColumns = Math.max(...sheet.rows.map((row) => row.length), 1);
+    const dimension = `A1:${this.columnName(maxColumns)}${Math.max(sheet.rows.length, 1)}`;
+    const rows = sheet.rows
+      .map((row, rowIndex) => {
+        const rowNumber = rowIndex + 1;
+        const cells = row
+          .map((cell, columnIndex) => this.cellXml(cell, `${this.columnName(columnIndex + 1)}${rowNumber}`))
+          .join('');
+        return `<row r="${rowNumber}">${cells}</row>`;
+      })
+      .join('');
+
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <dimension ref="${dimension}"/>
+  <sheetViews><sheetView workbookViewId="0"/></sheetViews>
+  <sheetFormatPr defaultRowHeight="15"/>
+  <sheetData>${rows}</sheetData>
+</worksheet>`;
+  }
+
+  private cellXml(cell: XlsxCell, reference: string): string {
+    const style = cell.style !== undefined ? ` s="${cell.style}"` : '';
+    return `<c r="${reference}" t="inlineStr"${style}><is><t>${this.escapeXml(cell.value)}</t></is></c>`;
+  }
+
+  private createZip(entries: ZipEntry[]): Uint8Array {
+    const centralDirectory: Uint8Array[] = [];
+    const localParts: Uint8Array[] = [];
+    let offset = 0;
+
+    for (const entry of entries) {
+      const fileName = TeacherSessionsPage.textEncoder.encode(entry.path);
+      const crc = this.crc32(entry.data);
+      const localHeader = this.localFileHeader(fileName, crc, entry.data.length);
+      const centralHeader = this.centralDirectoryHeader(fileName, crc, entry.data.length, offset);
+
+      localParts.push(localHeader, entry.data);
+      centralDirectory.push(centralHeader);
+      offset += localHeader.length + entry.data.length;
+    }
+
+    const centralDirectorySize = centralDirectory.reduce((sum, part) => sum + part.length, 0);
+    const endRecord = this.endCentralDirectoryRecord(entries.length, centralDirectorySize, offset);
+
+    return this.concatUint8Arrays([...localParts, ...centralDirectory, endRecord]);
+  }
+
+  private localFileHeader(fileName: Uint8Array, crc: number, size: number): Uint8Array {
+    const header = new Uint8Array(30 + fileName.length);
+    const view = new DataView(header.buffer);
+    view.setUint32(0, 0x04034b50, true);
+    view.setUint16(4, 20, true);
+    view.setUint16(6, 0, true);
+    view.setUint16(8, 0, true);
+    view.setUint16(10, 0, true);
+    view.setUint16(12, 0, true);
+    view.setUint32(14, crc, true);
+    view.setUint32(18, size, true);
+    view.setUint32(22, size, true);
+    view.setUint16(26, fileName.length, true);
+    view.setUint16(28, 0, true);
+    header.set(fileName, 30);
+    return header;
+  }
+
+  private centralDirectoryHeader(
+    fileName: Uint8Array,
+    crc: number,
+    size: number,
+    localHeaderOffset: number,
+  ): Uint8Array {
+    const header = new Uint8Array(46 + fileName.length);
+    const view = new DataView(header.buffer);
+    view.setUint32(0, 0x02014b50, true);
+    view.setUint16(4, 20, true);
+    view.setUint16(6, 20, true);
+    view.setUint16(8, 0, true);
+    view.setUint16(10, 0, true);
+    view.setUint16(12, 0, true);
+    view.setUint16(14, 0, true);
+    view.setUint32(16, crc, true);
+    view.setUint32(20, size, true);
+    view.setUint32(24, size, true);
+    view.setUint16(28, fileName.length, true);
+    view.setUint16(30, 0, true);
+    view.setUint16(32, 0, true);
+    view.setUint16(34, 0, true);
+    view.setUint16(36, 0, true);
+    view.setUint32(38, 0, true);
+    view.setUint32(42, localHeaderOffset, true);
+    header.set(fileName, 46);
+    return header;
+  }
+
+  private endCentralDirectoryRecord(
+    entryCount: number,
+    centralDirectorySize: number,
+    centralDirectoryOffset: number,
+  ): Uint8Array {
+    const record = new Uint8Array(22);
+    const view = new DataView(record.buffer);
+    view.setUint32(0, 0x06054b50, true);
+    view.setUint16(4, 0, true);
+    view.setUint16(6, 0, true);
+    view.setUint16(8, entryCount, true);
+    view.setUint16(10, entryCount, true);
+    view.setUint32(12, centralDirectorySize, true);
+    view.setUint32(16, centralDirectoryOffset, true);
+    view.setUint16(20, 0, true);
+    return record;
+  }
+
+  private crc32(data: Uint8Array): number {
+    let crc = 0xffffffff;
+    for (const byte of data) {
+      crc = (crc >>> 8) ^ TeacherSessionsPage.crc32Table[(crc ^ byte) & 0xff];
+    }
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+
+  private static buildCrc32Table(): Uint32Array {
+    const table = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let crc = i;
+      for (let j = 0; j < 8; j++) {
+        crc = crc & 1 ? 0xedb88320 ^ (crc >>> 1) : crc >>> 1;
+      }
+      table[i] = crc >>> 0;
+    }
+    return table;
+  }
+
+  private concatUint8Arrays(parts: Uint8Array[]): Uint8Array {
+    const totalLength = parts.reduce((sum, part) => sum + part.length, 0);
+    const output = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const part of parts) {
+      output.set(part, offset);
+      offset += part.length;
+    }
+    return output;
+  }
+
+  private encodeXml(xml: string): Uint8Array {
+    return TeacherSessionsPage.textEncoder.encode(xml);
+  }
+
+  private columnName(column: number): string {
+    let value = '';
+    let index = column;
+    while (index > 0) {
+      const remainder = (index - 1) % 26;
+      value = String.fromCharCode(65 + remainder) + value;
+      index = Math.floor((index - 1) / 26);
+    }
+    return value;
+  }
+
+  private displayDateLabel(date: Date): string {
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  }
+
+  private fileDateLabel(value: string): string {
+    const date = value ? new Date(value) : new Date();
+    if (Number.isNaN(date.getTime())) {
+      return new Date().toISOString().slice(0, 10);
+    }
+    return date.toISOString().slice(0, 10);
+  }
+
+  private sheetName(value: string): string {
+    const cleaned = (value || 'Sans filiere').replace(/[:\\/?*\[\]]/g, ' ').trim();
+    return (cleaned || 'Sans filiere').slice(0, 31);
+  }
+
+  private escapeXml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 }

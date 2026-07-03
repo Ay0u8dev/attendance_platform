@@ -3,6 +3,9 @@ export interface StudentUser {
   email: string;
   firstName: string;
   lastName: string;
+  academicYear?: string | null;
+  cycle?: string | null;
+  filiere?: string | null;
   groupeName?: string | null;
   pfpUrl?: string | null;
   numApogee: string;
