@@ -2,9 +2,12 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 
 @Component({
   selector: 'app-file-upload-dropzone',
+  host: {
+    class: 'block',
+  },
   template: `
     <section
-      class="rounded-[1.75rem] border border-dashed border-line bg-surface-subtle px-6 py-8 text-center"
+      class="flex h-full min-h-56 flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-line bg-surface-subtle px-6 py-8 text-center"
     >
       <div
         class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary"

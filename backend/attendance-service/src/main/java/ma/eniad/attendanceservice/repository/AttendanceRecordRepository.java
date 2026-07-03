@@ -15,6 +15,8 @@ import java.util.Optional;
 public interface AttendanceRecordRepository extends JpaRepository<AttendanceRecord, Long> {
     List<AttendanceRecord> findBySessionIdOrderByStudentIdAsc(Long sessionId);
 
+    List<AttendanceRecord> findBySessionIdInOrderByStudentIdAscSessionIdAsc(List<Long> sessionIds);
+
     void deleteBySessionId(Long sessionId);
 
     Optional<AttendanceRecord> findBySessionIdAndStudentId(Long sessionId, Long studentId);

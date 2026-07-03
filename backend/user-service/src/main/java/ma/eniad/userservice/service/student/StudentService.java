@@ -74,7 +74,7 @@ public class StudentService {
         applyAccountState(request, student, true, true);
         try {
             StudentResponseDTO dto = studentMapper.toResponse(studentRepository.save(student));
-            populateGroupName(dto);
+            populateEnrollmentDetails(dto);
             return dto;
         } catch (DataIntegrityViolationException ex) {
             if (normalizedEmail != null && userRepository.existsByEmail(normalizedEmail)) {
@@ -92,7 +92,7 @@ public class StudentService {
     // -------------------------------------------------------------------------
     public StudentResponseDTO getById(Long id) {
         StudentResponseDTO dto = studentMapper.toResponse(findStudentById(id));
-        populateGroupName(dto);
+        populateEnrollmentDetails(dto);
         return dto;
     }
 
@@ -100,7 +100,7 @@ public class StudentService {
         List<StudentResponseDTO> dtos = studentRepository.findAll().stream()
                 .map(studentMapper::toResponse)
                 .toList();
-        populateGroupNames(dtos);
+        populateEnrollmentDetails(dtos);
         return dtos;
     }
 
@@ -112,7 +112,7 @@ public class StudentService {
         List<StudentResponseDTO> dtos = studentRepository.findByGroupeId(groupeId).stream()
                 .map(studentMapper::toResponse)
                 .toList();
-        populateGroupNames(dtos);
+        populateEnrollmentDetails(dtos);
         return dtos;
     }
 
@@ -181,7 +181,7 @@ public class StudentService {
         applyAccountState(request, student, student.isEnabled(), student.isFirstLogin());
         try {
             StudentResponseDTO dto = studentMapper.toResponse(studentRepository.save(student));
-            populateGroupName(dto);
+            populateEnrollmentDetails(dto);
             return dto;
         } catch (DataIntegrityViolationException ex) {
             if (request.getEmail() != null) {
@@ -307,7 +307,7 @@ public class StudentService {
         student.setFirstLogin(enabled && firstLogin);
     }
 
-    private void populateGroupName(StudentResponseDTO dto) {
+    private void populateEnrollmentDetails(StudentResponseDTO dto) {
         if (dto == null) {
             return;
         }
@@ -317,14 +317,10 @@ public class StudentService {
         }
         Long activeYearId = activeYears.get(0).getId();
         inscriptionRepository.findActiveByStudentIdAndYearId(dto.getId(), activeYearId)
-                .ifPresent(inscription -> {
-                    if (inscription.getGroupe() != null) {
-                        dto.setGroupeName(inscription.getGroupe().getName());
-                    }
-                });
+                .ifPresent(inscription -> applyEnrollmentDetails(dto, inscription));
     }
 
-    private void populateGroupNames(List<StudentResponseDTO> dtos) {
+    private void populateEnrollmentDetails(List<StudentResponseDTO> dtos) {
         if (dtos == null || dtos.isEmpty()) {
             return;
         }
@@ -337,17 +333,49 @@ public class StudentService {
         if (inscriptions == null) {
             return;
         }
-
-        java.util.Map<Long, String> studentGroupMap = inscriptions.stream()
-                .filter(i -> i.getStudent() != null && i.getGroupe() != null)
+        java.util.Map<Long, Inscription> studentEnrollmentMap = inscriptions.stream()
+                .filter(i -> i.getStudent() != null)
                 .collect(java.util.stream.Collectors.toMap(
                         i -> i.getStudent().getId(),
-                        i -> i.getGroupe().getName(),
+                        i -> i,
                         (existing, replacement) -> existing
                 ));
 
         for (StudentResponseDTO dto : dtos) {
-            dto.setGroupeName(studentGroupMap.get(dto.getId()));
+            applyEnrollmentDetails(dto, studentEnrollmentMap.get(dto.getId()));
+        }
+    }
+
+    private void applyEnrollmentDetails(StudentResponseDTO dto, Inscription inscription) {
+        if (dto == null || inscription == null) {
+            return;
+        }
+
+        AnneeUniversitaire academicYear = inscription.getAnneeUniversitaire();
+        if (academicYear != null) {
+            dto.setAcademicYear(academicYear.getName());
+        }
+
+        Groupe groupe = inscription.getGroupe();
+        if (groupe != null) {
+            dto.setGroupeName(groupe.getName());
+        }
+
+        Formation formation = inscription.getFormation();
+        if (formation == null && groupe != null) {
+            formation = groupe.getFormation();
+        }
+        if (formation == null) {
+            return;
+        }
+
+        if (formation.getCycle() != null) {
+            dto.setCycle(formation.getCycle().getName());
+        }
+
+        Filiere filiere = formation.getFiliere();
+        if (filiere != null) {
+            dto.setFiliere(filiere.getCode());
         }
     }
 }

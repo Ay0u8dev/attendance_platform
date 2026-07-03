@@ -25,7 +25,6 @@ import { StatusBadge } from '../../../shared/components/status-badge/status-badg
 @Component({
   selector: 'app-student-justification-detail-page',
   imports: [
-    PageHeader,
     StatusBadge,
     Button,
     JustificationSummaryCard,
@@ -194,7 +193,7 @@ export class StudentJustificationDetailPage {
           title: 'Justification acceptée',
           description: 'L’absence ne sera pas comptabilisée contre vous.',
           meta: 'Décision finale',
-          state: 'current' as const,
+          state: 'approved' as const,
         },
       ];
     } else if (d.status === 'REJECTED') {
@@ -216,7 +215,7 @@ export class StudentJustificationDetailPage {
           description:
             d.teacherComment || 'Le document fourni ne permet pas de justifier l’absence.',
           meta: 'Décision finale',
-          state: 'current' as const,
+          state: 'rejected' as const,
         },
       ];
     } else {

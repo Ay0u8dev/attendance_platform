@@ -210,10 +210,8 @@ export const routes: Routes = [
       },
       {
         path: 'profile',
-        loadComponent: () =>
-          import('./features/student/profile/student-profile-page').then(
-            (module) => module.StudentProfilePage,
-          ),
+        redirectTo: 'settings',
+        pathMatch: 'full',
       },
       {
         path: 'justifications',

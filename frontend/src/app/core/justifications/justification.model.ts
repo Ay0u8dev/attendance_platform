@@ -12,6 +12,9 @@ export interface JustificationDto {
   readonly studentEmail: string | null;
   readonly studentCode: string | null;
   readonly studentProfileImageUrl?: string | null;
+  readonly studentFormation: string | null;
+  readonly studentClass: string | null;
+  readonly studentGroup: string | null;
   readonly courseLabel: string;
   readonly roomLabel: string | null;
   readonly absenceStartedAt: string;
@@ -25,7 +28,6 @@ export interface JustificationDto {
   readonly decidedAt: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
-
   readonly module: string;
   readonly sessionDate: string;
   readonly submittedAt: string;

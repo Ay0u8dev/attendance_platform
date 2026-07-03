@@ -10,102 +10,104 @@
     </div>
   </header>
 
-  <div class="grid gap-4 sm:gap-5">
-    @if (absenceWarning(); as warning) {
-      <app-student-alert-banner
-        [title]="
-          'Avertissement: Vous avez ' +
-          warning.absenceCount +
-          ' absences dans le module ' +
-          warning.moduleLabel
-        "
-        description=""
-        actionLabel="Justifier maintenant"
-        (actionClicked)="openJustifications()"
-      ></app-student-alert-banner>
-    }
+  @if (absenceWarning() || activeAttendanceSession() || activeAttendanceError()) {
+    <div class="grid gap-4 sm:gap-5">
+      @if (absenceWarning(); as warning) {
+        <app-student-alert-banner
+          [title]="
+            'Avertissement: Vous avez ' +
+            warning.absenceCount +
+            ' absences dans le module ' +
+            warning.moduleLabel
+          "
+          description=""
+          actionLabel="Justifier maintenant"
+          (actionClicked)="openJustifications()"
+        ></app-student-alert-banner>
+      }
 
-    @if (activeAttendanceSession(); as liveSession) {
-      <section
-        class="rounded-2xl border border-primary-soft bg-surface px-4 py-4 shadow-sm sm:px-5 sm:py-5"
-      >
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div class="min-w-0 space-y-3">
-            <div class="flex flex-wrap items-center gap-2">
-              <span
-                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary"
-                aria-hidden="true"
-              >
-                <i class="fa-solid fa-tower-broadcast"></i>
-              </span>
-              <app-status-badge label="Séance active" variant="success"></app-status-badge>
-            </div>
-
-            <div class="min-w-0">
-              <h2 class="text-lg font-semibold leading-7 text-principalText sm:text-xl">
-                {{ liveSession.courseLabel }}
-              </h2>
-              <p class="mt-1 text-sm text-secondaryText">
-                {{ liveSession.roomLabel }} ·
-                {{ liveSession.teacherFullName || 'Enseignant non renseigné' }}
-              </p>
-            </div>
-          </div>
-
-          <div class="w-full space-y-3 lg:max-w-sm">
-            @if (activeAttendanceStateMessage() !== '') {
-              <div
-                class="flex items-start gap-3 rounded-2xl border px-4 py-3"
-                [class]="activeAttendanceStateClasses()"
-              >
-                <i
-                  [class]="activeAttendanceStateIcon() + ' mt-0.5 text-base'"
+      @if (activeAttendanceSession(); as liveSession) {
+        <section
+          class="rounded-2xl border border-primary-soft bg-surface px-4 py-4 shadow-sm sm:px-5 sm:py-5"
+        >
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div class="min-w-0 space-y-3">
+              <div class="flex flex-wrap items-center gap-2">
+                <span
+                  class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary"
                   aria-hidden="true"
-                ></i>
-
-                <p class="text-sm font-semibold leading-6">{{ activeAttendanceStateMessage() }}</p>
-              </div>
-            }
-
-            @if (canStartAttendanceFlow()) {
-              <div class="grid gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
-                  class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary-soft bg-surface px-5 py-2.5 text-sm font-semibold text-principalText transition-colors duration-200 hover:bg-primary-soft focus:outline-none focus:ring-2 focus:ring-primary-soft focus:ring-offset-2"
-                  (click)="openAttendanceCamera('QR_CODE')"
                 >
-                  <span
-                    class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100 text-purple-500"
-                    aria-hidden="true"
-                  >
-                    <i class="fa-solid fa-qrcode"></i>
-                  </span>
-                  Scanner le QR code
-                </button>
-                <button
-                  type="button"
-                  class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary-soft bg-surface px-5 py-2.5 text-sm font-semibold text-principalText transition-colors duration-200 hover:bg-primary-soft focus:outline-none focus:ring-2 focus:ring-primary-soft focus:ring-offset-2"
-                  (click)="openAttendanceCamera('FACE_ID')"
-                >
-                  <span
-                    class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-warning-soft text-warning"
-                    aria-hidden="true"
-                  >
-                    <i class="fa-solid fa-user-check"></i>
-                  </span>
-                  Scanner mon visage
-                </button>
+                  <i class="fa-solid fa-tower-broadcast"></i>
+                </span>
+                <app-status-badge label="Séance active" variant="success"></app-status-badge>
               </div>
-            }
+
+              <div class="min-w-0">
+                <h2 class="text-lg font-semibold leading-7 text-principalText sm:text-xl">
+                  {{ liveSession.courseLabel }}
+                </h2>
+                <p class="mt-1 text-sm text-secondaryText">
+                  {{ liveSession.roomLabel }} ·
+                  {{ liveSession.teacherFullName || 'Enseignant non renseigné' }}
+                </p>
+              </div>
+            </div>
+
+            <div class="w-full space-y-3 lg:max-w-sm">
+              @if (activeAttendanceStateMessage() !== '') {
+                <div
+                  class="flex items-start gap-3 rounded-2xl border px-4 py-3"
+                  [class]="activeAttendanceStateClasses()"
+                >
+                  <i
+                    [class]="activeAttendanceStateIcon() + ' mt-0.5 text-base'"
+                    aria-hidden="true"
+                  ></i>
+
+                  <p class="text-sm font-semibold leading-6">{{ activeAttendanceStateMessage() }}</p>
+                </div>
+              }
+
+              @if (canStartAttendanceFlow()) {
+                <div class="grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary-soft bg-surface px-5 py-2.5 text-sm font-semibold text-principalText transition-colors duration-200 hover:bg-primary-soft focus:outline-none focus:ring-2 focus:ring-primary-soft focus:ring-offset-2"
+                    (click)="openAttendanceCamera('QR_CODE')"
+                  >
+                    <span
+                      class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100 text-purple-500"
+                      aria-hidden="true"
+                    >
+                      <i class="fa-solid fa-qrcode"></i>
+                    </span>
+                    Scanner le QR code
+                  </button>
+                  <button
+                    type="button"
+                    class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary-soft bg-surface px-5 py-2.5 text-sm font-semibold text-principalText transition-colors duration-200 hover:bg-primary-soft focus:outline-none focus:ring-2 focus:ring-primary-soft focus:ring-offset-2"
+                    (click)="openAttendanceCamera('FACE_ID')"
+                  >
+                    <span
+                      class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-warning-soft text-warning"
+                      aria-hidden="true"
+                    >
+                      <i class="fa-solid fa-user-check"></i>
+                    </span>
+                    Scanner mon visage
+                  </button>
+                </div>
+              }
+            </div>
           </div>
-        </div>
-      </section>
-    } @else if (activeAttendanceError()) {
-      <section class="rounded-2xl border border-warning/20 bg-warning-soft px-4 py-4">
-        <p class="text-sm font-medium text-warning">{{ activeAttendanceError() }}</p>
-      </section>
-    }
-  </div>
+        </section>
+      } @else if (activeAttendanceError()) {
+        <section class="rounded-2xl border border-warning/20 bg-warning-soft px-4 py-4">
+          <p class="text-sm font-medium text-warning">{{ activeAttendanceError() }}</p>
+        </section>
+      }
+    </div>
+  }
 
   <section class="space-y-4 pt-2 sm:space-y-5 sm:pt-4">
     <div>

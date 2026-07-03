@@ -2,6 +2,7 @@ package ma.eniad.attendanceservice.service;
 
 import jakarta.persistence.criteria.JoinType;
 import lombok.AllArgsConstructor;
+import ma.eniad.attendanceservice.client.UserServiceClient;
 import ma.eniad.attendanceservice.dto.*;
 import ma.eniad.attendanceservice.entity.*;
 import ma.eniad.attendanceservice.repository.AttendanceRecordRepository;
@@ -17,6 +18,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -31,6 +35,7 @@ public class AttendanceQueryService {
     private final AttendanceRecordRepository attendanceRecordRepository;
     private final AttendanceSessionReadService attendanceSessionReadService;
     private final LiveAttendanceSessionStore liveAttendanceSessionStore;
+    private final UserServiceClient userServiceClient;
 
     public PagedResponse<AttendanceSessionSummaryResponse> getTeacherSessions(Long teacherId,
                                                                               AttendanceSessionStatus status,
@@ -40,6 +45,68 @@ public class AttendanceQueryService {
         Specification<AttendanceSession> spec = baseSessionSpec(status, dateFrom, dateTo)
                 .and((root, query, cb) -> cb.equal(root.get("teacherId"), teacherId));
         return mapSessionPage(attendanceSessionRepository.findAll(spec, pageable));
+    }
+
+    public TeacherAttendanceReportResponse getTeacherExportReport(Long teacherId,
+                                                                  LocalDate dateFrom,
+                                                                  LocalDate dateTo,
+                                                                  String courseLabel) {
+        Specification<AttendanceSession> spec = baseSessionSpec(AttendanceSessionStatus.FINALIZED, dateFrom, dateTo)
+                .and((root, query, cb) -> cb.equal(root.get("teacherId"), teacherId));
+        if (courseLabel != null && !courseLabel.isBlank()) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("courseLabel"), courseLabel.trim()));
+        }
+
+        List<AttendanceSession> sessions = attendanceSessionRepository.findAll(spec).stream()
+                .sorted(Comparator.comparing(AttendanceSession::getStartedAt)
+                        .thenComparing(AttendanceSession::getId))
+                .toList();
+        if (sessions.isEmpty()) {
+            return new TeacherAttendanceReportResponse(LocalDate.now(), List.of());
+        }
+
+        Map<Long, AttendanceSession> sessionsById = sessions.stream()
+                .collect(Collectors.toMap(AttendanceSession::getId, Function.identity()));
+        List<Long> sessionIds = sessions.stream().map(AttendanceSession::getId).toList();
+        List<AttendanceRecord> records = attendanceRecordRepository.findBySessionIdInOrderByStudentIdAscSessionIdAsc(sessionIds);
+        Map<Long, StudentRosterDto> currentRosterByStudentId = loadCurrentRosterByStudentId(sessions);
+
+        Map<String, Map<Long, ReportStudentAccumulator>> groupedStudents = new LinkedHashMap<>();
+        Map<String, Map<Long, TeacherAttendanceReportSessionResponse>> groupedSessions = new LinkedHashMap<>();
+
+        for (AttendanceRecord record : records) {
+            StudentRosterDto roster = currentRosterByStudentId.get(record.getStudentId());
+            String filiere = firstNonBlank(record.getFiliere(), roster != null ? roster.filiere() : null, "Sans filiere");
+            String groupeName = firstNonBlank(record.getGroupeName(), roster != null ? roster.groupeName() : null, String.valueOf(record.getGroupId()));
+
+            groupedSessions
+                    .computeIfAbsent(filiere, ignored -> new LinkedHashMap<>())
+                    .putIfAbsent(record.getSessionId(), toReportSession(sessionsById.get(record.getSessionId())));
+
+            groupedStudents
+                    .computeIfAbsent(filiere, ignored -> new LinkedHashMap<>())
+                    .computeIfAbsent(record.getStudentId(), ignored -> new ReportStudentAccumulator(record, groupeName))
+                    .statusesBySessionId()
+                    .put(record.getSessionId(), record.getStatus());
+        }
+
+        List<TeacherAttendanceReportFiliereResponse> filieres = groupedStudents.entrySet().stream()
+                .map(entry -> new TeacherAttendanceReportFiliereResponse(
+                        entry.getKey(),
+                        groupedSessions.getOrDefault(entry.getKey(), Map.of()).values().stream()
+                                .sorted(Comparator.comparing(TeacherAttendanceReportSessionResponse::startedAt)
+                                        .thenComparing(TeacherAttendanceReportSessionResponse::sessionId))
+                                .toList(),
+                        entry.getValue().values().stream()
+                                .sorted(Comparator.comparing(ReportStudentAccumulator::lastName, String.CASE_INSENSITIVE_ORDER)
+                                        .thenComparing(ReportStudentAccumulator::firstName, String.CASE_INSENSITIVE_ORDER)
+                                        .thenComparing(ReportStudentAccumulator::numApogee, String.CASE_INSENSITIVE_ORDER))
+                                .map(ReportStudentAccumulator::toResponse)
+                                .toList()
+                ))
+                .toList();
+
+        return new TeacherAttendanceReportResponse(LocalDate.now(), filieres);
     }
 
     public AttendanceSessionDetailsResponse getActiveTeacherSession(Long teacherId) {
@@ -306,6 +373,43 @@ public class AttendanceQueryService {
                 .collect(Collectors.toMap(AttendanceSession::getId, Function.identity()));
     }
 
+    private Map<Long, StudentRosterDto> loadCurrentRosterByStudentId(List<AttendanceSession> sessions) {
+        List<Long> groupIds = sessions.stream()
+                .flatMap(session -> session.getGroupIds().stream())
+                .distinct()
+                .toList();
+        if (groupIds.isEmpty()) {
+            return Map.of();
+        }
+
+        try {
+            return userServiceClient.getStudentRosterByGroupIds(groupIds).stream()
+                    .collect(Collectors.toMap(StudentRosterDto::studentId, Function.identity(), (existing, replacement) -> existing));
+        } catch (RuntimeException ex) {
+            return Map.of();
+        }
+    }
+
+    private TeacherAttendanceReportSessionResponse toReportSession(AttendanceSession session) {
+        return new TeacherAttendanceReportSessionResponse(
+                session.getId(),
+                session.getCourseLabel(),
+                session.getRoomLabel(),
+                session.getStartedAt(),
+                session.getEndedAt()
+        );
+    }
+
+    private String firstNonBlank(String first, String second, String fallback) {
+        if (first != null && !first.isBlank()) {
+            return first.trim();
+        }
+        if (second != null && !second.isBlank()) {
+            return second.trim();
+        }
+        return fallback;
+    }
+
     private Specification<AttendanceSession> baseSessionSpec(AttendanceSessionStatus status, LocalDate dateFrom, LocalDate dateTo) {
         Specification<AttendanceSession> spec = (root, query, cb) -> cb.conjunction();
         if (status != null) {
@@ -358,5 +462,42 @@ public class AttendanceQueryService {
             case "markedAt" -> "markedAt";
             default -> "session.startedAt";
         };
+    }
+
+    private record ReportStudentAccumulator(
+            Long studentId,
+            String numApogee,
+            String firstName,
+            String lastName,
+            String email,
+            Long groupId,
+            String groupeName,
+            Map<Long, AttendanceStudentStatus> statusesBySessionId
+    ) {
+        ReportStudentAccumulator(AttendanceRecord record, String groupeName) {
+            this(
+                    record.getStudentId(),
+                    record.getNumApogee(),
+                    record.getFirstName(),
+                    record.getLastName(),
+                    record.getEmail(),
+                    record.getGroupId(),
+                    groupeName,
+                    new HashMap<>()
+            );
+        }
+
+        TeacherAttendanceReportStudentResponse toResponse() {
+            return new TeacherAttendanceReportStudentResponse(
+                    studentId,
+                    numApogee,
+                    firstName,
+                    lastName,
+                    email,
+                    groupId,
+                    groupeName,
+                    statusesBySessionId
+            );
+        }
     }
 }

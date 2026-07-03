@@ -116,7 +116,21 @@
       <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p class="text-lg font-bold text-principalText">{{ justification.studentName }}</p>
-          <p class="mt-1 text-sm text-secondaryText">Apogee {{ justification.studentCode }}</p>
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <span
+              class="inline-flex items-center rounded-full border border-line bg-surface-subtle px-3 py-1 text-xs font-semibold text-secondaryText"
+            >
+              Apogee {{ justification.studentCode }}
+            </span>
+            @for (item of justification.studentMeta; track item.label) {
+              <span
+                class="inline-flex items-center gap-1 rounded-full border border-primary-soft bg-primary-soft px-3 py-1 text-xs font-semibold text-primary"
+              >
+                <span class="text-primary/70">{{ item.label }}</span>
+                {{ item.value }}
+              </span>
+            }
+          </div>
         </div>
         <app-status-badge
           [label]="justification.status"
@@ -137,47 +151,26 @@
           <span class="detail-label">Soumise le</span>
           <p class="detail-value">{{ justification.submittedAt }}</p>
         </div>
+      </div>
+
+      <div class="review-notes-grid">
         <div class="detail-box">
           <span class="detail-label">Motif</span>
-          <p class="detail-value">{{ justification.reason }}</p>
+          <p class="detail-value detail-value--long">{{ justification.comment }}</p>
         </div>
+
+        <label class="detail-box">
+          <span class="detail-label">Commentaire administratif</span>
+          <textarea
+            rows="4"
+            class="admin-comment-input"
+            placeholder="Ajoutez un commentaire visible dans la décision..."
+            [disabled]="justification.status !== 'En attente' || reviewingId() === justification.id"
+            [ngModel]="reviewCommentDraft()"
+            (ngModelChange)="reviewCommentDraft.set($event)"
+          ></textarea>
+        </label>
       </div>
-
-      <div class="rounded-2xl border border-line bg-surface-subtle p-4">
-        <span class="detail-label">Commentaire etudiant</span>
-        <p class="mt-2 text-sm leading-6 text-secondaryText">{{ justification.comment }}</p>
-      </div>
-
-@if (justification.attachmentPreviewUrl) {
-  <figure class="justification-preview">
-    <div class="attachment-preview-section">
-      <span class="detail-label">Apercu de la piece jointe</span>
-
-      @switch (getAttachmentType(justification.attachmentPreviewUrl)) {
-        @case ('pdf') {
-          <iframe
-            [src]="getSafeUrl(justification.attachmentPreviewUrl)"
-            class="attachment-frame"
-            title="Apercu du justificatif"
-          ></iframe>
-        }
-        @case ('image') {
-          <img
-            [src]="justification.attachmentPreviewUrl"
-            [alt]="'Apercu de ' + justification.attachmentName"
-            class="attachment-image"
-          />
-        }
-        @default {
-          <div class="attachment-fallback">{{ justification.attachmentName }}</div>
-        }
-      }
-    </div>
-    <figcaption>
-      <p>{{ justification.attachmentName }}</p>
-    </figcaption>
-  </figure>
-}
 
       @if (justification.reviewedBy || justification.reviewedAt) {
         <div class="rounded-2xl border border-line bg-surface-subtle p-4">
@@ -194,23 +187,47 @@
         </div>
       }
 
-      <div class="flex items-center justify-between gap-4 rounded-2xl border border-line bg-surface p-4">
-        <div class="min-w-0">
-          <span class="detail-label">Piece jointe</span>
-          <p class="mt-1 truncate text-sm font-semibold text-principalText">
-            {{ justification.attachmentName }}
-          </p>
-        </div>
-        <button
-          type="button"
-          class="action-btn action-btn-neutral"
-          [disabled]="!justification.attachmentPreviewUrl"
-          (click)="openAttachment(justification)"
-        >
-          <i class="fa-regular fa-file-lines" aria-hidden="true"></i>
-          Ouvrir
-        </button>
-      </div>
+      @if (justification.attachmentPreviewUrl) {
+        <figure class="justification-preview">
+          <div class="attachment-preview-header">
+            <div class="min-w-0">
+              <span class="detail-label">Apercu de la piece jointe</span>
+              <p class="attachment-preview-name">{{ justification.attachmentName }}</p>
+            </div>
+            <button
+              type="button"
+              class="attachment-open-icon"
+              aria-label="Ouvrir la pièce jointe"
+              [disabled]="!justification.attachmentPreviewUrl"
+              (click)="openAttachment(justification)"
+            >
+              <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <div class="attachment-preview-body">
+            @switch (getAttachmentType(justification.attachmentPreviewUrl)) {
+              @case ('pdf') {
+                <iframe
+                  [src]="getSafeUrl(justification.attachmentPreviewUrl)"
+                  class="attachment-frame"
+                  title="Apercu du justificatif"
+                ></iframe>
+              }
+              @case ('image') {
+                <img
+                  [src]="justification.attachmentPreviewUrl"
+                  [alt]="'Apercu de ' + justification.attachmentName"
+                  class="attachment-image"
+                />
+              }
+              @default {
+                <div class="attachment-fallback">{{ justification.attachmentName }}</div>
+              }
+            }
+          </div>
+        </figure>
+      }
     }
   </div>
 
