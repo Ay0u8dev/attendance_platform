@@ -80,6 +80,7 @@ describe('StudentSettingsPage profile photo removal', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'Supprimer la photo de profil ?',
     );
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Photo à supprimer');
   });
 
   it('removes the profile photo and falls back to initials after confirmation', () => {

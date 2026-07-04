@@ -35,14 +35,16 @@ import { Modal } from '../modal/modal';
           </div>
         </div>
 
-        <div class="rounded-xl border border-line bg-surface-subtle px-4 py-3">
-          <p class="text-xs font-semibold uppercase tracking-wide text-secondaryText">
-            {{ confirmMessage() }}
-          </p>
-          <p class="mt-2 break-words text-base font-semibold text-principalText">
-            {{ itemName() || 'Élément non sélectionné' }}
-          </p>
-        </div>
+        @if (showItemSummary()) {
+          <div class="rounded-xl border border-line bg-surface-subtle px-4 py-3">
+            <p class="text-xs font-semibold uppercase tracking-wide text-secondaryText">
+              {{ confirmMessage() }}
+            </p>
+            <p class="mt-2 break-words text-base font-semibold text-principalText">
+              {{ itemName() || 'Élément non sélectionné' }}
+            </p>
+          </div>
+        }
 
         @if (requireConfirmation()) {
           <label class="block">
@@ -91,6 +93,7 @@ export class DeleteModal {
   readonly deleteButtonLabel = input('Supprimer définitivement');
   readonly requireConfirmation = input(true);
   readonly confirmationText = input('SUPPRIMER');
+  readonly showItemSummary = input(true);
 
   readonly closeRequested = output<void>();
   readonly confirmDelete = output<void>();
