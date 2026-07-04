@@ -99,6 +99,16 @@ public class TeacherController {
     }
 
     @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Teacher profile photo removed successfully",
+                    content = @Content(schema = @Schema(implementation = TeacherProfileDto.class)))
+    })
+    @RequireRole({"TEACHER"})
+    @DeleteMapping(value = "/profile/photo")
+    public ResponseEntity<TeacherProfileDto> removeProfilePhoto() {
+        return ResponseEntity.ok(service.removeCurrentProfilePhoto());
+    }
+
+    @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Presigned URL generated successfully",
                     content = @Content(schema = @Schema(implementation = PresignedUrlResponse.class)))
     })

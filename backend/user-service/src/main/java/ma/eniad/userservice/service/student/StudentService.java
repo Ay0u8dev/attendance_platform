@@ -34,6 +34,7 @@ import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
 import ma.eniad.userservice.repository.structure.GroupeRepository;
+import ma.eniad.userservice.service.CloudflareR2Service;
 import ma.eniad.userservice.service.UserContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +50,7 @@ public class StudentService {
     private final AnneeUniversitaireRepository anneeUniversitaireRepository;
     private final GroupeRepository groupeRepository;
     private final StudentMapper      studentMapper;
+    private final CloudflareR2Service r2Service;
 
     @Value("${app.allowed-domain}")
     private String allowedDomain;
@@ -124,6 +126,15 @@ public class StudentService {
     public StudentProfileDto updateCurrentProfilePhoto(String pfpUrl) {
         Student student = findCurrentStudent();
         student.setPfpUrl(pfpUrl);
+        studentRepository.save(student);
+        return buildCurrentProfile(student);
+    }
+
+    @Transactional
+    public StudentProfileDto removeCurrentProfilePhoto() {
+        Student student = findCurrentStudent();
+        r2Service.deleteProfilePhotoIfOwned(student.getPfpUrl());
+        student.setPfpUrl(null);
         studentRepository.save(student);
         return buildCurrentProfile(student);
     }

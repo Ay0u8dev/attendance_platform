@@ -133,6 +133,22 @@ class TeacherControllerTest {
     }
 
     @Test
+    void removeProfilePhoto_returnsOk() {
+        TeacherProfileDto profile = TeacherProfileDto.builder()
+                .id(1L)
+                .pfpUrl(null)
+                .build();
+
+        when(teacherService.removeCurrentProfilePhoto()).thenReturn(profile);
+
+        ResponseEntity<TeacherProfileDto> result = controller.removeProfilePhoto();
+
+        assertThat(result.getStatusCode().value()).isEqualTo(200);
+        assertThat(result.getBody()).isSameAs(profile);
+        verify(teacherService).removeCurrentProfilePhoto();
+    }
+
+    @Test
     void getProfilePhotoPresignedUrl_returnsUploadUrl() {
         when(r2Service.generatePresignedUploadUrl(any(String.class), any(String.class)))
                 .thenReturn("https://upload.example.com");

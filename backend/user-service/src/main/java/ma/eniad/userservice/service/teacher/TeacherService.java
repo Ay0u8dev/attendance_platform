@@ -25,6 +25,7 @@ import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.inscription.TeacherAssignmentRepository;
 import ma.eniad.userservice.repository.teacher.TeacherRepository;
+import ma.eniad.userservice.service.CloudflareR2Service;
 import ma.eniad.userservice.service.UserContext;
 import ma.eniad.userservice.mapper.teacher.TeacherMapper;
 
@@ -38,6 +39,7 @@ public class TeacherService {
     private final UserRepository userRepository;
     private final TeacherAssignmentRepository assignmentRepository;
     private final TeacherMapper      teacherMapper;
+    private final CloudflareR2Service r2Service;
 
     @Value("${app.allowed-domain}")
     private String allowedDomain;
@@ -92,6 +94,15 @@ public class TeacherService {
     public TeacherProfileDto updateCurrentProfilePhoto(String pfpUrl) {
         Teacher teacher = findCurrentTeacher();
         teacher.setPfpUrl(pfpUrl);
+        teacherRepository.save(teacher);
+        return buildCurrentProfile(teacher);
+    }
+
+    @Transactional
+    public TeacherProfileDto removeCurrentProfilePhoto() {
+        Teacher teacher = findCurrentTeacher();
+        r2Service.deleteProfilePhotoIfOwned(teacher.getPfpUrl());
+        teacher.setPfpUrl(null);
         teacherRepository.save(teacher);
         return buildCurrentProfile(teacher);
     }

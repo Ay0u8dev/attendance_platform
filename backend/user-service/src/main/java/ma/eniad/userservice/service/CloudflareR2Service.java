@@ -8,14 +8,19 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import jakarta.annotation.PostConstruct;
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -36,7 +41,11 @@ public class CloudflareR2Service {
     @Value("${cloudflare.r2.bucket-name:dummy-bucket}")
     private String bucketName;
 
+    @Value("${cloudflare.r2.public-url:}")
+    private String publicUrl;
+
     private S3Presigner presigner;
+    private S3Client s3Client;
 
     @PostConstruct
     public void init() {
@@ -54,6 +63,15 @@ public class CloudflareR2Service {
                 .endpointOverride(URI.create(finalEndpoint))
                 .credentialsProvider(StaticCredentialsProvider.create(credentials))
                 .region(Region.of("auto")) // Cloudflare R2 uses 'auto' region
+                .serviceConfiguration(S3Configuration.builder()
+                        .pathStyleAccessEnabled(true)
+                        .build())
+                .build();
+
+        this.s3Client = S3Client.builder()
+                .endpointOverride(URI.create(finalEndpoint))
+                .credentialsProvider(StaticCredentialsProvider.create(credentials))
+                .region(Region.of("auto"))
                 .serviceConfiguration(S3Configuration.builder()
                         .pathStyleAccessEnabled(true)
                         .build())
@@ -108,5 +126,49 @@ public class CloudflareR2Service {
 
         PresignedPutObjectRequest presignedRequest = presigner.presignPutObject(presignRequest);
         return presignedRequest.url().toString();
+    }
+
+    public boolean deleteProfilePhotoIfOwned(String photoUrl) {
+        Optional<String> objectKey = ownedProfilePhotoKey(photoUrl);
+        if (objectKey.isEmpty()) {
+            return false;
+        }
+
+        DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                .bucket(bucketName)
+                .key(objectKey.get())
+                .build();
+        s3Client.deleteObject(deleteObjectRequest);
+        return true;
+    }
+
+    Optional<String> ownedProfilePhotoKey(String photoUrl) {
+        if (photoUrl == null || photoUrl.isBlank() || publicUrl == null || publicUrl.isBlank()) {
+            return Optional.empty();
+        }
+
+        String normalizedPublicUrl = publicUrl.trim().replaceAll("/+$", "");
+        String normalizedPhotoUrl = photoUrl.trim();
+        String ownedPrefix = normalizedPublicUrl + "/";
+        if (!normalizedPhotoUrl.startsWith(ownedPrefix)) {
+            return Optional.empty();
+        }
+
+        String key = normalizedPhotoUrl.substring(ownedPrefix.length());
+        int queryStart = key.indexOf('?');
+        if (queryStart >= 0) {
+            key = key.substring(0, queryStart);
+        }
+        int fragmentStart = key.indexOf('#');
+        if (fragmentStart >= 0) {
+            key = key.substring(0, fragmentStart);
+        }
+
+        key = URLDecoder.decode(key, StandardCharsets.UTF_8);
+        if (!key.startsWith("profile-photos/") || key.length() <= "profile-photos/".length()) {
+            return Optional.empty();
+        }
+
+        return Optional.of(key);
     }
 }

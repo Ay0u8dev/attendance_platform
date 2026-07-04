@@ -88,6 +88,16 @@ export class TeacherProfileService {
       );
   }
 
+  removeProfilePhoto(): Observable<TeacherProfile> {
+    return this.http
+      .delete<TeacherProfile>(`${environment.apiBaseUrl}/users/teacher/profile/photo`)
+      .pipe(
+        tap((profile) => {
+          this.profileSignal.set(this.withCacheBustedProfilePhoto(profile));
+        }),
+      );
+  }
+
   clear(): void {
     this.profileSignal.set(null);
   }

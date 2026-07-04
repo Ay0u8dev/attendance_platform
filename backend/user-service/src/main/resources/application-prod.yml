@@ -28,6 +28,7 @@ cloudflare:
     access-key: ${R2_ACCESS_KEY}
     secret-key: ${R2_SECRET_KEY}
     bucket-name: ${R2_BUCKET_NAME}
+    public-url: ${R2_PUBLIC_URL:}
 
 management:
   endpoints:

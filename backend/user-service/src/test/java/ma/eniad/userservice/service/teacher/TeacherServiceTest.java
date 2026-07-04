@@ -14,6 +14,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -40,6 +41,7 @@ import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.repository.inscription.TeacherAssignmentRepository;
 import ma.eniad.userservice.repository.teacher.TeacherRepository;
 import ma.eniad.userservice.repository.UserRepository;
+import ma.eniad.userservice.service.CloudflareR2Service;
 import ma.eniad.userservice.service.UserContext;
 import ma.eniad.userservice.mapper.teacher.TeacherMapper;
 import ma.eniad.userservice.dto.teacher.TeacherRequestDTO;
@@ -61,6 +63,9 @@ class TeacherServiceTest {
 
     @Mock
     private TeacherMapper teacherMapper;
+
+    @Mock
+    private CloudflareR2Service r2Service;
 
     @InjectMocks
     private TeacherService teacherService;
@@ -260,6 +265,49 @@ class TeacherServiceTest {
         assertThat(teacherService.updateCurrentProfilePhoto(newUrl).getPfpUrl()).isEqualTo(newUrl);
         assertThat(teacher.getPfpUrl()).isEqualTo(newUrl);
         verify(teacherRepository).save(teacher);
+    }
+
+    @Test
+    void removeCurrentProfilePhotoDeletesOwnedObjectAndClearsCurrentTeacherPhotoUrl() {
+        UserContext.setCurrentUser("1", "teacher@ump.ac.ma", Set.of("TEACHER"));
+
+        Teacher teacher = new Teacher();
+        teacher.setId(1L);
+        teacher.setEmail("teacher@ump.ac.ma");
+        teacher.setPfpUrl("https://pub.example.r2.dev/profile-photos/teacher.png");
+
+        when(teacherRepository.findById(1L)).thenReturn(Optional.of(teacher));
+        when(teacherRepository.save(teacher)).thenReturn(teacher);
+        when(assignmentRepository.findByTeacherId(1L)).thenReturn(List.of());
+
+        TeacherProfileDto profile = teacherService.removeCurrentProfilePhoto();
+
+        assertThat(teacher.getPfpUrl()).isNull();
+        assertThat(profile.getPfpUrl()).isNull();
+        verify(r2Service).deleteProfilePhotoIfOwned("https://pub.example.r2.dev/profile-photos/teacher.png");
+        verify(teacherRepository).save(teacher);
+    }
+
+    @Test
+    void removeCurrentProfilePhotoKeepsDatabaseValueWhenOwnedObjectDeleteFails() {
+        UserContext.setCurrentUser("1", "teacher@ump.ac.ma", Set.of("TEACHER"));
+
+        Teacher teacher = new Teacher();
+        teacher.setId(1L);
+        teacher.setEmail("teacher@ump.ac.ma");
+        teacher.setPfpUrl("https://pub.example.r2.dev/profile-photos/teacher.png");
+
+        when(teacherRepository.findById(1L)).thenReturn(Optional.of(teacher));
+        doThrow(new RuntimeException("R2 delete failed"))
+                .when(r2Service)
+                .deleteProfilePhotoIfOwned("https://pub.example.r2.dev/profile-photos/teacher.png");
+
+        assertThatThrownBy(() -> teacherService.removeCurrentProfilePhoto())
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("R2 delete failed");
+
+        assertThat(teacher.getPfpUrl()).isEqualTo("https://pub.example.r2.dev/profile-photos/teacher.png");
+        verify(teacherRepository, never()).save(teacher);
     }
 
     @Test

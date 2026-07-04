@@ -36,3 +36,4 @@ cloudflare:
     access-key: ${R2_ACCESS_KEY:dummy-access-key}
     secret-key: ${R2_SECRET_KEY:dummy-secret-key}
     bucket-name: ${R2_BUCKET_NAME:dummy-bucket}
+    public-url: ${R2_PUBLIC_URL:}

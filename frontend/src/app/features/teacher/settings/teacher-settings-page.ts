@@ -21,13 +21,14 @@ import {
 } from '../../../core/teacher/models/teacher-preferences.model';
 import { TeacherProfileService } from '../../../core/teacher/services/teacher-profile.service';
 import { TeacherPreferencesService } from '../../../core/teacher/services/teacher-preferences.service';
+import { DeleteModal } from '../../../shared/components/delete-modal/delete-modal';
 import { SettingsSectionCard } from '../../../shared/components/settings/settings-section-card';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { ToastService } from '../../../shared/components/toast/toast.service';
 
 @Component({
   selector: 'app-teacher-settings-page',
-  imports: [PageHeader, SettingsSectionCard],
+  imports: [PageHeader, SettingsSectionCard, DeleteModal],
   templateUrl: './teacher-settings-page.html',
   styleUrls: [
     '../../../shared/components/settings/settings-page.css',
@@ -49,6 +50,8 @@ export class TeacherSettingsPage {
   readonly profilePhotoInput = viewChild<ElementRef<HTMLInputElement>>('profilePhotoInput');
   readonly profileImageFailed = signal(false);
   readonly profilePhotoUploading = signal(false);
+  readonly profilePhotoRemoving = signal(false);
+  readonly profilePhotoRemoveOpen = signal(false);
   readonly profilePhotoError = signal<string | null>(null);
   readonly profilePhotoMessage = signal<string | null>(null);
   readonly selectedProfilePhotoPreview = signal<string | null>(null);
@@ -108,6 +111,11 @@ export class TeacherSettingsPage {
     return value && value.length > 0 ? value : null;
   });
 
+  readonly persistedProfilePhotoUrl = computed(() => {
+    const value = this.profile()?.pfpUrl?.trim();
+    return value && value.length > 0 ? value : null;
+  });
+
   readonly selectedDurationLabel = computed(
     () =>
       this.durationOptions.find((option) => option.value === this.draftDurationMinutes())?.label ??
@@ -157,6 +165,10 @@ export class TeacherSettingsPage {
   }
 
   triggerProfilePhotoInput(): void {
+    if (this.profilePhotoUploading() || this.profilePhotoRemoving()) {
+      return;
+    }
+
     this.profilePhotoError.set(null);
     this.profilePhotoMessage.set(null);
     this.profilePhotoInput()?.nativeElement.click();
@@ -167,7 +179,7 @@ export class TeacherSettingsPage {
     const file = input.files?.[0];
     input.value = '';
 
-    if (!file || this.profilePhotoUploading()) {
+    if (!file || this.profilePhotoUploading() || this.profilePhotoRemoving()) {
       return;
     }
 
@@ -196,6 +208,51 @@ export class TeacherSettingsPage {
         error: (error) => {
           this.revokeProfilePhotoPreview();
           this.profilePhotoError.set(this.profilePhotoFailureMessage(error));
+        },
+      });
+  }
+
+  openProfilePhotoRemoval(): void {
+    if (!this.persistedProfilePhotoUrl() || this.profilePhotoUploading() || this.profilePhotoRemoving()) {
+      return;
+    }
+
+    this.profilePhotoError.set(null);
+    this.profilePhotoMessage.set(null);
+    this.profilePhotoRemoveOpen.set(true);
+  }
+
+  closeProfilePhotoRemoval(): void {
+    if (!this.profilePhotoRemoving()) {
+      this.profilePhotoRemoveOpen.set(false);
+    }
+  }
+
+  confirmProfilePhotoRemoval(): void {
+    if (!this.persistedProfilePhotoUrl() || this.profilePhotoUploading() || this.profilePhotoRemoving()) {
+      return;
+    }
+
+    this.profilePhotoRemoving.set(true);
+    this.profilePhotoError.set(null);
+    this.profilePhotoMessage.set(null);
+
+    this.teacherProfileService
+      .removeProfilePhoto()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.profilePhotoRemoving.set(false)),
+      )
+      .subscribe({
+        next: () => {
+          this.revokeProfilePhotoPreview();
+          this.profileImageFailed.set(false);
+          this.profilePhotoRemoveOpen.set(false);
+          this.profilePhotoMessage.set('Photo de profil supprimée.');
+        },
+        error: (error) => {
+          this.profilePhotoRemoveOpen.set(false);
+          this.profilePhotoError.set(this.profilePhotoRemovalFailureMessage(error));
         },
       });
   }
@@ -257,5 +314,21 @@ export class TeacherSettingsPage {
     }
 
     return 'Impossible de mettre à jour la photo. Réessayez.';
+  }
+
+  private profilePhotoRemovalFailureMessage(error: unknown): string {
+    if (error instanceof HttpErrorResponse) {
+      if (error.status === 0) {
+        return "Impossible de contacter le serveur. Vérifiez que le backend est démarré.";
+      }
+      if (error.status === 401 || error.status === 403) {
+        return 'Session non autorisée. Reconnectez-vous puis réessayez.';
+      }
+      if (error.status >= 500) {
+        return "Le serveur n'a pas pu supprimer la photo. Réessayez dans un instant.";
+      }
+    }
+
+    return 'Impossible de supprimer la photo. Réessayez.';
   }
 }

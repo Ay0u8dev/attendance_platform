@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -91,6 +90,16 @@ public class StudentController {
     public ResponseEntity<StudentProfileDto> updateProfilePhoto(
             @Valid @RequestBody UpdateProfilePhotoRequest request) {
         return ResponseEntity.ok(service.updateCurrentProfilePhoto(request.getPfpUrl()));
+    }
+
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Student profile photo removed successfully",
+                    content = @Content(schema = @Schema(implementation = StudentProfileDto.class)))
+    })
+    @RequireRole({"STUDENT"})
+    @DeleteMapping(value = "/profile/photo")
+    public ResponseEntity<StudentProfileDto> removeProfilePhoto() {
+        return ResponseEntity.ok(service.removeCurrentProfilePhoto());
     }
 
     @ApiResponses({

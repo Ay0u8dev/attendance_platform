@@ -92,6 +92,16 @@ export class StudentProfileService {
       );
   }
 
+  removeProfilePhoto(): Observable<StudentProfile> {
+    return this.http
+      .delete<StudentProfile>(`${environment.apiBaseUrl}/users/student/profile/photo`)
+      .pipe(
+        tap((profile) => {
+          this.profileSignal.set(this.withCacheBustedProfilePhoto(profile));
+        }),
+      );
+  }
+
   clear(): void {
     this.profileSignal.set(null);
   }
