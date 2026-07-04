@@ -1,0 +1,268 @@
+name: Container Pipeline Test
+
+on:
+  push:
+    branches:
+      - feat/github-actions-cicd
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  attestations: write
+  id-token: write
+
+concurrency:
+  group: container-pipeline-test
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: ay0u8dev
+
+jobs:
+  validation:
+    name: Mandatory validation
+    uses: ./.github/workflows/pr-ci.yml
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  prepare:
+    name: Prepare test release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      short_sha: ${{ steps.release.outputs.short_sha }}
+    steps:
+      - name: Compute immutable test version
+        id: release
+        shell: bash
+        run: |
+          echo "version=test-0.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+  build_scan:
+    name: Build and scan - ${{ matrix.id }}
+    needs:
+      - validation
+      - prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: frontend
+            image: attendance-platform-frontend
+            context: frontend
+            dockerfile: frontend/Dockerfile.prod
+          - id: auth
+            image: attendance-platform-auth
+            context: backend/auth-service
+            dockerfile: backend/auth-service/Dockerfile.prod
+          - id: user
+            image: attendance-platform-user
+            context: backend/user-service
+            dockerfile: backend/user-service/Dockerfile.prod
+          - id: attendance
+            image: attendance-platform-attendance
+            context: backend/attendance-service
+            dockerfile: backend/attendance-service/Dockerfile.prod
+          - id: justification
+            image: attendance-platform-justification
+            context: backend/justification-service
+            dockerfile: backend/justification-service/Dockerfile.prod
+          - id: qr
+            image: attendance-platform-qr
+            context: backend/qr-service
+            dockerfile: backend/qr-service/Dockerfile.prod
+          - id: face
+            image: attendance-platform-face
+            context: backend/face-service
+            dockerfile: backend/face-service/Dockerfile.prod
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push test image
+        id: build
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: ./${{ matrix.context }}
+          file: ./${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:${{ needs.prepare.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:test-sha-${{ needs.prepare.outputs.short_sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
+          cache-from: type=gha,scope=test-${{ matrix.id }}
+          cache-to: type=gha,mode=max,scope=test-${{ matrix.id }}
+          provenance: mode=max
+          sbom: true
+
+      - name: Scan image and produce JSON report
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}@${{ steps.build.outputs.digest }}
+          format: json
+          output: trivy-${{ matrix.id }}.json
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "0"
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Produce SARIF report
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}@${{ steps.build.outputs.digest }}
+          format: sarif
+          output: trivy-${{ matrix.id }}.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "0"
+          skip-setup-trivy: true
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summarize vulnerability findings
+        id: findings
+        shell: bash
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+          SERVICE_ID: ${{ matrix.id }}
+        run: |
+          critical=$(jq '[.Results[]? | .Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' "trivy-${SERVICE_ID}.json")
+          high=$(jq '[.Results[]? | .Vulnerabilities[]? | select(.Severity == "HIGH")] | length' "trivy-${SERVICE_ID}.json")
+
+          jq -n \
+            --arg service "$SERVICE_ID" \
+            --arg image "$IMAGE_REF" \
+            --arg version "$RELEASE_VERSION" \
+            --arg digest "$IMAGE_DIGEST" \
+            --argjson critical "$critical" \
+            --argjson high "$high" \
+            '{service: $service, image: $image, version: $version, digest: $digest, critical: $critical, high: $high}' \
+            > "metadata-${SERVICE_ID}.json"
+
+          if (( critical > 0 || high > 0 )); then
+            echo "::warning title=Trivy findings - ${SERVICE_ID}::${critical} CRITICAL and ${high} HIGH vulnerabilities found."
+          fi
+
+      - name: Upload image reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: test-image-${{ matrix.id }}
+          path: |
+            trivy-${{ matrix.id }}.json
+            trivy-${{ matrix.id }}.sarif
+            metadata-${{ matrix.id }}.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload SARIF to GitHub Security
+        if: ${{ always() && hashFiles(format('trivy-{0}.sarif', matrix.id)) != '' }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4
+        with:
+          sarif_file: trivy-${{ matrix.id }}.sarif
+          category: trivy-test-${{ matrix.id }}
+
+  notify:
+    name: Test pipeline summary
+    if: ${{ always() }}
+    needs:
+      - validation
+      - prepare
+      - build_scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download image metadata
+        if: ${{ needs.build_scan.result == 'success' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: test-image-*
+          path: reports
+          merge-multiple: true
+
+      - name: Build workflow summary
+        id: summary
+        shell: bash
+        env:
+          VALIDATION_RESULT: ${{ needs.validation.result }}
+          BUILD_RESULT: ${{ needs.build_scan.result }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          version="${RELEASE_VERSION:-test-0.0.${GITHUB_RUN_NUMBER}}"
+          if [[ "$VALIDATION_RESULT" == "success" && "$BUILD_RESULT" == "success" ]]; then
+            status="SUCCESS"
+            critical=$(jq -s '[.[].critical] | add // 0' reports/metadata-*.json)
+            high=$(jq -s '[.[].high] | add // 0' reports/metadata-*.json)
+            details="7 test images published; ${critical} CRITICAL and ${high} HIGH findings. Infrastructure was not touched."
+            jq -s 'sort_by(.service)' reports/metadata-*.json > test-release-metadata.json
+          else
+            status="FAILED"
+            details="Validation=${VALIDATION_RESULT}; image pipeline=${BUILD_RESULT}. No infrastructure action was attempted."
+          fi
+
+          message="Container pipeline test ${status}\nVersion: ${version}\nCommit: ${GITHUB_SHA}\n${details}\nRun: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          {
+            echo "message<<EOF"
+            echo -e "$message"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Container pipeline test: ${status}"
+            echo "- Version: \`${version}\`"
+            echo "- ${details}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload combined metadata
+        if: ${{ needs.build_scan.result == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: test-release-metadata
+          path: test-release-metadata.json
+          retention-days: 30
+
+      - name: Send Slack summary
+        continue-on-error: true
+        shell: bash
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          MESSAGE: ${{ steps.summary.outputs.message }}
+        run: |
+          if [[ -z "$SLACK_WEBHOOK_URL" ]]; then
+            echo "::warning title=Slack skipped::SLACK_WEBHOOK_URL is not configured."
+            exit 0
+          fi
+          payload=$(jq -n --arg text "$MESSAGE" '{text: $text}')
+          curl --fail --silent --show-error \
+            -H "Content-Type: application/json" \
+            -X POST \
+            --data "$payload" \
+            "$SLACK_WEBHOOK_URL"
+
+      - name: Fail when mandatory test pipeline jobs failed
+        if: ${{ needs.validation.result != 'success' || needs.build_scan.result != 'success' }}
+        shell: bash
+        run: exit 1
