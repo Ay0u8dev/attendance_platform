@@ -7,8 +7,10 @@ import {
   AdminAttendanceSessionDetailsDto,
   AdminAttendanceSessionSummaryDto,
   AdminStudentAttendanceSummaryDto,
+  AttendanceStudentStatus,
   PagedResponseDto,
 } from '../models/admin-attendance.model';
+import { StudentAttendanceSessionSummaryDto } from '../../attendance/models/student-attendance.model';
 
 @Injectable({ providedIn: 'root' })
 export class AdminAttendanceService {
@@ -60,6 +62,30 @@ export class AdminAttendanceService {
 
     return this.http.get<AdminStudentAttendanceSummaryDto>(
       `${this.baseUrl}/students/${studentId}/summary`,
+      { params },
+    );
+  }
+
+  getStudentSessions(
+    studentId: number,
+    query: {
+      readonly status?: AttendanceStudentStatus | null;
+      readonly dateFrom?: string | null;
+      readonly dateTo?: string | null;
+      readonly page?: number;
+      readonly size?: number;
+      readonly sort?: string;
+    } = {},
+  ) {
+    let params = new HttpParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== null && value !== '') {
+        params = params.set(key, String(value));
+      }
+    }
+
+    return this.http.get<PagedResponseDto<StudentAttendanceSessionSummaryDto>>(
+      `${this.baseUrl}/students/${studentId}/sessions`,
       { params },
     );
   }

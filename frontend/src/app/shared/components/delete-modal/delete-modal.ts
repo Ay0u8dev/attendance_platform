@@ -19,7 +19,7 @@ import { Modal } from '../modal/modal';
   template: `
     <app-modal
       [title]="title()"
-      description="Cette action ne peut pas etre annulee."
+      description="Cette action ne peut pas être annulée."
       [open]="open()"
       size="sm"
       (closed)="closeRequested.emit()"
@@ -30,7 +30,7 @@ import { Modal } from '../modal/modal';
             <i class="fa-solid fa-triangle-exclamation text-base"></i>
           </div>
           <div>
-            <p class="text-sm font-semibold text-danger">Suppression definitive</p>
+            <p class="text-sm font-semibold text-danger">Suppression définitive</p>
             <p class="mt-1 text-sm leading-6 text-secondaryText">{{ warningMessage() }}</p>
           </div>
         </div>
@@ -40,7 +40,7 @@ import { Modal } from '../modal/modal';
             {{ confirmMessage() }}
           </p>
           <p class="mt-2 break-words text-base font-semibold text-principalText">
-            {{ itemName() || 'Element non selectionne' }}
+            {{ itemName() || 'Élément non sélectionné' }}
           </p>
         </div>
 
@@ -82,13 +82,13 @@ import { Modal } from '../modal/modal';
 })
 export class DeleteModal {
   readonly open = input(false);
-  readonly title = input('Supprimer cet element ?');
+  readonly title = input('Supprimer cet élément ?');
   readonly itemName = input.required<string>();
-  readonly confirmMessage = input('Vous etes sur le point de supprimer :');
+  readonly confirmMessage = input('Vous êtes sur le point de supprimer :');
   readonly warningMessage = input(
-    'Assurez-vous que cet element ne contient aucune donnee critique avant de continuer.',
+    'Assurez-vous que cet élément ne contient aucune donnée critique avant de continuer.',
   );
-  readonly deleteButtonLabel = input('Supprimer definitivement');
+  readonly deleteButtonLabel = input('Supprimer définitivement');
   readonly requireConfirmation = input(true);
   readonly confirmationText = input('SUPPRIMER');
 

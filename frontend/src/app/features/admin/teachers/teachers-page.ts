@@ -87,8 +87,8 @@ interface TeacherRow {
     <section class="space-y-5">
       <header class="flex flex-col gap-4 rounded-[1.75rem] border border-line bg-surface px-5 py-6 shadow-card sm:px-7 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Academic attendance</p>
-          <h1 class="mt-2 text-3xl font-semibold tracking-tight text-principalText">Teachers</h1>
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Présence académique</p>
+          <h1 class="mt-2 text-3xl font-semibold tracking-tight text-principalText">Enseignants</h1>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
@@ -100,7 +100,7 @@ interface TeacherRow {
             (change)="handleImportFile($event)"
           />
           <app-button
-            label="Import Excel"
+            label="Importer Excel"
             icon="fa-regular fa-file-excel"
             variant="outline"
             [fullWidth]="false"
@@ -108,7 +108,7 @@ interface TeacherRow {
             (clicked)="openImportPicker()"
           ></app-button>
           <app-button
-            label="Add Teacher"
+            label="Ajouter un enseignant"
             icon="fa-solid fa-plus"
             [fullWidth]="false"
             (clicked)="openAddTeacherModal()"
@@ -129,7 +129,7 @@ interface TeacherRow {
               <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-line bg-primary-soft text-primary">
                 <i class="fa-solid fa-magnifying-glass text-sm" aria-hidden="true"></i>
               </span>
-              Search
+              Rechercher
             </span>
             <span class="relative block">
               <i
@@ -140,16 +140,16 @@ interface TeacherRow {
                 type="search"
                 [value]="searchQuery()"
                 (input)="onSearchInput($event)"
-                placeholder="Name or email..."
+                placeholder="Nom ou e-mail..."
                 class="h-12 w-full rounded-2xl border border-line bg-surface px-11 text-sm font-medium text-principalText shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
               />
             </span>
           </label>
 
           <app-dropdown-filter
-            label="Academic year"
+            label="Année universitaire"
             identifier="teacher-year-filter"
-            allLabel="All years"
+            allLabel="Toutes les années"
             [options]="academicYearOptions()"
             [value]="filterValue(academicYearFilter())"
             iconClass="fa-regular fa-calendar"
@@ -161,7 +161,7 @@ interface TeacherRow {
           <app-dropdown-filter
             label="Formation"
             identifier="teacher-formation-filter"
-            allLabel="All formations"
+            allLabel="Toutes les formations"
             [options]="filterFormationOptions()"
             [value]="filterValue(formationFilter())"
             iconClass="fa-solid fa-layer-group"
@@ -171,9 +171,9 @@ interface TeacherRow {
           ></app-dropdown-filter>
 
           <app-dropdown-filter
-            label="Group"
+            label="Groupe"
             identifier="teacher-group-filter"
-            allLabel="All groups"
+            allLabel="Tous les groupes"
             [options]="filterGroupOptions()"
             [value]="filterValue(groupFilter())"
             iconClass="fa-solid fa-users"
@@ -184,7 +184,7 @@ interface TeacherRow {
           <app-dropdown-filter
             label="Module"
             identifier="teacher-module-filter"
-            allLabel="All modules"
+            allLabel="Tous les modules"
             [options]="filterModuleOptions()"
             [value]="filterValue(moduleFilter())"
             iconClass="fa-solid fa-book"
@@ -194,9 +194,9 @@ interface TeacherRow {
           ></app-dropdown-filter>
 
           <app-dropdown-filter
-            label="Account status"
+            label="Statut du compte"
             identifier="teacher-status-filter"
-            allLabel="All statuses"
+            allLabel="Tous les statuts"
             [options]="statusOptions"
             [value]="filterValue(statusFilter())"
             iconClass="fa-solid fa-circle-check"
@@ -208,9 +208,9 @@ interface TeacherRow {
       </section>
 
       <app-data-table
-        searchPlaceholder="Search teachers..."
-        emptyStateTitle="No teachers found"
-        emptyStateDescription="Adjust the filters or add a teacher."
+        searchPlaceholder="Rechercher des enseignants..."
+        emptyStateTitle="Aucun enseignant trouvé"
+        emptyStateDescription="Ajustez les filtres ou ajoutez un enseignant."
         [rows]="filteredTeachers()"
         [columns]="columns"
         [rowId]="rowId"
@@ -243,14 +243,14 @@ interface TeacherRow {
             <p class="font-semibold text-principalText">{{ row.moduleName }}</p>
             @if (row.assignmentCount > 1) {
               <span class="inline-flex rounded-full border border-primary-soft bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary">
-                {{ row.assignmentCount }} assignments total
+                {{ row.assignmentCount }} affectations au total
               </span>
             }
           </div>
         </ng-template>
 
         <ng-template [appDataTableCell]="'status'" let-row="row">
-          <app-status-badge [label]="row.status" [variant]="statusVariant(row.status)"></app-status-badge>
+          <app-status-badge [label]="statusLabel(row.status)" [variant]="statusVariant(row.status)"></app-status-badge>
         </ng-template>
       </app-data-table>
     </section>
@@ -269,32 +269,32 @@ interface TeacherRow {
               <i class="fa-solid fa-id-card" aria-hidden="true"></i>
             </span>
             <div>
-              <h3>Identity information</h3>
-              <p>Core teacher account data used by sessions and assignments.</p>
+              <h3>Informations d'identité</h3>
+              <p>Données principales du compte enseignant utilisées par les sessions et affectations.</p>
             </div>
           </div>
 
           <label class="space-y-1">
-            <span class="text-sm font-medium text-principalText">First name *</span>
+            <span class="text-sm font-medium text-principalText">Prénom *</span>
             <input type="text" formControlName="firstName" class="form-input" />
           </label>
 
           <label class="space-y-1">
-            <span class="text-sm font-medium text-principalText">Last name *</span>
+            <span class="text-sm font-medium text-principalText">Nom *</span>
             <input type="text" formControlName="lastName" class="form-input" />
           </label>
 
           <label class="space-y-1 sm:col-span-2">
-            <span class="text-sm font-medium text-principalText">Email *</span>
+            <span class="text-sm font-medium text-principalText">E-mail *</span>
             <input type="email" formControlName="email" class="form-input" />
-            <span class="text-xs text-secondaryText">Use the school domain: @ump.ac.ma</span>
+            <span class="text-xs text-secondaryText">Utilisez le domaine de l'école : @ump.ac.ma</span>
           </label>
 
           <label class="space-y-1">
-            <span class="text-sm font-medium text-principalText">Account status *</span>
+            <span class="text-sm font-medium text-principalText">Statut du compte *</span>
             <select formControlName="status" class="form-input">
-              <option value="Enabled">Enabled</option>
-              <option value="Suspended">Suspended</option>
+              <option value="Enabled">Activé</option>
+              <option value="Suspended">Suspendu</option>
             </select>
           </label>
 
@@ -303,15 +303,15 @@ interface TeacherRow {
               <i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i>
             </span>
             <div>
-              <h3>Teaching assignment</h3>
-              <p>Assign the teacher to a valid year, formation, group, and module.</p>
+              <h3>Affectation d'enseignement</h3>
+              <p>Affectez l'enseignant à une année, une formation, un groupe et un module valides.</p>
             </div>
           </div>
 
           <label class="space-y-1">
-            <span class="text-sm font-medium text-principalText">Academic year *</span>
+            <span class="text-sm font-medium text-principalText">Année universitaire *</span>
             <select formControlName="academicYearId" class="form-input" (change)="onFormYearChange()">
-              <option value="">Select academic year</option>
+              <option value="">Sélectionner une année universitaire</option>
               @for (year of academicYears(); track year.id) {
                 <option [value]="year.id">{{ year.name }}{{ year.active ? ' (active)' : '' }}</option>
               }
@@ -321,7 +321,7 @@ interface TeacherRow {
           <label class="space-y-1">
             <span class="text-sm font-medium text-principalText">Formation *</span>
             <select formControlName="formationId" class="form-input" (change)="onFormFormationChange()" [disabled]="!teacherForm.controls.academicYearId.value">
-              <option value="">{{ teacherForm.controls.academicYearId.value ? 'Select formation' : 'Select an academic year first' }}</option>
+              <option value="">{{ teacherForm.controls.academicYearId.value ? 'Sélectionner une formation' : 'Sélectionnez d'abord une année universitaire' }}</option>
               @for (formation of formFormationOptions(); track formation.id) {
                 <option [value]="formation.id">{{ formation.name }}</option>
               }
@@ -329,9 +329,9 @@ interface TeacherRow {
           </label>
 
           <label class="space-y-1">
-            <span class="text-sm font-medium text-principalText">Group *</span>
+            <span class="text-sm font-medium text-principalText">Groupe *</span>
             <select formControlName="groupeId" class="form-input" [disabled]="!teacherForm.controls.formationId.value">
-              <option value="">{{ teacherForm.controls.formationId.value ? 'Select group' : 'Select a formation first' }}</option>
+              <option value="">{{ teacherForm.controls.formationId.value ? 'Sélectionner un groupe' : 'Sélectionnez d'abord une formation' }}</option>
               @for (group of formGroupOptions(); track group.id) {
                 <option [value]="group.id">{{ group.name }}</option>
               }
@@ -341,7 +341,7 @@ interface TeacherRow {
           <label class="space-y-1">
             <span class="text-sm font-medium text-principalText">Module *</span>
             <select formControlName="moduleId" class="form-input" [disabled]="!teacherForm.controls.formationId.value">
-              <option value="">{{ teacherForm.controls.formationId.value ? 'Select module' : 'Select a formation first' }}</option>
+              <option value="">{{ teacherForm.controls.formationId.value ? 'Sélectionner un module' : 'Sélectionnez d'abord une formation' }}</option>
               @for (module of formModuleOptions(); track module.id) {
                 <option [value]="module.id">{{ module.name }}</option>
               }
@@ -351,7 +351,7 @@ interface TeacherRow {
       </div>
 
       <div modal-footer class="flex w-full items-center justify-end gap-3">
-        <app-button label="Cancel" variant="outline" [fullWidth]="false" (clicked)="closeTeacherFormModal()"></app-button>
+        <app-button label="Annuler" variant="outline" [fullWidth]="false" (clicked)="closeTeacherFormModal()"></app-button>
         <app-button
           [label]="formSubmitLabel()"
           [disabled]="teacherForm.invalid || saving()"
@@ -364,8 +364,8 @@ interface TeacherRow {
 
     <app-modal
       [open]="teacherDetailsOpen()"
-      [title]="selectedTeacher()?.name || 'Teacher profile'"
-      description="Identity and teaching assignment."
+      [title]="selectedTeacher()?.name || 'Profil enseignant'"
+      description="Identité et affectation d'enseignement."
       size="lg"
       [showFooter]="false"
       (closed)="closeTeacherDetails()"
@@ -390,14 +390,14 @@ interface TeacherRow {
             <section class="rounded-3xl border border-line bg-surface p-5">
               <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p class="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Teaching assignments</p>
-                  <h4 class="mt-1 text-lg font-semibold text-principalText">Groups and modules</h4>
+                  <p class="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Affectations d’enseignement</p>
+                  <h4 class="mt-1 text-lg font-semibold text-principalText">Groupes et modules</h4>
                 </div>
                 <button
                   type="button"
                   class="profile-action-button text-primary hover:border-primary-soft hover:bg-primary-soft"
-                  title="Add assignment"
-                  aria-label="Add teaching assignment"
+                  title="Ajouter une affectation"
+                  aria-label="Ajouter une affectation d’enseignement"
                   (click)="openAddAssignmentModal(teacher)"
                 >
                   <i class="fa-solid fa-plus text-xs" aria-hidden="true"></i>
@@ -430,8 +430,8 @@ interface TeacherRow {
                   </article>
                 } @empty {
                   <div class="rounded-2xl border border-dashed border-line bg-surface-subtle px-4 py-6 text-center">
-                    <p class="font-semibold text-principalText">No assignment yet</p>
-                    <p class="mt-1 text-sm text-secondaryText">Add a group and module responsibility for this teacher.</p>
+                    <p class="font-semibold text-principalText">Aucune affectation pour le moment</p>
+                    <p class="mt-1 text-sm text-secondaryText">Ajoutez une responsabilité de groupe et de module pour cet enseignant.</p>
                   </div>
                 }
               </div>
@@ -441,8 +441,8 @@ interface TeacherRow {
               <button
                 type="button"
                 class="profile-action-button text-primary hover:border-primary-soft hover:bg-primary-soft"
-                title="Edit profile"
-                aria-label="Edit teacher profile"
+                title="Modifier le profil"
+                aria-label="Modifier le profil enseignant"
                 (click)="openEditTeacherModal(teacher)"
               >
                 <i class="fa-regular fa-pen-to-square" aria-hidden="true"></i>
@@ -450,8 +450,8 @@ interface TeacherRow {
               <button
                 type="button"
                 class="profile-action-button text-secondaryText hover:border-warning-soft hover:bg-warning-soft hover:text-warning"
-                [title]="teacher.status === 'Enabled' ? 'Suspend teacher' : 'Enable teacher'"
-                [attr.aria-label]="teacher.status === 'Enabled' ? 'Suspend teacher' : 'Enable teacher'"
+                [title]="teacher.status === 'Enabled' ? 'Suspendre l’enseignant' : 'Activer l’enseignant'"
+                [attr.aria-label]="teacher.status === 'Enabled' ? 'Suspendre l’enseignant' : 'Activer l’enseignant'"
                 (click)="toggleTeacherStatus(teacher)"
               >
                 <i
@@ -464,8 +464,8 @@ interface TeacherRow {
               <button
                 type="button"
                 class="profile-action-button text-danger hover:border-danger/20 hover:bg-danger-soft"
-                title="Delete teacher"
-                aria-label="Delete teacher"
+                title="Supprimer l’enseignant"
+                aria-label="Supprimer l’enseignant"
                 (click)="openDeleteTeacherModal(teacher)"
               >
                 <i class="fa-regular fa-trash-can" aria-hidden="true"></i>
@@ -478,8 +478,8 @@ interface TeacherRow {
 
     <app-modal
       [open]="assignmentFormOpen()"
-      title="Add teaching assignment"
-      description="Attach this teacher to one academic year, formation, group, and module."
+      title="Ajouter une affectation d’enseignement"
+      description="Rattachez cet enseignant à une année universitaire, une formation, un groupe et un module."
       size="lg"
       (closed)="closeAssignmentFormModal()"
     >
@@ -505,15 +505,15 @@ interface TeacherRow {
               <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
             </span>
             <div>
-              <h3>Assignment scope</h3>
-              <p>Only compatible formations, groups, and modules are listed.</p>
+              <h3>Périmètre d’affectation</h3>
+              <p>Seuls les formations, groupes et modules compatibles sont listés.</p>
             </div>
           </div>
 
           <label class="space-y-1">
-            <span class="text-sm font-medium text-principalText">Academic year *</span>
+            <span class="text-sm font-medium text-principalText">Année universitaire *</span>
             <select formControlName="academicYearId" class="form-input" (change)="onAssignmentFormYearChange()">
-              <option value="">Select academic year</option>
+              <option value="">Sélectionner une année universitaire</option>
               @for (year of academicYears(); track year.id) {
                 <option [value]="year.id">{{ year.name }}{{ year.active ? ' (active)' : '' }}</option>
               }
@@ -523,7 +523,7 @@ interface TeacherRow {
           <label class="space-y-1">
             <span class="text-sm font-medium text-principalText">Formation *</span>
             <select formControlName="formationId" class="form-input" (change)="onAssignmentFormFormationChange()" [disabled]="!assignmentForm.controls.academicYearId.value">
-              <option value="">{{ assignmentForm.controls.academicYearId.value ? 'Select formation' : 'Select an academic year first' }}</option>
+              <option value="">{{ assignmentForm.controls.academicYearId.value ? 'Sélectionner une formation' : 'Sélectionnez d'abord une année universitaire' }}</option>
               @for (formation of assignmentFormFormationOptions(); track formation.id) {
                 <option [value]="formation.id">{{ formation.name }}</option>
               }
@@ -531,9 +531,9 @@ interface TeacherRow {
           </label>
 
           <label class="space-y-1">
-            <span class="text-sm font-medium text-principalText">Group *</span>
+            <span class="text-sm font-medium text-principalText">Groupe *</span>
             <select formControlName="groupeId" class="form-input" [disabled]="!assignmentForm.controls.formationId.value">
-              <option value="">{{ assignmentForm.controls.formationId.value ? 'Select group' : 'Select a formation first' }}</option>
+              <option value="">{{ assignmentForm.controls.formationId.value ? 'Sélectionner un groupe' : 'Sélectionnez d'abord une formation' }}</option>
               @for (group of assignmentFormGroupOptions(); track group.id) {
                 <option [value]="group.id">{{ group.name }}</option>
               }
@@ -543,7 +543,7 @@ interface TeacherRow {
           <label class="space-y-1">
             <span class="text-sm font-medium text-principalText">Module *</span>
             <select formControlName="moduleId" class="form-input" [disabled]="!assignmentForm.controls.formationId.value">
-              <option value="">{{ assignmentForm.controls.formationId.value ? 'Select module' : 'Select a formation first' }}</option>
+              <option value="">{{ assignmentForm.controls.formationId.value ? 'Sélectionner un module' : 'Sélectionnez d'abord une formation' }}</option>
               @for (module of assignmentFormModuleOptions(); track module.id) {
                 <option [value]="module.id">{{ module.name }}</option>
               }
@@ -553,9 +553,9 @@ interface TeacherRow {
       </div>
 
       <div modal-footer class="flex justify-end gap-2">
-        <app-button label="Cancel" variant="outline" [fullWidth]="false" (clicked)="closeAssignmentFormModal()"></app-button>
+        <app-button label="Annuler" variant="outline" [fullWidth]="false" (clicked)="closeAssignmentFormModal()"></app-button>
         <app-button
-          label="Add assignment"
+          label="Ajouter une affectation"
           [disabled]="assignmentForm.invalid || assignmentSaving()"
           [loading]="assignmentSaving()"
           [fullWidth]="false"
@@ -566,7 +566,7 @@ interface TeacherRow {
 
     <app-modal
       [open]="importResult() !== null"
-      title="Teacher import summary"
+      title="Résumé d’import des enseignants"
       [description]="importStatusMessage(importResult())"
       size="lg"
       [showFooter]="false"
@@ -586,11 +586,11 @@ interface TeacherRow {
 
             @if ((result.errors?.length ?? 0) > 0) {
               <section class="rounded-2xl border border-danger/20 bg-danger-soft p-4">
-                <h3 class="font-semibold text-danger">Rows with errors</h3>
+                <h3 class="font-semibold text-danger">Lignes avec erreurs</h3>
                 <div class="mt-3 max-h-56 space-y-2 overflow-y-auto">
                   @for (error of result.errors; track error.rowNumber + '-' + error.field + '-' + error.message) {
                     <p class="rounded-xl bg-surface px-3 py-2 text-sm text-principalText">
-                      Row {{ error.rowNumber ?? '-' }}: {{ error.field ?? 'row' }} - {{ error.message ?? 'Import error' }}
+                      Ligne {{ error.rowNumber ?? '-' }}: {{ error.field ?? 'ligne' }} - {{ error.message ?? 'Erreur d’import' }}
                     </p>
                   }
                 </div>
@@ -599,7 +599,7 @@ interface TeacherRow {
 
             @if ((result.warnings?.length ?? 0) > 0) {
               <section class="rounded-2xl border border-warning-soft bg-warning-soft p-4">
-                <h3 class="font-semibold text-warning-strong">Warnings</h3>
+                <h3 class="font-semibold text-warning-strong">Avertissements</h3>
                 <div class="mt-3 max-h-48 space-y-2 overflow-y-auto">
                   @for (warning of result.warnings; track warning) {
                     <p class="rounded-xl bg-surface px-3 py-2 text-sm text-principalText">{{ warning }}</p>
@@ -614,11 +614,11 @@ interface TeacherRow {
 
     <app-delete-modal
       [open]="deleteOpen()"
-      title="Delete this teacher?"
+      title="Supprimer cet enseignant ?"
       [itemName]="teacherToDelete()?.name || ''"
-      confirmMessage="You are about to delete:"
-      warningMessage="Database relationships may block deletion if this teacher has assignments or attendance sessions."
-      deleteButtonLabel="Delete teacher"
+      confirmMessage="Vous êtes sur le point de supprimer :"
+      warningMessage="Les relations en base peuvent bloquer la suppression si cet enseignant a des affectations ou des sessions de présence."
+      deleteButtonLabel="Supprimer l’enseignant"
       (closeRequested)="closeDeleteTeacherModal()"
       (confirmDelete)="confirmDeleteTeacher()"
     ></app-delete-modal>
@@ -748,8 +748,8 @@ export class TeachersPage {
   private readonly importInput = viewChild<ElementRef<HTMLInputElement>>('teacherImportInput');
 
   readonly statusOptions: readonly Option[] = [
-    { value: 'Enabled', label: 'Enabled' },
-    { value: 'Suspended', label: 'Suspended' },
+    { value: 'Enabled', label: 'Activé' },
+    { value: 'Suspended', label: 'Suspendu' },
   ];
 
   readonly teachers = signal<readonly TeacherRow[]>([]);
@@ -800,13 +800,13 @@ export class TeachersPage {
     moduleId: ['', [Validators.required]],
   });
 
-  readonly formTitle = computed(() => (this.editingTeacherId() ? 'Edit teacher' : 'Add teacher'));
+  readonly formTitle = computed(() => (this.editingTeacherId() ? 'Modifier l’enseignant' : 'Ajouter un enseignant'));
   readonly formDescription = computed(() =>
     this.editingTeacherId()
-      ? 'Update identity and teaching assignment.'
-      : 'Create the teacher and assign group/module responsibilities in one flow.',
+      ? 'Mettre à jour l’identité et l’affectation d’enseignement.'
+      : 'Créer l’enseignant et affecter ses responsabilités de groupe/module dans le même flux.',
   );
-  readonly formSubmitLabel = computed(() => (this.editingTeacherId() ? 'Save changes' : 'Add teacher'));
+  readonly formSubmitLabel = computed(() => (this.editingTeacherId() ? 'Enregistrer les modifications' : 'Ajouter l’enseignant'));
   readonly academicYearOptions = computed<Option[]>(() =>
     this.academicYears().map((year) => ({ value: String(year.id), label: year.name })),
   );
@@ -882,11 +882,11 @@ export class TeachersPage {
   });
 
   readonly columns: readonly DataTableColumn<TeacherRow>[] = [
-    { id: 'teacher', header: 'Teacher', accessor: (row) => row.name, sortable: false, width: '22rem' },
-    { id: 'status', header: 'Account status', accessor: (row) => row.status, sortable: false, width: '11rem' },
-    { id: 'year', header: 'Academic year', accessor: (row) => row.academicYearName, sortable: false, width: '12rem' },
+    { id: 'teacher', header: 'Enseignant', accessor: (row) => row.name, sortable: false, width: '22rem' },
+    { id: 'status', header: 'Statut du compte', accessor: (row) => row.status, sortable: false, width: '11rem' },
+    { id: 'year', header: 'Année universitaire', accessor: (row) => row.academicYearName, sortable: false, width: '12rem' },
     { id: 'formation', header: 'Formation', accessor: (row) => row.formationName, sortable: false, width: '14rem' },
-    { id: 'group', header: 'Group', accessor: (row) => row.groupeName, sortable: false, width: '10rem' },
+    { id: 'group', header: 'Groupe', accessor: (row) => row.groupeName, sortable: false, width: '10rem' },
     { id: 'assignment', header: 'Module', accessor: (row) => row.moduleName, sortable: false, width: '15rem' },
   ];
 
@@ -989,10 +989,10 @@ export class TeachersPage {
       .subscribe({
         next: (result) => {
           this.importResult.set(result);
-          this.showImportToast('Teacher', result);
+          this.showImportToast('Enseignant', result);
           this.loadTeachers();
         },
-        error: () => this.toast.error('Teacher import failed', 'Check the Excel format and backend logs.'),
+        error: () => this.toast.error('Échec de l’import des enseignants', 'Vérifiez le format Excel et les journaux backend.'),
       });
   }
 
@@ -1085,11 +1085,11 @@ export class TeachersPage {
       )
       .subscribe({
         next: () => {
-          this.toast.success(editingId ? 'Teacher updated' : 'Teacher created');
+          this.toast.success(editingId ? 'Enseignant mis à jour' : 'Enseignant créé');
           this.closeTeacherFormModal();
           this.loadTeachers();
         },
-        error: () => this.toast.error('Teacher save failed', 'Check identity fields and teaching assignment.'),
+        error: () => this.toast.error('Échec de l’enregistrement de l’enseignant', 'Vérifiez les champs d’identité et l’affectation d’enseignement.'),
       });
   }
 
@@ -1162,11 +1162,11 @@ export class TeachersPage {
       )
       .subscribe({
         next: () => {
-          this.toast.success('Assignment added');
+          this.toast.success('Affectation ajoutée');
           this.closeAssignmentFormModal();
           this.loadTeachers();
         },
-        error: () => this.toast.error('Assignment save failed', 'Check academic year, formation, group, and module.'),
+        error: () => this.toast.error('Échec de l’enregistrement de l’affectation', 'Vérifiez l’année universitaire, la formation, le groupe et le module.'),
       });
   }
 
@@ -1176,10 +1176,10 @@ export class TeachersPage {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.toast.success('Assignment removed');
+          this.toast.success('Affectation supprimée');
           this.loadTeachers();
         },
-        error: () => this.toast.error('Assignment delete failed', 'This assignment may be used by a session.'),
+        error: () => this.toast.error('Échec de suppression de l’affectation', 'Cette affectation est peut-être utilisée par une session.'),
       });
   }
 
@@ -1195,11 +1195,11 @@ export class TeachersPage {
       firstLogin: state.firstLogin,
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
-        this.toast.success(nextStatus === 'Enabled' ? 'Teacher enabled' : 'Teacher suspended');
+        this.toast.success(nextStatus === 'Enabled' ? 'Enseignant activé' : 'Enseignant suspendu');
         this.closeTeacherDetails();
         this.loadTeachers();
       },
-      error: () => this.toast.error('Status update failed'),
+      error: () => this.toast.error('Échec de mise à jour du statut'),
     });
   }
 
@@ -1219,12 +1219,12 @@ export class TeachersPage {
 
     this.teacherService.delete(teacher.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
-        this.toast.success('Teacher deleted');
+        this.toast.success('Enseignant supprimé');
         this.closeDeleteTeacherModal();
         this.closeTeacherDetails();
         this.loadTeachers();
       },
-      error: () => this.toast.error('Delete failed', 'This teacher may be referenced by assignments or sessions.'),
+      error: () => this.toast.error('Échec de suppression', 'Cet enseignant peut être référencé par des affectations ou des sessions.'),
     });
   }
 
@@ -1239,23 +1239,27 @@ export class TeachersPage {
   importStatusMessage(result: AdminImportResult | null): string {
     if (!result) return '';
     if ((result.failedRows ?? result.rowsRejected ?? 0) > 0 || (result.errors?.length ?? 0) > 0) {
-      return 'Import completed with errors. Review the rows below before re-importing.';
+      return 'Import terminé avec des erreurs. Vérifiez les lignes ci-dessous avant de réimporter.';
     }
-    if ((result.warningsCount ?? result.warnings?.length ?? 0) > 0) return 'Import completed with warnings.';
-    return 'Import completed successfully.';
+    if ((result.warningsCount ?? result.warnings?.length ?? 0) > 0) return 'Import terminé avec des avertissements.';
+    return 'Import terminé avec succès.';
   }
 
   importMetrics(result: AdminImportResult): ReadonlyArray<{ readonly label: string; readonly value: number }> {
     return [
-      { label: 'Total rows', value: result.totalRows ?? 0 },
-      { label: 'Teachers created', value: result.createdTeachers ?? result.teachersCreated ?? 0 },
-      { label: 'Teachers updated', value: result.updatedTeachers ?? result.teachersUpdated ?? 0 },
-      { label: 'Assignments', value: result.createdAssignments ?? result.assignmentsCreated ?? 0 },
-      { label: 'Duplicates', value: result.duplicatesSkipped ?? ((result.duplicateAssignments ?? 0) + (result.duplicateAssignmentsInsideFile ?? 0)) },
-      { label: 'Rejected', value: result.failedRows ?? result.rowsRejected ?? 0 },
-      { label: 'Warnings', value: result.warningsCount ?? result.warnings?.length ?? 0 },
-      { label: 'Errors', value: result.errorsCount ?? result.errors?.length ?? 0 },
+      { label: 'Lignes totales', value: result.totalRows ?? 0 },
+      { label: 'Enseignants créés', value: result.createdTeachers ?? result.teachersCreated ?? 0 },
+      { label: 'Enseignants mis à jour', value: result.updatedTeachers ?? result.teachersUpdated ?? 0 },
+      { label: 'Affectations', value: result.createdAssignments ?? result.assignmentsCreated ?? 0 },
+      { label: 'Doublons', value: result.duplicatesSkipped ?? ((result.duplicateAssignments ?? 0) + (result.duplicateAssignmentsInsideFile ?? 0)) },
+      { label: 'Rejetées', value: result.failedRows ?? result.rowsRejected ?? 0 },
+      { label: 'Avertissements', value: result.warningsCount ?? result.warnings?.length ?? 0 },
+      { label: 'Erreurs', value: result.errorsCount ?? result.errors?.length ?? 0 },
     ];
+  }
+
+  statusLabel(status: AdminDirectoryStatus): string {
+    return status === 'Enabled' ? 'Activé' : 'Suspendu';
   }
 
   private saveAssignment(teacherId: number, assignmentId: number | null) {
@@ -1310,13 +1314,13 @@ export class TeachersPage {
       assignmentId: assignment?.id ?? null,
       assignmentCount: teacherAssignments.length,
       academicYearId: assignment?.academicYearId ?? null,
-      academicYearName: assignment?.academicYearName ?? 'Not assigned',
+      academicYearName: assignment?.academicYearName ?? 'Non affecté',
       formationId: assignment?.formationId ?? null,
-      formationName: assignment?.formationName ?? 'Not assigned',
+      formationName: assignment?.formationName ?? 'Non affectée',
       groupeId: assignment?.groupeId ?? null,
-      groupeName: assignment?.groupeName ?? 'Not assigned',
+      groupeName: assignment?.groupeName ?? 'Non affecté',
       moduleId: assignment?.moduleId ?? null,
-      moduleName: assignment?.moduleName ?? 'Not assigned',
+      moduleName: assignment?.moduleName ?? 'Non affecté',
     };
   }
 

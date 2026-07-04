@@ -36,13 +36,13 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
       <header class="rounded-[1.75rem] border border-line bg-surface px-5 py-6 shadow-card sm:px-7">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Academic attendance</p>
-            <h1 class="mt-2 text-3xl font-semibold tracking-tight text-principalText">Attendance</h1>
+            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Présence académique</p>
+            <h1 class="mt-2 text-3xl font-semibold tracking-tight text-principalText">Présences</h1>
           </div>
 
           <div class="flex flex-wrap items-center gap-3">
             <app-button
-              label="Refresh"
+              label="Actualiser"
               icon="fa-solid fa-rotate"
               variant="outline"
               size="sm"
@@ -63,8 +63,8 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
       <section class="rounded-[1.75rem] border border-line bg-surface p-4 shadow-card sm:p-5">
         <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Session registry</p>
-            <h2 class="mt-1 text-2xl font-semibold text-principalText">Registered sessions</h2>
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Registre des sessions</p>
+            <h2 class="mt-1 text-2xl font-semibold text-principalText">Sessions enregistrées</h2>
           </div>
         </div>
 
@@ -82,7 +82,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                     <div class="flex flex-wrap items-center gap-2">
                       <h3 class="truncate text-xl font-semibold text-principalText">{{ session.courseLabel }}</h3>
                       <app-status-badge
-                        [label]="session.status === 'ACTIVE' ? 'Active' : 'Finalized'"
+                        [label]="session.status === 'ACTIVE' ? 'Active' : 'Finalisée'"
                         [variant]="session.status === 'ACTIVE' ? 'info' : 'success'"
                       ></app-status-badge>
                     </div>
@@ -114,19 +114,19 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                     <div class="grid grid-cols-4 gap-2 text-center">
                       <span class="rounded-2xl bg-secondary-soft px-3 py-2">
                         <span class="block text-xl font-semibold text-secondary-strong">{{ session.presentCount }}</span>
-                        <span class="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-secondary-strong">Present</span>
+                        <span class="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-secondary-strong">Présents</span>
                       </span>
                       <span class="rounded-2xl bg-danger-soft px-3 py-2">
                         <span class="block text-xl font-semibold text-danger">{{ session.absentCount }}</span>
-                        <span class="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-danger">Absent</span>
+                        <span class="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-danger">Absents</span>
                       </span>
                       <span class="rounded-2xl bg-surface-subtle px-3 py-2">
                         <span class="block text-xl font-semibold text-secondaryText">{{ session.unknownCount }}</span>
-                        <span class="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-muted">Open</span>
+                        <span class="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-muted">Ouverts</span>
                       </span>
                       <span class="rounded-2xl bg-primary-soft px-3 py-2">
                         <span class="block text-xl font-semibold text-primary">{{ attendanceRateValue(session) }}%</span>
-                        <span class="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-primary">Rate</span>
+                        <span class="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-primary">Taux</span>
                       </span>
                     </div>
 
@@ -137,7 +137,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                       (click)="toggleRoster(session)"
                     >
                       <i [class]="isSelected(session) ? 'fa-solid fa-chevron-up' : 'fa-solid fa-users-viewfinder'" aria-hidden="true"></i>
-                      {{ isSelected(session) ? 'Hide roster' : 'View roster' }}
+                      {{ isSelected(session) ? 'Masquer la liste' : 'Voir la liste' }}
                     </button>
                   </div>
                 </div>
@@ -149,12 +149,12 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                         <div class="border-b border-line p-5">
                           <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                             <div>
-                              <h3 class="text-xl font-semibold text-principalText">Roster inspection</h3>
-                              <p class="mt-1 text-sm text-secondaryText">Review student attendance status for this session.</p>
+                              <h3 class="text-xl font-semibold text-principalText">Inspection de la liste</h3>
+                              <p class="mt-1 text-sm text-secondaryText">Vérifiez le statut de présence des étudiants pour cette session.</p>
                             </div>
 
                             <label class="relative block min-w-0 xl:w-96">
-                              <span class="sr-only">Search roster</span>
+                              <span class="sr-only">Rechercher dans la liste</span>
                               <i
                                 class="fa-solid fa-magnifying-glass pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-xs text-secondaryText"
                                 aria-hidden="true"
@@ -163,7 +163,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                                 type="search"
                                 [value]="rosterSearchQuery()"
                                 (input)="onRosterSearchInput($event)"
-                                placeholder="Search student, email, Apogee or group..."
+                                placeholder="Rechercher par étudiant, e-mail, Apogée ou groupe..."
                                 class="h-12 w-full rounded-2xl border border-line bg-surface px-11 text-sm font-medium text-principalText outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
                               />
                             </label>
@@ -198,13 +198,13 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
 
                           <div class="mt-5 flex flex-wrap items-center gap-2 text-xs font-semibold text-secondaryText">
                             <span class="rounded-full border border-line bg-surface-subtle px-3 py-1">
-                              {{ detail.students.length }} student(s)
+                              {{ detail.students.length }} étudiant(s)
                             </span>
                             <span class="rounded-full border border-line bg-surface-subtle px-3 py-1">
                               {{ groupLabel(detail.groupIds) }}
                             </span>
                             <span class="rounded-full border border-line bg-surface-subtle px-3 py-1">
-                              {{ attendanceRateValue(detail) }}% attendance
+                              {{ attendanceRateValue(detail) }}% de présence
                             </span>
                           </div>
                         </div>
@@ -237,7 +237,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
 
                                   <div class="flex flex-wrap gap-2 text-xs">
                                     <span class="rounded-xl border border-line bg-surface-subtle px-3 py-1.5 font-semibold text-secondaryText shadow-sm">
-                                      Apogee {{ student.numApogee }}
+                                      Apogée {{ student.numApogee }}
                                     </span>
                                     <span class="rounded-xl border border-primary-soft bg-primary-soft px-3 py-1.5 font-semibold text-primary shadow-sm">
                                       {{ groupName(student.groupId) }}
@@ -254,7 +254,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
 
                                   <div class="flex items-center justify-between gap-3 xl:justify-end">
                                     <span class="text-xs font-semibold text-primary opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
-                                      View profile
+                                      Voir le profil
                                     </span>
                                     <app-status-badge
                                       [label]="studentStatusLabel(student.status)"
@@ -265,8 +265,8 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                               </button>
                             } @empty {
                               <div class="rounded-2xl border border-dashed border-line bg-surface px-4 py-10 text-center">
-                                <p class="font-semibold text-principalText">No students match this filter</p>
-                                <p class="mt-1 text-sm text-secondaryText">Try another status or search term.</p>
+                                <p class="font-semibold text-principalText">Aucun étudiant ne correspond à ce filtre</p>
+                                <p class="mt-1 text-sm text-secondaryText">Essayez un autre statut ou terme de recherche.</p>
                               </div>
                             }
                           </div>
@@ -274,8 +274,8 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                           @if (filteredRoster().length > rosterPageSize) {
                             <div class="mt-4 flex flex-col gap-3 rounded-2xl border border-line bg-surface-subtle px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                               <p class="text-sm font-semibold text-secondaryText">
-                                Page {{ normalizedRosterPage() }} of {{ rosterTotalPages() }}
-                                <span class="font-normal">- {{ filteredRoster().length }} student(s)</span>
+                                Page {{ normalizedRosterPage() }} sur {{ rosterTotalPages() }}
+                                <span class="font-normal">- {{ filteredRoster().length }} étudiant(s)</span>
                               </p>
                               <div class="flex items-center gap-2">
                                 <button
@@ -285,7 +285,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                                   (click)="previousRosterPage()"
                                 >
                                   <i class="fa-solid fa-chevron-left text-xs" aria-hidden="true"></i>
-                                  Previous
+                                  Précédent
                                 </button>
                                 <button
                                   type="button"
@@ -293,7 +293,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                                   [disabled]="normalizedRosterPage() >= rosterTotalPages()"
                                   (click)="nextRosterPage()"
                                 >
-                                  Next
+                                  Suivant
                                   <i class="fa-solid fa-chevron-right text-xs" aria-hidden="true"></i>
                                 </button>
                               </div>
@@ -303,12 +303,12 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                       </div>
                     } @else {
                       <div class="rounded-2xl border border-line bg-surface px-4 py-10 text-center text-sm font-medium text-secondaryText">
-                        Loading roster details...
+                        Chargement des détails de la liste...
                       </div>
                     }
 
                     @if (detailLoading()) {
-                      <p class="mt-3 text-sm font-medium text-secondaryText">Refreshing roster details...</p>
+                      <p class="mt-3 text-sm font-medium text-secondaryText">Actualisation des détails de la liste...</p>
                     }
                   </section>
                 }
@@ -316,9 +316,9 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
             }
           } @else {
             <div class="rounded-3xl border border-dashed border-line bg-surface px-5 py-16 text-center sm:px-6">
-              <p class="text-base font-semibold text-principalText">No sessions found</p>
+              <p class="text-base font-semibold text-principalText">Aucune session trouvée</p>
               <p class="mt-1 text-sm text-secondaryText">
-                Start backend services and create attendance sessions to populate this page.
+                Démarrez les services backend et créez des sessions de présence pour alimenter cette page.
               </p>
             </div>
           }
@@ -328,7 +328,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
       <app-modal
         [open]="studentProfileOpen()"
         [title]="selectedStudentName()"
-        description="Student roster profile for the selected session."
+        description="Profil de l’étudiant dans la liste de la session sélectionnée."
         size="lg"
         [showFooter]="false"
         (closed)="closeStudentProfile()"
@@ -346,7 +346,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                       shape="rounded"
                     ></app-user-avatar>
                     <div class="min-w-0">
-                      <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Student profile</p>
+                      <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Profil étudiant</p>
                       <h3 class="mt-1 truncate text-2xl font-semibold text-principalText">{{ student.firstName }} {{ student.lastName }}</h3>
                       <p class="mt-1 truncate text-sm text-secondaryText">{{ student.email }}</p>
                     </div>
@@ -365,7 +365,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                       <i class="fa-solid fa-id-card text-sm" aria-hidden="true"></i>
                     </span>
                     <div>
-                      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Apogee</p>
+                      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Apogée</p>
                       <p class="mt-1 font-semibold text-principalText">{{ student.numApogee }}</p>
                     </div>
                   </div>
@@ -376,7 +376,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                       <i class="fa-solid fa-users text-sm" aria-hidden="true"></i>
                     </span>
                     <div>
-                      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Group</p>
+                      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Groupe</p>
                       <p class="mt-1 font-semibold text-principalText">{{ groupName(student.groupId) }}</p>
                     </div>
                   </div>
@@ -387,7 +387,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                       <i class="fa-solid fa-fingerprint text-sm" aria-hidden="true"></i>
                     </span>
                     <div>
-                      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Attendance method</p>
+                      <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Méthode de présence</p>
                       <p class="mt-1 font-semibold text-principalText">{{ methodLabel(student.markMethod) }}</p>
                     </div>
                   </div>
@@ -399,7 +399,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                         <i class="fa-regular fa-clock text-sm" aria-hidden="true"></i>
                       </span>
                       <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Marked time</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Heure de pointage</p>
                         <p class="mt-1 font-semibold text-principalText">{{ formatDateTime(student.markedAt) }}</p>
                       </div>
                     </div>
@@ -409,14 +409,14 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
 
               @if (studentSummaryLoading()) {
                 <section class="rounded-3xl border border-line bg-surface p-5 text-sm font-medium text-secondaryText">
-                  Loading academic attendance summary...
+                  Chargement du résumé des présences universitaires...
                 </section>
               } @else if (selectedStudentSummary(); as summary) {
                 <section class="rounded-[1.5rem] border border-line bg-surface p-5 shadow-card">
                   <div>
                     <div>
-                      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Academic year summary</p>
-                      <h4 class="mt-1 text-lg font-semibold text-principalText">Absence analytics</h4>
+                      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Résumé de l’année universitaire</p>
+                      <h4 class="mt-1 text-lg font-semibold text-principalText">Analyse des absences</h4>
                     </div>
                   </div>
 
@@ -427,7 +427,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                           <i class="fa-regular fa-calendar-xmark" aria-hidden="true"></i>
                         </span>
                         <div>
-                          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Total absences</p>
+                          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Absences totales</p>
                           <p class="mt-1 text-2xl font-semibold text-principalText">{{ summary.totalAbsences }}</p>
                         </div>
                       </div>
@@ -438,7 +438,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                           <i class="fa-solid fa-check" aria-hidden="true"></i>
                         </span>
                         <div>
-                          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-secondary-strong">Justified</p>
+                          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-secondary-strong">Justifiées</p>
                           <p class="mt-1 text-2xl font-semibold text-secondary-strong">{{ summary.justifiedAbsences }}</p>
                         </div>
                       </div>
@@ -449,7 +449,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                           <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
                         </span>
                         <div>
-                          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-danger">Unjustified</p>
+                          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-danger">Non justifiées</p>
                           <p class="mt-1 text-2xl font-semibold text-danger">{{ summary.unjustifiedAbsences }}</p>
                         </div>
                       </div>
@@ -460,7 +460,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                           <i class="fa-regular fa-hourglass-half" aria-hidden="true"></i>
                         </span>
                         <div>
-                          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Absence hours</p>
+                          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Heures d'absence</p>
                           <p class="mt-1 text-2xl font-semibold text-principalText">{{ formatHours(summary.totalAbsenceHours) }}</p>
                         </div>
                       </div>
@@ -471,9 +471,9 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                           <i class="fa-regular fa-calendar" aria-hidden="true"></i>
                         </span>
                         <div>
-                          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Last absence</p>
+                          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Dernière absence</p>
                           <p class="mt-1 text-sm font-semibold text-principalText">
-                            {{ summary.lastAbsenceAt ? formatDateTime(summary.lastAbsenceAt) : 'No absence recorded' }}
+                            {{ summary.lastAbsenceAt ? formatDateTime(summary.lastAbsenceAt) : 'Aucune absence enregistrée' }}
                           </p>
                         </div>
                       </div>
@@ -500,11 +500,11 @@ export class AttendancePage {
   private readonly filiereService = inject(FiliereService);
 
   readonly rosterFilters: ReadonlyArray<{ readonly value: RosterFilter; readonly label: string }> = [
-    { value: 'ALL', label: 'All' },
-    { value: 'PRESENT', label: 'Present' },
+    { value: 'ALL', label: 'Tous' },
+    { value: 'PRESENT', label: 'Présents' },
     { value: 'ABSENT', label: 'Absent' },
-    { value: 'JUSTIFIED', label: 'Justified' },
-    { value: 'UNKNOWN', label: 'Open' },
+    { value: 'JUSTIFIED', label: 'Justifiées' },
+    { value: 'UNKNOWN', label: 'Ouverts' },
   ];
 
   readonly overview = signal<AdminAttendanceOverviewDto | null>(null);
@@ -570,7 +570,7 @@ export class AttendancePage {
   readonly studentProfileOpen = computed(() => this.selectedStudent() !== null);
   readonly selectedStudentName = computed(() => {
     const student = this.selectedStudent();
-    return student ? `${student.firstName} ${student.lastName}` : 'Student profile';
+    return student ? `${student.firstName} ${student.lastName}` : 'Profil étudiant';
   });
   constructor() {
     this.loadData();
@@ -613,7 +613,7 @@ export class AttendancePage {
           }
         },
         error: () => {
-          this.errorMessage.set('Unable to load attendance sessions. Check backend services and auth.');
+          this.errorMessage.set('Impossible de charger les sessions de présence. Vérifiez les services backend et l’authentification.');
         },
       });
   }
@@ -637,7 +637,7 @@ export class AttendancePage {
       .pipe(finalize(() => this.detailLoading.set(false)))
       .subscribe({
         next: (detail) => this.selectedDetail.set(detail),
-        error: () => this.errorMessage.set('Unable to load selected session roster.'),
+        error: () => this.errorMessage.set('Impossible de charger la liste de la session sélectionnée.'),
       });
   }
 
@@ -710,31 +710,31 @@ export class AttendancePage {
   }
 
   teacherLabel(value: string | null): string {
-    return value?.trim() || 'Teacher not provided';
+    return value?.trim() || 'Enseignant non renseigné';
   }
 
   groupLabel(groupIds: readonly number[]): string {
-    return groupIds.length ? groupIds.map((id) => this.groupName(id)).join(', ') : 'No groups';
+    return groupIds.length ? groupIds.map((id) => this.groupName(id)).join(', ') : 'Aucun groupe';
   }
 
   groupName(groupId: number): string {
-    return this.groups().find((group) => group.id === groupId)?.name ?? `Group #${groupId}`;
+    return this.groups().find((group) => group.id === groupId)?.name ?? `Groupe #${groupId}`;
   }
 
   sessionContextItems(session: AdminAttendanceSessionSummaryDto): ReadonlyArray<{ readonly label: string; readonly value: string }> {
     return [
-      { label: 'Academic year', value: this.academicYearLabel(session.groupIds) },
+      { label: 'Année universitaire', value: this.academicYearLabel(session.groupIds) },
       { label: 'Formation', value: this.formationLabel(session.groupIds) },
-      { label: 'Filiere', value: this.filiereLabel(session.groupIds) },
-      { label: 'Semester', value: this.semesterLabel(session.courseLabel, session.groupIds) },
+      { label: 'Filière', value: this.filiereLabel(session.groupIds) },
+      { label: 'Semestre', value: this.semesterLabel(session.courseLabel, session.groupIds) },
       { label: 'Module', value: session.courseLabel },
-      { label: 'Group', value: this.groupLabel(session.groupIds) },
-      { label: 'Teacher', value: this.teacherLabel(session.teacherFullName) },
-      { label: 'Room', value: session.roomLabel },
+      { label: 'Groupe', value: this.groupLabel(session.groupIds) },
+      { label: 'Enseignant', value: this.teacherLabel(session.teacherFullName) },
+      { label: 'Salle', value: session.roomLabel },
       { label: 'Date', value: this.formatDate(session.startedAt) },
-      { label: 'Time', value: this.formatTimeRange(session.startedAt, session.endedAt ?? session.endsAt) },
-      { label: 'Status', value: session.status === 'ACTIVE' ? 'Active' : 'Finalized' },
-      { label: 'Attendance rate', value: `${this.attendanceRateValue(session)}%` },
+      { label: 'Heure', value: this.formatTimeRange(session.startedAt, session.endedAt ?? session.endsAt) },
+      { label: 'Statut', value: session.status === 'ACTIVE' ? 'Active' : 'Finalisée' },
+      { label: 'Taux de présence', value: `${this.attendanceRateValue(session)}%` },
     ];
   }
 
@@ -747,7 +747,7 @@ export class AttendancePage {
     const start = new Date(session.startedAt).getTime();
     const end = new Date(session.endedAt ?? session.endsAt).getTime();
     const minutes = Math.max(0, Math.round((end - start) / 60000));
-    return minutes > 0 ? `${minutes} min` : 'Duration unknown';
+    return minutes > 0 ? `${minutes} min` : 'Durée inconnue';
   }
 
   studentStatusVariant(status: AttendanceStudentStatus): 'success' | 'warning' | 'error' | 'neutral' {
@@ -766,13 +766,13 @@ export class AttendancePage {
   studentStatusLabel(status: AttendanceStudentStatus): string {
     switch (status) {
       case 'PRESENT':
-        return 'Present';
+        return 'Présent';
       case 'ABSENT':
         return 'Absent';
       case 'JUSTIFIED':
-        return 'Justified';
+        return 'Justifiées';
       case 'UNKNOWN':
-        return 'Open';
+        return 'Ouvert';
     }
   }
 
@@ -783,9 +783,9 @@ export class AttendancePage {
       case 'FACE_ID':
         return 'Face ID';
       case 'MANUAL':
-        return 'Manual';
+        return 'Manuel';
       default:
-        return 'Not marked';
+        return 'Non pointé';
     }
   }
 
@@ -826,22 +826,22 @@ export class AttendancePage {
   private academicYearLabel(groupIds: readonly number[]): string {
     const formation = this.firstFormationForGroups(groupIds);
     if (!formation) {
-      return 'Not specified';
+      return 'Non renseigné';
     }
-    return this.academicYears().find((year) => year.id === formation.anneeUniversitaireId)?.name ?? 'Not specified';
+    return this.academicYears().find((year) => year.id === formation.anneeUniversitaireId)?.name ?? 'Non renseigné';
   }
 
   private formationLabel(groupIds: readonly number[]): string {
-    return this.firstFormationForGroups(groupIds)?.name ?? 'Not specified';
+    return this.firstFormationForGroups(groupIds)?.name ?? 'Non renseigné';
   }
 
   private filiereLabel(groupIds: readonly number[]): string {
     const formation = this.firstFormationForGroups(groupIds);
     if (!formation?.filiereId) {
-      return 'Not specified';
+      return 'Non renseigné';
     }
     const filiere = this.filieres().find((item) => item.id === formation.filiereId);
-    return filiere ? `${filiere.code} - ${filiere.name}` : 'Not specified';
+    return filiere ? `${filiere.code} - ${filiere.name}` : 'Non renseigné';
   }
 
   private semesterLabel(courseLabel: string, groupIds: readonly number[]): string {
@@ -852,7 +852,7 @@ export class AttendancePage {
         item.formationId === formation?.id &&
         (item.name.trim().toLowerCase() === normalizedCourse || item.code.trim().toLowerCase() === normalizedCourse),
     );
-    return module?.semester ? `Semester ${module.semester}` : 'Not specified';
+    return module?.semester ? `Semestre ${module.semester}` : 'Non renseigné';
   }
 
   private firstFormationForGroups(groupIds: readonly number[]): Formation | null {

@@ -129,7 +129,7 @@ export class QrCodeMarking implements OnInit, OnDestroy {
       if (!this.webSocketConnected() || !this.webSocketEnabled()) {
         this.refreshSession();
       } else {
-        // Refresh léger uniquement pour la cohérence
+        // Actualiser léger uniquement pour la cohérence
         this.refreshSessionLight();
       }
     }, interval);
@@ -204,7 +204,7 @@ export class QrCodeMarking implements OnInit, OnDestroy {
         name,
         studentId: student.numApogee,
         pfpUrl: student.pfpUrl,
-        scannedAt: new Date(notification.markedAt).toLocaleTimeString([], {
+        scannedAt: new Date(notification.markedAt).toLocaleTimeString('fr-FR', {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
@@ -277,9 +277,9 @@ export class QrCodeMarking implements OnInit, OnDestroy {
       module: session?.courseLabel ?? 'Session QR Code',
       group: session?.groupIds?.length ? `Groupes ${session.groupIds.join(', ')}` : 'Groupes',
       time: session?.startedAt
-        ? `${new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${
+        ? `${new Date(session.startedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} - ${
             session.endsAt
-              ? new Date(session.endsAt).toLocaleTimeString([], {
+              ? new Date(session.endsAt).toLocaleTimeString('fr-FR', {
                   hour: '2-digit',
                   minute: '2-digit',
                 })
@@ -287,7 +287,7 @@ export class QrCodeMarking implements OnInit, OnDestroy {
           }`
         : '',
       location: session?.roomLabel ?? 'Salle non renseignee',
-      date: session?.startedAt ? new Date(session.startedAt).toLocaleDateString() : '',
+      date: session?.startedAt ? new Date(session.startedAt).toLocaleDateString('fr-FR') : '',
     };
   }
 
@@ -421,7 +421,7 @@ export class QrCodeMarking implements OnInit, OnDestroy {
   }
 
   private refreshSessionLight(): void {
-    // Refresh léger pour la cohérence sans surcharger
+    // Actualiser léger pour la cohérence sans surcharger
     const sessionId = this.readSessionId(this.session()) ?? this.currentSessionId();
     if (!sessionId) return;
 
@@ -475,7 +475,7 @@ export class QrCodeMarking implements OnInit, OnDestroy {
       studentId: student.numApogee,
       pfpUrl: student.pfpUrl,
       scannedAt: student.markedAt
-        ? new Date(student.markedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        ? new Date(student.markedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
         : '--:--',
     };
   }

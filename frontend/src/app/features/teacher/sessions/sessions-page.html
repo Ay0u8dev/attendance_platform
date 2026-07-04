@@ -1,6 +1,6 @@
 <section class="teacher-page">
   <app-page-header
-    title="Attendance Sessions"
+    title="Sessions de présence"
   ></app-page-header>
 
   <section class="teacher-page-panel">
@@ -23,14 +23,14 @@
       >
         @if (exportLoading()) {
           <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
-          Export...
+          Exportation...
         } @else {
           <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
           Exporter le rapport
         }
       </button>
       <a routerLink="/teacher/mark-attendance/start-session" class="teacher-primary-btn">
-        Start New Session
+        Démarrer une nouvelle session
       </a>
     </div>
   </section>
@@ -66,7 +66,7 @@
           <i class="fa-regular fa-calendar-check text-2xl"></i>
         </div>
         <h3 class="mt-6 text-xl font-bold text-principalText">Aucune session</h3>
-        <p class="mt-2 text-secondaryText">Demarrez une session pour voir l historique ici.</p>
+        <p class="mt-2 text-secondaryText">Démarrez une session pour voir l’historique ici.</p>
       </div>
     } @else {
       <div class="teacher-page-section-header md:hidden">
@@ -86,7 +86,7 @@
                 <div class="min-w-0">
                   <p class="text-sm font-semibold text-principalText">{{ session.courseLabel }}</p>
                   <p class="mt-1 truncate text-xs text-secondaryText">
-                    {{ session.roomLabel || 'Salle non renseignee' }} · Groupes
+                    {{ session.roomLabel || 'Salle non renseignée' }} · Groupes
                     {{ session.groupIds.join(', ') }}
                   </p>
                 </div>
@@ -103,13 +103,13 @@
                 </span>
                 <span class="inline-flex items-center gap-2">
                   <i class="fa-solid fa-location-dot text-muted" aria-hidden="true"></i>
-                  {{ session.roomLabel || 'Salle non renseignee' }} · {{ methodLabel(session.method) }}
+                  {{ session.roomLabel || 'Salle non renseignée' }} · {{ methodLabel(session.method) }}
                 </span>
               </div>
 
               <div class="mt-4 flex items-center justify-between gap-3">
                 <app-status-badge
-                  [label]="attendanceRate(session) + '% · ' + session.presentCount + ' presents'"
+                  [label]="attendanceRate(session) + '% · ' + session.presentCount + ' présent(s)'"
                   variant="neutral"
                 ></app-status-badge>
                 <span class="text-xs font-semibold text-primary">Détails</span>
@@ -123,7 +123,7 @@
         <div class="teacher-table-grid teacher-table-grid--sessions teacher-table-head">
           <span>Cours</span>
           <span>Date</span>
-          <span>Presence</span>
+          <span>Présence</span>
           <span>Statut</span>
         </div>
 
@@ -135,7 +135,7 @@
             <div class="min-w-0">
               <p class="truncate font-semibold text-principalText">{{ session.courseLabel }}</p>
               <p class="truncate text-xs text-secondaryText">
-                {{ session.roomLabel || 'Salle non renseignee' }} | Groupes
+                {{ session.roomLabel || 'Salle non renseignée' }} | Groupes
                 {{ session.groupIds.join(', ') }}
               </p>
             </div>
@@ -144,7 +144,7 @@
             }}</span>
             <div class="text-sm text-secondaryText">
               <span class="font-bold text-principalText">{{ attendanceRate(session) }}%</span>
-              <span> ({{ session.presentCount }} presents)</span>
+              <span> ({{ session.presentCount }} présent(s))</span>
             </div>
             <div class="teacher-table-status-cell">
               <app-status-badge
@@ -167,7 +167,7 @@
           <p class="modal-eyebrow">Session</p>
           <h2 class="modal-title">{{ session.courseLabel }}</h2>
           <p class="modal-subtitle">
-            {{ session.roomLabel || 'Salle non renseignee' }} -
+            {{ session.roomLabel || 'Salle non renseignée' }} -
             {{ session.startedAt | date: 'dd/MM/yyyy HH:mm' }}
           </p>
         </div>
@@ -177,7 +177,7 @@
       </div>
 
       <div class="details-summary">
-        <span><strong>{{ session.presentCount ?? 0 }}</strong> presents</span>
+        <span><strong>{{ session.presentCount ?? 0 }}</strong> présents</span>
         <span><strong>{{ session.absentCount ?? 0 }}</strong> absents</span>
         <span><strong>{{ session.unknownCount ?? 0 }}</strong> inconnus</span>
       </div>
@@ -210,7 +210,7 @@
               <div class="min-w-0">
                 <p class="student-name">{{ student.firstName }} {{ student.lastName }}</p>
                 <p class="student-meta">
-                  Apogee {{ student.numApogee }} - Groupe {{ student.groupId }}
+                  Apogée {{ student.numApogee }} - Groupe {{ student.groupId }}
                 </p>
               </div>
             </div>
@@ -228,7 +228,7 @@
                 [disabled]="updatingStudentId() === student.studentId || isSaving()"
                 (click)="updateStudentStatus(student, 'PRESENT')"
               >
-                Present
+                Présent
               </button>
               <button
                 type="button"
@@ -242,7 +242,7 @@
             </div>
           </div>
         } @empty {
-          <div class="empty-students">Aucun etudiant dans cette session.</div>
+          <div class="empty-students">Aucun étudiant dans cette session.</div>
         }
       </div>
 

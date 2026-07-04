@@ -30,7 +30,7 @@ import {
   presentJustificationStudent,
 } from '../../../shared/justifications/justification-presenter';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-type TeacherJustificationStatus = 'En attente' | 'Approuvee' | 'Declinee';
+type TeacherJustificationStatus = 'En attente' | 'Acceptée' | 'Refusée';
 type TeacherJustificationVariant = 'warning' | 'success' | 'error' | 'neutral';
 
 interface TeacherJustificationRow {
@@ -235,7 +235,9 @@ export class TeacherJustificationsPage implements OnInit {
 
   private toRow(justification: JustificationDto): TeacherJustificationRow {
     const statusData = this.statusData(justification.status);
-    const documentUrl = this.justificationService.resolveDocumentUrl(justification.documentUrl);
+    const documentUrl = this.justificationService.resolveDocumentUrl(
+      normalizeOptional(justification.attachmentUrl) ?? normalizeOptional(justification.documentUrl),
+    );
     const student = presentJustificationStudent(justification, this.studentDirectory());
     const review = presentJustificationReview(justification);
 
@@ -275,9 +277,9 @@ export class TeacherJustificationsPage implements OnInit {
   } {
     switch (status) {
       case 'APPROVED':
-        return { status: 'Approuvee', variant: 'success' };
+        return { status: 'Acceptée', variant: 'success' };
       case 'REJECTED':
-        return { status: 'Declinee', variant: 'error' };
+        return { status: 'Refusée', variant: 'error' };
       default:
         return { status: 'En attente', variant: 'warning' };
     }

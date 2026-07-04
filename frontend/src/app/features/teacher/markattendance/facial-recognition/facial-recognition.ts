@@ -53,14 +53,14 @@ export class FacialRecognition implements OnInit {
       module: session?.courseLabel ?? 'Session reconnaissance faciale',
       group: session?.groupIds?.length ? `Groupes ${session.groupIds.join(', ')}` : 'Groupes',
       time: session?.startedAt
-        ? `${new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${
+        ? `${new Date(session.startedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} - ${
             session.endsAt
-              ? new Date(session.endsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              ? new Date(session.endsAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
               : 'en cours'
           }`
         : '',
       location: session?.roomLabel ?? 'Salle non renseignee',
-      date: session?.startedAt ? new Date(session.startedAt).toLocaleDateString() : '',
+      date: session?.startedAt ? new Date(session.startedAt).toLocaleDateString('fr-FR') : '',
     };
   });
 

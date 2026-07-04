@@ -116,16 +116,16 @@ export class Dashboard {
   readonly groupModuleFilter = signal('all');
 
   readonly analyticsRanges: ReadonlyArray<{ readonly value: AnalyticsRange; readonly label: string }> = [
-    { value: '14', label: '14 days' },
-    { value: 'month', label: 'This month' },
-    { value: 'year', label: 'Year' },
+    { value: '14', label: '14 jours' },
+    { value: 'month', label: 'Ce mois' },
+    { value: 'year', label: 'Année' },
   ];
   readonly analyticsModes: ReadonlyArray<{ readonly value: AnalyticsMode; readonly label: string }> = [
-    { value: 'day', label: 'By day' },
-    { value: 'time', label: 'By time of day' },
+    { value: 'day', label: 'Par jour' },
+    { value: 'time', label: 'Par heure' },
   ];
 
-  readonly activeYearName = computed(() => this.academicYears().find((year) => year.active)?.name ?? 'No active year');
+  readonly activeYearName = computed(() => this.academicYears().find((year) => year.active)?.name ?? 'Aucune année active');
   readonly todaySessions = computed(() => this.sessions().filter((session) => this.isToday(session.startedAt)));
   readonly activeSessions = computed(() => this.sessions().filter((session) => session.status === 'ACTIVE'));
   readonly pendingJustifications = computed(() => this.justifications().filter((item) => item.status === 'PENDING'));
@@ -147,23 +147,23 @@ export class Dashboard {
 
   readonly kpiCards = computed<readonly KpiCard[]>(() => [
     {
-      label: 'Total students',
+      label: 'Étudiants',
       value: String(this.students().length),
-      helper: `${this.studentInscriptions().length} enrolled`,
+      helper: `${this.studentInscriptions().length} inscrit(s)`,
       icon: 'fa-solid fa-user-graduate',
       variant: 'info',
     },
     {
-      label: 'Teachers',
+      label: 'Enseignants',
       value: String(this.teachers().length),
-      helper: `${this.teacherAssignments().length} assignments`,
+      helper: `${this.teacherAssignments().length} affectation(s)`,
       icon: 'fa-solid fa-chalkboard-user',
       variant: 'neutral',
     },
     {
-      label: 'Groups',
+      label: 'Groupes',
       value: String(this.groups().length),
-      helper: `${this.groupsWithoutAttendanceToday()} without attendance today`,
+      helper: `${this.groupsWithoutAttendanceToday()} sans présence aujourd'hui`,
       icon: 'fa-solid fa-users-rectangle',
       variant: this.groupsWithoutAttendanceToday() > 0 ? 'warning' : 'success',
     },
@@ -175,30 +175,30 @@ export class Dashboard {
       variant: 'neutral',
     },
     {
-      label: 'Today sessions',
+      label: 'Sessions du jour',
       value: String(this.todaySessions().length),
-      helper: `${this.sessions().length} total recorded`,
+      helper: `${this.sessions().length} enregistrée(s) au total`,
       icon: 'fa-regular fa-calendar-check',
       variant: 'info',
     },
     {
-      label: 'Active sessions',
+      label: 'Sessions actives',
       value: String(this.activeSessions().length),
-      helper: this.activeSessions().length ? 'live supervision' : 'none running',
+      helper: this.activeSessions().length ? 'suivi en direct' : 'aucune en cours',
       icon: 'fa-solid fa-signal',
       variant: this.activeSessions().length ? 'info' : 'neutral',
     },
     {
-      label: 'Attendance today',
+      label: 'Présence aujourd’hui',
       value: this.formatPercent(this.todayAttendanceRate()),
-      helper: `${this.todayPresent()} present / ${this.todayAbsent()} absent`,
+      helper: `${this.todayPresent()} présent(s) / ${this.todayAbsent()} absent(s)`,
       icon: 'fa-solid fa-chart-line',
       variant: this.healthVariant(this.todayAttendanceRate()),
     },
     {
-      label: 'Pending justifications',
+      label: 'Justifications en attente',
       value: String(this.pendingJustifications().length),
-      helper: 'waiting for decision',
+      helper: 'en attente de décision',
       icon: 'fa-regular fa-file-lines',
       variant: this.pendingJustifications().length ? 'warning' : 'success',
     },
@@ -207,9 +207,9 @@ export class Dashboard {
   readonly attendanceDistribution = computed<readonly DistributionSegment[]>(() => {
     const total = this.todayPresent() + this.todayAbsent() + this.todayOpen();
     return [
-      { label: 'Present', value: this.todayPresent(), percent: this.percent(this.todayPresent(), total), variant: 'success' },
-      { label: 'Absent', value: this.todayAbsent(), percent: this.percent(this.todayAbsent(), total), variant: 'error' },
-      { label: 'Open', value: this.todayOpen(), percent: this.percent(this.todayOpen(), total), variant: 'neutral' },
+      { label: 'Présents', value: this.todayPresent(), percent: this.percent(this.todayPresent(), total), variant: 'success' },
+      { label: 'Absents', value: this.todayAbsent(), percent: this.percent(this.todayAbsent(), total), variant: 'error' },
+      { label: 'Ouverts', value: this.todayOpen(), percent: this.percent(this.todayOpen(), total), variant: 'neutral' },
     ];
   });
 
@@ -251,9 +251,9 @@ export class Dashboard {
     if (this.pendingJustifications().length > 0) {
       alerts.push({
         severity: 'warning',
-        title: `${this.pendingJustifications().length} justification(s) pending`,
-        description: 'Review requests so justified absences are reflected correctly.',
-        actionLabel: 'Review',
+        title: `${this.pendingJustifications().length} justification(s) en attente`,
+        description: 'Traitez les demandes afin que les absences justifiées soient correctement reflétées.',
+        actionLabel: 'Examiner',
         route: '/justifications',
       });
     }
@@ -261,9 +261,9 @@ export class Dashboard {
     if (this.groupsWithoutAttendanceToday() > 0) {
       alerts.push({
         severity: 'info',
-        title: `${this.groupsWithoutAttendanceToday()} group(s) without attendance`,
-        description: 'Check timetable coverage or missing session starts.',
-        actionLabel: 'Open structure',
+        title: `${this.groupsWithoutAttendanceToday()} groupe(s) sans présence`,
+        description: 'Vérifiez la couverture de l’emploi du temps ou les sessions non démarrées.',
+        actionLabel: 'Ouvrir la structure',
         route: '/structure',
       });
     }
@@ -272,9 +272,9 @@ export class Dashboard {
     if (activeTooLong > 0) {
       alerts.push({
         severity: 'critical',
-        title: `${activeTooLong} active session(s) past end time`,
-        description: 'Ask teachers to finalize sessions or verify live capture.',
-        actionLabel: 'Inspect',
+        title: `${activeTooLong} session(s) active(s) après l’heure de fin`,
+        description: 'Demandez aux enseignants de finaliser les sessions ou de vérifier la capture en direct.',
+        actionLabel: 'Inspecter',
         route: '/attendance',
       });
     }
@@ -283,9 +283,9 @@ export class Dashboard {
     if (weakGroup) {
       alerts.push({
         severity: 'critical',
-        title: `${weakGroup.label} needs follow-up`,
-        description: `Attendance is ${this.formatPercent(weakGroup.rate)} across captured sessions.`,
-        actionLabel: 'Audit',
+        title: `${weakGroup.label} nécessite un suivi`,
+        description: `Le taux de présence est de ${this.formatPercent(weakGroup.rate)} sur les sessions capturées.`,
+        actionLabel: 'Auditer',
         route: '/attendance',
       });
     }
@@ -295,9 +295,9 @@ export class Dashboard {
       : [
           {
             severity: 'success',
-            title: 'No immediate blocker',
-            description: 'Attendance signals are stable based on loaded data.',
-            actionLabel: 'View sessions',
+            title: 'Aucun blocage immédiat',
+            description: 'Les indicateurs de présence sont stables d’après les données chargées.',
+            actionLabel: 'Voir les sessions',
             route: '/attendance',
           },
         ];
@@ -359,7 +359,7 @@ export class Dashboard {
           this.lastUpdated.set(new Date());
         },
         error: () => {
-          this.errorMessage.set('Unable to load the dashboard. Check backend services and auth.');
+          this.errorMessage.set('Impossible de charger le tableau de bord. Vérifiez les services backend et l’authentification.');
         },
       });
   }
@@ -370,9 +370,9 @@ export class Dashboard {
 
   formatDateTime(value: string | Date | null): string {
     if (!value) {
-      return 'Not refreshed yet';
+      return 'Pas encore actualisé';
     }
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat('fr-FR', {
       day: '2-digit',
       month: 'short',
       hour: '2-digit',
@@ -381,14 +381,14 @@ export class Dashboard {
   }
 
   formatTimeRange(session: AdminAttendanceSessionSummaryDto): string {
-    const formatter = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit' });
+    const formatter = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
     const start = formatter.format(new Date(session.startedAt));
     const end = formatter.format(new Date(session.endedAt ?? session.endsAt));
     return `${start} - ${end}`;
   }
 
   groupLabel(groupIds: readonly number[]): string {
-    return groupIds.length ? groupIds.map((id) => this.groupName(id)).join(', ') : 'No group';
+    return groupIds.length ? groupIds.map((id) => this.groupName(id)).join(', ') : 'Aucun groupe';
   }
 
   sessionRate(session: AdminAttendanceSessionSummaryDto): number {
@@ -396,7 +396,7 @@ export class Dashboard {
   }
 
   sessionStatusLabel(session: AdminAttendanceSessionSummaryDto): string {
-    return session.status === 'ACTIVE' ? 'Active' : 'Finalized';
+    return session.status === 'ACTIVE' ? 'Active' : 'Finalisée';
   }
 
   barWidth(value: number, max: number): number {
@@ -426,9 +426,9 @@ export class Dashboard {
   severityLabel(severity: AlertSeverity): string {
     switch (severity) {
       case 'critical':
-        return 'Critical';
+        return 'Critique';
       case 'warning':
-        return 'Warning';
+        return 'Avertissement';
       case 'success':
         return 'Stable';
       default:
@@ -502,7 +502,7 @@ export class Dashboard {
   private performanceByTeacher(): readonly PerformanceRow[] {
     const byTeacher = new Map<string, { present: number; absent: number; sessions: number }>();
     for (const session of this.sessions()) {
-      const teacher = session.teacherFullName?.trim() || 'Teacher not provided';
+      const teacher = session.teacherFullName?.trim() || 'Enseignant non renseigné';
       const current = byTeacher.get(teacher) ?? { present: 0, absent: 0, sessions: 0 };
       current.present += session.presentCount;
       current.absent += session.absentCount;
@@ -540,7 +540,7 @@ export class Dashboard {
   }
 
   private groupName(groupId: number): string {
-    return this.groups().find((group) => group.id === groupId)?.name ?? `Group #${groupId}`;
+    return this.groups().find((group) => group.id === groupId)?.name ?? `Groupe #${groupId}`;
   }
 
   private moduleForGroupSession(groupId: number, courseLabel: string): Module | null {
@@ -596,7 +596,7 @@ export class Dashboard {
   private buildTimeAnalytics(): readonly AbsenceAnalyticsPoint[] {
     const sessions = this.sessionsInRange();
     const buckets = [
-      { label: '06-08', detail: 'Early morning', from: 6, to: 8 },
+      { label: '06-08', detail: 'Début de matinée', from: 6, to: 8 },
       { label: '08-10', detail: '08:00 - 10:00', from: 8, to: 10 },
       { label: '10-12', detail: '10:00 - 12:00', from: 10, to: 12 },
       { label: '12-14', detail: '12:00 - 14:00', from: 12, to: 14 },
@@ -630,8 +630,8 @@ export class Dashboard {
       date.setHours(0, 0, 0, 0);
       date.setDate(date.getDate() - (days - 1 - index));
       return {
-        label: new Intl.DateTimeFormat('en-US', { day: '2-digit', month: 'short' }).format(date),
-        detail: new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(date),
+        label: new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short' }).format(date),
+        detail: new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(date),
         sessions: this.sessions().filter((session) => this.sameDay(session.startedAt, date)),
       };
     });
@@ -648,8 +648,8 @@ export class Dashboard {
       date.setHours(0, 0, 0, 0);
       date.setMonth(date.getMonth() - (11 - index));
       return {
-        label: new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date),
-        detail: new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(date),
+        label: new Intl.DateTimeFormat('fr-FR', { month: 'short' }).format(date),
+        detail: new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(date),
         sessions: this.sessions().filter((session) => {
           const startedAt = new Date(session.startedAt);
           return startedAt.getFullYear() === date.getFullYear() && startedAt.getMonth() === date.getMonth();
@@ -718,7 +718,7 @@ export class Dashboard {
   }
 
   private setPartialDataError(): void {
-    this.errorMessage.set('Some dashboard data could not be loaded. Check backend services and auth.');
+    this.errorMessage.set('Certaines données du tableau de bord n’ont pas pu être chargées. Vérifiez les services backend et l’authentification.');
   }
 
   private emptySessionPage(): PagedResponseDto<AdminAttendanceSessionSummaryDto> {

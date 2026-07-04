@@ -25,8 +25,12 @@ export interface JustificationReviewPresentation {
   readonly reviewer: string | null;
   readonly role: JustificationReviewerRole;
   readonly reviewedAt: string | null;
-  readonly commentLabel: 'Decision comment' | 'Teacher comment' | 'Admin comment' | 'Review comment';
-  readonly reviewerRoleLabel: 'Teacher' | 'Admin' | 'Reviewer';
+  readonly commentLabel:
+    | 'Commentaire de décision'
+    | 'Commentaire enseignant'
+    | 'Commentaire administrateur'
+    | 'Commentaire de révision';
+  readonly reviewerRoleLabel: 'Enseignant' | 'Admin' | 'Réviseur';
 }
 
 export function normalizeOptional(value: string | null | undefined): string | null {
@@ -93,7 +97,7 @@ export function presentJustificationStudent(
       normalizeOptional(directoryName) ??
       normalizeOptional(item.studentEmail) ??
       normalizeOptional(student?.email) ??
-      `Student #${item.studentId}`,
+      `Étudiant #${item.studentId}`,
     email: normalizeOptional(item.studentEmail) ?? normalizeOptional(student?.email),
     code: normalizeOptional(item.studentCode) ?? normalizeOptional(student?.numApogee),
     pfpUrl: normalizeOptional(item.studentProfileImageUrl) ?? normalizeOptional(student?.pfpUrl),
@@ -111,7 +115,7 @@ export function groupLabelForJustification(
   item: JustificationDto,
   directory: JustificationStudentDirectory,
 ): string {
-  return presentJustificationStudent(item, directory).group ?? (item.groupId ? `Group #${item.groupId}` : 'Group not provided');
+  return presentJustificationStudent(item, directory).group ?? (item.groupId ? `Groupe #${item.groupId}` : 'Groupe non renseigné');
 }
 
 export function presentJustificationReview(item: JustificationDto): JustificationReviewPresentation {
@@ -124,11 +128,11 @@ export function presentJustificationReview(item: JustificationDto): Justificatio
     role,
     reviewedAt: normalizeOptional(item.decidedAt) ?? normalizeOptional(item.reviewedAt),
     commentLabel: reviewCommentLabel(item.status, role),
-    reviewerRoleLabel: role === 'TEACHER' ? 'Teacher' : role === 'ADMIN' ? 'Admin' : 'Reviewer',
+    reviewerRoleLabel: role === 'TEACHER' ? 'Enseignant' : role === 'ADMIN' ? 'Admin' : 'Réviseur',
   };
 }
 
-export function formatJustificationDate(value: string | null | undefined, fallback = 'Not provided'): string {
+export function formatJustificationDate(value: string | null | undefined, fallback = 'Non renseigné'): string {
   const normalized = normalizeOptional(value);
   if (!normalized) {
     return fallback;
@@ -146,7 +150,7 @@ export function formatJustificationDate(value: string | null | undefined, fallba
   }).format(parsed);
 }
 
-export function formatJustificationDateTime(value: string | null | undefined, fallback = 'Not provided'): string {
+export function formatJustificationDateTime(value: string | null | undefined, fallback = 'Non renseigné'): string {
   const normalized = normalizeOptional(value);
   if (!normalized) {
     return fallback;
@@ -169,7 +173,7 @@ export function formatJustificationDateTime(value: string | null | undefined, fa
 export function cleanJustificationAttachmentName(
   documentName: string | null | undefined,
   url: string | null | undefined,
-  fallback = 'No attachment',
+  fallback = 'Aucune pièce jointe',
 ): string {
   const explicitName = normalizeOptional(documentName);
   if (explicitName) {
@@ -204,13 +208,13 @@ function reviewCommentLabel(
   role: JustificationReviewerRole,
 ): JustificationReviewPresentation['commentLabel'] {
   if (status === 'PENDING') {
-    return 'Decision comment';
+    return 'Commentaire de décision';
   }
   if (role === 'TEACHER') {
-    return 'Teacher comment';
+    return 'Commentaire enseignant';
   }
   if (role === 'ADMIN') {
-    return 'Admin comment';
+    return 'Commentaire administrateur';
   }
-  return 'Review comment';
+  return 'Commentaire de révision';
 }

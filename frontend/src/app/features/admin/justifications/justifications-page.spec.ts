@@ -48,18 +48,18 @@ describe('Admin JustificationsPage', () => {
 
     expect(text).toContain('aya@ump.ac.ma');
     expect(text).toContain('GI-2');
-    expect(text).toContain('Apogee A007');
+    expect(text).toContain('Apogée A007');
   });
 
   it('labels teacher-reviewed rejection comments as teacher comments', () => {
     const text = fixture.nativeElement.textContent as string;
     const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
 
-    expect(text).toContain('Teacher comment');
+    expect(text).toContain('Commentaire enseignant');
     expect(textarea.value).toBe('Rejected by teacher');
-    expect(text).not.toContain('Admin comment');
-    expect(text).toContain('Reviewed');
-    expect(text).toContain('by Teacher Teacher One (6)');
+    expect(text).not.toContain('Commentaire administrateur');
+    expect(text).toContain('Révisée');
+    expect(text).toContain('par Enseignant Teacher One (6)');
     expect(text).toContain('Prof. Idrissi');
   });
 });

@@ -14,5 +14,5 @@ export class App {
   // Keep AuthService alive from app startup so OAuth callbacks are handled on every route.
   private readonly authService = inject(AuthService);
 
-  protected readonly title = signal('Attendance Platform');
+  protected readonly title = signal('Plateforme de présence');
 }

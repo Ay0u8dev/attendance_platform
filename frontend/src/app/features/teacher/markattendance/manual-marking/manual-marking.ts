@@ -49,9 +49,9 @@ export class ManualMarking implements OnInit {
       module: session?.courseLabel ?? 'Session d appel',
       group: session?.groupIds?.length ? `Groupes ${session.groupIds.join(', ')}` : 'Groupes',
       time: session?.startedAt
-        ? `${new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${
+        ? `${new Date(session.startedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} - ${
             session.endsAt
-              ? new Date(session.endsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              ? new Date(session.endsAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
               : 'en cours'
           }`
         : '',

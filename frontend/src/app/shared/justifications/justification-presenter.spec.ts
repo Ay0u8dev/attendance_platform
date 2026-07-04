@@ -71,7 +71,7 @@ describe('justification presenter', () => {
     expect(review.comment).toBe('Rejected by admin');
     expect(review.reviewer).toBe('42');
     expect(review.role).toBe('ADMIN');
-    expect(review.commentLabel).toBe('Admin comment');
+    expect(review.commentLabel).toBe('Commentaire administrateur');
   });
 
   it('labels legacy teacher reviews as teacher comments', () => {
@@ -87,13 +87,13 @@ describe('justification presenter', () => {
 
     expect(review.comment).toBe('Rejected by teacher');
     expect(review.role).toBe('TEACHER');
-    expect(review.commentLabel).toBe('Teacher comment');
+    expect(review.commentLabel).toBe('Commentaire enseignant');
   });
 
   it('uses a decision comment label while a request is pending', () => {
     const review = presentJustificationReview(justification({ status: 'PENDING' }));
 
-    expect(review.commentLabel).toBe('Decision comment');
+    expect(review.commentLabel).toBe('Commentaire de décision');
   });
 
   it('cleans generated attachment ids from filenames', () => {

@@ -124,7 +124,7 @@ export class TeacherSessionsPage implements OnInit {
   }
 
   sessionStatusLabel(session: AttendanceSessionSummary): string {
-    return session.status === 'FINALIZED' ? 'Finalisee' : 'En cours';
+    return session.status === 'FINALIZED' ? 'Finalisée' : 'En cours';
   }
 
   sessionDateLabel(session: AttendanceSessionSummary): string {
@@ -363,11 +363,11 @@ export class TeacherSessionsPage implements OnInit {
   studentStatusLabel(status: AttendanceStudentStatus): string {
     switch (status) {
       case 'PRESENT':
-        return 'Present';
+        return 'Présent';
       case 'ABSENT':
         return 'Absent';
       case 'JUSTIFIED':
-        return 'Justifie';
+        return 'Justifié';
       default:
         return 'Inconnu';
     }
@@ -439,7 +439,7 @@ export class TeacherSessionsPage implements OnInit {
       'Code Apogée',
       'Nom',
       'Prénom',
-      'Email',
+      'E-mail',
       'Groupe',
       ...filiere.sessions.map((session) => this.sessionExportLabel(session)),
     ].map((value) => ({ value, style: 2 }));

@@ -54,14 +54,14 @@ type Option = { readonly label: string; readonly value: string };
     <section class="space-y-5">
       <app-page-header
         title="Inscription"
-        description="Assign students and teachers to the active academic structure used by attendance."
+        description="Affectez les étudiants et les enseignants à la structure académique active utilisée pour les présences."
         [meta]="inscriptionMeta()"
       ></app-page-header>
 
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div
           class="inline-flex rounded-2xl border border-line bg-surface p-1 shadow-card"
-          aria-label="Inscription section"
+          aria-label="Section d’inscription"
         >
           <button
             type="button"
@@ -73,7 +73,7 @@ type Option = { readonly label: string; readonly value: string };
             (click)="setSection('students')"
           >
             <i class="fa-solid fa-user-graduate" aria-hidden="true"></i>
-            Students
+            Étudiants
           </button>
           <button
             type="button"
@@ -85,12 +85,12 @@ type Option = { readonly label: string; readonly value: string };
             (click)="setSection('teachers')"
           >
             <i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i>
-            Teachers
+            Enseignants
           </button>
         </div>
 
         <app-button
-          [label]="activeSection() === 'students' ? 'Assign Student' : 'Assign Teacher'"
+          [label]="activeSection() === 'students' ? 'Affecter un étudiant' : 'Affecter un enseignant'"
           icon="fa-solid fa-plus"
           [fullWidth]="false"
           (clicked)="openCreateAssignmentModal()"
@@ -105,12 +105,12 @@ type Option = { readonly label: string; readonly value: string };
 
       @if (activeSection() === 'students') {
         <app-data-table
-          title="Student inscriptions"
-          description="Student enrollment rows loaded from user-service."
-          caption="Student assignments"
-          searchPlaceholder="Search by student, formation, group, or academic year..."
-          emptyStateTitle="No student inscriptions found"
-          emptyStateDescription="Create student inscriptions after students and structure data exist."
+          title="Inscriptions des étudiants"
+          description="Lignes d’inscription des étudiants chargées depuis le service utilisateur."
+          caption="Affectations des étudiants"
+          searchPlaceholder="Rechercher par étudiant, formation, groupe ou année universitaire..."
+          emptyStateTitle="Aucune inscription étudiant trouvée"
+          emptyStateDescription="Créez des inscriptions après l’ajout des étudiants et de la structure."
           [rows]="studentInscriptions()"
           [columns]="studentColumns"
           [rowId]="studentRowId"
@@ -128,7 +128,7 @@ type Option = { readonly label: string; readonly value: string };
               ></app-user-avatar>
               <div class="min-w-0">
                 <p class="truncate text-[0.95rem] font-semibold text-principalText">{{ studentName(row) }}</p>
-                <p class="mt-0.5 truncate text-[0.8rem] text-secondaryText">Student #{{ row.studentId }}</p>
+                <p class="mt-0.5 truncate text-[0.8rem] text-secondaryText">Étudiant #{{ row.studentId }}</p>
               </div>
             </div>
           </ng-template>
@@ -151,14 +151,14 @@ type Option = { readonly label: string; readonly value: string };
             <div class="flex justify-end gap-2">
               <app-icon-button
                 icon="fa-regular fa-pen-to-square"
-                [label]="'Edit inscription for ' + studentName(row)"
+                [label]="'Modifier l’inscription de ' + studentName(row)"
                 tone="primary"
                 size="sm"
                 (click)="openEditStudentAssignmentModal(row)"
               ></app-icon-button>
               <app-icon-button
                 icon="fa-regular fa-trash-can"
-                [label]="'Delete inscription for ' + studentName(row)"
+                [label]="'Supprimer l’inscription de ' + studentName(row)"
                 tone="danger"
                 size="sm"
                 (click)="openDeleteStudentAssignmentModal(row)"
@@ -168,12 +168,12 @@ type Option = { readonly label: string; readonly value: string };
         </app-data-table>
       } @else {
         <app-data-table
-          title="Teacher assignments"
-          description="Teacher module and group assignments loaded from user-service."
-          caption="Teacher assignments"
-          searchPlaceholder="Search by teacher, module, formation, group, or year..."
-          emptyStateTitle="No teacher assignments found"
-          emptyStateDescription="Create teacher assignments after teachers and structure data exist."
+          title="Affectations des enseignants"
+          description="Affectations des enseignants aux modules et groupes chargées depuis le service utilisateur."
+          caption="Affectations des enseignants"
+          searchPlaceholder="Rechercher par enseignant, module, formation, groupe ou année..."
+          emptyStateTitle="Aucune affectation enseignant trouvée"
+          emptyStateDescription="Créez des affectations après l’ajout des enseignants et de la structure."
           [rows]="teacherAssignments()"
           [columns]="teacherColumns"
           [rowId]="teacherRowId"
@@ -216,14 +216,14 @@ type Option = { readonly label: string; readonly value: string };
             <div class="flex justify-end gap-2">
               <app-icon-button
                 icon="fa-regular fa-pen-to-square"
-                [label]="'Edit assignment for ' + teacherName(row)"
+                [label]="'Modifier l’affectation de ' + teacherName(row)"
                 tone="primary"
                 size="sm"
                 (click)="openEditTeacherAssignmentModal(row)"
               ></app-icon-button>
               <app-icon-button
                 icon="fa-regular fa-trash-can"
-                [label]="'Delete assignment for ' + teacherName(row)"
+                [label]="'Supprimer l’affectation de ' + teacherName(row)"
                 tone="danger"
                 size="sm"
                 (click)="openDeleteTeacherAssignmentModal(row)"
@@ -237,7 +237,7 @@ type Option = { readonly label: string; readonly value: string };
     <app-modal
       [open]="studentAssignmentOpen()"
       [title]="studentAssignmentTitle()"
-      description="Assign an existing student to an academic year, formation, and group."
+      description="Affectez un étudiant existant à une année universitaire, une formation et un groupe."
       size="md"
       (closed)="closeStudentAssignmentModal()"
     >
@@ -245,9 +245,9 @@ type Option = { readonly label: string; readonly value: string };
         <form [formGroup]="studentAssignmentForm" class="grid gap-5 sm:grid-cols-2">
           <div class="sm:col-span-2">
             <app-dropdown-filter
-              label="Student *"
+              label="Étudiant *"
               identifier="student-inscription-student"
-              allLabel="Select student"
+              allLabel="Sélectionner un étudiant"
               [options]="studentOptions()"
               [value]="studentAssignmentValue('studentId')"
               iconClass="fa-solid fa-user-graduate"
@@ -257,9 +257,9 @@ type Option = { readonly label: string; readonly value: string };
           </div>
 
           <app-dropdown-filter
-            label="Academic year *"
+            label="Année universitaire *"
             identifier="student-inscription-year"
-            allLabel="Select academic year"
+            allLabel="Sélectionner une année universitaire"
             [options]="academicYearOptions()"
             [value]="studentAssignmentValue('academicYearId')"
             iconClass="fa-regular fa-calendar"
@@ -272,7 +272,7 @@ type Option = { readonly label: string; readonly value: string };
             <app-dropdown-filter
               label="Formation *"
               identifier="student-inscription-formation"
-              [allLabel]="studentAssignmentValue('academicYearId') ? 'Select formation' : 'Select an academic year first'"
+              [allLabel]="studentAssignmentValue('academicYearId') ? 'Sélectionner une formation' : 'Sélectionnez d’abord une année universitaire'"
               [options]="studentFormationOptions()"
               [value]="studentAssignmentValue('formationId')"
               iconClass="fa-solid fa-layer-group"
@@ -282,15 +282,15 @@ type Option = { readonly label: string; readonly value: string };
             (filterChange)="setStudentAssignmentValue('formationId', $event)"
           ></app-dropdown-filter>
             @if (studentAssignmentValue('academicYearId') && studentFormationOptions().length === 0) {
-              <p class="mt-2 text-xs font-medium text-secondaryText">No formations available for this academic year.</p>
+              <p class="mt-2 text-xs font-medium text-secondaryText">Aucune formation disponible pour cette année universitaire.</p>
             }
           </div>
 
           <div class="sm:col-span-2">
             <app-dropdown-filter
-              label="Group *"
+              label="Groupe *"
               identifier="student-inscription-group"
-              [allLabel]="studentAssignmentValue('formationId') ? 'Select group' : 'Select a formation first'"
+              [allLabel]="studentAssignmentValue('formationId') ? 'Sélectionner un groupe' : 'Sélectionnez d’abord une formation'"
               [options]="studentGroupOptions()"
               [value]="studentAssignmentValue('groupeId')"
               iconClass="fa-solid fa-users"
@@ -299,7 +299,7 @@ type Option = { readonly label: string; readonly value: string };
               (filterChange)="setStudentAssignmentValue('groupeId', $event)"
             ></app-dropdown-filter>
             @if (studentAssignmentValue('formationId') && studentGroupOptions().length === 0) {
-              <p class="mt-2 text-xs font-medium text-secondaryText">No groups available for this formation.</p>
+              <p class="mt-2 text-xs font-medium text-secondaryText">Aucun groupe disponible pour cette formation.</p>
             }
           </div>
         </form>
@@ -307,13 +307,13 @@ type Option = { readonly label: string; readonly value: string };
 
       <div modal-footer class="flex gap-2">
         <app-button
-          label="Cancel"
+          label="Annuler"
           variant="outline"
           [fullWidth]="true"
           (clicked)="closeStudentAssignmentModal()"
         ></app-button>
         <app-button
-          label="Save inscription"
+          label="Enregistrer l’inscription"
           [disabled]="studentAssignmentForm.invalid || saving()"
           [loading]="saving()"
           [fullWidth]="true"
@@ -325,7 +325,7 @@ type Option = { readonly label: string; readonly value: string };
     <app-modal
       [open]="teacherAssignmentOpen()"
       [title]="teacherAssignmentTitle()"
-      description="Assign an existing teacher to an academic year, formation, group, and module."
+      description="Affectez un enseignant existant à une année universitaire, une formation, un groupe et un module."
       size="md"
       (closed)="closeTeacherAssignmentModal()"
     >
@@ -333,9 +333,9 @@ type Option = { readonly label: string; readonly value: string };
         <form [formGroup]="teacherAssignmentForm" class="grid gap-5 sm:grid-cols-2">
           <div class="sm:col-span-2">
             <app-dropdown-filter
-              label="Teacher *"
+              label="Enseignant *"
               identifier="teacher-assignment-teacher"
-              allLabel="Select teacher"
+              allLabel="Sélectionner un enseignant"
               [options]="teacherOptions()"
               [value]="teacherAssignmentValue('teacherId')"
               iconClass="fa-solid fa-chalkboard-user"
@@ -345,9 +345,9 @@ type Option = { readonly label: string; readonly value: string };
           </div>
 
           <app-dropdown-filter
-            label="Academic year *"
+            label="Année universitaire *"
             identifier="teacher-assignment-year"
-            allLabel="Select academic year"
+            allLabel="Sélectionner une année universitaire"
             [options]="academicYearOptions()"
             [value]="teacherAssignmentValue('academicYearId')"
             iconClass="fa-regular fa-calendar"
@@ -360,7 +360,7 @@ type Option = { readonly label: string; readonly value: string };
             <app-dropdown-filter
               label="Formation *"
               identifier="teacher-assignment-formation"
-              [allLabel]="teacherAssignmentValue('academicYearId') ? 'Select formation' : 'Select an academic year first'"
+              [allLabel]="teacherAssignmentValue('academicYearId') ? 'Sélectionner une formation' : 'Sélectionnez d’abord une année universitaire'"
               [options]="teacherFormationOptions()"
               [value]="teacherAssignmentValue('formationId')"
               iconClass="fa-solid fa-layer-group"
@@ -370,15 +370,15 @@ type Option = { readonly label: string; readonly value: string };
             (filterChange)="setTeacherAssignmentValue('formationId', $event)"
           ></app-dropdown-filter>
             @if (teacherAssignmentValue('academicYearId') && teacherFormationOptions().length === 0) {
-              <p class="mt-2 text-xs font-medium text-secondaryText">No formations available for this academic year.</p>
+              <p class="mt-2 text-xs font-medium text-secondaryText">Aucune formation disponible pour cette année universitaire.</p>
             }
           </div>
 
           <div>
             <app-dropdown-filter
-              label="Group *"
+              label="Groupe *"
               identifier="teacher-assignment-group"
-              [allLabel]="teacherAssignmentValue('formationId') ? 'Select group' : 'Select a formation first'"
+              [allLabel]="teacherAssignmentValue('formationId') ? 'Sélectionner un groupe' : 'Sélectionnez d’abord une formation'"
               [options]="teacherGroupOptions()"
               [value]="teacherAssignmentValue('groupeId')"
               iconClass="fa-solid fa-users"
@@ -387,7 +387,7 @@ type Option = { readonly label: string; readonly value: string };
               (filterChange)="setTeacherAssignmentValue('groupeId', $event)"
             ></app-dropdown-filter>
             @if (teacherAssignmentValue('formationId') && teacherGroupOptions().length === 0) {
-              <p class="mt-2 text-xs font-medium text-secondaryText">No groups available for this formation.</p>
+              <p class="mt-2 text-xs font-medium text-secondaryText">Aucun groupe disponible pour cette formation.</p>
             }
           </div>
 
@@ -395,7 +395,7 @@ type Option = { readonly label: string; readonly value: string };
             <app-dropdown-filter
               label="Module *"
               identifier="teacher-assignment-module"
-              [allLabel]="teacherAssignmentValue('formationId') ? 'Select module' : 'Select a formation first'"
+              [allLabel]="teacherAssignmentValue('formationId') ? 'Sélectionner un module' : 'Sélectionnez d’abord une formation'"
               [options]="teacherModuleOptions()"
               [value]="teacherAssignmentValue('moduleId')"
               iconClass="fa-solid fa-book"
@@ -405,7 +405,7 @@ type Option = { readonly label: string; readonly value: string };
               (filterChange)="setTeacherAssignmentValue('moduleId', $event)"
             ></app-dropdown-filter>
             @if (teacherAssignmentValue('formationId') && teacherModuleOptions().length === 0) {
-              <p class="mt-2 text-xs font-medium text-secondaryText">No modules available for this formation.</p>
+              <p class="mt-2 text-xs font-medium text-secondaryText">Aucun module disponible pour cette formation.</p>
             }
           </div>
         </form>
@@ -413,13 +413,13 @@ type Option = { readonly label: string; readonly value: string };
 
       <div modal-footer class="flex gap-2">
         <app-button
-          label="Cancel"
+          label="Annuler"
           variant="outline"
           [fullWidth]="true"
           (clicked)="closeTeacherAssignmentModal()"
         ></app-button>
         <app-button
-          label="Save assignment"
+          label="Enregistrer l’affectation"
           [disabled]="teacherAssignmentForm.invalid || saving()"
           [loading]="saving()"
           [fullWidth]="true"
@@ -430,22 +430,22 @@ type Option = { readonly label: string; readonly value: string };
 
     <app-delete-modal
       [open]="deleteStudentOpen()"
-      title="Delete this inscription?"
+      title="Supprimer cette inscription ?"
       [itemName]="selectedStudentInscription() ? studentName(selectedStudentInscription()!) : ''"
       confirmMessage="You are about to delete inscription for:"
-      warningMessage="The student account stays in the database. Only this inscription row is removed."
-      deleteButtonLabel="Delete inscription"
+      warningMessage="Le compte étudiant reste dans la base. Seule cette ligne d’inscription est supprimée."
+      deleteButtonLabel="Supprimer l’inscription"
       (closeRequested)="closeDeleteStudentAssignmentModal()"
       (confirmDelete)="confirmDeleteStudentAssignment()"
     ></app-delete-modal>
 
     <app-delete-modal
       [open]="deleteTeacherOpen()"
-      title="Delete this teacher assignment?"
+      title="Supprimer cette affectation d’enseignant ?"
       [itemName]="selectedTeacherAssignment() ? teacherName(selectedTeacherAssignment()!) : ''"
       confirmMessage="You are about to delete assignment for:"
-      warningMessage="The teacher account stays in the database. Only this assignment row is removed."
-      deleteButtonLabel="Delete assignment"
+      warningMessage="Le compte enseignant reste dans la base. Seule cette ligne d’affectation est supprimée."
+      deleteButtonLabel="Supprimer l’affectation"
       (closeRequested)="closeDeleteTeacherAssignmentModal()"
       (confirmDelete)="confirmDeleteTeacherAssignment()"
     ></app-delete-modal>
@@ -508,13 +508,13 @@ export class InscriptionPage {
   });
 
   readonly inscriptionMeta = computed(
-    () => `${this.studentInscriptions().length} student inscriptions - ${this.teacherAssignments().length} teacher assignments`,
+    () => `${this.studentInscriptions().length} inscription(s) étudiant - ${this.teacherAssignments().length} affectation(s) enseignant`,
   );
   readonly studentAssignmentTitle = computed(() =>
-    this.editingStudentInscriptionId() ? 'Edit student inscription' : 'Assign student',
+    this.editingStudentInscriptionId() ? 'Modifier l’inscription étudiant' : 'Affecter un étudiant',
   );
   readonly teacherAssignmentTitle = computed(() =>
-    this.editingTeacherAssignmentId() ? 'Edit teacher assignment' : 'Assign teacher',
+    this.editingTeacherAssignmentId() ? 'Modifier l’affectation enseignant' : 'Affecter un enseignant',
   );
 
   readonly studentOptions = computed<Option[]>(() => {
@@ -563,7 +563,7 @@ export class InscriptionPage {
   readonly studentColumns: readonly DataTableColumn<AdminStudentInscriptionDto>[] = [
     {
       id: 'student',
-      header: 'Student',
+      header: 'Étudiant',
       accessor: (row) => this.studentName(row),
       filterValue: (row) => [this.studentName(row), row.formationName, row.groupeName, row.academicYearName],
       sortable: false,
@@ -571,13 +571,13 @@ export class InscriptionPage {
     },
     {
       id: 'academicYear',
-      header: 'Academic year',
+      header: 'Année universitaire',
       accessor: (row) => row.academicYearName,
       sortable: false,
       filter: {
         type: 'text',
-        label: 'Academic year',
-        placeholder: 'Filter year',
+        label: 'Année universitaire',
+        placeholder: 'Filtrer l’année',
       },
       width: '12rem',
     },
@@ -589,18 +589,18 @@ export class InscriptionPage {
       filter: {
         type: 'text',
         label: 'Formation',
-        placeholder: 'Filter formation',
+        placeholder: 'Filtrer la formation',
       },
     },
     {
       id: 'groupe',
-      header: 'Group',
+      header: 'Groupe',
       accessor: (row) => row.groupeName,
       sortable: false,
       filter: {
         type: 'text',
-        label: 'Group',
-        placeholder: 'Filter group',
+        label: 'Groupe',
+        placeholder: 'Filtrer le groupe',
       },
       width: '10rem',
     },
@@ -619,7 +619,7 @@ export class InscriptionPage {
   readonly teacherColumns: readonly DataTableColumn<AdminTeacherAssignmentDto>[] = [
     {
       id: 'teacher',
-      header: 'Teacher',
+      header: 'Enseignant',
       accessor: (row) => this.teacherName(row),
       filterValue: (row) => [this.teacherName(row), row.teacherEmail, row.moduleName, row.groupeName, row.academicYearName],
       sortable: false,
@@ -640,18 +640,18 @@ export class InscriptionPage {
       filter: {
         type: 'text',
         label: 'Formation',
-        placeholder: 'Filter formation',
+        placeholder: 'Filtrer la formation',
       },
     },
     {
       id: 'scope',
-      header: 'Scope',
+      header: 'Périmètre',
       accessor: (row) => `${row.academicYearName} ${row.groupeName}`,
       sortable: false,
       filter: {
         type: 'text',
-        label: 'Scope',
-        placeholder: 'Year or group',
+        label: 'Périmètre',
+        placeholder: 'Année ou groupe',
       },
       width: '16rem',
     },
@@ -695,7 +695,7 @@ export class InscriptionPage {
           this.groups.set(data.groups);
           this.modules.set(data.modules);
         },
-        error: () => this.errorMessage.set('Unable to load inscription data from backend services.'),
+        error: () => this.errorMessage.set('Impossible de charger les données d’inscription depuis les services backend.'),
       });
   }
 
@@ -763,7 +763,7 @@ export class InscriptionPage {
       groupeId: Number(value.groupeId),
     };
     if (!this.studentAssignmentRelationshipsValid(payload.academicYearId, payload.formationId, payload.groupeId)) {
-      this.toast.error('Invalid academic structure', 'Select a formation and group that belong to the selected academic year.');
+      this.toast.error('Structure académique invalide', 'Sélectionnez une formation et un groupe appartenant à l’année universitaire sélectionnée.');
       return;
     }
     const editingId = this.editingStudentInscriptionId();
@@ -779,11 +779,11 @@ export class InscriptionPage {
       )
       .subscribe({
         next: () => {
-          this.toast.success(editingId ? 'Inscription updated' : 'Inscription created');
+          this.toast.success(editingId ? 'Inscription mise à jour' : 'Inscription créée');
           this.closeStudentAssignmentModal();
           this.loadData();
         },
-        error: () => this.toast.error('Save failed', 'Check selected academic relationships.'),
+        error: () => this.toast.error('Échec de l’enregistrement', 'Vérifiez les relations académiques sélectionnées.'),
       });
   }
 
@@ -808,11 +808,11 @@ export class InscriptionPage {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.toast.success('Inscription deleted');
+          this.toast.success('Inscription supprimée');
           this.closeDeleteStudentAssignmentModal();
           this.loadData();
         },
-        error: () => this.toast.error('Delete failed'),
+        error: () => this.toast.error('Échec de suppression'),
       });
   }
 
@@ -877,7 +877,7 @@ export class InscriptionPage {
         payload.moduleId,
       )
     ) {
-      this.toast.error('Invalid academic structure', 'Select group and module values that belong to the selected formation.');
+      this.toast.error('Structure académique invalide', 'Sélectionnez un groupe et un module appartenant à la formation sélectionnée.');
       return;
     }
     const editingId = this.editingTeacherAssignmentId();
@@ -893,11 +893,11 @@ export class InscriptionPage {
       )
       .subscribe({
         next: () => {
-          this.toast.success(editingId ? 'Assignment updated' : 'Assignment created');
+          this.toast.success(editingId ? 'Affectation mise à jour' : 'Affectation créée');
           this.closeTeacherAssignmentModal();
           this.loadData();
         },
-        error: () => this.toast.error('Save failed', 'Check selected academic relationships.'),
+        error: () => this.toast.error('Échec de l’enregistrement', 'Vérifiez les relations académiques sélectionnées.'),
       });
   }
 
@@ -922,16 +922,16 @@ export class InscriptionPage {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.toast.success('Assignment deleted');
+          this.toast.success('Affectation supprimée');
           this.closeDeleteTeacherAssignmentModal();
           this.loadData();
         },
-        error: () => this.toast.error('Delete failed'),
+        error: () => this.toast.error('Échec de suppression'),
       });
   }
 
   studentName(row: AdminStudentInscriptionDto): string {
-    return fullName(row.studentFirstName, row.studentLastName) || `Student #${row.studentId}`;
+    return fullName(row.studentFirstName, row.studentLastName) || `Étudiant #${row.studentId}`;
   }
 
   teacherName(row: AdminTeacherAssignmentDto): string {

@@ -41,14 +41,14 @@ type NavItem = {
             type="button"
             class="fixed inset-0 z-30 bg-slate-950/45 backdrop-blur-sm lg:hidden"
             (click)="closeSidebar()"
-            aria-label="Close navigation"
+            aria-label="Fermer la navigation"
           ></button>
         }
 
         <aside
           class="fixed inset-y-0 left-0 z-40 flex flex-col border-r border-line bg-surface/95 shadow-shell transition-[width,transform] duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0"
           [class]="sidebarShellClasses()"
-          aria-label="Admin navigation"
+          aria-label="Navigation administrateur"
         >
           <div
             class="flex h-16 items-center border-b border-line px-3"
@@ -66,7 +66,7 @@ type NavItem = {
                   ngSrc="assets/logo-app.png"
                   width="24"
                   height="24"
-                  alt="Attendance Platform"
+                  alt="Plateforme de présence"
                   class="h-fit w-auto object-contain"
                 />
               </div>
@@ -74,9 +74,9 @@ type NavItem = {
               @if (!isSidebarCollapsed()) {
                 <div class="min-w-0">
                   <p class="truncate text-sm font-semibold text-principalText">
-                    Attendance Platform
+                    Plateforme de présence
                   </p>
-                  <p class="truncate text-xs text-secondaryText">Admin dashboard</p>
+                  <p class="truncate text-xs text-secondaryText">Tableau de bord administrateur</p>
                 </div>
               }
             </div>
@@ -85,7 +85,7 @@ type NavItem = {
               type="button"
               class="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:hidden"
               (click)="closeSidebar()"
-              aria-label="Close menu"
+              aria-label="Fermer le menu"
             >
               <i class="fa-solid fa-xmark" aria-hidden="true"></i>
             </button>
@@ -95,7 +95,7 @@ type NavItem = {
             type="button"
             class="absolute top-5 right-0 hidden h-7 w-7 translate-x-1/2 items-center justify-center rounded-full border border-line bg-surface text-secondaryText shadow-card transition-all duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:inline-flex"
             (click)="toggleSidebarCollapsed()"
-            [attr.aria-label]="isSidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+            [attr.aria-label]="isSidebarCollapsed() ? 'Déplier la barre latérale' : 'Replier la barre latérale'"
           >
             <i
               class="fa-solid text-xs"
@@ -150,7 +150,7 @@ type NavItem = {
                     class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:hidden"
                     (click)="toggleSidebar()"
                     [attr.aria-expanded]="isSidebarOpen()"
-                    aria-label="Open menu"
+                    aria-label="Ouvrir le menu"
                   >
                     <i class="fa-solid fa-bars" aria-hidden="true"></i>
                   </button>
@@ -159,10 +159,10 @@ type NavItem = {
                     <p
                       class="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-primary"
                     >
-                      Admin workspace
+                      Espace administrateur
                     </p>
                     <h1 class="truncate text-lg font-semibold tracking-tight text-principalText">
-                      Dashboard
+                      Tableau de bord
                     </h1>
                   </div>
                 </div>
@@ -175,7 +175,7 @@ type NavItem = {
                       (click)="toggleAcademicYearMenu()"
                       [attr.aria-expanded]="isAcademicYearMenuOpen()"
                       aria-haspopup="menu"
-                      aria-label="Select active academic year"
+                      aria-label="Sélectionner l'année universitaire active"
                       [disabled]="activeAcademicYears().length === 0"
                     >
                       <i class="fa-regular fa-calendar shrink-0 text-base" aria-hidden="true"></i>
@@ -246,7 +246,7 @@ type NavItem = {
                       (click)="toggleUserMenu()"
                       [attr.aria-expanded]="isUserMenuOpen()"
                       aria-haspopup="menu"
-                      aria-label="Open user menu"
+                      aria-label="Ouvrir le menu utilisateur"
                     >
                       @if (userProfileImageUrl(); as imageUrl) {
                         <img
@@ -287,7 +287,7 @@ type NavItem = {
                           (click)="logout()"
                         >
                           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-                          <span>Logout</span>
+                          <span>Déconnexion</span>
                         </button>
                       </div>
                     }
@@ -319,11 +319,11 @@ export class AdminLayout {
     viewChild<ElementRef<HTMLElement>>('academicYearMenuRoot');
 
   readonly navItems: NavItem[] = [
-    { label: 'Dashboard', route: '/dashboard', icon: 'fa-solid fa-table-cells-large' },
-    { label: 'Attendance', route: '/attendance', icon: 'fa-regular fa-square-check' },
+    { label: 'Tableau de bord', route: '/dashboard', icon: 'fa-solid fa-table-cells-large' },
+    { label: 'Présences', route: '/attendance', icon: 'fa-regular fa-square-check' },
     { label: 'Justifications', route: '/justifications', icon: 'fa-regular fa-file-lines' },
-    { label: 'Students', route: '/students', icon: 'fa-solid fa-user-graduate' },
-    { label: 'Teachers', route: '/teachers', icon: 'fa-solid fa-chalkboard-user' },
+    { label: 'Étudiants', route: '/students', icon: 'fa-solid fa-user-graduate' },
+    { label: 'Enseignants', route: '/teachers', icon: 'fa-solid fa-chalkboard-user' },
     { label: 'Structure', route: '/structure', icon: 'fa-solid fa-sitemap' },
   ];
 

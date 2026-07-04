@@ -175,13 +175,13 @@ export class TeacherStudentsPage implements OnInit {
 
   private toRow(student: StudentUser): StudentRow {
     const lastSeen = student.updatedAt
-      ? new Date(student.updatedAt).toLocaleDateString()
+      ? new Date(student.updatedAt).toLocaleDateString('fr-FR')
       : 'Jamais';
     const isActive = student.updatedAt
       ? Date.now() - new Date(student.updatedAt).getTime() < 1000 * 60 * 60 * 24 * 30
       : false;
     const joinedDate = student.createdAt
-      ? new Date(student.createdAt).toLocaleDateString()
+      ? new Date(student.createdAt).toLocaleDateString('fr-FR')
       : 'Inconnu';
 
     return {

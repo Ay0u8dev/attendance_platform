@@ -46,14 +46,14 @@ type UtilityItem = {
             type="button"
             class="fixed inset-0 z-30 bg-slate-950/45 backdrop-blur-sm lg:hidden"
             (click)="closeSidebar()"
-            aria-label="Close navigation"
+            aria-label="Fermer la navigation"
           ></button>
         }
 
         <aside
           class="fixed inset-y-0 left-0 z-40 flex flex-col border-r border-line bg-surface/95 shadow-shell transition-[width,transform] duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0"
           [class]="sidebarShellClasses()"
-          aria-label="Teacher navigation"
+          aria-label="Navigation enseignant"
         >
           <div
             class="flex h-16 items-center border-b border-line px-3"
@@ -71,7 +71,7 @@ type UtilityItem = {
                   ngSrc="assets/logo-app.png"
                   width="24"
                   height="24"
-                  alt="Attendance Platform"
+                  alt="Plateforme de présence"
                   class="h-fit w-auto object-contain"
                 />
               </div>
@@ -79,9 +79,9 @@ type UtilityItem = {
               @if (!isSidebarCollapsed()) {
                 <div class="min-w-0">
                   <p class="truncate text-sm font-semibold text-principalText">
-                    Attendance Platform
+                    Plateforme de présence
                   </p>
-                  <p class="truncate text-xs text-secondaryText">Teacher dashboard</p>
+                  <p class="truncate text-xs text-secondaryText">Tableau de bord enseignant</p>
                 </div>
               }
             </div>
@@ -90,7 +90,7 @@ type UtilityItem = {
               type="button"
               class="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:hidden"
               (click)="closeSidebar()"
-              aria-label="Close menu"
+              aria-label="Fermer le menu"
             >
               <i class="fa-solid fa-xmark" aria-hidden="true"></i>
             </button>
@@ -100,7 +100,7 @@ type UtilityItem = {
             type="button"
             class="absolute top-20 right-0 hidden h-7 w-7 translate-x-1/2 items-center justify-center rounded-full border border-line bg-surface text-secondaryText shadow-card transition-all duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:inline-flex"
             (click)="toggleSidebarCollapsed()"
-            [attr.aria-label]="isSidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+            [attr.aria-label]="isSidebarCollapsed() ? 'Déplier la barre latérale' : 'Replier la barre latérale'"
           >
             <i
               class="fa-solid text-xs"
@@ -176,7 +176,7 @@ type UtilityItem = {
                     class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:hidden"
                     (click)="toggleSidebar()"
                     [attr.aria-expanded]="isSidebarOpen()"
-                    aria-label="Open menu"
+                    aria-label="Ouvrir le menu"
                   >
                     <i class="fa-solid fa-bars" aria-hidden="true"></i>
                   </button>
@@ -185,10 +185,10 @@ type UtilityItem = {
                     <p
                       class="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-primary"
                     >
-                      Teacher workspace
+                      Espace enseignant
                     </p>
                     <h1 class="truncate text-lg font-semibold tracking-tight text-principalText">
-                      Dashboard
+                      Tableau de bord
                     </h1>
                   </div>
                 </div>
@@ -209,7 +209,7 @@ type UtilityItem = {
                       (click)="toggleUserMenu()"
                       [attr.aria-expanded]="isUserMenuOpen()"
                       aria-haspopup="menu"
-                      aria-label="Open user menu"
+                      aria-label="Ouvrir le menu utilisateur"
                     >
                       <span
                         class="flex h-7 w-7 overflow-hidden rounded-lg bg-primary-soft text-primary"
@@ -257,7 +257,7 @@ type UtilityItem = {
                           (click)="openSettings()"
                         >
                           <i class="fa-solid fa-gear" aria-hidden="true"></i>
-                          <span>Settings</span>
+                          <span>Paramètres</span>
                         </button>
 
                         <button
@@ -266,7 +266,7 @@ type UtilityItem = {
                           (click)="logout()"
                         >
                           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-                          <span>Logout</span>
+                          <span>Déconnexion</span>
                         </button>
                       </div>
                     }
@@ -294,15 +294,15 @@ export class TeacherLayout {
   private readonly userMenuRoot = viewChild<ElementRef<HTMLElement>>('userMenuRoot');
 
   readonly navItems: NavItem[] = [
-    { label: 'Dashboard', route: '/teacher/dashboard', icon: 'fa-solid fa-table-cells-large' },
-    { label: 'Attendance', route: '/teacher/sessions', icon: 'fa-regular fa-calendar-check' },
+    { label: 'Tableau de bord', route: '/teacher/dashboard', icon: 'fa-solid fa-table-cells-large' },
+    { label: 'Présences', route: '/teacher/sessions', icon: 'fa-regular fa-calendar-check' },
     { label: 'Modules', route: '/teacher/modules', icon: 'fa-solid fa-cube' },
-    { label: 'Groups', route: '/teacher/groups', icon: 'fa-solid fa-users-rectangle' },
-    { label: 'Students', route: '/teacher/students', icon: 'fa-solid fa-user-graduate' },
+    { label: 'Groupes', route: '/teacher/groups', icon: 'fa-solid fa-users-rectangle' },
+    { label: 'Étudiants', route: '/teacher/students', icon: 'fa-solid fa-user-graduate' },
     { label: 'Justifications', route: '/teacher/justifications', icon: 'fa-regular fa-file-lines' },
   ];
 
-  readonly utilityItems: UtilityItem[] = [{ label: 'Settings', icon: 'fa-solid fa-gear' }];
+  readonly utilityItems: UtilityItem[] = [{ label: 'Paramètres', icon: 'fa-solid fa-gear' }];
 
   readonly isSidebarOpen = signal(false);
   readonly isSidebarCollapsed = signal(false);
@@ -408,7 +408,7 @@ export class TeacherLayout {
 
   private formatUserName(user: User | null): string {
     if (!user) {
-      return 'Teacher';
+      return 'Enseignant';
     }
 
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();

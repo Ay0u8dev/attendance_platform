@@ -126,8 +126,8 @@ export class AbsenceLineChart {
     const total = this.points().reduce((sum, point) => sum + point.absent, 0);
     const peak = this.chartPoints().find((point) => point.isPeak);
     return peak
-      ? `${total} absences in this period. Highest absence bar: ${peak.absent} on ${peak.detail}.`
-      : 'No attendance marks recorded in this period.';
+      ? `${total} absence(s) sur cette période. Pic d’absences : ${peak.absent} le ${peak.detail}.`
+      : 'Aucun pointage enregistré sur cette période.';
   });
 
   showPoint(index: number): void {

@@ -42,7 +42,7 @@ type Option = { readonly value: string; readonly label: string };
     <section class="space-y-6">
       <header class="rounded-[1.75rem] border border-line bg-surface px-5 py-6 shadow-card sm:px-7">
         <p class="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
-          Academic attendance
+          Présence académique
         </p>
         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-principalText">
           Justifications
@@ -92,7 +92,7 @@ type Option = { readonly value: string; readonly label: string };
         <div
           class="inline-flex w-fit flex-wrap items-center gap-1 rounded-2xl border border-line bg-surface p-1 shadow-card"
           role="tablist"
-          aria-label="Justification status"
+          aria-label="Statut des justifications"
         >
           @for (tab of tabs; track tab.key) {
             <button
@@ -121,7 +121,7 @@ type Option = { readonly value: string; readonly label: string };
         </div>
 
         <app-button
-          label="Refresh"
+          label="Actualiser"
           icon="fa-solid fa-rotate"
           variant="outline"
           [fullWidth]="false"
@@ -136,7 +136,7 @@ type Option = { readonly value: string; readonly label: string };
         <app-dropdown-filter
           label="Module"
           identifier="admin-justification-module"
-          allLabel="All modules"
+          allLabel="Tous les modules"
           [options]="moduleOptions()"
           [value]="dropdownValue(moduleFilter())"
           iconClass="fa-regular fa-folder"
@@ -145,9 +145,9 @@ type Option = { readonly value: string; readonly label: string };
         ></app-dropdown-filter>
 
         <app-dropdown-filter
-          label="Group"
+          label="Groupe"
           identifier="admin-justification-group"
-          allLabel="All groups"
+          allLabel="Tous les groupes"
           [options]="groupOptions()"
           [value]="dropdownValue(groupFilter())"
           iconClass="fa-solid fa-users"
@@ -163,13 +163,13 @@ type Option = { readonly value: string; readonly label: string };
             >
               <i class="fa-solid fa-magnifying-glass text-sm" aria-hidden="true"></i>
             </span>
-            Search
+            Rechercher
           </span>
           <input
             type="search"
             [value]="searchQuery()"
             (input)="onSearchInput($event)"
-            placeholder="Student, Apogee, module, teacher..."
+            placeholder="Étudiant, Apogée, module, enseignant..."
             class="w-full rounded-xl border border-line bg-surface px-3.5 py-3 text-sm font-medium text-principalText shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
           />
         </label>
@@ -177,7 +177,7 @@ type Option = { readonly value: string; readonly label: string };
 
       @if (hasActiveFilters()) {
         <div class="flex flex-wrap items-center gap-2 text-xs">
-          <span class="font-semibold uppercase tracking-[0.16em] text-muted">Active filters</span>
+          <span class="font-semibold uppercase tracking-[0.16em] text-muted">Filtres actifs</span>
           @for (chip of activeFilterChips(); track chip.key) {
             <button
               type="button"
@@ -193,7 +193,7 @@ type Option = { readonly value: string; readonly label: string };
             class="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 font-semibold text-secondaryText transition-colors hover:border-danger-soft hover:text-danger"
             (click)="resetFilters()"
           >
-            Reset
+            Réinitialiser
           </button>
         </div>
       }
@@ -211,13 +211,13 @@ type Option = { readonly value: string; readonly label: string };
           <div class="border-b border-line px-5 py-4 sm:px-6">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h2 class="text-xl font-semibold text-principalText">Requests</h2>
+                <h2 class="text-xl font-semibold text-principalText">Demandes</h2>
                 <p class="mt-1 text-sm text-secondaryText">
-                  {{ visibleJustifications().length }} request(s) matching the current view.
+                  {{ visibleJustifications().length }} demande(s) correspondant à la vue actuelle.
                 </p>
               </div>
               @if (isLoading()) {
-                <span class="text-sm font-medium text-secondaryText">Loading...</span>
+                <span class="text-sm font-medium text-secondaryText">Chargement...</span>
               }
             </div>
           </div>
@@ -249,7 +249,7 @@ type Option = { readonly value: string; readonly label: string };
                           {{ moduleLabel(item) }} - {{ groupLabel(item) }}
                         </span>
                         <span class="mt-0.5 block truncate text-xs text-muted">
-                          Apogee {{ studentCode(item) || '-' }} -
+                          Apogée {{ studentCode(item) || '-' }} -
                           {{ formatDateTime(item.absenceStartedAt || item.sessionDate) }}
                         </span>
                       </span>
@@ -266,7 +266,7 @@ type Option = { readonly value: string; readonly label: string };
                         class="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-principalText transition-colors hover:border-primary-soft hover:bg-primary-soft"
                         (click)="select(item)"
                       >
-                        Details
+                        Détails
                         <i class="fa-regular fa-eye text-xs" aria-hidden="true"></i>
                       </button>
 
@@ -275,7 +275,7 @@ type Option = { readonly value: string; readonly label: string };
                         class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors hover:border-danger-soft hover:bg-danger-soft hover:text-danger disabled:cursor-not-allowed disabled:opacity-40"
                         [disabled]="item.status !== 'PENDING' || savingReviewId() === item.id"
                         (click)="review(item.id, 'REJECTED')"
-                        [attr.aria-label]="'Reject request for ' + studentName(item)"
+                        [attr.aria-label]="'Refuser la demande de ' + studentName(item)"
                       >
                         <i class="fa-solid fa-xmark" aria-hidden="true"></i>
                       </button>
@@ -285,7 +285,7 @@ type Option = { readonly value: string; readonly label: string };
                         class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-white shadow-card transition-all hover:-translate-y-0.5 hover:bg-secondary-strong hover:shadow-card-strong disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
                         [disabled]="item.status !== 'PENDING' || savingReviewId() === item.id"
                         (click)="review(item.id, 'APPROVED')"
-                        [attr.aria-label]="'Approve request for ' + studentName(item)"
+                        [attr.aria-label]="'Accepter la demande de ' + studentName(item)"
                       >
                         <i class="fa-solid fa-check" aria-hidden="true"></i>
                       </button>
@@ -296,10 +296,10 @@ type Option = { readonly value: string; readonly label: string };
             } @else {
               <div class="px-5 py-16 text-center sm:px-6">
                 <p class="text-base font-semibold text-principalText">
-                  No justification requests found
+                  Aucune demande de justification trouvée
                 </p>
                 <p class="mt-1 text-sm text-secondaryText">
-                  Adjust filters or make sure absent records exist in attendance-service.
+                  Ajustez les filtres ou vérifiez que des absences existent dans le service de présence.
                 </p>
               </div>
             }
@@ -312,7 +312,7 @@ type Option = { readonly value: string; readonly label: string };
               <div class="flex items-start justify-between gap-3">
                 <div>
                   <p class="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-                    Request #{{ detail.id }}
+                    Demande #{{ detail.id }}
                   </p>
                   <h2 class="mt-1 text-xl font-semibold text-principalText">
                     {{ studentName(detail) }}
@@ -335,10 +335,10 @@ type Option = { readonly value: string; readonly label: string };
                 ></app-user-avatar>
                 <div class="min-w-0">
                   <p class="truncate font-semibold text-principalText">
-                    {{ studentEmail(detail) || 'Email not provided' }}
+                    {{ studentEmail(detail) || 'E-mail non renseigné' }}
                   </p>
                   <p class="mt-1 text-sm text-secondaryText">
-                    Apogee {{ studentCode(detail) || '-' }} - {{ groupLabel(detail) }}
+                    Apogée {{ studentCode(detail) || '-' }} - {{ groupLabel(detail) }}
                   </p>
                 </div>
               </div>
@@ -354,7 +354,7 @@ type Option = { readonly value: string; readonly label: string };
                 </div>
                 <div class="rounded-2xl border border-line p-3">
                   <p class="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted">
-                    Teacher
+                    Enseignant
                   </p>
                   <p class="mt-1 text-sm font-semibold text-principalText">
                     {{ teacherLabel(detail) }}
@@ -362,7 +362,7 @@ type Option = { readonly value: string; readonly label: string };
                 </div>
                 <div class="rounded-2xl border border-line p-3">
                   <p class="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted">
-                    Session date
+                    Date de session
                   </p>
                   <p class="mt-1 text-sm font-semibold text-principalText">
                     {{ formatDateTime(detail.absenceStartedAt || detail.sessionDate) }}
@@ -380,16 +380,16 @@ type Option = { readonly value: string; readonly label: string };
 
               <section class="rounded-2xl border border-line p-4">
                 <p class="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted">
-                  Student motive
+                  Motif de l’étudiant
                 </p>
                 <p class="mt-2 text-sm leading-6 text-principalText">
-                  {{ detail.reason || 'No reason provided' }}
+                  {{ detail.reason || 'Aucun motif renseigné' }}
                 </p>
               </section>
 
               <section class="rounded-2xl border border-line p-4">
                 <p class="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted">
-                  Attachment
+                  Pièce jointe
                 </p>
                 <div class="mt-3 flex items-center gap-3 rounded-2xl bg-surface-subtle p-3">
                   <span
@@ -400,13 +400,13 @@ type Option = { readonly value: string; readonly label: string };
                   </span>
                   <div class="min-w-0">
                     <p class="truncate text-sm font-semibold text-principalText">
-                      {{ attachmentName(attachmentUrl(detail)) }}
+                      {{ attachmentName(detail) }}
                     </p>
                     <p class="text-xs text-secondaryText">
                       {{
                         attachmentUrl(detail)
-                          ? 'Student-provided attachment'
-                          : 'No attachment provided'
+                          ? 'Pièce jointe fournie par l’étudiant'
+                          : 'Aucune pièce jointe fournie'
                       }}
                     </p>
                   </div>
@@ -417,7 +417,7 @@ type Option = { readonly value: string; readonly label: string };
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      Open
+                      Ouvrir
                     </a>
                   }
                 </div>
@@ -433,7 +433,7 @@ type Option = { readonly value: string; readonly label: string };
                     [value]="reviewComment()"
                     [disabled]="detail.status !== 'PENDING' || savingReviewId() === detail.id"
                     (input)="onReviewCommentInput($event)"
-                    placeholder="Add a short trace for the decision..."
+                    placeholder="Ajoutez une courte trace pour la décision..."
                     class="mt-2 w-full resize-none rounded-xl border border-line bg-surface-subtle px-3 py-2.5 text-sm leading-6 text-principalText outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-soft disabled:cursor-not-allowed disabled:text-muted"
                   ></textarea>
                 </label>
@@ -446,14 +446,14 @@ type Option = { readonly value: string; readonly label: string };
 
               <div class="grid grid-cols-2 gap-3">
                 <app-button
-                  label="Reject"
+                  label="Refuser"
                   variant="outline"
                   [disabled]="detail.status !== 'PENDING' || savingReviewId() === detail.id"
                   [loading]="savingReviewId() === detail.id"
                   (clicked)="review(detail.id, 'REJECTED')"
                 ></app-button>
                 <app-button
-                  label="Approve"
+                  label="Accepter"
                   [disabled]="detail.status !== 'PENDING' || savingReviewId() === detail.id"
                   [loading]="savingReviewId() === detail.id"
                   (clicked)="review(detail.id, 'APPROVED')"
@@ -468,10 +468,9 @@ type Option = { readonly value: string; readonly label: string };
                 >
                   <i class="fa-regular fa-file-lines" aria-hidden="true"></i>
                 </span>
-                <p class="mt-4 text-base font-semibold text-principalText">Select a request</p>
+                <p class="mt-4 text-base font-semibold text-principalText">Sélectionnez une demande</p>
                 <p class="mt-1 text-sm leading-6 text-secondaryText">
-                  Open a row to inspect the absence, student motive, attachment label, and review
-                  state.
+                  Ouvrez une ligne pour examiner l’absence, le motif de l’étudiant, la pièce jointe et l’état de révision.
                 </p>
               </div>
             </div>
@@ -489,10 +488,10 @@ export class JustificationsPage {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly tabs: ReadonlyArray<{ readonly key: TabKey; readonly label: string }> = [
-    { key: 'ALL', label: 'All' },
-    { key: 'PENDING', label: 'Pending' },
-    { key: 'APPROVED', label: 'Approved' },
-    { key: 'REJECTED', label: 'Rejected' },
+    { key: 'ALL', label: 'Toutes' },
+    { key: 'PENDING', label: 'En attente' },
+    { key: 'APPROVED', label: 'Acceptée' },
+    { key: 'REJECTED', label: 'Refusée' },
   ];
 
   readonly justifications = signal<readonly JustificationDto[]>([]);
@@ -513,28 +512,28 @@ export class JustificationsPage {
     {
       label: 'Total',
       value: this.justifications().length,
-      caption: 'requests in database',
+      caption: 'demandes en base',
       variant: 'info' as const,
       icon: 'fa-regular fa-folder-open',
     },
     {
-      label: 'Pending',
+      label: 'En attente',
       value: this.countFor('PENDING'),
-      caption: 'waiting for admin review',
+      caption: 'en attente de révision admin',
       variant: 'warning' as const,
       icon: 'fa-regular fa-clock',
     },
     {
-      label: 'Approved',
+      label: 'Acceptées',
       value: this.countFor('APPROVED'),
-      caption: 'accepted absences',
+      caption: 'absences acceptées',
       variant: 'success' as const,
       icon: 'fa-solid fa-check',
     },
     {
-      label: 'Rejected',
+      label: 'Refusées',
       value: this.countFor('REJECTED'),
-      caption: 'refused requests',
+      caption: 'demandes refusées',
       variant: 'error' as const,
       icon: 'fa-solid fa-xmark',
     },
@@ -544,7 +543,7 @@ export class JustificationsPage {
     const labels = new Set(
       this.justifications()
         .map((item) => this.moduleLabel(item))
-        .filter((label) => label !== 'Module not provided'),
+        .filter((label) => label !== 'Module non renseigné'),
     );
     return Array.from(labels)
       .sort((a, b) => a.localeCompare(b))
@@ -555,7 +554,7 @@ export class JustificationsPage {
     const labels = new Set(
       this.justifications()
         .map((item) => this.groupLabel(item))
-        .filter((label) => label !== 'Group not provided'),
+        .filter((label) => label !== 'Groupe non renseigné'),
     );
     return Array.from(labels)
       .sort((a, b) => a.localeCompare(b))
@@ -608,10 +607,10 @@ export class JustificationsPage {
       chips.push({ key: 'module', label: 'Module', value: this.moduleFilter() });
     }
     if (this.groupFilter() !== 'all') {
-      chips.push({ key: 'group', label: 'Group', value: this.groupFilter() });
+      chips.push({ key: 'group', label: 'Groupe', value: this.groupFilter() });
     }
     if (this.searchQuery().trim()) {
-      chips.push({ key: 'search', label: 'Search', value: this.searchQuery().trim() });
+      chips.push({ key: 'search', label: 'Recherche', value: this.searchQuery().trim() });
     }
     return chips;
   });
@@ -648,7 +647,7 @@ export class JustificationsPage {
           }
         },
         error: () => {
-          this.errorMessage.set('Unable to load justifications from justification-service.');
+          this.errorMessage.set('Impossible de charger les justifications depuis le service de justification.');
         },
       });
   }
@@ -732,11 +731,11 @@ export class JustificationsPage {
           this.selectedId.set(updated.id);
           this.reviewComment.set(this.reviewInfo(updated).comment ?? '');
           this.toast.success(
-            status === 'APPROVED' ? 'Justification approved' : 'Justification rejected',
+            status === 'APPROVED' ? 'Justification acceptée' : 'Justification refusée',
           );
         },
         error: () => {
-          this.toast.error('Review failed', 'Check your admin session and backend logs.');
+          this.toast.error('Échec de la révision', 'Vérifiez votre session admin et les journaux backend.');
         },
       });
   }
@@ -766,23 +765,23 @@ export class JustificationsPage {
   }
 
   teacherLabel(item: JustificationDto): string {
-    return normalizeOptional(item.teacherName) ?? 'Not provided';
+    return normalizeOptional(item.teacherName) ?? 'Non renseigné';
   }
 
   moduleLabel(item: JustificationDto): string {
     return (
-      normalizeOptional(item.courseLabel) ?? normalizeOptional(item.module) ?? 'Module not provided'
+      normalizeOptional(item.courseLabel) ?? normalizeOptional(item.module) ?? 'Module non renseigné'
     );
   }
 
   statusLabel(status: JustificationStatus): string {
     switch (status) {
       case 'PENDING':
-        return 'Pending';
+        return 'En attente';
       case 'APPROVED':
-        return 'Approved';
+        return 'Acceptée';
       case 'REJECTED':
-        return 'Rejected';
+        return 'Refusée';
     }
   }
 
@@ -803,13 +802,13 @@ export class JustificationsPage {
 
   durationLabel(item: JustificationDto): string {
     if (!item.absenceEndedAt) {
-      return 'Open session';
+      return 'Session ouverte';
     }
 
     const start = new Date(item.absenceStartedAt).getTime();
     const end = new Date(item.absenceEndedAt).getTime();
     if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
-      return 'Not available';
+      return 'Non disponible';
     }
 
     const totalMinutes = Math.round((end - start) / 60000);
@@ -824,14 +823,13 @@ export class JustificationsPage {
     return `${hours} h ${minutes} min`;
   }
 
-  attachmentName(url: string | null): string {
-    return cleanJustificationAttachmentName(null, url);
+  attachmentName(item: JustificationDto): string {
+    return cleanJustificationAttachmentName(item.documentName, this.attachmentUrl(item));
   }
 
   attachmentUrl(item: JustificationDto): string | null {
-    return (
-      normalizeOptional(item.attachmentUrl) ??
-      this.justificationService.resolveDocumentUrl(item.documentUrl)
+    return this.justificationService.resolveDocumentUrl(
+      normalizeOptional(item.attachmentUrl) ?? normalizeOptional(item.documentUrl),
     );
   }
 
@@ -845,8 +843,8 @@ export class JustificationsPage {
       return null;
     }
 
-    const reviewer = review.reviewer ? ` by ${review.reviewerRoleLabel} ${review.reviewer}` : '';
-    return `Reviewed ${this.formatDateTime(review.reviewedAt)}${reviewer}`;
+    const reviewer = review.reviewer ? ` par ${review.reviewerRoleLabel} ${review.reviewer}` : '';
+    return `Révisée ${this.formatDateTime(review.reviewedAt)}${reviewer}`;
   }
 
   private searchText(item: JustificationDto): string {

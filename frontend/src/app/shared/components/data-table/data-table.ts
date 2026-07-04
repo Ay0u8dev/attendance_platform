@@ -39,10 +39,10 @@ export class DataTable<T extends object> {
   readonly title = input('');
   readonly description = input('');
   readonly caption = input('');
-  readonly searchPlaceholder = input('Search rows...');
-  readonly emptyStateTitle = input('No rows found');
+  readonly searchPlaceholder = input('Rechercher des lignes...');
+  readonly emptyStateTitle = input('Aucune ligne trouvée');
   readonly emptyStateDescription = input(
-    'Try adjusting filters, search terms, or visible columns.',
+    'Essayez d’ajuster les filtres, les termes de recherche ou les colonnes visibles.',
   );
   readonly rows = input.required<readonly T[]>();
   readonly columns = input.required<readonly DataTableColumn<T>[]>();
@@ -112,8 +112,8 @@ export class DataTable<T extends object> {
         placeholder:
           column.filter!.placeholder ??
           (column.filter!.type === 'select'
-            ? `All ${column.header.toLowerCase()}`
-            : `Filter ${column.header.toLowerCase()}`),
+            ? `Tous les ${column.header.toLowerCase()}`
+            : `Filtrer ${column.header.toLowerCase()}`),
         options: column.filter!.options ?? [],
       }));
   });
@@ -435,11 +435,11 @@ export class DataTable<T extends object> {
     }
 
     if (value instanceof Date) {
-      return value.toLocaleDateString();
+      return value.toLocaleDateString('fr-FR');
     }
 
     if (typeof value === 'boolean') {
-      return value ? 'Yes' : 'No';
+      return value ? 'Oui' : 'Non';
     }
 
     if (value === null || value === undefined || value === '') {
@@ -531,7 +531,7 @@ export class DataTable<T extends object> {
       return Number(left) - Number(right);
     }
 
-    return String(left).localeCompare(String(right), undefined, {
+    return String(left).localeCompare(String(right), 'fr-FR', {
       numeric: true,
       sensitivity: 'base',
     });

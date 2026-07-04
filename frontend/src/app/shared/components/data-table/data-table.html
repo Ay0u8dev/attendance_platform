@@ -5,7 +5,7 @@
         <div class="space-y-1">
           @if (title()) {
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-              Directory view
+              Vue annuaire
             </p>
             <h2 class="text-xl font-semibold text-principalText sm:text-2xl">{{ title() }}</h2>
           }
@@ -90,7 +90,7 @@
     <table class="data-table-grid min-w-full border-separate">
       <caption class="sr-only">
         {{
-          caption() || title() || 'Data table'
+          caption() || title() || 'Tableau de données'
         }}
       </caption>
 
@@ -105,7 +105,7 @@
                 [indeterminate]="somePageRowsSelected()"
                 [disabled]="paginatedRows().length === 0"
                 (change)="togglePageRowsSelection($event)"
-                aria-label="Select all rows on this page"
+                aria-label="Sélectionner toutes les lignes de cette page"
               />
             </th>
           }
@@ -150,7 +150,7 @@
                     class="h-4 w-4 rounded border-line accent-primary"
                     [checked]="isRowSelected(rowEntry.id)"
                     (change)="toggleRowSelection(rowEntry.id, $event)"
-                    [attr.aria-label]="'Select row ' + (rowEntry.index + 1)"
+                    [attr.aria-label]="'Sélectionner la ligne ' + (rowEntry.index + 1)"
                   />
                 </td>
               }

@@ -11,7 +11,7 @@ import { DataTableColumnVisibilityOption, DataTableToolbarFilter } from './data-
       <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div class="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <label class="relative block min-w-0 flex-1 sm:max-w-md">
-            <span class="sr-only">Search rows</span>
+            <span class="sr-only">Rechercher des lignes</span>
             <span
               class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-secondaryText"
               aria-hidden="true"
@@ -65,7 +65,7 @@ import { DataTableColumnVisibilityOption, DataTableToolbarFilter } from './data-
               class="flex h-12 cursor-pointer list-none items-center gap-2 rounded-2xl border border-line bg-surface px-4 text-sm font-semibold text-principalText shadow-sm transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
             >
               <i class="fa-solid fa-table-columns text-xs text-primary" aria-hidden="true"></i>
-              Columns
+              Colonnes
               <i
                 class="fa-solid fa-chevron-down text-[0.65rem] text-secondaryText"
                 aria-hidden="true"
@@ -78,7 +78,7 @@ import { DataTableColumnVisibilityOption, DataTableToolbarFilter } from './data-
               <p
                 class="px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText"
               >
-                Toggle columns
+                Afficher les colonnes
               </p>
 
               @for (option of columnVisibilityOptions(); track option.columnId) {
@@ -108,15 +108,15 @@ import { DataTableColumnVisibilityOption, DataTableToolbarFilter } from './data-
         >
           @if (showResultSummary()) {
             <p>
-              Showing <span class="font-semibold text-principalText">{{ filteredCount() }}</span> of
-              {{ totalCount() }} rows
+              <span class="font-semibold text-principalText">{{ filteredCount() }}</span> ligne(s)
+              affichée(s) sur {{ totalCount() }}
             </p>
           }
 
           @if (selectedCount() > 0) {
             <p>
-              <span class="font-semibold text-principalText">{{ selectedCount() }}</span> row(s)
-              selected
+              <span class="font-semibold text-principalText">{{ selectedCount() }}</span> ligne(s)
+              sélectionnée(s)
             </p>
           }
         </div>
@@ -128,7 +128,7 @@ import { DataTableColumnVisibilityOption, DataTableToolbarFilter } from './data-
 })
 export class DataTableToolbar {
   readonly searchValue = input('');
-  readonly searchPlaceholder = input('Search rows...');
+  readonly searchPlaceholder = input('Rechercher des lignes...');
   readonly filterControls = input<readonly DataTableToolbarFilter[]>([]);
   readonly columnVisibilityOptions = input<readonly DataTableColumnVisibilityOption[]>([]);
   readonly filteredCount = input(0);
