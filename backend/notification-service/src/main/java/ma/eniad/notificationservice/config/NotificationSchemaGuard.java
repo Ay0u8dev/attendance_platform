@@ -1,6 +1,7 @@
 package ma.eniad.notificationservice.config;
 
 import lombok.RequiredArgsConstructor;
+import ma.eniad.notificationservice.entity.enums.EmailStatus;
 import ma.eniad.notificationservice.entity.enums.NotificationSeverity;
 import ma.eniad.notificationservice.entity.enums.NotificationType;
 import ma.eniad.notificationservice.entity.enums.RecipientRole;
@@ -34,6 +35,7 @@ public class NotificationSchemaGuard implements ApplicationRunner {
         repairCheckConstraint("notifications_type_check", "type", NotificationType.values());
         repairCheckConstraint("notifications_severity_check", "severity", NotificationSeverity.values());
         repairCheckConstraint("notifications_recipient_role_check", "recipient_role", RecipientRole.values());
+        repairCheckConstraint("notifications_email_status_check", "email_status", EmailStatus.values());
     }
 
     private boolean isPostgreSql() throws Exception {
@@ -56,8 +58,8 @@ public class NotificationSchemaGuard implements ApplicationRunner {
 
         jdbcTemplate.execute("alter table notifications drop constraint if exists " + constraintName);
         jdbcTemplate.execute(
-                "alter table notifications add constraint " + constraintName +
-                        " check (" + columnName + " in (" + allowedSql + "))"
+                "alter table notifications add constraint " + constraintName
+                        + " check (" + columnName + " in (" + allowedSql + "))"
         );
     }
 

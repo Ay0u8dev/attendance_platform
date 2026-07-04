@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import ma.eniad.attendanceservice.client.UserServiceClient;
 import ma.eniad.attendanceservice.dto.*;
 import ma.eniad.attendanceservice.entity.*;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.repository.AttendanceRecordRepository;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 import org.springframework.data.domain.Page;

@@ -1,6 +1,7 @@
 package ma.eniad.notificationservice.service;
 
 import ma.eniad.notificationservice.dto.CreateNotificationRequest;
+import ma.eniad.notificationservice.email.NotificationEmailOrchestrator;
 import ma.eniad.notificationservice.entity.Notification;
 import ma.eniad.notificationservice.entity.enums.NotificationSeverity;
 import ma.eniad.notificationservice.entity.enums.NotificationType;
@@ -18,19 +19,26 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 class NotificationServiceTest {
 
     private NotificationRepository notificationRepository;
     private NotificationBroadcastService notificationBroadcastService;
+    private NotificationEmailOrchestrator notificationEmailOrchestrator;
     private NotificationService notificationService;
 
     @BeforeEach
     void setUp() {
         notificationRepository = mock(NotificationRepository.class);
         notificationBroadcastService = mock(NotificationBroadcastService.class);
-        notificationService = new NotificationService(notificationRepository, notificationBroadcastService);
+        notificationEmailOrchestrator = mock(NotificationEmailOrchestrator.class);
+        notificationService = new NotificationService(
+                notificationRepository,
+                notificationBroadcastService,
+                notificationEmailOrchestrator
+        );
     }
 
     @Test
@@ -39,6 +47,8 @@ class NotificationServiceTest {
 
         notificationService.createNotification(new CreateNotificationRequest(
                 10L,
+                null,
+                null,
                 RecipientRole.STUDENT,
                 NotificationType.JUSTIFICATION_APPROVED,
                 null,
@@ -52,6 +62,9 @@ class NotificationServiceTest {
         ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
         verify(notificationRepository).save(captor.capture());
         assertThat(captor.getValue().getSeverity()).isEqualTo(NotificationSeverity.SUCCESS);
+        verify(notificationEmailOrchestrator).applyInitialEmailState(captor.getValue());
+        verify(notificationEmailOrchestrator).enqueueAfterCommit(captor.getValue());
+        verifyNoMoreInteractions(notificationEmailOrchestrator);
     }
 
     @Test
@@ -60,6 +73,8 @@ class NotificationServiceTest {
 
         notificationService.createNotification(new CreateNotificationRequest(
                 10L,
+                null,
+                null,
                 RecipientRole.STUDENT,
                 NotificationType.ATTENDANCE_STATUS_CONFIRMED,
                 null,
@@ -81,6 +96,8 @@ class NotificationServiceTest {
 
         notificationService.createNotification(new CreateNotificationRequest(
                 77L,
+                null,
+                null,
                 RecipientRole.TEACHER,
                 NotificationType.JUSTIFICATION_REVIEW_REQUESTED,
                 null,

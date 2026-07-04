@@ -1,11 +1,14 @@
 package ma.eniad.attendanceservice.service;
 
-import ma.eniad.attendanceservice.client.NotificationServiceClient;
-import ma.eniad.attendanceservice.dto.CreateNotificationRequest;
+import ma.eniad.attendanceservice.dto.NotificationRequestedEvent;
 import ma.eniad.attendanceservice.dto.StudentRosterDto;
 import ma.eniad.attendanceservice.entity.AttendanceRecord;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.enums.NotificationChannel;
+import ma.eniad.attendanceservice.messaging.NotificationEventPublisher;
+import ma.eniad.attendanceservice.repository.AttendanceRecordRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -22,13 +25,15 @@ import static org.mockito.Mockito.verify;
 
 class AttendanceNotificationServiceTest {
 
-    private NotificationServiceClient notificationServiceClient;
+    private NotificationEventPublisher notificationEventPublisher;
+    private AttendanceRecordRepository attendanceRecordRepository;
     private AttendanceNotificationService attendanceNotificationService;
 
     @BeforeEach
     void setUp() {
-        notificationServiceClient = mock(NotificationServiceClient.class);
-        attendanceNotificationService = new AttendanceNotificationService(notificationServiceClient);
+        notificationEventPublisher = mock(NotificationEventPublisher.class);
+        attendanceRecordRepository = mock(AttendanceRecordRepository.class);
+        attendanceNotificationService = new AttendanceNotificationService(notificationEventPublisher, attendanceRecordRepository);
     }
 
     @Test
@@ -40,11 +45,14 @@ class AttendanceNotificationServiceTest {
                 rosterStudent(11L, "Yassine", "Fassi", "yassine@ump.ac.ma", "A002")
         ));
 
-        ArgumentCaptor<CreateNotificationRequest> captor = ArgumentCaptor.forClass(CreateNotificationRequest.class);
-        verify(notificationServiceClient, org.mockito.Mockito.times(2)).createNotification(captor.capture());
+        ArgumentCaptor<NotificationRequestedEvent> captor = ArgumentCaptor.forClass(NotificationRequestedEvent.class);
+        verify(notificationEventPublisher, org.mockito.Mockito.times(2)).publish(captor.capture());
         assertThat(captor.getAllValues())
-                .extracting(CreateNotificationRequest::type)
+                .extracting(NotificationRequestedEvent::type)
                 .containsOnly("ATTENDANCE_SESSION_STARTED");
+        assertThat(captor.getAllValues())
+                .allSatisfy(event -> assertThat(event.channels())
+                        .containsExactlyInAnyOrder(NotificationChannel.IN_APP, NotificationChannel.WEBSOCKET, NotificationChannel.EMAIL));
     }
 
     @Test
@@ -57,18 +65,38 @@ class AttendanceNotificationServiceTest {
                 baseRecord(11L, AttendanceStudentStatus.ABSENT)
         ));
 
-        ArgumentCaptor<CreateNotificationRequest> captor = ArgumentCaptor.forClass(CreateNotificationRequest.class);
-        verify(notificationServiceClient, org.mockito.Mockito.times(2)).createNotification(captor.capture());
+        ArgumentCaptor<NotificationRequestedEvent> captor = ArgumentCaptor.forClass(NotificationRequestedEvent.class);
+        verify(notificationEventPublisher, org.mockito.Mockito.times(2)).publish(captor.capture());
         assertThat(captor.getAllValues())
-                .extracting(CreateNotificationRequest::type)
+                .extracting(NotificationRequestedEvent::type)
                 .containsExactly("ATTENDANCE_STATUS_CONFIRMED", "ABSENCE_RECORDED");
         assertThat(captor.getAllValues())
-                .extracting(CreateNotificationRequest::recipientUserId)
+                .extracting(NotificationRequestedEvent::recipientUserId)
                 .containsExactly(10L, 11L);
         assertThat(captor.getAllValues().get(0).severity()).isEqualTo("SUCCESS");
         assertThat(captor.getAllValues().get(1).severity()).isEqualTo("WARNING");
         assertThat(captor.getAllValues().get(0).metadataJson()).contains("\"status\":\"PRESENT\"");
         assertThat(captor.getAllValues().get(1).metadataJson()).contains("\"status\":\"ABSENT\"");
+    }
+
+    @Test
+    void notifyFinalizedStudentStatusesPublishesThresholdWarningWhenAbsencesExceedThree() {
+        AttendanceSession session = baseSession();
+        session.setEndedAt(LocalDateTime.of(2026, 4, 28, 12, 45));
+        AttendanceRecord absent = baseRecord(11L, AttendanceStudentStatus.ABSENT);
+        org.mockito.Mockito.when(attendanceRecordRepository.countFinalizedAbsencesForStudentAndCourse(11L, "Distributed Systems"))
+                .thenReturn(4L);
+
+        attendanceNotificationService.notifyFinalizedStudentStatuses(session, List.of(absent));
+
+        ArgumentCaptor<NotificationRequestedEvent> captor = ArgumentCaptor.forClass(NotificationRequestedEvent.class);
+        verify(notificationEventPublisher, org.mockito.Mockito.times(2)).publish(captor.capture());
+        assertThat(captor.getAllValues())
+                .extracting(NotificationRequestedEvent::type)
+                .containsExactly("ABSENCE_RECORDED", "ABSENCE_THRESHOLD_EXCEEDED");
+        assertThat(captor.getAllValues().get(1).metadataJson()).contains("\"absenceCount\":4");
+        assertThat(captor.getAllValues().get(1).channels())
+                .containsExactlyInAnyOrder(NotificationChannel.IN_APP, NotificationChannel.WEBSOCKET, NotificationChannel.EMAIL);
     }
 
     @Test
@@ -81,8 +109,8 @@ class AttendanceNotificationServiceTest {
 
         attendanceNotificationService.notifySessionFinalized(session);
 
-        ArgumentCaptor<CreateNotificationRequest> captor = ArgumentCaptor.forClass(CreateNotificationRequest.class);
-        verify(notificationServiceClient).createNotification(captor.capture());
+        ArgumentCaptor<NotificationRequestedEvent> captor = ArgumentCaptor.forClass(NotificationRequestedEvent.class);
+        verify(notificationEventPublisher).publish(captor.capture());
         assertThat(captor.getValue().recipientUserId()).isEqualTo(77L);
         assertThat(captor.getValue().recipientRole()).isEqualTo("TEACHER");
         assertThat(captor.getValue().type()).isEqualTo("ATTENDANCE_SESSION_FINALIZED");
@@ -92,8 +120,8 @@ class AttendanceNotificationServiceTest {
     @Test
     void notificationClientFailuresAreNonBlocking() {
         doThrow(new RuntimeException("notification-service down"))
-                .when(notificationServiceClient)
-                .createNotification(any());
+                .when(notificationEventPublisher)
+                .publish(any());
 
         assertThatNoException().isThrownBy(() ->
                 attendanceNotificationService.notifyFinalizedStudentStatuses(baseSession(), List.of(
@@ -117,6 +145,9 @@ class AttendanceNotificationServiceTest {
         return AttendanceRecord.builder()
                 .sessionId(100L)
                 .studentId(studentId)
+                .firstName("Aya")
+                .lastName("Bennani")
+                .email("aya@ump.ac.ma")
                 .status(status)
                 .build();
     }

@@ -21,7 +21,7 @@ import ma.eniad.justificationservice.dto.PresignedUrlResponse;
 import ma.eniad.justificationservice.dto.ReviewJustificationRequest;
 import ma.eniad.justificationservice.dto.SubmitJustificationRequest;
 import ma.eniad.justificationservice.entity.Justification;
-import ma.eniad.justificationservice.entity.JustificationStatus;
+import ma.eniad.justificationservice.entity.enums.JustificationStatus;
 import ma.eniad.justificationservice.service.CloudflareR2Service;
 import ma.eniad.justificationservice.service.JustificationService;
 
@@ -170,6 +170,7 @@ public class JustificationController {
                 .sessionId(justification.getSessionId())
                 .studentId(justification.getStudentId())
                 .studentName(justification.getStudentName())
+                .studentEmail(justification.getStudentEmail())
                 .studentCode(justification.getStudentCode())
                 .studentFormation(justification.getStudentFormation())
                 .studentClass(justification.getStudentClass())

@@ -20,7 +20,7 @@ import ma.eniad.justificationservice.dto.AttendanceSessionLookupResponse;
 import ma.eniad.justificationservice.dto.ReviewJustificationRequest;
 import ma.eniad.justificationservice.dto.SubmitJustificationRequest;
 import ma.eniad.justificationservice.entity.Justification;
-import ma.eniad.justificationservice.entity.JustificationStatus;
+import ma.eniad.justificationservice.entity.enums.JustificationStatus;
 import ma.eniad.justificationservice.repository.JustificationRepository;
 
 import org.slf4j.Logger;
@@ -51,6 +51,7 @@ public class JustificationService {
                 .sessionId(request.sessionId())
                 .studentId(request.studentId())
                 .studentName(request.studentName().trim())
+                .studentEmail(normalizeOptional(request.studentEmail()))
                 .studentCode(normalizeOptional(request.studentCode()))
                 .studentFormation(normalizeOptional(request.studentFormation()))
                 .studentClass(normalizeOptional(request.studentClass()))

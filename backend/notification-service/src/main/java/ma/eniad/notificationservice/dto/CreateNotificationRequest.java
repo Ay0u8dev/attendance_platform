@@ -11,6 +11,12 @@ public record CreateNotificationRequest(
     @NotNull
     Long recipientUserId,
 
+    @Size(max = 254)
+    String recipientEmail,
+
+    @Size(max = 180)
+    String recipientName,
+
     @NotNull
     RecipientRole recipientRole,
 

@@ -1,9 +1,9 @@
 package ma.eniad.attendanceservice.dto;
 
-import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
-
 import java.time.LocalDateTime;
 import java.util.List;
+
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
 
 public record AttendanceSessionDetailsResponse(
         Long sessionId,

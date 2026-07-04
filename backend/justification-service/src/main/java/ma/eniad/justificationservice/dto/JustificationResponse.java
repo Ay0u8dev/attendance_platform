@@ -6,7 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import ma.eniad.justificationservice.entity.JustificationStatus;
+import ma.eniad.justificationservice.entity.enums.JustificationStatus;
 
 @Data
 @Builder
@@ -17,6 +17,7 @@ public class JustificationResponse {
     private Long sessionId;
     private Long studentId;
     private String studentName;
+    private String studentEmail;
     private String studentCode;
     private String studentFormation;
     private String studentClass;

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import ma.eniad.notificationservice.dto.CreateNotificationRequest;
 import ma.eniad.notificationservice.dto.NotificationResponse;
 import ma.eniad.notificationservice.dto.PagedResponse;
+import ma.eniad.notificationservice.email.NotificationEmailOrchestrator;
 import ma.eniad.notificationservice.entity.Notification;
 import ma.eniad.notificationservice.entity.enums.NotificationSeverity;
 import ma.eniad.notificationservice.entity.enums.NotificationType;
@@ -28,12 +29,15 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final NotificationBroadcastService notificationBroadcastService;
+    private final NotificationEmailOrchestrator notificationEmailOrchestrator;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Transactional
     public NotificationResponse createNotification(CreateNotificationRequest request) {
         Notification notification = Notification.builder()
                 .recipientUserId(request.recipientUserId())
+                .recipientEmail(trimOrNull(request.recipientEmail()))
+                .recipientName(trimOrNull(request.recipientName()))
                 .recipientRole(request.recipientRole())
                 .type(request.type())
                 .severity(resolveSeverity(request.type(), request.severity(), request.metadataJson()))
@@ -43,9 +47,11 @@ public class NotificationService {
                 .relatedEntityId(trimOrNull(request.relatedEntityId()))
                 .metadataJson(trimOrNull(request.metadataJson()))
                 .build();
+        notificationEmailOrchestrator.applyInitialEmailState(notification);
 
         Notification saved = notificationRepository.save(notification);
         NotificationResponse response = toResponse(saved);
+        notificationEmailOrchestrator.enqueueAfterCommit(saved);
         broadcastAfterCommit(saved.getRecipientUserId(), response);
         return response;
     }

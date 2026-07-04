@@ -5,6 +5,7 @@ export interface JustificationDto {
   readonly sessionId: number | null;
   readonly studentId: number;
   readonly studentName: string;
+  readonly studentEmail: string | null;
   readonly studentCode: string | null;
   readonly studentFormation: string | null;
   readonly studentClass: string | null;

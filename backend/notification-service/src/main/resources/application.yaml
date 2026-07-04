@@ -1,37 +1,12 @@
-server:
-  port: 8086
 spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5435/notification_db
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
-    driver-class-name: org.postgresql.Driver
+    application:
+        name: notification-service
 
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
+    config:
 
-springdoc:
-  api-docs:
-    enabled: true
-  swagger-ui:
-    enabled: true
+        import:
+            - optional:file:.env[.properties]
+            - optional:file:backend/notification-service/.env[.properties]
 
-app:
-  internal:
-    service-token: ${INTERNAL_SERVICE_TOKEN}
-
-services:
-  auth:
-    url: http://localhost:8081
-
-notification:
-  websocket:
-    allowed-origin-patterns:
-      - http://localhost:[*]
-      - http://127.0.0.1:[*]
-      - http://host.docker.internal:[*]
-      - http://192.168.100.73:[*]
-      - http://attendance-platform.ma
-      - http://attendance-platform.duckdns.org
+    profiles:
+        active: ${PROFILE:dev}

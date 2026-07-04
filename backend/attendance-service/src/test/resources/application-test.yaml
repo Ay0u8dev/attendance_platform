@@ -12,6 +12,18 @@ spring:
     redis:
       host: localhost
       port: 6379
+  rabbitmq:
+    dynamic: false
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+app:
+  rabbitmq:
+    notifications:
+      exchange: notifications.exchange
+      routing-key: notification.requested
 
 attendance:
   session:

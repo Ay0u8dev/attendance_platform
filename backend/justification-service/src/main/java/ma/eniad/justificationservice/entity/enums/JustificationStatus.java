@@ -1,4 +1,4 @@
-package ma.eniad.justificationservice.entity;
+package ma.eniad.justificationservice.entity.enums;
 
 public enum JustificationStatus {
     PENDING,

@@ -6,7 +6,7 @@ import ma.eniad.attendanceservice.dto.AdminOverviewResponse;
 import ma.eniad.attendanceservice.dto.AttendanceSessionDetailsResponse;
 import ma.eniad.attendanceservice.dto.AttendanceSessionSummaryResponse;
 import ma.eniad.attendanceservice.dto.PagedResponse;
-import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
 import ma.eniad.attendanceservice.service.AttendanceQueryService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;

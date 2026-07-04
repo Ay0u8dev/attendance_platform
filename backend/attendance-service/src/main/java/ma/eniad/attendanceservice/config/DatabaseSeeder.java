@@ -10,9 +10,9 @@ import org.springframework.context.annotation.Configuration;
 
 import ma.eniad.attendanceservice.entity.AttendanceRecord;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
-import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
-import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionMethod;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.repository.AttendanceRecordRepository;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 
@@ -101,16 +101,6 @@ public class DatabaseSeeder {
                     AttendanceSessionMethod.FACE_ID,
                     LocalDateTime.now().minusDays(10),
                     List.of(11L, 13L, 14L)
-            );
-            seedFinalizedSession(
-                    attendanceSessionRepository,
-                    attendanceRecordRepository,
-                    groupTwoStudents,
-                    "Reseaux",
-                    "Amphi A",
-                    AttendanceSessionMethod.MANUAL,
-                    LocalDateTime.now().minusDays(5),
-                    List.of(12L, 13L, 15L)
             );
 
             System.out.println("Attendance history seeded successfully!");

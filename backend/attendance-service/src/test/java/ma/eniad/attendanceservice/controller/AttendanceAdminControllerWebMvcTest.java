@@ -5,7 +5,7 @@ import ma.eniad.attendanceservice.config.WebConfig;
 import ma.eniad.attendanceservice.dto.AdminOverviewResponse;
 import ma.eniad.attendanceservice.dto.AttendanceSessionSummaryResponse;
 import ma.eniad.attendanceservice.dto.PagedResponse;
-import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
 import ma.eniad.attendanceservice.exception.GlobalExceptionHandler;
 import ma.eniad.attendanceservice.service.AttendanceQueryService;
 import org.junit.jupiter.api.Test;

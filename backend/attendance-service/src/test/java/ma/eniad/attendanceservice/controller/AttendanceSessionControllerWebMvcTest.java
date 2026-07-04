@@ -9,8 +9,8 @@ import ma.eniad.attendanceservice.dto.StudentAttendanceSessionSummaryResponse;
 import ma.eniad.attendanceservice.dto.AttendanceStudentView;
 import ma.eniad.attendanceservice.dto.CreateAttendanceSessionRequest;
 import ma.eniad.attendanceservice.dto.PagedResponse;
-import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.exception.GlobalExceptionHandler;
 import ma.eniad.attendanceservice.service.AttendanceFinalizationService;
 import ma.eniad.attendanceservice.service.AttendanceQueryService;
@@ -166,7 +166,7 @@ class AttendanceSessionControllerWebMvcTest {
                 AttendanceSessionStatus.ACTIVE, 1, 0, 1,
                 List.of(new AttendanceStudentView(
                         10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001",
-                        AttendanceStudentStatus.PRESENT, ma.eniad.attendanceservice.entity.AttendanceSessionMethod.QR_CODE,
+                        AttendanceStudentStatus.PRESENT, ma.eniad.attendanceservice.entity.enums.AttendanceSessionMethod.QR_CODE,
                         LocalDateTime.of(2026, 4, 28, 12, 5)
                 ))
         ));

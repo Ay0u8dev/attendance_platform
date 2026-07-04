@@ -2,15 +2,22 @@ package ma.eniad.attendanceservice.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import ma.eniad.attendanceservice.client.NotificationServiceClient;
 import ma.eniad.attendanceservice.dto.CreateNotificationRequest;
+import ma.eniad.attendanceservice.dto.NotificationRequestedEvent;
 import ma.eniad.attendanceservice.dto.StudentRosterDto;
 import ma.eniad.attendanceservice.entity.AttendanceRecord;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.enums.NotificationChannel;
+import ma.eniad.attendanceservice.messaging.NotificationEventPublisher;
+import ma.eniad.attendanceservice.repository.AttendanceRecordRepository;
+
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -24,22 +31,34 @@ public class AttendanceNotificationService {
     private static final String TYPE_ATTENDANCE_STATUS_CONFIRMED = "ATTENDANCE_STATUS_CONFIRMED";
     private static final String TYPE_ATTENDANCE_STATUS_UPDATED = "ATTENDANCE_STATUS_UPDATED";
     private static final String TYPE_ABSENCE_RECORDED = "ABSENCE_RECORDED";
+    private static final String TYPE_ABSENCE_THRESHOLD_EXCEEDED = "ABSENCE_THRESHOLD_EXCEEDED";
     private static final String ENTITY_ATTENDANCE_SESSION = "ATTENDANCE_SESSION";
+    private static final String EVENT_SOURCE = "attendance-service";
+    private static final long ABSENCE_WARNING_THRESHOLD = 3L;
+    private static final Set<NotificationChannel> DEFAULT_CHANNELS =
+            Set.of(NotificationChannel.IN_APP, NotificationChannel.WEBSOCKET, NotificationChannel.EMAIL);
 
-    private final NotificationServiceClient notificationServiceClient;
+    private final NotificationEventPublisher notificationEventPublisher;
+    private final AttendanceRecordRepository attendanceRecordRepository;
 
     public void notifySessionStarted(AttendanceSession session, List<StudentRosterDto> roster) {
         for (StudentRosterDto student : roster) {
-            sendSafely(new CreateNotificationRequest(
+            sendSafely(new NotificationRequestedEvent(
+                    newEventId(),
+                    EVENT_SOURCE,
+                    TYPE_SESSION_STARTED,
                     student.studentId(),
                     ROLE_STUDENT,
-                    TYPE_SESSION_STARTED,
-                    "INFO",
+                    student.email(),
+                    studentName(student.firstName(), student.lastName()),
                     "Attendance session started",
                     buildSessionStartedMessage(session),
+                    "INFO",
                     ENTITY_ATTENDANCE_SESSION,
                     String.valueOf(session.getId()),
-                    null
+                    DEFAULT_CHANNELS,
+                    buildSessionStartedMetadata(session, student),
+                    LocalDateTime.now()
             ), "session-start", session.getId(), student.studentId());
         }
     }
@@ -50,17 +69,26 @@ public class AttendanceNotificationService {
                         || record.getStatus() == AttendanceStudentStatus.ABSENT)
                 .forEach(record -> {
                     boolean present = record.getStatus() == AttendanceStudentStatus.PRESENT;
-                    sendSafely(new CreateNotificationRequest(
+                    sendSafely(new NotificationRequestedEvent(
+                            newEventId(),
+                            EVENT_SOURCE,
+                            present ? TYPE_ATTENDANCE_STATUS_CONFIRMED : TYPE_ABSENCE_RECORDED,
                             record.getStudentId(),
                             ROLE_STUDENT,
-                            present ? TYPE_ATTENDANCE_STATUS_CONFIRMED : TYPE_ABSENCE_RECORDED,
-                            present ? "SUCCESS" : "WARNING",
+                            record.getEmail(),
+                            studentName(record.getFirstName(), record.getLastName()),
                             present ? "Attendance confirmed" : "Absence recorded",
                             present ? buildPresenceConfirmedMessage(session) : buildAbsenceMessage(session),
+                            present ? "SUCCESS" : "WARNING",
                             ENTITY_ATTENDANCE_SESSION,
                             String.valueOf(session.getId()),
-                            buildFinalStatusMetadata(session, record)
+                            DEFAULT_CHANNELS,
+                            buildFinalStatusMetadata(session, record),
+                            LocalDateTime.now()
                     ), present ? "presence-finalized" : "absence-finalized", session.getId(), record.getStudentId());
+                    if (!present) {
+                        notifyAbsenceThresholdIfNeeded(session, record);
+                    }
                 });
     }
 
@@ -97,11 +125,15 @@ public class AttendanceNotificationService {
     }
 
     private void sendSafely(CreateNotificationRequest request, String event, Long sessionId, Long studentId) {
+        sendSafely(toEvent(request), event, sessionId, studentId);
+    }
+
+    private void sendSafely(NotificationRequestedEvent request, String event, Long sessionId, Long studentId) {
         try {
-            notificationServiceClient.createNotification(request);
+            notificationEventPublisher.publish(request);
         } catch (RuntimeException ex) {
             log.warn(
-                    "Notification send failed for event={} sessionId={} studentId={}: {}",
+                    "Notification publish failed for event={} sessionId={} studentId={}: {}",
                     event,
                     sessionId,
                     studentId,
@@ -109,6 +141,72 @@ public class AttendanceNotificationService {
                     ex
             );
         }
+    }
+
+    private NotificationRequestedEvent toEvent(CreateNotificationRequest request) {
+        return new NotificationRequestedEvent(
+                newEventId(),
+                EVENT_SOURCE,
+                request.type(),
+                request.recipientUserId(),
+                request.recipientRole(),
+                null,
+                null,
+                request.title(),
+                request.message(),
+                request.severity(),
+                request.relatedEntityType(),
+                request.relatedEntityId(),
+                DEFAULT_CHANNELS,
+                request.metadataJson(),
+                LocalDateTime.now()
+        );
+    }
+
+    private void notifyAbsenceThresholdIfNeeded(AttendanceSession session, AttendanceRecord record) {
+        if (attendanceRecordRepository == null || session.getCourseLabel() == null || session.getCourseLabel().isBlank()) {
+            return;
+        }
+
+        long absenceCount;
+        try {
+            absenceCount = attendanceRecordRepository.countFinalizedAbsencesForStudentAndCourse(
+                    record.getStudentId(),
+                    session.getCourseLabel()
+            );
+        } catch (RuntimeException ex) {
+            log.warn(
+                    "Could not calculate finalized absence count for sessionId={} studentId={} course={}: {}",
+                    session.getId(),
+                    record.getStudentId(),
+                    session.getCourseLabel(),
+                    ex.getMessage(),
+                    ex
+            );
+            return;
+        }
+
+        if (absenceCount <= ABSENCE_WARNING_THRESHOLD) {
+            return;
+        }
+
+        sendSafely(new NotificationRequestedEvent(
+                newEventId(),
+                EVENT_SOURCE,
+                TYPE_ABSENCE_THRESHOLD_EXCEEDED,
+                record.getStudentId(),
+                ROLE_STUDENT,
+                record.getEmail(),
+                studentName(record.getFirstName(), record.getLastName()),
+                "Avertissement d'absence",
+                buildAbsenceThresholdMessage(session, absenceCount),
+                "WARNING",
+                ENTITY_ATTENDANCE_SESSION,
+                String.valueOf(session.getId()),
+                DEFAULT_CHANNELS,
+                buildFinalStatusMetadata(session, record, absenceCount),
+                LocalDateTime.now()
+        ), "absence-threshold-exceeded", session.getId(), record.getStudentId());
     }
 
     private String buildSessionStartedMessage(AttendanceSession session) {
@@ -165,14 +263,39 @@ public class AttendanceNotificationService {
                 + ",\"unknownCount\":" + safeCount(session.getUnknownCount()) + "}";
     }
 
+    private String buildAbsenceThresholdMessage(AttendanceSession session, long absenceCount) {
+        String courseLabel = labelOrFallback(session.getCourseLabel(), "ce module");
+        return "Vous avez depasse le seuil autorise d'absences pour " + courseLabel
+                + " avec " + absenceCount
+                + " absences finalisees. Veuillez consulter votre espace etudiant et deposer les justificatifs necessaires.";
+    }
+
+    private String buildSessionStartedMetadata(AttendanceSession session, StudentRosterDto student) {
+        return "{\"sessionId\":" + session.getId()
+                + ",\"courseLabel\":\"" + jsonEscape(labelOrFallback(session.getCourseLabel(), "")) + "\""
+                + ",\"roomLabel\":\"" + jsonEscape(labelOrFallback(session.getRoomLabel(), "")) + "\""
+                + ",\"teacherId\":" + session.getTeacherId()
+                + ",\"teacherFullName\":\"" + jsonEscape(labelOrFallback(session.getTeacherFullName(), "")) + "\""
+                + ",\"groupId\":" + student.groupId()
+                + ",\"startedAt\":\"" + nullSafe(session.getStartedAt()) + "\""
+                + ",\"endsAt\":\"" + nullSafe(session.getEndsAt()) + "\"}";
+    }
+
     private String buildFinalStatusMetadata(AttendanceSession session, AttendanceRecord record) {
+        return buildFinalStatusMetadata(session, record, null);
+    }
+
+    private String buildFinalStatusMetadata(AttendanceSession session, AttendanceRecord record, Long absenceCount) {
         return "{\"sessionId\":" + session.getId()
                 + ",\"courseLabel\":\"" + jsonEscape(labelOrFallback(session.getCourseLabel(), "")) + "\""
                 + ",\"roomLabel\":\"" + jsonEscape(labelOrFallback(session.getRoomLabel(), "")) + "\""
                 + ",\"teacherId\":" + session.getTeacherId()
                 + ",\"teacherFullName\":\"" + jsonEscape(labelOrFallback(session.getTeacherFullName(), "")) + "\""
                 + ",\"status\":\"" + record.getStatus().name() + "\""
-                + ",\"finalizedAt\":\"" + session.getEndedAt() + "\"}";
+                + (absenceCount == null ? "" : ",\"absenceCount\":" + absenceCount)
+                + ",\"absenceThreshold\":" + ABSENCE_WARNING_THRESHOLD
+                + ",\"moduleKey\":\"courseLabel\""
+                + ",\"finalizedAt\":\"" + nullSafe(session.getEndedAt()) + "\"}";
     }
 
     private int safeCount(Integer value) {
@@ -192,5 +315,18 @@ public class AttendanceNotificationService {
                 .replace("\"", "\\\"")
                 .replace("\n", "\\n")
                 .replace("\r", "\\r");
+    }
+
+    private String studentName(String firstName, String lastName) {
+        String fullName = (labelOrFallback(firstName, "") + " " + labelOrFallback(lastName, "")).trim();
+        return fullName.isBlank() ? null : fullName;
+    }
+
+    private String nullSafe(Object value) {
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    private String newEventId() {
+        return UUID.randomUUID().toString();
     }
 }

@@ -15,7 +15,29 @@ spring:
   sql:
     init:
       mode: never
+  rabbitmq:
+    dynamic: false
+    listener:
+      simple:
+        auto-startup: false
+  mail:
+    host: localhost
+    port: 1025
 
 app:
   internal:
     service-token: test-internal-service-token
+  rabbitmq:
+    notifications:
+      exchange: notifications.exchange
+      queue: notification-service.notifications.queue
+      routing-key: notification.requested
+  notifications:
+    email:
+      enabled: false
+      from: no-reply@attendance.local
+      sender-name: Test Attendance Platform
+      frontend-base-url: http://localhost:4200
+      exchange: notifications.email.exchange
+      queue: notification-service.email.queue
+      routing-key: notification.email.send

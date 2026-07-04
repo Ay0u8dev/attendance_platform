@@ -1,7 +1,8 @@
 package ma.eniad.attendanceservice.repository;
 
 import ma.eniad.attendanceservice.entity.AttendanceRecord;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -20,6 +21,17 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
     void deleteBySessionId(Long sessionId);
 
     Optional<AttendanceRecord> findBySessionIdAndStudentId(Long sessionId, Long studentId);
+
+    @Query("""
+            select count(r) from AttendanceRecord r
+            join r.session s
+            where r.studentId = :studentId
+              and r.status = ma.eniad.attendanceservice.entity.AttendanceStudentStatus.ABSENT
+              and s.status = ma.eniad.attendanceservice.entity.AttendanceSessionStatus.FINALIZED
+              and lower(s.courseLabel) = lower(:courseLabel)
+            """)
+    long countFinalizedAbsencesForStudentAndCourse(@Param("studentId") Long studentId,
+                                                   @Param("courseLabel") String courseLabel);
 
     @Query("""
             select r from AttendanceRecord r

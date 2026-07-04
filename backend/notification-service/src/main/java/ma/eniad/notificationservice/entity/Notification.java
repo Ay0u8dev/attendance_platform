@@ -2,6 +2,7 @@ package ma.eniad.notificationservice.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import ma.eniad.notificationservice.entity.enums.EmailStatus;
 import ma.eniad.notificationservice.entity.enums.NotificationSeverity;
 import ma.eniad.notificationservice.entity.enums.NotificationType;
 import ma.eniad.notificationservice.entity.enums.RecipientRole;
@@ -36,6 +37,12 @@ public class Notification {
     @Column(name = "recipient_user_id", nullable = false)
     private Long recipientUserId;
 
+    @Column(name = "recipient_email", length = 254)
+    private String recipientEmail;
+
+    @Column(name = "recipient_name", length = 180)
+    private String recipientName;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "recipient_role", nullable = false, length = 30)
     private RecipientRole recipientRole;
@@ -69,6 +76,16 @@ public class Notification {
     @Column(name = "metadata_json", columnDefinition = "TEXT")
     private String metadataJson;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "email_status", nullable = false, length = 20)
+    private EmailStatus emailStatus;
+
+    @Column(name = "email_sent_at")
+    private LocalDateTime emailSentAt;
+
+    @Column(name = "email_error", length = 500)
+    private String emailError;
+
     @Column(name = "read_at")
     private LocalDateTime readAt;
 
@@ -86,6 +103,9 @@ public class Notification {
         LocalDateTime now = LocalDateTime.now();
         if (severity == null) {
             severity = NotificationSeverity.INFO;
+        }
+        if (emailStatus == null) {
+            emailStatus = EmailStatus.NOT_REQUIRED;
         }
         createdAt = now;
         updatedAt = now;

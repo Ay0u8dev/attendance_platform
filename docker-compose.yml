@@ -88,6 +88,18 @@ services:
       timeout: 5s
       retries: 20
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
   # ===================== Services =======================
   #### ONLY FOR PROD TESTING — in dev we run these services locally, not in Docker ####
   # frontend:
@@ -198,3 +210,4 @@ volumes:
   users_db_data:
   attendance_db_data:
   notification_db_data:
+  rabbitmq_data:
