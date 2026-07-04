@@ -1,6 +1,7 @@
 package ma.eniad.userservice.service.teacher;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,19 +21,29 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.HashSet;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import ma.eniad.userservice.entity.Teacher;
+import ma.eniad.userservice.entity.TeacherAssignment;
 import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.entity.enums.Role;
+import ma.eniad.userservice.entity.structure.Filiere;
+import ma.eniad.userservice.entity.structure.Formation;
+import ma.eniad.userservice.entity.structure.Groupe;
+import ma.eniad.userservice.entity.structure.Module;
 import ma.eniad.userservice.exception.DuplicateResourceException;
 import ma.eniad.userservice.exception.InvalidDomainException;
 import ma.eniad.userservice.exception.ResourceNotFoundException;
+import ma.eniad.userservice.repository.inscription.TeacherAssignmentRepository;
 import ma.eniad.userservice.repository.teacher.TeacherRepository;
 import ma.eniad.userservice.repository.UserRepository;
+import ma.eniad.userservice.service.UserContext;
 import ma.eniad.userservice.mapper.teacher.TeacherMapper;
 import ma.eniad.userservice.dto.teacher.TeacherRequestDTO;
+import ma.eniad.userservice.dto.teacher.TeacherProfileDto;
 import ma.eniad.userservice.dto.teacher.TeacherResponseDTO;
 
 
@@ -46,6 +57,9 @@ class TeacherServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private TeacherAssignmentRepository assignmentRepository;
+
+    @Mock
     private TeacherMapper teacherMapper;
 
     @InjectMocks
@@ -54,6 +68,11 @@ class TeacherServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(teacherService, "allowedDomain", "ump.ac.ma");
+    }
+
+    @AfterEach
+    void tearDown() {
+        UserContext.clear();
     }
 
     @Test
@@ -176,6 +195,71 @@ class TeacherServiceTest {
         when(teacherMapper.toResponse(second)).thenReturn(secondResponse);
 
         assertThat(teacherService.getAll()).containsExactly(firstResponse, secondResponse);
+    }
+
+    @Test
+    void getCurrentProfile_includesTeacherAssignmentsSummary() {
+        UserContext.setCurrentUser("1", "teacher@ump.ac.ma", Set.of("TEACHER"));
+
+        Teacher teacher = new Teacher();
+        teacher.setId(1L);
+        teacher.setEmail("teacher@ump.ac.ma");
+        teacher.setFirstName("Ahmed");
+        teacher.setLastName("Bennani");
+        teacher.setPfpUrl("https://example.com/teacher.png");
+        teacher.setEnabled(true);
+        teacher.setFirstLogin(false);
+        LocalDateTime createdAt = LocalDateTime.of(2026, 1, 10, 9, 0);
+        teacher.setCreatedAt(createdAt);
+
+        Filiere filiere = Filiere.builder().code("GI").name("Genie Informatique").build();
+        Formation formation = Formation.builder().name("GI-1").filiere(filiere).build();
+        Groupe groupe = Groupe.builder().name("GI-1-A").formation(formation).build();
+        Module module = Module.builder().name("Advanced Web Development").code("AWD").formation(formation).build();
+        TeacherAssignment assignment = new TeacherAssignment();
+        assignment.setTeacher(teacher);
+        assignment.setFormation(formation);
+        assignment.setGroupe(groupe);
+        assignment.setModule(module);
+
+        when(teacherRepository.findById(1L)).thenReturn(Optional.of(teacher));
+        when(assignmentRepository.findByTeacherId(1L)).thenReturn(List.of(assignment));
+
+        TeacherProfileDto profile = teacherService.getCurrentProfile();
+
+        assertThat(profile)
+                .extracting("id", "email", "firstName", "lastName", "pfpUrl", "enabled", "firstLogin", "createdAt", "moduleCount", "groupCount", "formationCount")
+                .containsExactly(1L, "teacher@ump.ac.ma", "Ahmed", "Bennani", "https://example.com/teacher.png", true, false, createdAt, 1, 1, 1);
+        assertThat(profile.getModules()).containsExactly("Advanced Web Development");
+        assertThat(profile.getGroupes()).containsExactly("GI-1-A");
+        assertThat(profile.getFormations()).containsExactly("GI-1");
+        assertThat(profile.getFilieres()).containsExactly("GI");
+    }
+
+    @Test
+    void getCurrentProfile_throwsWhenUserContextIsMissing() {
+        assertThatThrownBy(() -> teacherService.getCurrentProfile())
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+                .hasMessageContaining("Missing user context");
+    }
+
+    @Test
+    void updateCurrentProfilePhoto_updatesOnlyCurrentTeacherPhotoUrl() {
+        UserContext.setCurrentUser("1", "teacher@ump.ac.ma", Set.of("TEACHER"));
+
+        Teacher teacher = new Teacher();
+        teacher.setId(1L);
+        teacher.setEmail("teacher@ump.ac.ma");
+
+        String newUrl = "https://example.com/avatar.png";
+
+        when(teacherRepository.findById(1L)).thenReturn(Optional.of(teacher));
+        when(teacherRepository.save(teacher)).thenReturn(teacher);
+        when(assignmentRepository.findByTeacherId(1L)).thenReturn(List.of());
+
+        assertThat(teacherService.updateCurrentProfilePhoto(newUrl).getPfpUrl()).isEqualTo(newUrl);
+        assertThat(teacher.getPfpUrl()).isEqualTo(newUrl);
+        verify(teacherRepository).save(teacher);
     }
 
     @Test

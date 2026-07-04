@@ -18,7 +18,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 
 import ma.eniad.userservice.dto.teacher.TeacherRequestDTO;
+import ma.eniad.userservice.dto.teacher.TeacherProfileDto;
 import ma.eniad.userservice.dto.teacher.TeacherResponseDTO;
+import ma.eniad.userservice.dto.student.UpdateProfilePhotoRequest;
+import ma.eniad.userservice.controller.dto.PresignedUrlResponse;
+import ma.eniad.userservice.service.CloudflareR2Service;
 import ma.eniad.userservice.service.teacher.TeacherService;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,9 +32,12 @@ class TeacherControllerTest {
     @Mock
     private TeacherService teacherService;
 
+    @Mock
+    private CloudflareR2Service r2Service;
+
     @BeforeEach
     void setUp() {
-        controller = new TeacherController(teacherService);
+        controller = new TeacherController(teacherService, r2Service);
     }
 
     @Test
@@ -84,6 +91,58 @@ class TeacherControllerTest {
         assertThat(result.getStatusCode().value()).isEqualTo(200);
         assertThat(result.getBody()).isSameAs(response);
         verify(teacherService).getById(1L);
+    }
+
+    @Test
+    void getProfile_returnsOk() {
+        TeacherProfileDto profile = TeacherProfileDto.builder()
+                .id(1L)
+                .email("teacher@example.com")
+                .firstName("Ahmed")
+                .lastName("Bennani")
+                .moduleCount(2)
+                .groupCount(1)
+                .formationCount(1)
+                .build();
+
+        when(teacherService.getCurrentProfile()).thenReturn(profile);
+
+        ResponseEntity<TeacherProfileDto> result = controller.getProfile();
+
+        assertThat(result.getStatusCode().value()).isEqualTo(200);
+        assertThat(result.getBody()).isSameAs(profile);
+        verify(teacherService).getCurrentProfile();
+    }
+
+    @Test
+    void updateProfilePhoto_returnsOk() {
+        TeacherProfileDto profile = TeacherProfileDto.builder()
+                .id(1L)
+                .pfpUrl("https://example.com/avatar.png")
+                .build();
+        UpdateProfilePhotoRequest request = new UpdateProfilePhotoRequest();
+        request.setPfpUrl("https://example.com/avatar.png");
+
+        when(teacherService.updateCurrentProfilePhoto("https://example.com/avatar.png")).thenReturn(profile);
+
+        ResponseEntity<TeacherProfileDto> result = controller.updateProfilePhoto(request);
+
+        assertThat(result.getStatusCode().value()).isEqualTo(200);
+        assertThat(result.getBody()).isSameAs(profile);
+        verify(teacherService).updateCurrentProfilePhoto("https://example.com/avatar.png");
+    }
+
+    @Test
+    void getProfilePhotoPresignedUrl_returnsUploadUrl() {
+        when(r2Service.generatePresignedUploadUrl(any(String.class), any(String.class)))
+                .thenReturn("https://upload.example.com");
+
+        ResponseEntity<PresignedUrlResponse> result = controller.getProfilePhotoPresignedUrl("image/png");
+
+        assertThat(result.getStatusCode().value()).isEqualTo(200);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody().getUrl()).isEqualTo("https://upload.example.com");
+        assertThat(result.getBody().getKey()).startsWith("profile-photos/").endsWith(".png");
     }
 
     @Test
