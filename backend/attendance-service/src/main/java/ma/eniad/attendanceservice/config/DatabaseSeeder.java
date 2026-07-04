@@ -37,6 +37,7 @@ public class DatabaseSeeder {
 
             List<SeedStudent> groupOneStudents = List.of(
                     new SeedStudent(6L, 1L, "Mariam", "Fahim", "mariamfahim@uma.ac.ma", "250001"),
+                    new SeedStudent(6L, 1L, "Ayoub", "Elebbar", "ayoubelebbar15@gmail.com", "250011"),
                     new SeedStudent(7L, 1L, "Yassine", "Bennani", "student.g1.02@gmail.com", "24000002"),
                     new SeedStudent(8L, 1L, "Salma", "Naciri", "student.g1.03@gmail.com", "24000003"),
                     new SeedStudent(9L, 1L, "Omar", "Ait Lahcen", "student.g1.04@gmail.com", "24000004"),
