@@ -43,6 +43,7 @@ class AttendanceUpdateServiceTest {
     private AttendanceUpdateService attendanceUpdateService;
     private AttendanceRecordRepository attendanceRecordRepository;
     private AttendanceSessionRepository attendanceSessionRepository;
+    private AttendanceNotificationService attendanceNotificationService;
 
     @BeforeEach
     void setUp() {
@@ -50,6 +51,7 @@ class AttendanceUpdateServiceTest {
         liveAttendanceSessionStore = new InMemoryLiveAttendanceSessionStore();
         attendanceRecordRepository = mock(AttendanceRecordRepository.class);
         attendanceSessionRepository = mock(AttendanceSessionRepository.class);
+        attendanceNotificationService = mock(AttendanceNotificationService.class);
         AttendanceSessionLock directLock = new AttendanceSessionLock() {
             @Override
             public <T> T execute(Long sessionId, java.util.function.Supplier<T> operation) {
@@ -62,7 +64,8 @@ class AttendanceUpdateServiceTest {
                 messagingTemplate,
                 directLock,
                 attendanceRecordRepository,
-                attendanceSessionRepository
+                attendanceSessionRepository,
+                attendanceNotificationService
         );
 
         // Ensure internal updates pass auth checks during unit tests

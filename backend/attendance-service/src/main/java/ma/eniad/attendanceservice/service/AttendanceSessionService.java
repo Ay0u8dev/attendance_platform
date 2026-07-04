@@ -27,6 +27,7 @@ public class AttendanceSessionService {
     private final UserServiceClient userServiceClient;
     private final LiveAttendanceSessionStore liveAttendanceSessionStore;
     private final AttendanceSessionProperties attendanceSessionProperties;
+    private final AttendanceNotificationService attendanceNotificationService;
 
     @Transactional
     public AttendanceSessionResponse createSession(Long teacherId, CreateAttendanceSessionRequest request) {
@@ -100,6 +101,9 @@ public class AttendanceSessionService {
             attendanceSessionRepository.flush();
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to initialize live session state", ex);
         }
+
+        attendanceNotificationService.notifySessionStarted(savedSession, roster);
+
         return new AttendanceSessionResponse(
                 savedSession.getId(),
                 savedSession.getTeacherId(),

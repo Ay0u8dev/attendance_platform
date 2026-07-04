@@ -56,6 +56,19 @@ http:
       middlewares: ["forward-auth", "strip-api-face"]
       service: face-service
 
+    # Notification routes — protected, JWT required
+    notification:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/notifications`) && !PathPrefix(`/api/notifications/internal`)"
+      middlewares: ["forward-auth", "strip-api-notification"]
+      service: notification-service
+
+    notifications-ws:
+      entryPoints: ["web"]
+      rule: "Path(`/api/ws/notifications/ws`)"
+      middlewares: ["strip-api-ws-notifications"]
+      service: notification-service
+
     # Frontend — catches everything else, no auth needed
     # Priority is lowest because PathPrefix(/) matches everything.
     # Traefik automatically gives more specific rules higher priority,
@@ -100,6 +113,13 @@ http:
       stripPrefix:
         prefixes: ["/api"]
 
+    strip-api-notification:
+      stripPrefix:
+        prefixes: ["/api"]
+
+    strip-api-ws-notifications:
+      stripPrefix:
+        prefixes: ["/api/ws"]
     # ForwardAuth — this is the JWT validation middleware.
     # Before forwarding any request to a protected service, Traefik
     # makes a request to your auth service's /validate endpoint.
@@ -158,3 +178,9 @@ http:
       loadBalancer:
         servers:
           - url: "http://host.docker.internal:8002"
+
+    notification-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8086"
+

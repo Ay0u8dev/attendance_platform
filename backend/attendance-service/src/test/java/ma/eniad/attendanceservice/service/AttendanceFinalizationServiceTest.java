@@ -41,6 +41,7 @@ class AttendanceFinalizationServiceTest {
     private LiveAttendanceSessionStore liveAttendanceSessionStore;
     private AttendanceSessionReadService attendanceSessionReadService;
     private SimpMessagingTemplate messagingTemplate;
+    private AttendanceNotificationService attendanceNotificationService;
     private AttendanceFinalizationService attendanceFinalizationService;
 
     @BeforeEach
@@ -50,13 +51,17 @@ class AttendanceFinalizationServiceTest {
         liveAttendanceSessionStore = mock(LiveAttendanceSessionStore.class);
         attendanceSessionReadService = mock(AttendanceSessionReadService.class);
         messagingTemplate = mock(SimpMessagingTemplate.class);
+        attendanceNotificationService = mock(AttendanceNotificationService.class);
         attendanceFinalizationService = new AttendanceFinalizationService(
                 attendanceSessionRepository,
                 attendanceRecordRepository,
                 liveAttendanceSessionStore,
                 attendanceSessionReadService,
                 new AttendanceSessionProperties(Duration.ofMinutes(30), Duration.ofHours(1), Duration.ofMinutes(1)),
-                messagingTemplate
+                messagingTemplate,
+                AttendanceFinalizationService.directLock(),
+                null,
+                attendanceNotificationService
         );
     }
 
@@ -96,6 +101,8 @@ class AttendanceFinalizationServiceTest {
         assertThat(presentRecord.getPfpUrl()).isEqualTo("https://cdn.example.com/aya.jpg");
         assertThat(absentRecord.getStatus()).isEqualTo(AttendanceStudentStatus.ABSENT);
         assertThat(absentRecord.getMarkMethod()).isNull();
+        verify(attendanceNotificationService).notifyFinalizedStudentStatuses(eq(session), eq(records));
+        verify(attendanceNotificationService).notifySessionFinalized(eq(session));
 
         ArgumentCaptor<LiveAttendanceSessionMeta> metaCaptor = ArgumentCaptor.forClass(LiveAttendanceSessionMeta.class);
         @SuppressWarnings("unchecked")

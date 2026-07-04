@@ -9,9 +9,14 @@ import ma.eniad.justificationservice.dto.SubmitJustificationRequest;
 import ma.eniad.justificationservice.entity.Justification;
 import ma.eniad.justificationservice.entity.JustificationStatus;
 import ma.eniad.justificationservice.repository.JustificationRepository;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -28,6 +33,7 @@ public class JustificationService {
 
     private final JustificationRepository repository;
     private final AttendanceServiceClient attendanceServiceClient;
+    private final JustificationNotificationService justificationNotificationService;
 
     @Transactional
     public Justification submit(SubmitJustificationRequest request) {
@@ -49,7 +55,10 @@ public class JustificationService {
                 .documentUrl(normalizeOptional(request.documentUrl()))
                 .build();
 
-        return repository.save(justification);
+        Justification saved = repository.save(justification);
+        notifyAfterCommit(() -> justificationNotificationService.notifySubmitted(saved));
+        // TODO(notification): notify admins or the responsible teacher here once a reliable user-id lookup exists.
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -104,7 +113,9 @@ public class JustificationService {
 
         justification.setStatus(JustificationStatus.APPROVED);
         applyReviewData(justification, request, reviewerRole);
-        return repository.save(justification);
+        Justification saved = repository.save(justification);
+        notifyAfterCommit(() -> justificationNotificationService.notifyApproved(saved));
+        return saved;
     }
 
     @Transactional
@@ -115,7 +126,33 @@ public class JustificationService {
         // Le refus ne modifie pas l'assiduite: l'absence reste ABSENT.
         justification.setStatus(JustificationStatus.REJECTED);
         applyReviewData(justification, request, reviewerRole);
-        return repository.save(justification);
+        Justification saved = repository.save(justification);
+        notifyAfterCommit(() -> justificationNotificationService.notifyRejected(saved));
+        return saved;
+    }
+
+    private static final Logger log = LoggerFactory.getLogger(JustificationService.class);
+
+    private void notifyAfterCommit(Runnable notification) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            safeRun(notification);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                safeRun(notification);
+            }
+        });
+    }
+
+    private void safeRun(Runnable notification) {
+        try {
+            notification.run();
+        } catch (Exception ex) {
+            log.warn("Failed to dispatch justification notification", ex);
+        }
     }
 
     private Justification requirePendingJustification(Long id) {

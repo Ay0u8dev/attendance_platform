@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -31,6 +33,7 @@ public class AttendanceFinalizationService {
     private final SimpMessagingTemplate messagingTemplate;
     private final AttendanceSessionLock sessionLock;
     private final TransactionTemplate transactionTemplate;
+    private final AttendanceNotificationService attendanceNotificationService;
 
     @Autowired
     public AttendanceFinalizationService(AttendanceSessionRepository sessions,
@@ -40,7 +43,8 @@ public class AttendanceFinalizationService {
                                          AttendanceSessionProperties properties,
                                          SimpMessagingTemplate messagingTemplate,
                                          AttendanceSessionLock sessionLock,
-                                         TransactionTemplate transactionTemplate) {
+                                         TransactionTemplate transactionTemplate,
+                                         AttendanceNotificationService attendanceNotificationService) {
         this.attendanceSessionRepository = sessions;
         this.attendanceRecordRepository = records;
         this.liveAttendanceSessionStore = store;
@@ -49,6 +53,7 @@ public class AttendanceFinalizationService {
         this.messagingTemplate = messagingTemplate;
         this.sessionLock = sessionLock;
         this.transactionTemplate = transactionTemplate;
+        this.attendanceNotificationService = attendanceNotificationService;
     }
 
     AttendanceFinalizationService(AttendanceSessionRepository sessions,
@@ -58,10 +63,10 @@ public class AttendanceFinalizationService {
                                   AttendanceSessionProperties properties,
                                   SimpMessagingTemplate messagingTemplate) {
         this(sessions, records, store, readService, properties, messagingTemplate,
-                directLock(), null);
+                directLock(), null, null);
     }
 
-    private static AttendanceSessionLock directLock() {
+    static AttendanceSessionLock directLock() {
         return new AttendanceSessionLock() {
             @Override
             public <T> T execute(Long sessionId, Supplier<T> operation) {
@@ -128,7 +133,7 @@ public class AttendanceFinalizationService {
                 .toList();
 
         attendanceRecordRepository.deleteBySessionId(session.getId());
-        attendanceRecordRepository.saveAll(finalizedStudents.stream()
+        List<AttendanceRecord> recordsToPersist = finalizedStudents.stream()
                 .map(student -> AttendanceRecord.builder()
                         .sessionId(session.getId())
                         .studentId(student.studentId())
@@ -142,7 +147,8 @@ public class AttendanceFinalizationService {
                         .markMethod(student.markMethod())
                         .markedAt(student.markedAt())
                         .build())
-                .toList());
+                .toList();
+        List<AttendanceRecord> persistedRecords = attendanceRecordRepository.saveAll(recordsToPersist);
 
         AttendanceCounts counts = computeCounts(finalizedStudents);
         session.setStatus(AttendanceSessionStatus.FINALIZED);
@@ -151,6 +157,8 @@ public class AttendanceFinalizationService {
         session.setAbsentCount(counts.absentCount());
         session.setUnknownCount(counts.unknownCount());
         attendanceSessionRepository.save(session);
+
+        notifyFinalizationAfterCommit(session, persistedRecords);
 
         LiveAttendanceSessionMeta finalizedMeta = new LiveAttendanceSessionMeta(
                 meta.sessionId(),
@@ -198,6 +206,27 @@ public class AttendanceFinalizationService {
             }
         }
         return new AttendanceCounts(present, absent, unknown);
+    }
+
+    private void notifyFinalizationAfterCommit(AttendanceSession session, List<AttendanceRecord> persistedRecords) {
+        if (attendanceNotificationService == null) {
+            return;
+        }
+
+        List<AttendanceRecord> notificationRecords = List.copyOf(persistedRecords);
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            attendanceNotificationService.notifyFinalizedStudentStatuses(session, notificationRecords);
+            attendanceNotificationService.notifySessionFinalized(session);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                attendanceNotificationService.notifyFinalizedStudentStatuses(session, notificationRecords);
+                attendanceNotificationService.notifySessionFinalized(session);
+            }
+        });
     }
 
     private <T> T inTransaction(Supplier<T> operation) {
