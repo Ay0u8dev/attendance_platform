@@ -330,6 +330,8 @@ export class NotificationBellComponent {
         return 'fa-regular fa-circle-xmark';
       case 'JUSTIFICATION_SUBMITTED':
         return 'fa-regular fa-paper-plane';
+      case 'JUSTIFICATION_REVIEW_REQUESTED':
+        return 'fa-regular fa-clipboard';
       case 'JUSTIFICATION_APPROVED':
         return 'fa-regular fa-circle-check';
       case 'JUSTIFICATION_REJECTED':

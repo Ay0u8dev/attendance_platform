@@ -14,6 +14,8 @@ public class JustificationNotificationService {
 
     private static final String REQUEST_SOURCE = "justification-service";
     private static final String ROLE_STUDENT = "STUDENT";
+    private static final String ROLE_TEACHER = "TEACHER";
+    private static final String ROLE_ADMIN = "ADMIN";
     private static final String ENTITY_JUSTIFICATION = "JUSTIFICATION";
 
     private final NotificationServiceClient notificationServiceClient;
@@ -31,6 +33,40 @@ public class JustificationNotificationService {
                 String.valueOf(justification.getId()),
                 buildMetadata(justification)
         ), "justification-submitted", justification);
+    }
+
+    public void notifySubmittedForTeacher(Justification justification, Long teacherId) {
+        sendSafely(new CreateNotificationRequest(
+                teacherId,
+                ROLE_TEACHER,
+                "JUSTIFICATION_REVIEW_REQUESTED",
+                "INFO",
+                "New justification request",
+                labelOrFallback(justification.getStudentName(), "A student")
+                        + " submitted a justification for "
+                        + labelOrFallback(justification.getModule(), "your session")
+                        + ".",
+                ENTITY_JUSTIFICATION,
+                String.valueOf(justification.getId()),
+                buildMetadata(justification)
+        ), "justification-review-requested", justification);
+    }
+
+    public void notifySubmittedForAdmin(Justification justification, Long adminId) {
+        sendSafely(new CreateNotificationRequest(
+                adminId,
+                ROLE_ADMIN,
+                "JUSTIFICATION_REVIEW_REQUESTED",
+                "INFO",
+                "New justification request",
+                labelOrFallback(justification.getStudentName(), "A student")
+                        + " submitted a justification for "
+                        + labelOrFallback(justification.getModule(), "a session")
+                        + ".",
+                ENTITY_JUSTIFICATION,
+                String.valueOf(justification.getId()),
+                buildMetadata(justification)
+        ), "justification-review-requested-admin", justification);
     }
 
     public void notifyApproved(Justification justification) {

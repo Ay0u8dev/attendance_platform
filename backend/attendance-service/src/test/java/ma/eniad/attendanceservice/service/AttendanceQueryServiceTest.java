@@ -5,8 +5,11 @@ import ma.eniad.attendanceservice.dto.AttendanceCounts;
 import ma.eniad.attendanceservice.dto.AttendanceSessionDetailsResponse;
 import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 import ma.eniad.attendanceservice.dto.PagedResponse;
+import ma.eniad.attendanceservice.dto.StudentRosterDto;
 import ma.eniad.attendanceservice.dto.StudentActiveAttendanceSessionResponse;
 import ma.eniad.attendanceservice.dto.StudentAttendanceSessionDetailResponse;
+import ma.eniad.attendanceservice.dto.TeacherAttendanceReportResponse;
+import ma.eniad.attendanceservice.client.UserServiceClient;
 import ma.eniad.attendanceservice.entity.AttendanceRecord;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
 import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
@@ -41,6 +44,7 @@ class AttendanceQueryServiceTest {
     private AttendanceRecordRepository attendanceRecordRepository;
     private AttendanceSessionReadService attendanceSessionReadService;
     private LiveAttendanceSessionStore liveAttendanceSessionStore;
+    private UserServiceClient userServiceClient;
     private AttendanceQueryService attendanceQueryService;
 
     @BeforeEach
@@ -49,11 +53,13 @@ class AttendanceQueryServiceTest {
         attendanceRecordRepository = mock(AttendanceRecordRepository.class);
         attendanceSessionReadService = mock(AttendanceSessionReadService.class);
         liveAttendanceSessionStore = mock(LiveAttendanceSessionStore.class);
+        userServiceClient = mock(UserServiceClient.class);
         attendanceQueryService = new AttendanceQueryService(
                 attendanceSessionRepository,
                 attendanceRecordRepository,
                 attendanceSessionReadService,
-                liveAttendanceSessionStore
+                liveAttendanceSessionStore,
+                userServiceClient
         );
     }
 
@@ -104,6 +110,57 @@ class AttendanceQueryServiceTest {
         assertThat(response.totalPresentMarks()).isEqualTo(3);
         assertThat(response.totalAbsentMarks()).isEqualTo(1);
         assertThat(response.attendanceRate()).isEqualTo(0.75);
+    }
+
+    @Test
+    void teacherExportReportGroupsStudentRowsByFiliereWithSessionStatusColumns() {
+        AttendanceSession sessionOne = baseSession(100L, AttendanceSessionStatus.FINALIZED);
+        sessionOne.setGroupIds(List.of(1L));
+        sessionOne.setStartedAt(LocalDateTime.of(2026, 4, 28, 12, 0));
+        AttendanceSession sessionTwo = baseSession(101L, AttendanceSessionStatus.FINALIZED);
+        sessionTwo.setGroupIds(List.of(2L));
+        sessionTwo.setStartedAt(LocalDateTime.of(2026, 4, 29, 12, 0));
+
+        AttendanceRecord giRecord = AttendanceRecord.builder()
+                .sessionId(100L)
+                .studentId(10L)
+                .groupId(1L)
+                .firstName("Aya")
+                .lastName("Bennani")
+                .email("aya@ump.ac.ma")
+                .numApogee("A001")
+                .status(AttendanceStudentStatus.PRESENT)
+                .build();
+        AttendanceRecord idsRecord = AttendanceRecord.builder()
+                .sessionId(101L)
+                .studentId(11L)
+                .groupId(2L)
+                .firstName("Yassine")
+                .lastName("Fassi")
+                .email("yassine@ump.ac.ma")
+                .numApogee("A002")
+                .status(AttendanceStudentStatus.ABSENT)
+                .build();
+
+        when(attendanceSessionRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class)))
+                .thenReturn(List.of(sessionTwo, sessionOne));
+        when(attendanceRecordRepository.findBySessionIdInOrderByStudentIdAscSessionIdAsc(List.of(100L, 101L)))
+                .thenReturn(List.of(giRecord, idsRecord));
+        when(userServiceClient.getStudentRosterByGroupIds(List.of(1L, 2L))).thenReturn(List.of(
+                new StudentRosterDto(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", null, "A001", "GI", "GI-1"),
+                new StudentRosterDto(11L, 2L, "Yassine", "Fassi", "yassine@ump.ac.ma", null, "A002", "IDS", "IDS-1")
+        ));
+
+        TeacherAttendanceReportResponse response = attendanceQueryService.getTeacherExportReport(77L, null, null, null);
+
+        assertThat(response.filieres()).extracting("filiere").containsExactly("GI", "IDS");
+        assertThat(response.filieres().getFirst().sessions()).extracting("sessionId").containsExactly(100L);
+        assertThat(response.filieres().getFirst().students().getFirst().groupeName()).isEqualTo("GI-1");
+        assertThat(response.filieres().getFirst().students().getFirst().statusesBySessionId())
+                .containsEntry(100L, AttendanceStudentStatus.PRESENT);
+        assertThat(response.filieres().getLast().sessions()).extracting("sessionId").containsExactly(101L);
+        assertThat(response.filieres().getLast().students().getFirst().statusesBySessionId())
+                .containsEntry(101L, AttendanceStudentStatus.ABSENT);
     }
 
     @Test
@@ -172,6 +229,8 @@ class AttendanceQueryServiceTest {
                         "aya@ump.ac.ma",
                         null,
                         "A001",
+                        "GI",
+                        "GI-1",
                         AttendanceStudentStatus.UNKNOWN,
                         null,
                         null,

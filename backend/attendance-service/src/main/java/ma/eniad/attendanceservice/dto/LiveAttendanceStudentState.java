@@ -15,6 +15,8 @@ public record LiveAttendanceStudentState(
         String pfpUrl,
 
         String numApogee,
+        String filiere,
+        String groupeName,
 
         AttendanceStudentStatus status,
 

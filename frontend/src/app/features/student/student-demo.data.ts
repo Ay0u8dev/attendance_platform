@@ -63,7 +63,7 @@ export type StudentJustificationDetail = {
     title: string;
     description: string;
     meta: string;
-    state: 'done' | 'current' | 'upcoming';
+    state: 'done' | 'current' | 'upcoming' | 'approved' | 'rejected';
   }[];
 };
 
@@ -406,7 +406,7 @@ export const STUDENT_JUSTIFICATION_DETAILS: readonly StudentJustificationDetail[
         title: 'Analyse par l’administration',
         description: 'Le justificatif est en cours de revue.',
         meta: 'Statut actuel',
-        state: 'current',
+        state: 'approved',
       },
       {
         title: 'Décision finale',
@@ -448,7 +448,7 @@ export const STUDENT_JUSTIFICATION_DETAILS: readonly StudentJustificationDetail[
         title: 'Justification acceptée',
         description: 'L’absence ne sera pas comptabilisée contre vous.',
         meta: 'Décision finale',
-        state: 'current',
+        state: 'rejected',
       },
     ],
   },

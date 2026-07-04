@@ -1,4 +1,4 @@
-package ma.eniad.justificationservice.controller.dto;
+package ma.eniad.justificationservice.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

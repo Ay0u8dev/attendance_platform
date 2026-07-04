@@ -1,25 +1,42 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs/operators';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { JustificationDto } from '../../../core/justifications/justification.model';
 import { JustificationService } from '../../../core/justifications/justification.service';
-import { DataTableCellDef } from '../../../shared/components/data-table/data-table-cell-def';
-import { DataTable } from '../../../shared/components/data-table/data-table';
-import { DataTableColumn } from '../../../shared/components/data-table/data-table.types';
+import { StudentUser } from '../../../core/users/models/student.model';
+import { StudentUserService } from '../../../core/users/services/student-user.service';
 import { Modal } from '../../../shared/components/modal/modal';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
 import { ToastService } from '../../../shared/components/toast/toast.service';
-
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 type TeacherJustificationStatus = 'En attente' | 'Approuvee' | 'Declinee';
 type TeacherJustificationVariant = 'warning' | 'success' | 'error' | 'neutral';
+
+type StudentAcademicMeta = {
+  readonly formation: string | null;
+  readonly className: string | null;
+  readonly group: string | null;
+};
 
 interface TeacherJustificationRow {
   readonly id: number;
   readonly studentName: string;
   readonly studentCode: string;
+  readonly studentFormation: string | null;
+  readonly studentClass: string | null;
+  readonly studentGroup: string | null;
+  readonly studentMeta: readonly { label: string; value: string }[];
   readonly module: string;
   readonly sessionDate: string;
   readonly submittedAt: string;
@@ -59,72 +76,46 @@ function createAttachmentPreview(title: string, subtitle: string, color: string)
 @Component({
   selector: 'app-teacher-justifications-page',
   standalone: true,
-  imports: [PageHeader, DataTable, DataTableCellDef, StatusBadge, Modal],
+  imports: [FormsModule, PageHeader, StatusBadge, Modal],
   templateUrl: './justifications-page.html',
   styleUrl: './justifications-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TeacherJustificationsPage implements OnInit {
   private readonly justificationService = inject(JustificationService);
+  private readonly studentService = inject(StudentUserService);
   private readonly authService = inject(AuthService);
   private readonly toastService = inject(ToastService);
-
+  private readonly sanitizer = inject(DomSanitizer);
   readonly rows = signal<readonly TeacherJustificationRow[]>([]);
   readonly selectedJustification = signal<TeacherJustificationRow | null>(null);
   readonly loading = signal(false);
   readonly reviewingId = signal<number | null>(null);
   readonly errorMessage = signal<string | null>(null);
+  readonly reviewCommentDraft = signal('');
+  private readonly studentMetadataByCode = signal<ReadonlyMap<string, StudentAcademicMeta>>(
+    new Map(),
+  );
 
   readonly pendingCount = computed(
     () => this.rows().filter((row) => row.status === 'En attente').length,
   );
 
-  readonly justificationRowId = (row: TeacherJustificationRow) => String(row.id);
-
-  readonly columns: readonly DataTableColumn<TeacherJustificationRow>[] = [
-    {
-      id: 'student',
-      header: 'Etudiant',
-      accessor: (row) => row.studentName,
-      width: '16rem',
-    },
-    {
-      id: 'module',
-      header: 'Module',
-      accessor: (row) => row.module,
-      width: '15rem',
-    },
-    {
-      id: 'sessionDate',
-      header: 'Seance',
-      accessor: (row) => row.sessionDate,
-      width: '13rem',
-    },
-    {
-      id: 'reason',
-      header: 'Motif',
-      accessor: (row) => row.reason,
-      width: '14rem',
-    },
-    {
-      id: 'status',
-      header: 'Statut',
-      accessor: (row) => row.status,
-      width: '10rem',
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      accessor: () => '',
-      align: 'end',
-      sortable: false,
-      searchable: false,
-      width: '18rem',
-    },
-  ];
-
   ngOnInit(): void {
+    this.loadStudentMetadata();
     this.loadJustifications();
+  }
+
+  loadStudentMetadata(): void {
+    this.studentService.getAll().subscribe({
+      next: (students) => {
+        this.studentMetadataByCode.set(this.buildStudentMetadataMap(students));
+        this.enrichRowsWithStudentMetadata();
+      },
+      error: () => {
+        // The justification list remains usable even if roster enrichment fails.
+      },
+    });
   }
 
   loadJustifications(): void {
@@ -158,6 +149,7 @@ export class TeacherJustificationsPage implements OnInit {
       .subscribe({
         next: (justification) => {
           this.upsertRow(this.toRow(justification));
+          this.closeDetails();
           this.toastService.success('Justification approuvee');
         },
         error: (error: HttpErrorResponse) => {
@@ -174,6 +166,7 @@ export class TeacherJustificationsPage implements OnInit {
       .subscribe({
         next: (justification) => {
           this.upsertRow(this.toRow(justification));
+          this.closeDetails();
           this.toastService.success('Justification declinee');
         },
         error: (error: HttpErrorResponse) => {
@@ -184,10 +177,14 @@ export class TeacherJustificationsPage implements OnInit {
 
   openDetails(row: TeacherJustificationRow): void {
     this.selectedJustification.set(row);
+    this.reviewCommentDraft.set(
+      row.reviewComment === 'Aucun commentaire enseignant.' ? '' : row.reviewComment,
+    );
   }
 
   closeDetails(): void {
     this.selectedJustification.set(null);
+    this.reviewCommentDraft.set('');
   }
 
   openAttachment(row: TeacherJustificationRow): void {
@@ -219,28 +216,42 @@ export class TeacherJustificationsPage implements OnInit {
   private buildReviewPayload() {
     const user = this.authService.currentUser;
     const reviewerName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
+    const comment = this.reviewCommentDraft().trim();
 
     return {
       reviewerId: user?.id,
       reviewerName: reviewerName || user?.email || 'Enseignant',
       reviewerRole: 'TEACHER' as const,
-      comment: 'Decision traitee depuis l espace enseignant.',
+      comment: comment || undefined,
     };
   }
 
   private toRow(justification: JustificationDto): TeacherJustificationRow {
     const statusData = this.statusData(justification.status);
-    const documentUrl = justification.documentUrl?.trim() || null;
+    const documentUrl = this.justificationService.resolveDocumentUrl(justification.documentUrl);
+    const rosterMeta = this.studentMetadataByCode().get(
+      this.normalizeCode(justification.studentCode),
+    );
+    const studentFormation =
+      this.normalizeOptional(justification.studentFormation) ?? rosterMeta?.formation ?? null;
+    const studentClass =
+      this.normalizeOptional(justification.studentClass) ?? rosterMeta?.className ?? null;
+    const studentGroup =
+      this.normalizeOptional(justification.studentGroup) ?? rosterMeta?.group ?? null;
 
     return {
       id: justification.id,
       studentName: justification.studentName || 'Etudiant non renseigne',
       studentCode: justification.studentCode || '-',
+      studentFormation,
+      studentClass,
+      studentGroup,
+      studentMeta: this.buildStudentMeta(studentFormation, studentGroup),
       module: justification.module || 'Module non renseigne',
       sessionDate: this.formatDateTime(justification.sessionDate),
       submittedAt: this.formatDate(justification.submittedAt),
       reason: justification.reason || 'Motif non renseigne',
-      attachmentName: this.attachmentName(documentUrl),
+      attachmentName: this.attachmentName(justification, documentUrl),
       attachmentPreviewUrl:
         documentUrl ??
         createAttachmentPreview('Justificatif', 'Piece jointe non disponible', '#64748b'),
@@ -267,13 +278,91 @@ export class TeacherJustificationsPage implements OnInit {
     }
   }
 
-  private attachmentName(documentUrl: string | null): string {
-    if (!documentUrl) {
+  private attachmentName(justification: JustificationDto, resolvedUrl: string | null): string {
+    if (justification.documentName) {
+      return justification.documentName;
+    }
+    if (!resolvedUrl) {
       return 'Aucune piece jointe';
     }
 
-    const cleanUrl = documentUrl.split('?')[0].split('#')[0];
-    return decodeURIComponent(cleanUrl.split('/').pop() || 'Piece jointe');
+    const cleanUrl = resolvedUrl.split('?')[0].split('#')[0];
+    let name = decodeURIComponent(cleanUrl.split('/').pop() || 'Piece jointe');
+    name = name.replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[_-]/i, '');
+    name = name.replace(
+      /[_-][0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\.[a-zA-Z0-9]+$|$)/i,
+      '',
+    );
+    return name;
+  }
+
+  private normalizeOptional(value: string | null | undefined): string | null {
+    const normalized = value?.trim();
+    return normalized ? normalized : null;
+  }
+
+  private buildStudentMetadataMap(
+    students: readonly StudentUser[],
+  ): ReadonlyMap<string, StudentAcademicMeta> {
+    const metadata = new Map<string, StudentAcademicMeta>();
+
+    for (const student of students) {
+      const code = this.normalizeCode(student.numApogee);
+      if (!code) {
+        continue;
+      }
+
+      metadata.set(code, {
+        formation: this.normalizeOptional(student.filiere),
+        className:
+          this.normalizeOptional(student.cycle) ?? this.normalizeOptional(student.academicYear),
+        group: this.normalizeOptional(student.groupeName),
+      });
+    }
+
+    return metadata;
+  }
+
+  private enrichRowsWithStudentMetadata(): void {
+    let updatedRows: readonly TeacherJustificationRow[] = [];
+    this.rows.update((rows) => {
+      updatedRows = rows.map((row) => this.enrichRowWithStudentMetadata(row));
+      return updatedRows;
+    });
+    this.syncSelectedRow(updatedRows);
+  }
+
+  private enrichRowWithStudentMetadata(row: TeacherJustificationRow): TeacherJustificationRow {
+    const rosterMeta = this.studentMetadataByCode().get(this.normalizeCode(row.studentCode));
+    if (!rosterMeta) {
+      return row;
+    }
+
+    const studentFormation = row.studentFormation ?? rosterMeta.formation;
+    const studentClass = row.studentClass ?? rosterMeta.className;
+    const studentGroup = row.studentGroup ?? rosterMeta.group;
+
+    return {
+      ...row,
+      studentFormation,
+      studentClass,
+      studentGroup,
+      studentMeta: this.buildStudentMeta(studentFormation, studentGroup),
+    };
+  }
+
+  private buildStudentMeta(
+    studentFormation: string | null,
+    studentGroup: string | null,
+  ): readonly { label: string; value: string }[] {
+    return [
+      studentFormation ? { label: 'Formation', value: studentFormation } : null,
+      studentGroup ? { label: 'Groupe', value: studentGroup } : null,
+    ].filter((item): item is { label: string; value: string } => item !== null);
+  }
+
+  private normalizeCode(value: string | null | undefined): string {
+    return value?.trim().toLowerCase() ?? '';
   }
 
   private formatDate(value: string): string {
@@ -296,8 +385,19 @@ export class TeacherJustificationsPage implements OnInit {
 
   private errorLabel(error: HttpErrorResponse): string {
     const message = error.error?.message || error.error?.error || error.message;
-    return typeof message === 'string' && message.trim()
-      ? message
-      : 'Une erreur est survenue.';
+    return typeof message === 'string' && message.trim() ? message : 'Une erreur est survenue.';
+  }
+  getAttachmentType(url: string | null): 'pdf' | 'image' | 'other' {
+    if (!url) return 'other';
+    const lower = url.toLowerCase();
+    if (lower.startsWith('data:image')) return 'image';
+    if (lower.includes('.pdf')) return 'pdf';
+    if (/\.(png|jpe?g|gif|webp|bmp|svg)(\?|$)/.test(lower)) return 'image';
+    return 'other';
+  }
+
+  getSafeUrl(url: string): SafeResourceUrl {
+    const cleanUrl = `${url}#toolbar=0&navpanes=0&scrollbar=0`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(cleanUrl);
   }
 }

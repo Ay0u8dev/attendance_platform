@@ -72,9 +72,11 @@ class AttendanceFinalizationServiceTest {
         when(liveAttendanceSessionStore.findSessionMeta(100L)).thenReturn(Optional.of(baseMeta(AttendanceSessionStatus.ACTIVE)));
         when(liveAttendanceSessionStore.findAllStudentStates(100L)).thenReturn(List.of(
                 new LiveAttendanceStudentState(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001",
+                        "GI", "GI-1",
                         AttendanceStudentStatus.PRESENT, LocalDateTime.of(2026, 4, 28, 12, 5),
                         AttendanceSessionMethod.QR_CODE, "phone-10", "34.6820", "-1.9091"),
                 new LiveAttendanceStudentState(11L, 1L, "Yassine", "Fassi", "yassine@ump.ac.ma", "https://cdn.example.com/yassine.jpg", "A002",
+                        "GI", "GI-1",
                         AttendanceStudentStatus.UNKNOWN, null, null, null, null, null)
         ));
         doNothing().when(attendanceRecordRepository).deleteBySessionId(100L);
@@ -99,6 +101,8 @@ class AttendanceFinalizationServiceTest {
         AttendanceRecord absentRecord = records.getLast();
         assertThat(presentRecord.getFirstName()).isEqualTo("Aya");
         assertThat(presentRecord.getPfpUrl()).isEqualTo("https://cdn.example.com/aya.jpg");
+        assertThat(presentRecord.getFiliere()).isEqualTo("GI");
+        assertThat(presentRecord.getGroupeName()).isEqualTo("GI-1");
         assertThat(absentRecord.getStatus()).isEqualTo(AttendanceStudentStatus.ABSENT);
         assertThat(absentRecord.getMarkMethod()).isNull();
         verify(attendanceNotificationService).notifyFinalizedStudentStatuses(eq(session), eq(records));
@@ -136,6 +140,7 @@ class AttendanceFinalizationServiceTest {
         when(liveAttendanceSessionStore.findSessionMeta(100L)).thenReturn(Optional.of(baseMeta(AttendanceSessionStatus.ACTIVE)));
         when(liveAttendanceSessionStore.findAllStudentStates(100L)).thenReturn(List.of(
                 new LiveAttendanceStudentState(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001",
+                        "GI", "GI-1",
                         AttendanceStudentStatus.UNKNOWN, null, null, null, null, null)
         ));
         doNothing().when(attendanceRecordRepository).deleteBySessionId(100L);
@@ -160,6 +165,7 @@ class AttendanceFinalizationServiceTest {
         )));
         when(liveAttendanceSessionStore.findAllStudentStates(100L)).thenReturn(List.of(
                 new LiveAttendanceStudentState(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001",
+                        "GI", "GI-1",
                         AttendanceStudentStatus.PRESENT, LocalDateTime.of(2026, 4, 28, 12, 5),
                         AttendanceSessionMethod.FACE_ID, "face-phone-10", "34.6820", "-1.9091")
         ));

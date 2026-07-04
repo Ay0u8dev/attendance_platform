@@ -77,6 +77,17 @@ public class UserController {
         return ResponseEntity.ok(userService.getTeacherIdentityById(id));
     }
 
+    @GetMapping("internal/admins/ids")
+    public ResponseEntity<List<Long>> getAdminIds(
+            @RequestHeader(name = "X-Request-Source", required = false) String requestSource
+    ) {
+        if (!"justification-service".equals(requestSource)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Untrusted request source");
+        }
+
+        return ResponseEntity.ok(userService.getEnabledAdminIds());
+    }
+
 //    @GetMapping
 //    public List<User> findAll() {
 //        return userRepository.findAll();

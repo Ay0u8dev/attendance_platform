@@ -16,7 +16,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -37,12 +36,12 @@ class AttendanceNotificationServiceTest {
         AttendanceSession session = baseSession();
 
         attendanceNotificationService.notifySessionStarted(session, List.of(
-                new StudentRosterDto(10L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", null, "A001"),
-                new StudentRosterDto(11L, 1L, "Yassine", "Fassi", "yassine@ump.ac.ma", null, "A002")
+                rosterStudent(10L, "Aya", "Bennani", "aya@ump.ac.ma", "A001"),
+                rosterStudent(11L, "Yassine", "Fassi", "yassine@ump.ac.ma", "A002")
         ));
 
         ArgumentCaptor<CreateNotificationRequest> captor = ArgumentCaptor.forClass(CreateNotificationRequest.class);
-        verify(notificationServiceClient, org.mockito.Mockito.times(2)).createNotification(anyString(), captor.capture());
+        verify(notificationServiceClient, org.mockito.Mockito.times(2)).createNotification(captor.capture());
         assertThat(captor.getAllValues())
                 .extracting(CreateNotificationRequest::type)
                 .containsOnly("ATTENDANCE_SESSION_STARTED");
@@ -59,7 +58,7 @@ class AttendanceNotificationServiceTest {
         ));
 
         ArgumentCaptor<CreateNotificationRequest> captor = ArgumentCaptor.forClass(CreateNotificationRequest.class);
-        verify(notificationServiceClient, org.mockito.Mockito.times(2)).createNotification(anyString(), captor.capture());
+        verify(notificationServiceClient, org.mockito.Mockito.times(2)).createNotification(captor.capture());
         assertThat(captor.getAllValues())
                 .extracting(CreateNotificationRequest::type)
                 .containsExactly("ATTENDANCE_STATUS_CONFIRMED", "ABSENCE_RECORDED");
@@ -83,7 +82,7 @@ class AttendanceNotificationServiceTest {
         attendanceNotificationService.notifySessionFinalized(session);
 
         ArgumentCaptor<CreateNotificationRequest> captor = ArgumentCaptor.forClass(CreateNotificationRequest.class);
-        verify(notificationServiceClient).createNotification(anyString(), captor.capture());
+        verify(notificationServiceClient).createNotification(captor.capture());
         assertThat(captor.getValue().recipientUserId()).isEqualTo(77L);
         assertThat(captor.getValue().recipientRole()).isEqualTo("TEACHER");
         assertThat(captor.getValue().type()).isEqualTo("ATTENDANCE_SESSION_FINALIZED");
@@ -94,7 +93,7 @@ class AttendanceNotificationServiceTest {
     void notificationClientFailuresAreNonBlocking() {
         doThrow(new RuntimeException("notification-service down"))
                 .when(notificationServiceClient)
-                .createNotification(anyString(), any());
+                .createNotification(any());
 
         assertThatNoException().isThrownBy(() ->
                 attendanceNotificationService.notifyFinalizedStudentStatuses(baseSession(), List.of(
@@ -120,5 +119,23 @@ class AttendanceNotificationServiceTest {
                 .studentId(studentId)
                 .status(status)
                 .build();
+    }
+
+    private StudentRosterDto rosterStudent(Long studentId,
+                                           String firstName,
+                                           String lastName,
+                                           String email,
+                                           String numApogee) {
+        return new StudentRosterDto(
+                studentId,
+                1L,
+                firstName,
+                lastName,
+                email,
+                null,
+                numApogee,
+                "Computer Science",
+                "G1"
+        );
     }
 }

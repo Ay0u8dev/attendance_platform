@@ -76,6 +76,28 @@ class NotificationServiceTest {
     }
 
     @Test
+    void justificationReviewRequestedDefaultsToInfoSeverity() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        notificationService.createNotification(new CreateNotificationRequest(
+                77L,
+                RecipientRole.TEACHER,
+                NotificationType.JUSTIFICATION_REVIEW_REQUESTED,
+                null,
+                "New justification request",
+                "A student submitted a justification.",
+                "JUSTIFICATION",
+                "55",
+                null
+        ));
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+        assertThat(captor.getValue().getSeverity()).isEqualTo(NotificationSeverity.INFO);
+        assertThat(captor.getValue().getRecipientRole()).isEqualTo(RecipientRole.TEACHER);
+    }
+
+    @Test
     void deleteNotificationSoftDeletesOnlyOwnNotification() {
         Notification notification = Notification.builder()
                 .id(1L)

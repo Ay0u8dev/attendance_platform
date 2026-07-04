@@ -9,8 +9,11 @@ import {
   CreateAttendanceSessionRequest,
   ManualAttendanceUpdateRequest,
   PagedResponse,
+  TeacherAttendanceReportDto,
   TeacherSessionsQuery,
 } from '../models/attendance.model';
+import { StudentAttendanceSessionSummaryDto } from '../models/student-attendance.model';
+import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AttendanceService {
@@ -40,6 +43,17 @@ export class AttendanceService {
     return this.http.get<PagedResponse<AttendanceSessionSummary>>(this.baseUrl, { params });
   }
 
+  getTeacherExportReport(query: { dateFrom?: string; dateTo?: string; courseLabel?: string } = {}) {
+    let params = new HttpParams();
+    Object.entries(query).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params = params.set(key, String(value));
+      }
+    });
+
+    return this.http.get<TeacherAttendanceReportDto>(`${this.baseUrl}/export-report`, { params });
+  }
+
   updateAttendance(sessionId: number, payload: ManualAttendanceUpdateRequest) {
     return this.http.post<AttendanceUpdateResponse>(
       `${this.baseUrl}/${sessionId}/attendance`,
@@ -49,5 +63,20 @@ export class AttendanceService {
 
   endSession(sessionId: number) {
     return this.http.post<AttendanceSessionResponse>(`${this.baseUrl}/${sessionId}/end`, {});
+  }
+
+  getStudentSessions(
+    studentId: number,
+    status?: string
+  ): Observable<PagedResponse<StudentAttendanceSessionSummaryDto>> {
+    let params = new HttpParams();
+    if (status) {
+      params = params.set('status', status);
+    }
+    params = params.set('size', '1000');
+    return this.http.get<PagedResponse<StudentAttendanceSessionSummaryDto>>(
+      `${this.baseUrl}/students/${studentId}/sessions`,
+      { params }
+    );
   }
 }

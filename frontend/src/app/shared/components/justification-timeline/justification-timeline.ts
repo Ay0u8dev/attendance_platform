@@ -4,11 +4,14 @@ type TimelineItem = {
   readonly title: string;
   readonly description: string;
   readonly meta: string;
-  readonly state: 'done' | 'current' | 'upcoming';
+  readonly state: 'done' | 'current' | 'upcoming' | 'approved' | 'rejected';
 };
 
 @Component({
   selector: 'app-justification-timeline',
+  host: {
+    class: 'block',
+  },
   template: `
     <section class="rounded-[1.75rem] border border-line bg-surface p-5 shadow-card">
       <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
@@ -25,7 +28,8 @@ type TimelineItem = {
               >
                 <i
                   class="fa-solid text-xs"
-                  [class.fa-check]="item.state === 'done'"
+                  [class.fa-check]="item.state === 'done' || item.state === 'approved'"
+                  [class.fa-xmark]="item.state === 'rejected'"
                   [class.fa-clock]="item.state === 'current'"
                   [class.fa-ellipsis]="item.state === 'upcoming'"
                   aria-hidden="true"
@@ -58,6 +62,10 @@ export class JustificationTimeline {
     switch (state) {
       case 'done':
         return 'border-secondary-soft bg-secondary-soft text-secondary-strong';
+      case 'approved':
+        return 'border-secondary-soft bg-secondary-soft text-secondary-strong';
+      case 'rejected':
+        return 'border-danger-soft bg-danger-soft text-danger';
       case 'current':
         return 'border-primary-soft bg-primary-soft text-primary';
       default:

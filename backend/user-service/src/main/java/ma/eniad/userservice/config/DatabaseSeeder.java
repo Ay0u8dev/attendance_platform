@@ -4,6 +4,7 @@ import ma.eniad.userservice.entity.Admin;
 import ma.eniad.userservice.entity.Inscription;
 import ma.eniad.userservice.entity.Student;
 import ma.eniad.userservice.entity.Teacher;
+import ma.eniad.userservice.entity.TeacherAssignment;
 import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.entity.enums.CycleType;
 import ma.eniad.userservice.entity.enums.Role;
@@ -11,6 +12,7 @@ import ma.eniad.userservice.entity.structure.*;
 import ma.eniad.userservice.entity.structure.Module;
 import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
+import ma.eniad.userservice.repository.inscription.TeacherAssignmentRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
 import ma.eniad.userservice.repository.structure.*;
 import org.springframework.boot.CommandLineRunner;
@@ -41,6 +43,7 @@ public class DatabaseSeeder {
             GroupeRepository groupeRepository,
             ModuleRepository moduleRepository,
             StudentInscriptionRepository inscriptionRepository,
+            TeacherAssignmentRepository teacherAssignmentRepository,
             StudentRepository studentRepository,
             TransactionTemplate transactionTemplate) {
         return args -> transactionTemplate.executeWithoutResult(status -> {
@@ -54,6 +57,7 @@ public class DatabaseSeeder {
                     moduleRepository
             );
             seedInscriptions(inscriptionRepository, seedUsers, seedStructure);
+            seedTeacherAssignments(teacherAssignmentRepository, seedUsers, seedStructure);
         });
     }
 
@@ -65,20 +69,20 @@ public class DatabaseSeeder {
                 "Elebbar"
         );
 
-        ensureTeacher(
+        Teacher mariamTeacher = ensureTeacher(
                 userRepository,
-                "abdelkoddousselfadili@ump.ac.ma",
-                "Abdelkoddouss",
-                "Elfadili"
+                "mariam.fahim.2003@gmail.com",
+                "Mariam",
+                "Fahim"
         );
 
-        ensureAdmin(userRepository, "mariamfahim@ump.ac.ma", "Mariam", "Fahim");
+        // ensureAdmin(userRepository, "mariamfahim@ump.ac.ma", "Mariam", "Fahim");
         ensureAdmin(userRepository, "abdelaliferhan@ump.ac.ma", "Abdelali", "Ferhan");
         ensureAdmin(userRepository, "abdelkodouselfadili@ump.ac.ma", "Abdelkodous", "Elfadili");
         ensureTeacher(userRepository, "ayoubelebbar03@gmail.com", "Ayoub", "Elebbar");
 
         List<Student> students = new ArrayList<>(List.of(
-                ensureStudent(userRepository, studentRepository, "sofiane.meziane@ump.ac.ma", "Sofiane", "Meziane", "250001"),
+                ensureStudent(userRepository, studentRepository, "mariamfahim@ump.ac.ma", "Mariam", "Fahim", "250001"),
                 ensureStudent(userRepository, studentRepository, "leila.bensalem@ump.ac.ma", "Leila", "Bensalem", "250002"),
                 ensureStudent(userRepository, studentRepository, "yassine.elidrissi@ump.ac.ma", "Yassine", "El Idrissi", "250003"),
                 ensureStudent(userRepository, studentRepository, "meryem.toumi@ump.ac.ma", "Meryem", "Toumi", "250004"),
@@ -104,7 +108,9 @@ public class DatabaseSeeder {
         students.add(ensureStudent(userRepository, studentRepository, "abdoelfadili695@gmail.com", "Abdo", "El Fadili", "250021"));
         students.add(ensureStudent(userRepository, studentRepository, "ayoubelebbar15@gmail.com", "Ayoub", "Elebbar", "250022"));
 
-        return new SeedUsers(students);
+        ensureAdmin(userRepository, "ahmed.alami.alphaverse@gmail.com", "Ahmed", "Alami");
+
+        return new SeedUsers(mariamTeacher, students);
     }
 
 
@@ -153,10 +159,10 @@ public class DatabaseSeeder {
         Groupe cyber2 = ensureGroup(groupeRepository, cyberFormation, "CYBER-2");
         Groupe prepa1 = ensureGroup(groupeRepository, prepaFormation, "PREPA-1");
 
-        ensureModule(moduleRepository, giFormation, "WEB-401", "Advanced Web Development", 1, 48);
-        ensureModule(moduleRepository, giFormation, "DB-301", "Database Architecture", 1, 42);
-        ensureModule(moduleRepository, giFormation, "SEC-401", "Network Security", 2, 36);
-        ensureModule(moduleRepository, giFormation, "SFT-402", "Software Engineering", 2, 40);
+        Module giWeb = ensureModule(moduleRepository, giFormation, "WEB-401", "Advanced Web Development", 1, 48);
+        Module giDatabase = ensureModule(moduleRepository, giFormation, "DB-301", "Database Architecture", 1, 42);
+        Module giSecurity = ensureModule(moduleRepository, giFormation, "SEC-401", "Network Security", 2, 36);
+        Module giSoftware = ensureModule(moduleRepository, giFormation, "SFT-402", "Software Engineering", 2, 40);
         ensureModule(moduleRepository, idsFormation, "AI-305", "Machine Learning Basics", 1, 44);
         ensureModule(moduleRepository, idsFormation, "STAT-301", "Applied Statistics", 1, 36);
         ensureModule(moduleRepository, idsFormation, "DM-302", "Data Mining", 2, 38);
@@ -165,7 +171,11 @@ public class DatabaseSeeder {
         ensureModule(moduleRepository, prepaFormation, "ALG-201", "Advanced Algorithms", 1, 50);
         ensureModule(moduleRepository, prepaFormation, "PHY-202", "Physics for Engineers", 1, 46);
 
-        return new SeedStructure(activeYear, List.of(gi1, gi2, ids1, ids2, cyber1, cyber2, prepa1));
+        return new SeedStructure(
+                activeYear,
+                List.of(gi1, gi2, ids1, ids2, cyber1, cyber2, prepa1),
+                List.of(giWeb, giDatabase, giSecurity, giSoftware)
+        );
     }
 
     private void ensureAdmin(UserRepository repository, String email, String firstName, String lastName) {
@@ -181,17 +191,21 @@ public class DatabaseSeeder {
                 );
     }
 
-    private void ensureTeacher(UserRepository repository, String email, String firstName, String lastName) {
-        findSeedUserByEmail(repository, email)
-                .ifPresentOrElse(
-                        user -> updateSeedUser(repository, user, email, firstName, lastName, Role.TEACHER),
-                        () -> repository.save(Teacher.builder()
+    private Teacher ensureTeacher(UserRepository repository, String email, String firstName, String lastName) {
+        return findSeedUserByEmail(repository, email)
+                .map(user -> {
+                    if (user instanceof Teacher) {
+                        Teacher teacher = (Teacher) user;
+                        return (Teacher) updateSeedUser(repository, teacher, email, firstName, lastName, Role.TEACHER);
+                    }
+                    throw new IllegalStateException("Seed email already belongs to a non-teacher: " + email);
+                })
+                .orElseGet(() -> repository.save(Teacher.builder()
                         .email(email)
                         .firstName(firstName)
                         .lastName(lastName)
                         .roles(Set.of(Role.TEACHER))
-                        .build())
-                );
+                        .build()));
     }
 
     private Optional<User> findSeedUserByEmail(UserRepository repository, String email) {
@@ -382,7 +396,8 @@ public class DatabaseSeeder {
             Student student = students.get(i);
             Groupe group;
 
-            if ("abdoelfadili695@gmail.com".equals(student.getEmail())
+            if ("mariamfahim@ump.ac.ma".equalsIgnoreCase(student.getEmail())
+                    || "abdoelfadili695@gmail.com".equalsIgnoreCase(student.getEmail())
                     || "ayoubelebbar15@gmail.com".equals(student.getEmail())) {
                 group = gi1Group;
             } else {
@@ -393,6 +408,56 @@ public class DatabaseSeeder {
                 ensureInscription(inscriptionRepository, student, group, seedStructure.activeYear());
             }
         }
+    }
+
+    private void seedTeacherAssignments(
+            TeacherAssignmentRepository teacherAssignmentRepository,
+            SeedUsers seedUsers,
+            SeedStructure seedStructure) {
+        Groupe gi1Group = seedStructure.groups().stream()
+                .filter(g -> "GI-1".equals(g.getName()))
+                .findFirst()
+                .orElse(null);
+        Module module = seedStructure.modules().stream()
+                .filter(m -> "WEB-401".equals(m.getCode()))
+                .findFirst()
+                .orElse(null);
+
+        if (gi1Group == null || module == null) {
+            return;
+        }
+
+        ensureTeacherAssignment(
+                teacherAssignmentRepository,
+                seedUsers.mariamTeacher(),
+                seedStructure.activeYear(),
+                gi1Group,
+                module
+        );
+    }
+
+    private void ensureTeacherAssignment(
+            TeacherAssignmentRepository repository,
+            Teacher teacher,
+            AnneeUniversitaire academicYear,
+            Groupe group,
+            Module module) {
+        if (repository.existsByTeacherIdAndAcademicYearIdAndFormationIdAndGroupeIdAndModuleId(
+                teacher.getId(),
+                academicYear.getId(),
+                group.getFormation().getId(),
+                group.getId(),
+                module.getId())) {
+            return;
+        }
+
+        TeacherAssignment assignment = new TeacherAssignment();
+        assignment.setTeacher(teacher);
+        assignment.setAcademicYear(academicYear);
+        assignment.setFormation(group.getFormation());
+        assignment.setGroupe(group);
+        assignment.setModule(module);
+        repository.save(assignment);
     }
 
     private void ensureInscription(
@@ -416,10 +481,16 @@ public class DatabaseSeeder {
     }
 
     private static final class SeedUsers {
+        private final Teacher mariamTeacher;
         private final List<Student> students;
 
-        private SeedUsers(List<Student> students) {
+        private SeedUsers(Teacher mariamTeacher, List<Student> students) {
+            this.mariamTeacher = mariamTeacher;
             this.students = students;
+        }
+
+        private Teacher mariamTeacher() {
+            return mariamTeacher;
         }
 
         private List<Student> students() {
@@ -430,10 +501,12 @@ public class DatabaseSeeder {
     private static final class SeedStructure {
         private final AnneeUniversitaire activeYear;
         private final List<Groupe> groups;
+        private final List<Module> modules;
 
-        private SeedStructure(AnneeUniversitaire activeYear, List<Groupe> groups) {
+        private SeedStructure(AnneeUniversitaire activeYear, List<Groupe> groups, List<Module> modules) {
             this.activeYear = activeYear;
             this.groups = groups;
+            this.modules = modules;
         }
 
         private AnneeUniversitaire activeYear() {
@@ -442,6 +515,10 @@ public class DatabaseSeeder {
 
         private List<Groupe> groups() {
             return groups;
+        }
+
+        private List<Module> modules() {
+            return modules;
         }
     }
 }

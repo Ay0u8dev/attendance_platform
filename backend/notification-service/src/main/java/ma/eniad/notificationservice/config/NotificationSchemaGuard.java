@@ -1,6 +1,9 @@
 package ma.eniad.notificationservice.config;
 
 import lombok.RequiredArgsConstructor;
+import ma.eniad.notificationservice.entity.enums.NotificationSeverity;
+import ma.eniad.notificationservice.entity.enums.NotificationType;
+import ma.eniad.notificationservice.entity.enums.RecipientRole;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -10,6 +13,8 @@ import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -26,9 +31,9 @@ public class NotificationSchemaGuard implements ApplicationRunner {
             return;
         }
 
-        verifyCheckConstraint("notifications_type_check");
-        verifyCheckConstraint("notifications_severity_check");
-        verifyCheckConstraint("notifications_recipient_role_check");
+        repairCheckConstraint("notifications_type_check", "type", NotificationType.values());
+        repairCheckConstraint("notifications_severity_check", "severity", NotificationSeverity.values());
+        repairCheckConstraint("notifications_recipient_role_check", "recipient_role", RecipientRole.values());
     }
 
     private boolean isPostgreSql() throws Exception {
@@ -43,24 +48,20 @@ public class NotificationSchemaGuard implements ApplicationRunner {
         }
     }
 
-    private void verifyCheckConstraint(String constraintName) {
-        Integer count = jdbcTemplate.queryForObject(
-                """
-                select count(*)
-                from information_schema.table_constraints
-                where table_name = 'notifications'
-                  and constraint_name = ?
-                  and constraint_type = 'CHECK'
-                """,
-                Integer.class,
-                constraintName
-        );
+    private void repairCheckConstraint(String constraintName, String columnName, Enum<?>[] allowedValues) {
+        String allowedSql = Arrays.stream(allowedValues)
+                .map(Enum::name)
+                .map(this::quoteSqlLiteral)
+                .collect(Collectors.joining(", "));
 
-        if (count == null || count == 0) {
-            throw new IllegalStateException(
-                    "Missing notifications check constraint: " + constraintName +
-                            ". Apply the versioned database migration before starting the service."
-            );
-        }
+        jdbcTemplate.execute("alter table notifications drop constraint if exists " + constraintName);
+        jdbcTemplate.execute(
+                "alter table notifications add constraint " + constraintName +
+                        " check (" + columnName + " in (" + allowedSql + "))"
+        );
+    }
+
+    private String quoteSqlLiteral(String value) {
+        return "'" + value.replace("'", "''") + "'";
     }
 }

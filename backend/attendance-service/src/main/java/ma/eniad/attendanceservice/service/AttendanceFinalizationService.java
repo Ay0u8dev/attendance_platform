@@ -122,6 +122,8 @@ public class AttendanceFinalizationService {
                         student.email(),
                         student.pfpUrl(),
                         student.numApogee(),
+                        student.filiere(),
+                        student.groupeName(),
                         AttendanceStudentStatus.ABSENT,
                         null,
                         null,
@@ -143,6 +145,8 @@ public class AttendanceFinalizationService {
                         .email(student.email())
                         .pfpUrl(student.pfpUrl())
                         .numApogee(student.numApogee())
+                        .filiere(student.filiere())
+                        .groupeName(student.groupeName())
                         .status(student.status())
                         .markMethod(student.markMethod())
                         .markedAt(student.markedAt())

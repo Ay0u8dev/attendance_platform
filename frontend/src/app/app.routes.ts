@@ -156,6 +156,13 @@ export const routes: Routes = [
             (module) => module.TeacherJustificationsPage,
           ),
       },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./features/teacher/settings/teacher-settings-page').then(
+            (module) => module.TeacherSettingsPage,
+          ),
+      },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ],
   },
@@ -196,10 +203,8 @@ export const routes: Routes = [
       },
       {
         path: 'profile',
-        loadComponent: () =>
-          import('./features/student/profile/student-profile-page').then(
-            (module) => module.StudentProfilePage,
-          ),
+        redirectTo: 'settings',
+        pathMatch: 'full',
       },
       {
         path: 'justifications',
@@ -213,6 +218,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/student/justifications/student-justification-detail-page').then(
             (module) => module.StudentJustificationDetailPage,
+          ),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./features/student/settings/student-settings-page').then(
+            (module) => module.StudentSettingsPage,
           ),
       },
     ],

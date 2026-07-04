@@ -98,3 +98,33 @@ export interface AttendanceUpdateResponse {
   absentCount: number;
   unknownCount: number;
 }
+
+export interface TeacherAttendanceReportDto {
+  generatedAt: string;
+  filieres: TeacherAttendanceReportFiliereDto[];
+}
+
+export interface TeacherAttendanceReportFiliereDto {
+  filiere: string;
+  sessions: TeacherAttendanceReportSessionDto[];
+  students: TeacherAttendanceReportStudentDto[];
+}
+
+export interface TeacherAttendanceReportSessionDto {
+  sessionId: number;
+  courseLabel: string;
+  roomLabel?: string | null;
+  startedAt: string;
+  endedAt?: string | null;
+}
+
+export interface TeacherAttendanceReportStudentDto {
+  studentId: number;
+  numApogee: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  groupId: number;
+  groupeName?: string | null;
+  statusesBySessionId: Record<string, AttendanceStudentStatus>;
+}

@@ -1,9 +1,22 @@
 package ma.eniad.justificationservice.service;
 
+import java.net.URI;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import ma.eniad.justificationservice.client.AttendanceServiceClient;
+import ma.eniad.justificationservice.client.UserServiceClient;
 import ma.eniad.justificationservice.dto.AttendanceJustificationRequest;
+import ma.eniad.justificationservice.dto.AttendanceSessionLookupResponse;
 import ma.eniad.justificationservice.dto.ReviewJustificationRequest;
 import ma.eniad.justificationservice.dto.SubmitJustificationRequest;
 import ma.eniad.justificationservice.entity.Justification;
@@ -12,17 +25,8 @@ import ma.eniad.justificationservice.repository.JustificationRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +37,7 @@ public class JustificationService {
 
     private final JustificationRepository repository;
     private final AttendanceServiceClient attendanceServiceClient;
+    private final UserServiceClient userServiceClient;
     private final JustificationNotificationService justificationNotificationService;
 
     @Transactional
@@ -47,17 +52,23 @@ public class JustificationService {
                 .studentId(request.studentId())
                 .studentName(request.studentName().trim())
                 .studentCode(normalizeOptional(request.studentCode()))
+                .studentFormation(normalizeOptional(request.studentFormation()))
+                .studentClass(normalizeOptional(request.studentClass()))
+                .studentGroup(normalizeOptional(request.studentGroup()))
                 .module(request.module().trim())
                 .sessionDate(request.sessionDate())
                 .status(JustificationStatus.PENDING)
                 .reason(request.reason().trim())
                 .submittedAt(LocalDateTime.now())
-                .documentUrl(normalizeOptional(request.documentUrl()))
+                .documentUrl(normalizeDocumentUrl(request.documentUrl()))
                 .build();
 
         Justification saved = repository.save(justification);
-        notifyAfterCommit(() -> justificationNotificationService.notifySubmitted(saved));
-        // TODO(notification): notify admins or the responsible teacher here once a reliable user-id lookup exists.
+        notifyAfterCommit(() -> {
+            justificationNotificationService.notifySubmitted(saved);
+            notifyResponsibleTeacher(saved);
+            notifyAdmins(saved);
+        });
         return saved;
     }
 
@@ -155,6 +166,57 @@ public class JustificationService {
         }
     }
 
+    private void notifyResponsibleTeacher(Justification justification) {
+        if (attendanceServiceClient == null || justificationNotificationService == null) {
+            return;
+        }
+
+        try {
+            AttendanceSessionLookupResponse session =
+                    attendanceServiceClient.getSession(justification.getSessionId(), JUSTIFICATION_SOURCE);
+
+            if (session.teacherId() == null) {
+                log.warn(
+                        "Skipping teacher justification notification because session={} has no teacherId",
+                        justification.getSessionId()
+                );
+                return;
+            }
+
+            justificationNotificationService.notifySubmittedForTeacher(justification, session.teacherId());
+        } catch (RuntimeException ex) {
+            log.warn(
+                    "Failed to resolve responsible teacher for justificationId={} sessionId={}: {}",
+                    justification.getId(),
+                    justification.getSessionId(),
+                    ex.getMessage(),
+                    ex
+            );
+        }
+    }
+
+    private void notifyAdmins(Justification justification) {
+        if (userServiceClient == null || justificationNotificationService == null) {
+            return;
+        }
+
+        try {
+            List<Long> adminIds = userServiceClient.getAdminIds(JUSTIFICATION_SOURCE);
+            for (Long adminId : adminIds) {
+                if (adminId != null) {
+                    justificationNotificationService.notifySubmittedForAdmin(justification, adminId);
+                }
+            }
+        } catch (RuntimeException ex) {
+            log.warn(
+                    "Failed to resolve admins for justificationId={}: {}",
+                    justification.getId(),
+                    ex.getMessage(),
+                    ex
+            );
+        }
+    }
+
     private Justification requirePendingJustification(Long id) {
         Justification justification = requireJustification(id);
         if (justification.getStatus() != JustificationStatus.PENDING) {
@@ -191,6 +253,34 @@ public class JustificationService {
             return request.reviewerName().trim();
         }
         return request.reviewerName().trim() + " (" + reviewerId + ")";
+    }
+
+    private String normalizeDocumentUrl(String documentUrl) {
+        String normalized = normalizeOptional(documentUrl);
+        if (normalized == null) {
+            return null;
+        }
+
+        try {
+            URI uri = new URI(normalized);
+            String path = uri.getPath();
+            if (path == null || path.isBlank()) {
+                return normalized;
+            }
+
+            if (path.startsWith("/")) {
+                path = path.substring(1);
+            }
+
+            int index = path.indexOf("justifications/");
+            if (index >= 0) {
+                return normalizeOptional(path.substring(index));
+            }
+
+            return normalizeOptional(path);
+        } catch (Exception ex) {
+            return normalized;
+        }
     }
 
     private String normalizeOptional(String value) {

@@ -17,6 +17,12 @@ public record SubmitJustificationRequest(
 
         String studentCode,
 
+        String studentFormation,
+
+        String studentClass,
+
+        String studentGroup,
+
         @NotBlank(message = "module is required")
         String module,
 

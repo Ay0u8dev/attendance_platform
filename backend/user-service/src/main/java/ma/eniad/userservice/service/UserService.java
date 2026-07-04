@@ -10,6 +10,9 @@ import ma.eniad.userservice.entity.Teacher;
 import ma.eniad.userservice.entity.User;
 import ma.eniad.userservice.entity.enums.Role;
 import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
+import ma.eniad.userservice.entity.structure.Filiere;
+import ma.eniad.userservice.entity.structure.Formation;
+import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.teacher.TeacherRepository;
@@ -100,12 +103,14 @@ public class UserService {
                 .filter(inscription -> inscription.getStudent() != null)
                 .map(inscription -> new StudentRosterDto(
                         inscription.getStudent().getId(),
-                        inscription.getGroupe().getId(),
+                        inscription.getGroupe() != null ? inscription.getGroupe().getId() : null,
                         inscription.getStudent().getFirstName(),
                         inscription.getStudent().getLastName(),
                         inscription.getStudent().getEmail(),
                         inscription.getStudent().getPfpUrl(),
-                        inscription.getStudent().getNumApogee()
+                        inscription.getStudent().getNumApogee(),
+                        resolveFiliereCode(inscription),
+                        resolveGroupeName(inscription)
                 ))
                 .toList();
     }
@@ -121,6 +126,10 @@ public class UserService {
         );
     }
 
+    public List<Long> getEnabledAdminIds() {
+        return userRepository.findEnabledUserIdsByRole(Role.ADMIN);
+    }
+
     private String normalizeProfilePhotoUrl(String pfpUrl) {
         if (pfpUrl == null) {
             return null;
@@ -128,5 +137,20 @@ public class UserService {
 
         String trimmed = pfpUrl.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String resolveFiliereCode(Inscription inscription) {
+        Formation formation = inscription.getFormation();
+        if (formation == null && inscription.getGroupe() != null) {
+            formation = inscription.getGroupe().getFormation();
+        }
+
+        Filiere filiere = formation != null ? formation.getFiliere() : null;
+        return filiere != null ? filiere.getCode() : null;
+    }
+
+    private String resolveGroupeName(Inscription inscription) {
+        Groupe groupe = inscription.getGroupe();
+        return groupe != null ? groupe.getName() : null;
     }
 }

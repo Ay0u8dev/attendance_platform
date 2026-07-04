@@ -87,6 +87,8 @@ public class AttendanceSessionService {
                                     student.email(),
                                     student.pfpUrl(),
                                     student.numApogee(),
+                                    student.filiere(),
+                                    student.groupeName(),
                                     AttendanceStudentStatus.UNKNOWN,
                                     null,
                                     null,

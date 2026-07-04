@@ -98,7 +98,7 @@ public class AttendanceNotificationService {
 
     private void sendSafely(CreateNotificationRequest request, String event, Long sessionId, Long studentId) {
         try {
-            notificationServiceClient.createNotification(event, request);
+            notificationServiceClient.createNotification(request);
         } catch (RuntimeException ex) {
             log.warn(
                     "Notification send failed for event={} sessionId={} studentId={}: {}",

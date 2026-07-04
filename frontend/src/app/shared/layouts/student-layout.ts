@@ -149,6 +149,7 @@ type UtilityItem = {
                   [class.justify-center]="isSidebarCollapsed()"
                   [attr.aria-label]="isSidebarCollapsed() ? item.label : null"
                   [attr.title]="isSidebarCollapsed() ? item.label : null"
+                  (click)="openSettings()"
                 >
                   <span class="flex h-8 w-8 shrink-0 items-center justify-center text-base">
                     <i [class]="item.icon" aria-hidden="true"></i>
@@ -270,14 +271,6 @@ type UtilityItem = {
                         <button
                           type="button"
                           class="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-secondaryText transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText"
-                          (click)="openProfile()"
-                        >
-                          <i class="fa-solid fa-user" aria-hidden="true"></i>
-                          <span>Profil</span>
-                        </button>
-                        <button
-                          type="button"
-                          class="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-secondaryText transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText"
                           (click)="openSettings()"
                         >
                           <i class="fa-solid fa-gear" aria-hidden="true"></i>
@@ -319,8 +312,8 @@ export class StudentLayout {
   private readonly routeTitles: Record<string, string> = {
     '/student/dashboard': 'Tableau de bord',
     '/student/sessions': 'Mes sessions',
-    '/student/profile': 'Mon profil',
     '/student/justifications': 'Justifications',
+    '/student/settings': 'Parametres',
   };
 
   readonly navItems: NavItem[] = [
@@ -449,13 +442,10 @@ export class StudentLayout {
     return this.router.url === route;
   }
 
-  openProfile(): void {
-    this.isUserMenuOpen.set(false);
-    void this.router.navigateByUrl('/student/profile');
-  }
-
   openSettings(): void {
     this.isUserMenuOpen.set(false);
+    this.isSidebarOpen.set(false);
+    void this.router.navigateByUrl('/student/settings');
   }
 
   onProfileImageError(): void {

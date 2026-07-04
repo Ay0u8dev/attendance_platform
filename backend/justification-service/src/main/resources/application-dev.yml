@@ -30,10 +30,12 @@ services:
     url: http://localhost:8083
   notification-service:
     url: http://localhost:8086
+  user-service:
+    url: http://localhost:8082
 
 app:
   internal:
-    service-token: ${INTERNAL_SERVICE_TOKEN:dummy-token-for-dev}
+    service-token: ${INTERNAL_SERVICE_TOKEN:internal_service_token_abdoelfadili}
 
 cloudflare:
   r2:
