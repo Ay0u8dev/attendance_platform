@@ -504,14 +504,18 @@
           </div>
         }
 
+      </div>
+
+      <div modal-footer class="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         @if (cameraError()) {
-          <div class="rounded-2xl border border-danger/20 bg-danger-soft px-4 py-4">
+          <div
+            class="order-0 w-full rounded-2xl border border-danger/20 bg-danger-soft px-4 py-4"
+            role="alert"
+            aria-live="assertive"
+          >
             <p class="text-sm font-medium text-danger">{{ cameraError() }}</p>
           </div>
         }
-      </div>
-
-      <div modal-footer class="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
         <span class="hidden text-xs font-medium text-secondaryText sm:order-1 sm:mr-auto sm:inline">
           {{ activeAttendanceCameraLabel() }}
         </span>
