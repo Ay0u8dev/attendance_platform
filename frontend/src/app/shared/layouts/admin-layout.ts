@@ -22,11 +22,6 @@ type NavItem = {
   icon: string;
 };
 
-type UtilityItem = {
-  label: string;
-  icon: string;
-};
-
 @Component({
   selector: 'app-admin-layout',
   imports: [NgOptimizedImage, RouterLink, RouterLinkActive, RouterOutlet],
@@ -140,26 +135,6 @@ type UtilityItem = {
               </a>
             }
 
-            <div class="mt-auto pt-3">
-              @for (item of utilityItems; track item.label) {
-                <button
-                  type="button"
-                  class="mb-1.5 flex w-full min-h-10 items-center rounded-xl border border-transparent px-2.5 py-2 text-left text-sm font-medium text-secondaryText transition-colors duration-200 hover:border-line hover:bg-surface-subtle hover:text-principalText"
-                  [class.gap-3]="!isSidebarCollapsed()"
-                  [class.justify-center]="isSidebarCollapsed()"
-                  [attr.aria-label]="isSidebarCollapsed() ? item.label : null"
-                  [attr.title]="isSidebarCollapsed() ? item.label : null"
-                >
-                  <span class="flex h-8 w-8 shrink-0 items-center justify-center text-base">
-                    <i [class]="item.icon" aria-hidden="true"></i>
-                  </span>
-
-                  @if (!isSidebarCollapsed()) {
-                    <span>{{ item.label }}</span>
-                  }
-                </button>
-              }
-            </div>
           </nav>
         </aside>
 
@@ -308,24 +283,6 @@ type UtilityItem = {
 
                         <button
                           type="button"
-                          class="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-secondaryText transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText"
-                          (click)="openProfile()"
-                        >
-                          <i class="fa-solid fa-gear" aria-hidden="true"></i>
-                          <span>Profile</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          class="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-secondaryText transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText"
-                          (click)="openSettings()"
-                        >
-                          <i class="fa-solid fa-gear" aria-hidden="true"></i>
-                          <span>Settings</span>
-                        </button>
-
-                        <button
-                          type="button"
                           class="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-danger transition-colors duration-200 hover:bg-danger-soft"
                           (click)="logout()"
                         >
@@ -369,8 +326,6 @@ export class AdminLayout {
     { label: 'Teachers', route: '/teachers', icon: 'fa-solid fa-chalkboard-user' },
     { label: 'Structure', route: '/structure', icon: 'fa-solid fa-sitemap' },
   ];
-
-  readonly utilityItems: UtilityItem[] = [{ label: 'Settings', icon: 'fa-solid fa-gear' }];
 
   readonly isSidebarOpen = signal(false);
   readonly isSidebarCollapsed = signal(false);
@@ -476,14 +431,6 @@ export class AdminLayout {
 
   isActiveRoute(route: string): boolean {
     return this.router.url === route;
-  }
-
-  openSettings(): void {
-    this.isUserMenuOpen.set(false);
-  }
-
-  openProfile(): void {
-    this.isUserMenuOpen.set(false);
   }
 
   logout(): void {
