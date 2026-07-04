@@ -4,6 +4,7 @@ import {
   Component,
   ElementRef,
   computed,
+  effect,
   inject,
   signal,
   viewChild,
@@ -13,6 +14,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 
 import { AuthService } from '../../core/auth/services/auth.service';
 import { User } from '../../core/auth/models/auth.model';
+import { TeacherProfileService } from '../../core/teacher/services/teacher-profile.service';
 
 type NavItem = {
   label: string;
@@ -210,9 +212,20 @@ type UtilityItem = {
                       aria-label="Open user menu"
                     >
                       <span
-                        class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary"
+                        class="flex h-7 w-7 overflow-hidden rounded-lg bg-primary-soft text-primary"
                       >
-                        <i class="fa-solid fa-user-shield text-xs" aria-hidden="true"></i>
+                        @if (profileImageUrl(); as imageUrl) {
+                          <img
+                            [src]="imageUrl"
+                            alt=""
+                            class="h-full w-full object-cover"
+                            (error)="onProfileImageError()"
+                          />
+                        } @else {
+                          <span class="flex h-full w-full items-center justify-center">
+                            <i class="fa-solid fa-user-shield text-xs" aria-hidden="true"></i>
+                          </span>
+                        }
                       </span>
                       <span class="hidden text-sm font-medium text-principalText md:inline"
                         >{{ userDisplayName() }}</span
@@ -276,6 +289,7 @@ type UtilityItem = {
 })
 export class TeacherLayout {
   private readonly authService = inject(AuthService);
+  private readonly teacherProfileService = inject(TeacherProfileService);
   private readonly router = inject(Router);
   private readonly userMenuRoot = viewChild<ElementRef<HTMLElement>>('userMenuRoot');
 
@@ -293,11 +307,21 @@ export class TeacherLayout {
   readonly isSidebarOpen = signal(false);
   readonly isSidebarCollapsed = signal(false);
   readonly isUserMenuOpen = signal(false);
+  readonly profileImageFailed = signal(false);
   readonly currentUser = toSignal(this.authService.currentUser$, {
     initialValue: this.authService.currentUser,
   });
+  readonly teacherProfile = this.teacherProfileService.profile;
   readonly userDisplayName = computed(() => this.formatUserName(this.currentUser()));
   readonly userEmail = computed(() => this.currentUser()?.email ?? 'teacher@ump.ac.ma');
+  readonly profileImageUrl = computed(() => {
+    if (this.profileImageFailed()) {
+      return null;
+    }
+
+    const value = this.teacherProfile()?.pfpUrl?.trim();
+    return value && value.length > 0 ? value : null;
+  });
   readonly sidebarMotionClasses = computed(() =>
     this.isSidebarOpen() ? 'translate-x-0' : '-translate-x-full',
   );
@@ -306,6 +330,18 @@ export class TeacherLayout {
     const desktopWidth = this.isSidebarCollapsed() ? 'lg:w-19' : 'lg:w-68';
     return `${mobileState} w-68 ${desktopWidth}`;
   });
+
+  constructor() {
+    effect(
+      () => {
+        this.teacherProfile()?.pfpUrl;
+        this.profileImageFailed.set(false);
+      },
+      { allowSignalWrites: true },
+    );
+
+    this.teacherProfileService.ensureLoaded();
+  }
 
   toggleSidebar(): void {
     const nextState = !this.isSidebarOpen();
@@ -364,6 +400,10 @@ export class TeacherLayout {
   logout(): void {
     this.isUserMenuOpen.set(false);
     this.authService.logout();
+  }
+
+  onProfileImageError(): void {
+    this.profileImageFailed.set(true);
   }
 
   private formatUserName(user: User | null): string {
