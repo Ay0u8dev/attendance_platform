@@ -17,5 +17,5 @@ export class App {
   // Keep notification websocket lifecycle tied to the authenticated app session.
   private readonly notificationRealtimeService = inject(NotificationRealtimeService);
 
-  protected readonly title = signal('Attendance Platform');
+  protected readonly title = signal('Plateforme de présence');
 }

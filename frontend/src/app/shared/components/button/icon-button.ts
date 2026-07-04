@@ -38,7 +38,7 @@ export class IconButton {
   });
 
   readonly sizeClasses = computed(() => {
-    return this.size() === 'sm' ? 'h-8 w-8 text-xs' : 'h-9 w-9 text-sm';
+    return this.size() === 'sm' ? 'h-9 w-9 text-xs' : 'h-10 w-10 text-sm';
   });
 
   readonly disabledClasses = computed(() => {
@@ -46,7 +46,8 @@ export class IconButton {
   });
 
   readonly buttonClasses = computed(() => {
-    const baseClasses = 'flex items-center justify-center rounded-2xl border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2';
+    const baseClasses =
+      'flex items-center justify-center rounded-2xl border shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card active:translate-y-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2';
     return `${baseClasses} ${this.toneClasses()} ${this.sizeClasses()} ${this.disabledClasses()}`.trim();
   });
 }

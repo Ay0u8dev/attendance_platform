@@ -81,8 +81,8 @@ class UserServiceTest {
     }
 
     @Test
-    void nonBlankProfilePictureUpdateDoesNotClearFirstLogin() {
-        User student = user(Role.STUDENT, true, "old-picture.jpg");
+    void firstLoginStudentWithBlankProfilePictureSeedsGooglePicture() {
+        User student = user(Role.STUDENT, true, null);
         AuthUserRequest request = request("new-picture.jpg");
         when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(student));
         when(userRepository.save(student)).thenReturn(student);
@@ -92,6 +92,60 @@ class UserServiceTest {
         assertThat(result.isFirstLogin()).isTrue();
         assertThat(result.getPfpUrl()).isEqualTo("new-picture.jpg");
         verify(userRepository).save(student);
+    }
+
+    @Test
+    void firstLoginTeacherWithBlankProfilePictureSeedsGooglePictureAndCompletesFirstLogin() {
+        User teacher = user(Role.TEACHER, true, null);
+        AuthUserRequest request = request("new-picture.jpg");
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(teacher));
+        when(userRepository.save(teacher)).thenReturn(teacher);
+
+        UserResponseDto result = userService.findUser(request);
+
+        assertThat(result.isFirstLogin()).isFalse();
+        assertThat(result.getPfpUrl()).isEqualTo("new-picture.jpg");
+        verify(userRepository).save(teacher);
+    }
+
+    @Test
+    void firstLoginDoesNotOverwriteExistingProfilePicture() {
+        User student = user(Role.STUDENT, true, "old-picture.jpg");
+        AuthUserRequest request = request("new-picture.jpg");
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(student));
+
+        UserResponseDto result = userService.findUser(request);
+
+        assertThat(result.isFirstLogin()).isTrue();
+        assertThat(result.getPfpUrl()).isEqualTo("old-picture.jpg");
+        verify(userRepository, never()).save(student);
+    }
+
+    @Test
+    void laterLoginDoesNotReseedRemovedProfilePicture() {
+        User student = user(Role.STUDENT, false, null);
+        AuthUserRequest request = request("new-picture.jpg");
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(student));
+
+        UserResponseDto result = userService.findUser(request);
+
+        assertThat(result.isFirstLogin()).isFalse();
+        assertThat(result.getPfpUrl()).isNull();
+        verify(userRepository, never()).save(student);
+    }
+
+    @Test
+    void firstLoginAdminDoesNotSeedGoogleProfilePicture() {
+        User admin = user(Role.ADMIN, true, null);
+        AuthUserRequest request = request("new-picture.jpg");
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(admin));
+        when(userRepository.save(admin)).thenReturn(admin);
+
+        UserResponseDto result = userService.findUser(request);
+
+        assertThat(result.isFirstLogin()).isFalse();
+        assertThat(result.getPfpUrl()).isNull();
+        verify(userRepository).save(admin);
     }
 
     @Test

@@ -4,6 +4,7 @@ import {
   Component,
   ElementRef,
   computed,
+  effect,
   inject,
   signal,
   viewChild,
@@ -13,6 +14,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 
 import { AuthService } from '../../core/auth/services/auth.service';
 import { User } from '../../core/auth/models/auth.model';
+import { TeacherProfileService } from '../../core/teacher/services/teacher-profile.service';
 import { NotificationBellComponent } from '../components/notification-bell/notification-bell';
 
 type NavItem = {
@@ -28,7 +30,13 @@ type UtilityItem = {
 
 @Component({
   selector: 'app-teacher-layout',
-  imports: [NgOptimizedImage, NotificationBellComponent, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [
+    NgOptimizedImage,
+    NotificationBellComponent,
+    RouterLink,
+    RouterLinkActive,
+    RouterOutlet,
+  ],
   host: {
     '(document:click)': 'handleDocumentClick($event)',
     '(document:keydown.escape)': 'handleEscape()',
@@ -45,14 +53,14 @@ type UtilityItem = {
             type="button"
             class="fixed inset-0 z-30 bg-slate-950/45 backdrop-blur-sm lg:hidden"
             (click)="closeSidebar()"
-            aria-label="Close navigation"
+            aria-label="Fermer la navigation"
           ></button>
         }
 
         <aside
           class="fixed inset-y-0 left-0 z-40 flex flex-col border-r border-line bg-surface/95 shadow-shell transition-[width,transform] duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0"
           [class]="sidebarShellClasses()"
-          aria-label="Teacher navigation"
+          aria-label="Navigation enseignant"
         >
           <div
             class="flex h-16 items-center border-b border-line px-3"
@@ -70,7 +78,7 @@ type UtilityItem = {
                   ngSrc="assets/logo-app.png"
                   width="24"
                   height="24"
-                  alt="Attendance Platform"
+                  alt="Plateforme de présence"
                   class="h-fit w-auto object-contain"
                 />
               </div>
@@ -78,9 +86,9 @@ type UtilityItem = {
               @if (!isSidebarCollapsed()) {
                 <div class="min-w-0">
                   <p class="truncate text-sm font-semibold text-principalText">
-                    Attendance Platform
+                    Plateforme de présence
                   </p>
-                  <p class="truncate text-xs text-secondaryText">Teacher dashboard</p>
+                  <p class="truncate text-xs text-secondaryText">Tableau de bord enseignant</p>
                 </div>
               }
             </div>
@@ -89,7 +97,7 @@ type UtilityItem = {
               type="button"
               class="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:hidden"
               (click)="closeSidebar()"
-              aria-label="Close menu"
+              aria-label="Fermer le menu"
             >
               <i class="fa-solid fa-xmark" aria-hidden="true"></i>
             </button>
@@ -99,7 +107,9 @@ type UtilityItem = {
             type="button"
             class="absolute top-20 right-0 hidden h-7 w-7 translate-x-1/2 items-center justify-center rounded-full border border-line bg-surface text-secondaryText shadow-card transition-all duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:inline-flex"
             (click)="toggleSidebarCollapsed()"
-            [attr.aria-label]="isSidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+            [attr.aria-label]="
+              isSidebarCollapsed() ? 'Déplier la barre latérale' : 'Replier la barre latérale'
+            "
           >
             <i
               class="fa-solid text-xs"
@@ -175,7 +185,7 @@ type UtilityItem = {
                     class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:hidden"
                     (click)="toggleSidebar()"
                     [attr.aria-expanded]="isSidebarOpen()"
-                    aria-label="Open menu"
+                    aria-label="Ouvrir le menu"
                   >
                     <i class="fa-solid fa-bars" aria-hidden="true"></i>
                   </button>
@@ -184,10 +194,10 @@ type UtilityItem = {
                     <p
                       class="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-primary"
                     >
-                      Teacher workspace
+                      Espace enseignant
                     </p>
                     <h1 class="truncate text-lg font-semibold tracking-tight text-principalText">
-                      Dashboard
+                      Tableau de bord
                     </h1>
                   </div>
                 </div>
@@ -202,16 +212,27 @@ type UtilityItem = {
                       (click)="toggleUserMenu()"
                       [attr.aria-expanded]="isUserMenuOpen()"
                       aria-haspopup="menu"
-                      aria-label="Open user menu"
+                      aria-label="Ouvrir le menu utilisateur"
                     >
                       <span
-                        class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary"
+                        class="flex h-7 w-7 overflow-hidden rounded-lg bg-primary-soft text-primary"
                       >
-                        <i class="fa-solid fa-user-shield text-xs" aria-hidden="true"></i>
+                        @if (profileImageUrl(); as imageUrl) {
+                          <img
+                            [src]="imageUrl"
+                            alt=""
+                            class="h-full w-full object-cover"
+                            (error)="onProfileImageError()"
+                          />
+                        } @else {
+                          <span class="flex h-full w-full items-center justify-center">
+                            <i class="fa-solid fa-user-shield text-xs" aria-hidden="true"></i>
+                          </span>
+                        }
                       </span>
-                      <span class="hidden text-sm font-medium text-principalText md:inline"
-                        >{{ userDisplayName() }}</span
-                      >
+                      <span class="hidden text-sm font-medium text-principalText md:inline">{{
+                        userDisplayName()
+                      }}</span>
                       <!-- <i
                       class="fa-solid text-[0.6rem] text-secondaryText"
                       [class.fa-chevron-up]="isUserMenuOpen()"
@@ -239,7 +260,7 @@ type UtilityItem = {
                           (click)="openSettings()"
                         >
                           <i class="fa-solid fa-gear" aria-hidden="true"></i>
-                          <span>Settings</span>
+                          <span>Paramètres</span>
                         </button>
 
                         <button
@@ -248,7 +269,7 @@ type UtilityItem = {
                           (click)="logout()"
                         >
                           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-                          <span>Logout</span>
+                          <span>Déconnexion</span>
                         </button>
                       </div>
                     }
@@ -271,28 +292,43 @@ type UtilityItem = {
 })
 export class TeacherLayout {
   private readonly authService = inject(AuthService);
+  private readonly teacherProfileService = inject(TeacherProfileService);
   private readonly router = inject(Router);
   private readonly userMenuRoot = viewChild<ElementRef<HTMLElement>>('userMenuRoot');
 
   readonly navItems: NavItem[] = [
-    { label: 'Dashboard', route: '/teacher/dashboard', icon: 'fa-solid fa-table-cells-large' },
-    { label: 'Attendance', route: '/teacher/sessions', icon: 'fa-regular fa-calendar-check' },
+    {
+      label: 'Tableau de bord',
+      route: '/teacher/dashboard',
+      icon: 'fa-solid fa-table-cells-large',
+    },
+    { label: 'Présences', route: '/teacher/sessions', icon: 'fa-regular fa-calendar-check' },
     { label: 'Modules', route: '/teacher/modules', icon: 'fa-solid fa-cube' },
-    { label: 'Groups', route: '/teacher/groups', icon: 'fa-solid fa-users-rectangle' },
-    { label: 'Students', route: '/teacher/students', icon: 'fa-solid fa-user-graduate' },
+    { label: 'Groupes', route: '/teacher/groups', icon: 'fa-solid fa-users-rectangle' },
+    { label: 'Étudiants', route: '/teacher/students', icon: 'fa-solid fa-user-graduate' },
     { label: 'Justifications', route: '/teacher/justifications', icon: 'fa-regular fa-file-lines' },
   ];
 
-  readonly utilityItems: UtilityItem[] = [{ label: 'Settings', icon: 'fa-solid fa-gear' }];
+  readonly utilityItems: UtilityItem[] = [{ label: 'Paramètres', icon: 'fa-solid fa-gear' }];
 
   readonly isSidebarOpen = signal(false);
   readonly isSidebarCollapsed = signal(false);
   readonly isUserMenuOpen = signal(false);
+  readonly profileImageFailed = signal(false);
   readonly currentUser = toSignal(this.authService.currentUser$, {
     initialValue: this.authService.currentUser,
   });
+  readonly teacherProfile = this.teacherProfileService.profile;
   readonly userDisplayName = computed(() => this.formatUserName(this.currentUser()));
   readonly userEmail = computed(() => this.currentUser()?.email ?? 'teacher@ump.ac.ma');
+  readonly profileImageUrl = computed(() => {
+    if (this.profileImageFailed()) {
+      return null;
+    }
+
+    const value = this.teacherProfile()?.pfpUrl?.trim();
+    return value && value.length > 0 ? value : null;
+  });
   readonly sidebarMotionClasses = computed(() =>
     this.isSidebarOpen() ? 'translate-x-0' : '-translate-x-full',
   );
@@ -301,6 +337,18 @@ export class TeacherLayout {
     const desktopWidth = this.isSidebarCollapsed() ? 'lg:w-19' : 'lg:w-68';
     return `${mobileState} w-68 ${desktopWidth}`;
   });
+
+  constructor() {
+    effect(
+      () => {
+        this.teacherProfile()?.pfpUrl;
+        this.profileImageFailed.set(false);
+      },
+      { allowSignalWrites: true },
+    );
+
+    this.teacherProfileService.ensureLoaded();
+  }
 
   toggleSidebar(): void {
     const nextState = !this.isSidebarOpen();
@@ -361,9 +409,13 @@ export class TeacherLayout {
     this.authService.logout();
   }
 
+  onProfileImageError(): void {
+    this.profileImageFailed.set(true);
+  }
+
   private formatUserName(user: User | null): string {
     if (!user) {
-      return 'Teacher';
+      return 'Enseignant';
     }
 
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();

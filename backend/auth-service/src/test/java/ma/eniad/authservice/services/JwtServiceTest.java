@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class JwtServiceTest {
@@ -21,6 +22,7 @@ class JwtServiceTest {
         UserDto user = UserDto.builder()
                 .id(1L)
                 .email("student@ump.ac.ma")
+                .pfpUrl("https://cdn.example.com/student.jpg")
                 .roles(List.of(Role.STUDENT))
                 .enabled(true)
                 .firstLogin(true)
@@ -29,6 +31,24 @@ class JwtServiceTest {
         Claims claims = jwtService.parseAndValidateAccessToken(jwtService.generateToken(user));
 
         assertEquals(Boolean.TRUE, claims.get("firstLogin", Boolean.class));
+        assertEquals("https://cdn.example.com/student.jpg", claims.get("pfpUrl", String.class));
+    }
+
+    @Test
+    void generatedTokenOmitsBlankProfilePhotoClaim() throws Exception {
+        JwtService jwtService = jwtService();
+        UserDto user = UserDto.builder()
+                .id(1L)
+                .email("student@ump.ac.ma")
+                .pfpUrl("   ")
+                .roles(List.of(Role.STUDENT))
+                .enabled(true)
+                .firstLogin(true)
+                .build();
+
+        Claims claims = jwtService.parseAndValidateAccessToken(jwtService.generateToken(user));
+
+        assertNull(claims.get("pfpUrl", String.class));
     }
 
     @Test

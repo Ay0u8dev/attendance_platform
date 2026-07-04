@@ -17,41 +17,53 @@
           accept="image/jpeg,image/png,image/webp"
           (change)="onProfilePhotoSelected($event)"
         />
-        <button
-          type="button"
-          class="group relative flex h-28 w-28 shrink-0 overflow-hidden rounded-[1.5rem] border border-primary-soft bg-primary-soft text-primary shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
-          aria-label="Changer la photo de profil"
-          (click)="triggerProfilePhotoInput()"
-          [disabled]="profilePhotoUploading()"
-        >
-          @if (profileImageUrl(); as imageUrl) {
-            <img
-              [src]="imageUrl"
-              alt=""
-              class="h-full w-full object-cover"
-              (error)="onProfileImageError()"
-            />
-          } @else {
-            <span class="flex h-full w-full items-center justify-center text-3xl font-semibold">
-              {{ initials() }}
-            </span>
-          }
-          <span
-            class="absolute inset-0 flex items-center justify-center bg-black/55 px-3 text-center text-xs font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+        <div class="relative h-28 w-28 shrink-0">
+          <div
+            class="absolute inset-0 flex overflow-hidden rounded-[1.5rem] border border-primary-soft bg-primary-soft text-primary shadow-sm"
           >
-            @if (profilePhotoUploading()) {
-              <i class="fa-solid fa-spinner fa-spin text-base" aria-hidden="true"></i>
+            @if (profileImageUrl(); as imageUrl) {
+              <img
+                [src]="imageUrl"
+                alt=""
+                class="h-full w-full object-cover"
+                (error)="onProfileImageError()"
+              />
             } @else {
-              Changer la photo
+              <span class="flex h-full w-full items-center justify-center text-3xl font-semibold">
+                {{ initials() }}
+              </span>
             }
-          </span>
-          <span
-            class="pointer-events-none absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-full border-2 border-surface bg-primary text-xs text-white shadow-card transition-transform group-hover:scale-105 group-focus-visible:scale-105"
-            aria-hidden="true"
+            @if (profilePhotoUploading() || profilePhotoRemoving()) {
+              <span
+                class="absolute inset-0 flex items-center justify-center bg-black/55 px-3 text-center text-xs font-semibold text-white"
+              >
+                <i class="fa-solid fa-spinner fa-spin text-base" aria-hidden="true"></i>
+              </span>
+            }
+          </div>
+          <button
+            type="button"
+            class="absolute -bottom-3 -right-3 flex h-11 w-11 items-center justify-center rounded-full border-2 border-surface bg-primary text-sm text-white shadow-card transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
+            aria-label="Changer la photo de profil"
+            title="Changer la photo de profil"
+            (click)="triggerProfilePhotoInput()"
+            [disabled]="profilePhotoUploading() || profilePhotoRemoving()"
           >
-            <i class="fa-solid fa-pen"></i>
-          </span>
-        </button>
+            <i class="fa-solid fa-pen" aria-hidden="true"></i>
+          </button>
+          @if (persistedProfilePhotoUrl()) {
+            <button
+              type="button"
+              class="absolute -bottom-3 -left-3 flex h-11 w-11 items-center justify-center rounded-full border-2 border-surface bg-danger text-sm text-white shadow-card transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
+              aria-label="Supprimer la photo de profil"
+              title="Supprimer la photo de profil"
+              (click)="openProfilePhotoRemoval()"
+              [disabled]="profilePhotoUploading() || profilePhotoRemoving()"
+            >
+              <i class="fa-solid fa-trash" aria-hidden="true"></i>
+            </button>
+          }
+        </div>
 
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-2">
@@ -285,6 +297,19 @@
       </button>
     </div>
   </app-settings-section-card>
+
+  <app-delete-modal
+    title="Supprimer la photo de profil ?"
+    confirmMessage="Photo à supprimer :"
+    warningMessage="Cette photo sera retirée de votre profil. Si elle appartient au stockage de la plateforme, le fichier sera aussi supprimé."
+    deleteButtonLabel="Supprimer la photo"
+    [itemName]="fullName()"
+    [open]="profilePhotoRemoveOpen()"
+    [requireConfirmation]="false"
+    [showItemSummary]="false"
+    (closeRequested)="closeProfilePhotoRemoval()"
+    (confirmDelete)="confirmProfilePhotoRemoval()"
+  ></app-delete-modal>
 
   <app-modal
     [title]="isFaceEnrolled() ? 'Mettre à jour mon visage' : 'Enregistrer mon visage'"

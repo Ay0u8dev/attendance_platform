@@ -2,11 +2,9 @@ package ma.eniad.attendanceservice.controller;
 
 import lombok.AllArgsConstructor;
 import ma.eniad.attendanceservice.annotation.RequireRole;
-import ma.eniad.attendanceservice.dto.AdminOverviewResponse;
-import ma.eniad.attendanceservice.dto.AttendanceSessionDetailsResponse;
-import ma.eniad.attendanceservice.dto.AttendanceSessionSummaryResponse;
-import ma.eniad.attendanceservice.dto.PagedResponse;
+import ma.eniad.attendanceservice.dto.*;
 import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.service.AttendanceQueryService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -48,5 +46,27 @@ public class AttendanceAdminController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
     ) {
         return ResponseEntity.ok(attendanceQueryService.getAdminOverview(dateFrom, dateTo));
+    }
+
+    @RequireRole({"ADMIN"})
+    @GetMapping("/students/{studentId}/summary")
+    public ResponseEntity<AdminStudentAttendanceSummaryResponse> getStudentSummary(
+            @PathVariable Long studentId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
+    ) {
+        return ResponseEntity.ok(attendanceQueryService.getAdminStudentSummary(studentId, dateFrom, dateTo));
+    }
+
+    @RequireRole({"ADMIN"})
+    @GetMapping("/students/{studentId}/sessions")
+    public ResponseEntity<PagedResponse<StudentAttendanceSessionSummaryResponse>> getStudentSessions(
+            @PathVariable Long studentId,
+            @RequestParam(required = false) AttendanceStudentStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            Pageable pageable
+    ) {
+        return ResponseEntity.ok(attendanceQueryService.getStudentSessions(studentId, status, dateFrom, dateTo, pageable));
     }
 }

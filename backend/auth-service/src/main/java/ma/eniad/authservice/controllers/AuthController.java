@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
+import java.util.HashMap;
 import java.util.Objects;
 
 @RestController
@@ -94,11 +95,16 @@ public class AuthController {
             log.info("[AUTH] Token validé avec succès pour: {}", email);
             log.debug("[AUTH] Token validé avec succès pour: {}", email);
             log.debug("[AUTH] ✓ Domaine @ump.ac.ma vérifié pour {}", email);            // 3. user-service est le seul propriétaire du cycle de vie des utilisateurs
+            Map<String, String> userData = new HashMap<>();
+            userData.put("email", email);
+            String picture = googleClaims.get("picture");
+            if (picture != null && !picture.isBlank()) {
+                userData.put("pfpUrl", picture.trim());
+            }
+
             UserDto user;
             try {
-                user = userServiceClient.authUser(Map.of(
-                        "email", email
-                ));
+                user = userServiceClient.authUser(userData);
             } catch (FeignException.NotFound ex) {
                 throw new AccountNotFoundException();
             }

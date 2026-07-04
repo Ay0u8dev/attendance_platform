@@ -6,10 +6,10 @@ type StatusVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral';
   selector: 'app-status-badge',
   template: `
     <span
-      class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
+      class="inline-flex min-h-7 items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold leading-none shadow-sm"
       [class]="badgeClasses()"
     >
-      <span class="h-2 w-2 rounded-full" [class]="dotClasses()"></span>
+      <span class="h-2 w-2 rounded-full ring-2 ring-white/80" [class]="dotClasses()"></span>
       {{ label() }}
     </span>
   `,
@@ -22,15 +22,15 @@ export class StatusBadge {
   readonly badgeClasses = computed(() => {
     switch (this.variant()) {
       case 'success':
-        return 'bg-success-soft text-secondary';
+        return 'border-secondary-soft bg-success-soft text-secondary-strong';
       case 'warning':
-        return 'bg-warning-soft text-warning-strong';
+        return 'border-warning-soft bg-warning-soft text-warning-strong';
       case 'error':
-        return 'bg-danger-soft text-danger';
+        return 'border-danger-soft bg-danger-soft text-danger';
       case 'info':
-        return 'bg-info-soft text-primary';
+        return 'border-primary-soft bg-info-soft text-primary';
       default:
-        return 'bg-surface-subtle text-secondaryText';
+        return 'border-line bg-surface-subtle text-secondaryText';
     }
   });
 

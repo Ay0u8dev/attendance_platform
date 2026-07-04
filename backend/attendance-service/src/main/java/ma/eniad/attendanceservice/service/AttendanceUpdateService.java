@@ -4,6 +4,7 @@ import ma.eniad.attendanceservice.dto.AttendanceCounts;
 import ma.eniad.attendanceservice.dto.AttendanceUpdateEvent;
 import ma.eniad.attendanceservice.dto.AttendanceUpdateResponse;
 import ma.eniad.attendanceservice.dto.InternalAttendanceUpdateRequest;
+import ma.eniad.attendanceservice.dto.JustificationContextResponse;
 import ma.eniad.attendanceservice.dto.JustifyAbsenceRequest;
 import ma.eniad.attendanceservice.dto.LiveAttendanceSessionMeta;
 import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
@@ -235,14 +236,16 @@ public class AttendanceUpdateService {
                                         Long sessionId,
                                         Long studentId,
                                         JustifyAbsenceRequest request) {
-        if (!JUSTIFICATION_SOURCE.equals(requestSource)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Untrusted request source");
-        }
+        requireJustificationSource(requestSource);
 
         validateInternalToken(requestSource, internalToken);
 
         AttendanceRecord record = attendanceRecordRepository.findBySessionIdAndStudentId(sessionId, studentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attendance record not found"));
+
+        if (record.getStatus() == AttendanceStudentStatus.JUSTIFIED) {
+            return;
+        }
 
         if (record.getStatus() != AttendanceStudentStatus.ABSENT) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Only absent attendance records can be justified");
@@ -260,12 +263,38 @@ public class AttendanceUpdateService {
             );
         }
 
-        attendanceSessionRepository.findById(sessionId).ifPresent(session -> {
-            if (session.getAbsentCount() > 0) {
-                session.setAbsentCount(session.getAbsentCount() - 1);
-                attendanceSessionRepository.save(session);
-            }
-        });
+        attendanceSessionRepository.findById(sessionId).ifPresent(session -> updateSessionCounts(session, sessionId));
+    }
+
+    @Transactional(readOnly = true)
+    public JustificationContextResponse getJustificationContext(String requestSource,
+                                                                String internalToken,
+                                                                Long sessionId,
+                                                                Long studentId) {
+        requireJustificationSource(requestSource);
+        validateInternalToken(requestSource, internalToken);
+
+        AttendanceRecord record = attendanceRecordRepository.findBySessionIdAndStudentId(sessionId, studentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attendance record not found"));
+        AttendanceSession session = attendanceSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attendance session not found"));
+
+        return new JustificationContextResponse(
+                record.getId(),
+                session.getId(),
+                record.getStudentId(),
+                record.getGroupId(),
+                session.getTeacherId(),
+                session.getTeacherFullName(),
+                (record.getFirstName() + " " + record.getLastName()).trim(),
+                record.getEmail(),
+                record.getNumApogee(),
+                session.getCourseLabel(),
+                session.getRoomLabel(),
+                session.getStartedAt(),
+                session.getEndedAt() != null ? session.getEndedAt() : session.getEndsAt(),
+                record.getStatus()
+        );
     }
 
     private AttendanceUpdateResponse updateFinalizedAttendance(AttendanceSession session,
@@ -321,6 +350,21 @@ public class AttendanceUpdateService {
         }
 
         return new AttendanceCounts(presentCount, absentCount, unknownCount);
+    }
+
+        private AttendanceCounts updateSessionCounts(AttendanceSession session, Long sessionId) {
+        AttendanceCounts counts = recalculateFinalizedCounts(sessionId);
+        session.setPresentCount(counts.presentCount());
+        session.setAbsentCount(counts.absentCount());
+        session.setUnknownCount(counts.unknownCount());
+        attendanceSessionRepository.save(session);
+        return counts;
+    }
+
+    private void requireJustificationSource(String requestSource) {
+        if (!JUSTIFICATION_SOURCE.equals(requestSource)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Untrusted request source");
+        }
     }
 
     private void notifyStatusUpdated(AttendanceSession session,

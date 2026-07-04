@@ -81,7 +81,11 @@
               @for (student of scannedStudents(); track student.id) {
                 <!-- Style identique à la liste manuelle mais sans boutons -->
                 <div class="scanned-item">
-                  <div class="scanned-avatar">{{ student.initials }}</div>
+                  <app-user-avatar
+                    [name]="student.name"
+                    [imageUrl]="student.pfpUrl"
+                    size="md"
+                  ></app-user-avatar>
                   <div class="scanned-details">
                     <p class="scanned-name">{{ student.name }}</p>
                     <span class="scanned-id">{{ student.studentId }}</span>
@@ -135,7 +139,11 @@
             [class.row-present]="student.status === 'present'"
             [class.row-absent]="student.status === 'absent'"
           >
-            <div class="student-avatar manual-avatar">{{ student.initials }}</div>
+            <app-user-avatar
+              [name]="student.name"
+              [imageUrl]="student.pfpUrl"
+              size="md"
+            ></app-user-avatar>
             <div class="student-details">
               <p class="student-name">{{ student.name }}</p>
               <span class="student-id manual-student-id">{{ student.studentId }}</span>

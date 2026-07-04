@@ -1,24 +1,29 @@
-import { NgFor, NgIf } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  HostListener,
   computed,
   effect,
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { NgFor, NgIf, NgStyle } from '@angular/common';
 
 export interface DropdownOption {
   value: string;
   label: string;
 }
 
+type DropdownIconColor = 'primary' | 'secondary' | 'warning';
+
 @Component({
   selector: 'app-dropdown-filter',
   standalone: true,
-  imports: [FormsModule, NgFor, NgIf],
+  imports: [FormsModule, NgFor, NgIf, NgStyle],
   template: `
     <div class="w-full text-left">
       <!-- Label Section -->
@@ -30,7 +35,7 @@ export interface DropdownOption {
           class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-line"
           [class]="iconBackgroundClass()"
         >
-          <i class="text-sm" [class]="iconClass()"></i>
+          <i class="text-sm" [class]="iconClassWithColor()"></i>
         </span>
         <span>{{ label() }}</span>
         <span *ngIf="required()" class="text-danger" aria-hidden="true">*</span>
@@ -39,6 +44,7 @@ export interface DropdownOption {
       <div class="relative" [class.group]="isOpen()">
         <!-- Trigger Button -->
         <button
+          #triggerButton
           type="button"
           [id]="'filter-' + identifier()"
           (click)="toggleDropdown()"
@@ -64,12 +70,15 @@ export interface DropdownOption {
         <!-- Dropdown Popover -->
         <div
           *ngIf="isOpen()"
-          class="absolute left-0 right-0 top-full z-30 mt-2 flex max-h-80 flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-xl animate-in"
+          class="fixed bg-white rounded-xl border-2 border-line shadow-lg z-[70] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 flex flex-col"
+          [ngStyle]="panelStyle()"
         >
           <!-- Optional Search Bar -->
           <div *ngIf="searchable()" class="sticky top-0 border-b border-line bg-surface p-3">
             <div class="relative group">
-              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xs text-secondaryText group-focus-within:text-primary transition-colors"></i>
+              <i
+                class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xs text-secondaryText group-focus-within:text-primary transition-colors"
+              ></i>
               <input
                 type="text"
                 placeholder="Rechercher..."
@@ -134,48 +143,54 @@ export interface DropdownOption {
           </div>
         </div>
 
-        <!-- Backdrop to close -->
-        <div *ngIf="isOpen()" (click)="closeDropdown()" class="fixed inset-0 z-20 bg-transparent"></div>
-      </div>
-
-      <!-- Helper & Error Messages -->
-      <p *ngIf="helper() && !error()" class="mt-2 text-xs text-secondaryText/70 italic leading-relaxed">{{ helper() }}</p>
-      <div 
-        *ngIf="error()" 
-        class="mt-2 flex items-center gap-1.5 text-xs font-bold text-danger animate-in"
-      >
-        <i class="fa-solid fa-circle-exclamation"></i>
-        <span>{{ error() }}</span>
+        <!-- Backdrop overlay to close dropdown -->
+        <div *ngIf="isOpen()" (click)="closeDropdown()" class="fixed inset-0 z-[60]"></div>
       </div>
     </div>
   `,
-  styles: [`
-    @keyframes animateIn {
-      from { opacity: 0; transform: translateY(-8px) scale(0.98); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-    .animate-in { animation: animateIn 0.2s cubic-bezier(0, 0, 0.2, 1) forwards; }
-    .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { 
-      background: rgba(var(--primary-rgb, 0, 0, 0), 0.1); 
-      border-radius: 10px; 
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { 
-      background: rgba(var(--primary-rgb, 0, 0, 0), 0.2); 
-    }
-  `],
+  styles: [
+    `
+      @keyframes animateIn {
+        from {
+          opacity: 0;
+          transform: translateY(-8px) scale(0.98);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+      .animate-in {
+        animation: animateIn 0.2s cubic-bezier(0, 0, 0.2, 1) forwards;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 5px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(var(--primary-rgb, 0, 0, 0), 0.1);
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(var(--primary-rgb, 0, 0, 0), 0.2);
+      }
+    `,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DropdownFilter {
-  // Inputs
+  private readonly triggerButton = viewChild<ElementRef<HTMLButtonElement>>('triggerButton');
+
   readonly identifier = input.required<string>();
   readonly label = input.required<string>();
   readonly allLabel = input('Tous les éléments');
-  readonly options = input.required<DropdownOption[]>();
+  readonly options = input.required<readonly DropdownOption[]>();
   readonly value = input<string | null>(null);
   readonly iconClass = input.required<string>();
   readonly iconBackgroundClass = input.required<string>();
+  readonly iconColor = input<DropdownIconColor>('primary');
   readonly searchable = input(true);
   readonly required = input(false);
   readonly disabled = input(false);
@@ -185,10 +200,10 @@ export class DropdownFilter {
   // Outputs
   readonly filterChange = output<string | null>();
 
-  // Internal State
-  readonly isOpen = signal(false);
-  readonly selectedValue = signal('');
-  readonly searchQuery = signal('');
+  readonly isOpen = signal<boolean>(false);
+  readonly selectedValue = signal<string>('');
+  readonly searchQuery = signal<string>('');
+  readonly panelStyle = signal<Record<string, string>>({});
 
   // Computed Values
   readonly selectedLabel = computed(() => {
@@ -202,20 +217,41 @@ export class DropdownFilter {
     if (!this.searchable() || !query) return this.options();
 
     return this.options().filter(
-      (opt) => opt.label.toLowerCase().includes(query) || opt.value.toLowerCase().includes(query)
+      (opt) => opt.label.toLowerCase().includes(query) || opt.value.toLowerCase().includes(query),
     );
   });
+
+  readonly iconClassWithColor = computed(() => `${this.iconClass()} ${this.iconColorClass()}`);
 
   // Sync input value with internal state
   private readonly valueSync = effect(() => {
     this.selectedValue.set(this.value() ?? '');
-  }, { allowSignalWrites: true });
+  });
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    if (this.isOpen()) {
+      this.updatePanelPosition();
+    }
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    if (this.isOpen()) {
+      this.updatePanelPosition();
+    }
+  }
 
   // Methods
   toggleDropdown(): void {
-    if (this.disabled()) return;
-    this.isOpen.update((v) => !v);
-    if (!this.isOpen()) this.searchQuery.set('');
+    const nextState = !this.isOpen();
+    this.isOpen.set(nextState);
+
+    if (nextState) {
+      window.setTimeout(() => this.updatePanelPosition());
+    } else {
+      this.searchQuery.set('');
+    }
   }
 
   closeDropdown(): void {
@@ -233,7 +269,49 @@ export class DropdownFilter {
     this.closeDropdown();
   }
 
-  trackByValue(_: number, option: DropdownOption): string {
+  trackByValue(_index: number, option: DropdownOption): string {
     return option.value;
+  }
+
+  private iconColorClass(): string {
+    switch (this.iconColor()) {
+      case 'secondary':
+        return 'text-secondary';
+      case 'warning':
+        return 'text-warning';
+      case 'primary':
+      default:
+        return 'text-primary';
+    }
+  }
+
+  private updatePanelPosition(): void {
+    const trigger = this.triggerButton()?.nativeElement;
+    if (!trigger) {
+      return;
+    }
+
+    const rect = trigger.getBoundingClientRect();
+    const viewportPadding = 16;
+    const gap = 8;
+    const maximumPanelHeight = 384;
+    const minimumPanelHeight = 180;
+    const availableBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
+    const availableAbove = rect.top - viewportPadding - gap;
+    const openAbove = availableBelow < minimumPanelHeight && availableAbove > availableBelow;
+    const availableSpace = openAbove ? availableAbove : availableBelow;
+    const panelHeight = Math.min(maximumPanelHeight, Math.max(minimumPanelHeight, availableSpace));
+    const top = openAbove ? rect.top - panelHeight - gap : rect.bottom + gap;
+    const left = Math.min(
+      Math.max(viewportPadding, rect.left),
+      window.innerWidth - rect.width - viewportPadding,
+    );
+
+    this.panelStyle.set({
+      top: `${Math.max(viewportPadding, top)}px`,
+      left: `${left}px`,
+      width: `${rect.width}px`,
+      maxHeight: `${panelHeight}px`,
+    });
   }
 }

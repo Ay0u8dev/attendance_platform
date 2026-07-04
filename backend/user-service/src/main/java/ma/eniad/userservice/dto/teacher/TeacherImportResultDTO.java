@@ -27,6 +27,13 @@ public class TeacherImportResultDTO {
     private int createdAssignments;
     private int duplicateAssignments;
     private int duplicateAssignmentsInsideFile;
+    private int teachersCreated;
+    private int teachersUpdated;
+    private int assignmentsCreated;
+    private int rowsRejected;
+    private int duplicatesSkipped;
+    private int warningsCount;
+    private int errorsCount;
     private int missingAcademicYears;
     private int missingFormations;
     private int missingGroups;

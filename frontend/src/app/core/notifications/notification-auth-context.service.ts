@@ -6,11 +6,11 @@ import { AuthService } from '../auth/services/auth.service';
 @Injectable({ providedIn: 'root' })
 export class NotificationAuthContextService {
   private readonly authService = inject(AuthService);
-  private readonly storage = inject(OAuthStorage);
+  private readonly storage = inject(OAuthStorage, { optional: true });
   private readonly tokenKey = 'backend_access_token';
 
   getToken(): string | null {
-    return this.authService.getToken() ?? this.storage.getItem(this.tokenKey);
+    return this.authService.getToken() ?? this.storage?.getItem(this.tokenKey) ?? null;
   }
 
   getCurrentUserId(): number | null {

@@ -33,4 +33,8 @@ public class TeacherRequestDTO {
     @URL(message = "Profile picture URL must be valid")
     @Size(max = 512, message = "Profile picture URL must not exceed 512 characters")
     private String pfpUrl;
+
+    private Boolean enabled;
+
+    private Boolean firstLogin;
 }

@@ -24,11 +24,63 @@ class AuthControllerRefreshTest {
 
     private final UserServiceClient userServiceClient = mock(UserServiceClient.class);
     private final JwtService jwtService = mock(JwtService.class);
+    private final GoogleTokenService googleTokenService = mock(GoogleTokenService.class);
     private final AuthController controller = new AuthController(
             userServiceClient,
             jwtService,
-            mock(GoogleTokenService.class)
+            googleTokenService
     );
+
+    @Test
+    void loginForwardsNonBlankGooglePictureToUserService() {
+        UserDto user = UserDto.builder()
+                .id(12L)
+                .email("student@ump.ac.ma")
+                .pfpUrl("https://lh3.googleusercontent.com/avatar.jpg")
+                .roles(List.of(Role.STUDENT))
+                .enabled(true)
+                .firstLogin(true)
+                .build();
+        when(googleTokenService.validateWithGoogleApi("google-token")).thenReturn(Map.of(
+                "email", "student@ump.ac.ma",
+                "picture", " https://lh3.googleusercontent.com/avatar.jpg "
+        ));
+        when(userServiceClient.authUser(Map.of(
+                "email", "student@ump.ac.ma",
+                "pfpUrl", "https://lh3.googleusercontent.com/avatar.jpg"
+        ))).thenReturn(user);
+        when(jwtService.generateToken(user)).thenReturn("access-token");
+
+        ResponseEntity<?> response = controller.loginWithGoogle(Map.of("idToken", "google-token"));
+
+        assertEquals(Map.of("accessToken", "access-token"), response.getBody());
+        verify(userServiceClient).authUser(Map.of(
+                "email", "student@ump.ac.ma",
+                "pfpUrl", "https://lh3.googleusercontent.com/avatar.jpg"
+        ));
+    }
+
+    @Test
+    void loginDoesNotForwardBlankGooglePicture() {
+        UserDto user = UserDto.builder()
+                .id(12L)
+                .email("student@ump.ac.ma")
+                .roles(List.of(Role.STUDENT))
+                .enabled(true)
+                .firstLogin(true)
+                .build();
+        when(googleTokenService.validateWithGoogleApi("google-token")).thenReturn(Map.of(
+                "email", "student@ump.ac.ma",
+                "picture", "   "
+        ));
+        when(userServiceClient.authUser(Map.of("email", "student@ump.ac.ma"))).thenReturn(user);
+        when(jwtService.generateToken(user)).thenReturn("access-token");
+
+        ResponseEntity<?> response = controller.loginWithGoogle(Map.of("idToken", "google-token"));
+
+        assertEquals(Map.of("accessToken", "access-token"), response.getBody());
+        verify(userServiceClient).authUser(Map.of("email", "student@ump.ac.ma"));
+    }
 
     @Test
     void reissuesTokenFromFreshUserState() {

@@ -26,6 +26,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
             <!-- Bouton Déclencheur -->
             <button
               type="button"
+              aria-haspopup="listbox"
               class="flex h-10 w-24 items-center justify-between rounded-xl border border-line bg-surface px-4 text-sm font-bold text-principalText transition-all duration-300 hover:border-primary/50 hover:bg-primary-soft/10 focus:ring-4 focus:ring-primary-soft/30 active:scale-95"
             >
               <span>{{ pageSize() }}</span>
@@ -43,14 +44,23 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 
             <!-- Liste Popover Moderne -->
             <div
-              class="absolute bottom-full mb-2 left-0 z-50 w-full min-w-[100px] origin-bottom scale-95 opacity-0 invisible transition-all duration-200 group-focus-within:visible group-focus-within:scale-100 group-focus-within:opacity-100"
+              class="absolute left-0 z-[80] w-full min-w-[100px] scale-95 opacity-0 invisible transition-all duration-200 group-focus-within:visible group-focus-within:scale-100 group-focus-within:opacity-100"
+              [class.bottom-full]="menuDirection() === 'up'"
+              [class.mb-2]="menuDirection() === 'up'"
+              [class.origin-bottom]="menuDirection() === 'up'"
+              [class.top-full]="menuDirection() === 'down'"
+              [class.mt-2]="menuDirection() === 'down'"
+              [class.origin-top]="menuDirection() === 'down'"
             >
-              <div class="overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-xl ring-1 ring-black/5">
+              <div class="overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-shell ring-1 ring-black/5">
                 <p class="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-secondaryText/60">Lignes</p>
                 
                 @for (option of pageSizeOptions(); track option) {
                   <button
+                    type="button"
                     (click)="pageSizeChange.emit(option)"
+                    role="option"
+                    [attr.aria-selected]="option === pageSize()"
                     class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold transition-colors
                            hover:bg-primary-soft hover:text-primary
                            [&:not(:hover)]:text-principalText"
@@ -103,6 +113,7 @@ export class DataTablePagination {
   readonly canGoPrevious = input(false);
   readonly canGoNext = input(false);
   readonly pageSizeOptions = input<readonly number[]>([5, 10, 20, 50]);
+  readonly menuDirection = input<'up' | 'down'>('up');
 
   readonly pageChange = output<number>();
   readonly pageSizeChange = output<number>();

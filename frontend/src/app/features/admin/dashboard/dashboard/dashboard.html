@@ -1,302 +1,428 @@
-<section class="space-y-6 lg:space-y-8">
-  <app-page-header
-    title="Dashboard"
-    description="Track attendance performance, recent sessions, and the review workload from a single responsive operations screen."
-    meta="Updated 5 minutes ago"
-  ></app-page-header>
+<section class="space-y-8">
+  <header class="rounded-[1.75rem] border border-line bg-surface px-5 py-6 shadow-card sm:px-7">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Tableau de bord administrateur</p>
+        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-principalText">Centre de contrôle des présences</h1>
+      </div>
 
-  <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-    <div class="inline-flex w-fit items-center gap-1 rounded-2xl border border-line bg-surface p-1.5 shadow-card">
-      @for (item of ['Overview', 'Engagement', 'Sales']; track item) {
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-3">
+          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Année universitaire</p>
+          <p class="mt-1 font-semibold text-principalText">{{ activeYearName() }}</p>
+        </div>
+        <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-3">
+          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Dernière mise à jour</p>
+          <p class="mt-1 font-semibold text-principalText">{{ formatDateTime(lastUpdated()) }}</p>
+        </div>
         <button
           type="button"
-          class="rounded-xl px-3 py-1.5 text-sm font-medium text-secondaryText transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText"
-          [class.bg-primary-soft]="item === 'Overview'"
-          [class.text-primary]="item === 'Overview'"
-          [attr.aria-pressed]="item === 'Overview'"
+          class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-line bg-surface px-4 text-sm font-semibold text-principalText shadow-sm transition hover:-translate-y-0.5 hover:border-primary-soft hover:bg-primary-soft hover:text-primary hover:shadow-card disabled:cursor-not-allowed disabled:opacity-60"
+          [disabled]="loading()"
+          (click)="loadData()"
         >
-          {{ item }}
+          <i class="fa-solid fa-rotate" [class.fa-spin]="loading()" aria-hidden="true"></i>
+          Actualiser
         </button>
-      }
+      </div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        class="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-medium text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
-      >
-        <i class="fa-solid fa-share-nodes text-xs" aria-hidden="true"></i>
-        Share
-      </button>
-      <button
-        type="button"
-        class="inline-flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-sm font-semibold text-white shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-strong hover:shadow-card-strong"
-      >
-        <i class="fa-solid fa-cloud-arrow-down text-xs" aria-hidden="true"></i>
-        Export
-      </button>
-    </div>
-  </div>
-
-  <div class="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.85fr)]">
-    <article
-      class="rounded-3xl border border-primary-soft bg-linear-to-br from-primary-soft via-surface to-secondary-soft p-5 shadow-card sm:p-6"
-    >
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 class="text-xl font-semibold text-principalText">Control center</h2>
-          <p class="text-sm text-secondaryText">
-            Keep attendance operations visible and act quickly without opening multiple pages.
-          </p>
-        </div>
-
-        <a
-          routerLink="/attendance"
-          class="inline-flex items-center gap-2 rounded-xl border border-primary-soft bg-surface px-4 py-2 text-sm font-semibold text-principalText transition-colors duration-200 hover:bg-primary-soft hover:text-primary"
-        >
-          Open attendance board
-          <i class="fa-solid fa-arrow-up-right-from-square text-xs" aria-hidden="true"></i>
-        </a>
+    @if (errorMessage()) {
+      <div class="mt-5 rounded-2xl border border-warning-soft bg-warning-soft px-4 py-3 text-sm font-semibold text-warning-strong">
+        {{ errorMessage() }}
       </div>
-
-      <div class="mt-5 flex flex-wrap gap-2">
-        @for (highlight of highlights; track highlight) {
-          <span
-            class="inline-flex items-center rounded-full border border-primary-soft bg-surface px-3 py-1 text-xs font-semibold text-primary"
-          >
-            {{ highlight }}
-          </span>
-        }
-      </div>
-    </article>
-
-    <article class="rounded-3xl border border-line bg-surface p-5 shadow-card sm:p-6">
-      <div class="flex items-center justify-between gap-3">
-        <h2 class="text-xl font-semibold text-principalText">Priority queue</h2>
-        <app-status-badge label="2 urgent" variant="warning"></app-status-badge>
-      </div>
-
-      <div class="mt-5 space-y-3">
-        @for (item of focusQueue; track item.label) {
-          <div
-            class="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface-subtle px-4 py-3"
-          >
-            <p class="text-sm font-medium text-principalText">{{ item.label }}</p>
-            <div class="flex items-center gap-2">
-              <p class="text-sm font-semibold text-principalText">{{ item.value }}</p>
-              <app-status-badge [label]="item.variant" [variant]="item.variant"></app-status-badge>
-            </div>
-          </div>
-        }
-      </div>
-    </article>
-  </div>
-
-  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-    @for (stat of stats; track stat.label) {
-      <app-stat-card
-        [label]="stat.label"
-        [value]="stat.value"
-        [icon]="stat.icon"
-        [badge]="stat.badge"
-        [variant]="stat.variant"
-      ></app-stat-card>
     }
-  </div>
+  </header>
 
-  <div class="grid gap-4 xl:grid-cols-[minmax(0,1.62fr)_minmax(18rem,0.88fr)]">
-    <article class="rounded-3xl border border-line bg-surface p-5 shadow-card sm:p-6">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 class="text-xl font-semibold text-principalText">Attendance trends</h2>
-          <p class="text-sm text-secondaryText">Daily presence rate over the last 30 days.</p>
-        </div>
-
-        <button
-          type="button"
-          class="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2 text-sm font-medium text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
-        >
-          Last 30 days
-          <i class="fa-solid fa-chevron-down text-xs" aria-hidden="true"></i>
-        </button>
-      </div>
-
-      <div class="mt-6 overflow-x-auto">
-        <div
-          class="min-w-160 rounded-[1.75rem] border border-primary-soft bg-linear-to-b from-primary-soft via-surface to-surface p-4"
-        >
-          <svg
-            viewBox="0 0 720 220"
-            class="h-64 w-full"
-            role="img"
-            aria-label="Attendance trend chart"
+  <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    @for (card of kpiCards(); track card.label) {
+      <article class="rounded-[1.35rem] border border-line bg-surface p-5 shadow-card transition hover:-translate-y-0.5 hover:shadow-card-strong">
+        <div class="flex items-start justify-between gap-4">
+          <span
+            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+            [class.bg-primary-soft]="card.variant === 'info'"
+            [class.text-primary]="card.variant === 'info'"
+            [class.bg-secondary-soft]="card.variant === 'success'"
+            [class.text-secondary-strong]="card.variant === 'success'"
+            [class.bg-warning-soft]="card.variant === 'warning'"
+            [class.text-warning-strong]="card.variant === 'warning'"
+            [class.bg-danger-soft]="card.variant === 'error'"
+            [class.text-danger]="card.variant === 'error'"
+            [class.bg-surface-subtle]="card.variant === 'neutral'"
+            [class.text-secondaryText]="card.variant === 'neutral'"
           >
-            <defs>
-              <linearGradient id="trendArea" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="rgba(30,58,138,0.22)"></stop>
-                <stop offset="100%" stop-color="rgba(30,58,138,0.02)"></stop>
-              </linearGradient>
-            </defs>
+            <i [class]="card.icon" aria-hidden="true"></i>
+          </span>
+          <app-status-badge [label]="card.helper" [variant]="card.variant"></app-status-badge>
+        </div>
+        <p class="mt-5 text-3xl font-semibold tracking-tight text-principalText">{{ card.value }}</p>
+        <p class="mt-1 text-sm font-semibold text-secondaryText">{{ card.label }}</p>
+      </article>
+    }
+  </section>
 
-            @for (line of [40, 85, 130, 175]; track line) {
-              <line
-                x1="0"
-                [attr.y1]="line"
-                x2="720"
-                [attr.y2]="line"
-                stroke="rgba(148, 163, 184, 0.25)"
-              ></line>
+  <section class="rounded-[1.75rem] border border-line bg-surface p-6 shadow-card">
+    <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+      <h2 class="text-2xl font-semibold text-principalText">Analyse des présences</h2>
+
+      <div class="flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-surface-subtle px-3 py-3">
+        <div>
+          <p class="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted">Période</p>
+          <div class="flex flex-wrap gap-1.5 rounded-xl bg-surface p-1 shadow-sm">
+            @for (range of analyticsRanges; track range.value) {
+              <button
+                type="button"
+                class="rounded-lg px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                [class.bg-primary]="analyticsRange() === range.value"
+                [class.text-white]="analyticsRange() === range.value"
+                [class.text-secondaryText]="analyticsRange() !== range.value"
+                [class.hover:bg-primary-soft]="analyticsRange() !== range.value"
+                (click)="setAnalyticsRange(range.value)"
+              >
+                {{ range.label }}
+              </button>
             }
-
-            <polyline
-              fill="url(#trendArea)"
-              stroke="none"
-              [attr.points]="'0,220 ' + trendPoints + ' 712,220'"
-            ></polyline>
-            <polyline
-              fill="none"
-              stroke="#1E3A8A"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="3"
-              [attr.points]="trendPoints"
-            ></polyline>
-          </svg>
-
-          <div class="mt-3 grid grid-cols-6 gap-2 text-xs text-muted">
-            <span>01 Oct</span>
-            <span>07 Oct</span>
-            <span>14 Oct</span>
-            <span>21 Oct</span>
-            <span>28 Oct</span>
-            <span class="text-right">Today</span>
           </div>
         </div>
-      </div>
-    </article>
-
-    <article class="rounded-3xl border border-line bg-surface p-5 shadow-card sm:p-6">
-      <div class="flex items-center justify-between gap-3">
-        <h2 class="text-xl font-semibold text-principalText">Operational status</h2>
-        <app-status-badge label="Healthy" variant="success"></app-status-badge>
-      </div>
-
-      <div class="mt-5 space-y-4">
-        <div class="rounded-2xl border border-warning-soft bg-warning-soft p-4">
-          <p class="text-sm font-medium text-principalText">Critical student follow-up</p>
-          <p class="mt-1 text-sm leading-6 text-secondaryText">
-            One student exceeded the absence threshold and needs administrative confirmation.
-          </p>
-        </div>
-        <div class="rounded-2xl border border-secondary-soft bg-secondary-soft p-4">
-          <p class="text-sm font-medium text-principalText">Review throughput</p>
-          <p class="mt-1 text-sm leading-6 text-secondaryText">
-            Justification processing remains within service targets this week.
-          </p>
-        </div>
-        <div class="rounded-2xl border border-primary-soft bg-primary-soft p-4">
-          <p class="text-sm font-medium text-principalText">Mobile behavior</p>
-          <p class="mt-1 text-sm leading-6 text-secondaryText">
-            Cards stack first, dense tables collapse into readable records, and the shell becomes a
-            drawer.
-          </p>
-        </div>
-      </div>
-    </article>
-  </div>
-
-  <div class="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.9fr)]">
-    <article class="rounded-3xl border border-line bg-surface p-5 shadow-card sm:p-6">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 class="text-xl font-semibold text-principalText">Recent sessions</h2>
-          <p class="text-sm text-secondaryText">
-            A responsive record list that replaces a rigid desktop-only table.
-          </p>
+          <p class="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted">Vue</p>
+          <div class="flex flex-wrap gap-1.5 rounded-xl bg-surface p-1 shadow-sm">
+            @for (mode of analyticsModes; track mode.value) {
+              <button
+                type="button"
+                class="rounded-lg px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                [class.bg-primary]="analyticsMode() === mode.value"
+                [class.text-white]="analyticsMode() === mode.value"
+                [class.text-secondaryText]="analyticsMode() !== mode.value"
+                [class.hover:bg-primary-soft]="analyticsMode() !== mode.value"
+                (click)="setAnalyticsMode(mode.value)"
+              >
+                {{ mode.label }}
+              </button>
+            }
+          </div>
         </div>
-        <a
-          routerLink="/attendance"
-          class="inline-flex items-center rounded-xl border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
+        <button
+          type="button"
+          class="mb-0.5 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-surface text-primary shadow-sm transition hover:border-primary-soft hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          aria-label="Agrandir le graphique"
+          (click)="openAnalytics()"
         >
-          View all
-        </a>
+          <i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-3 sm:grid-cols-5">
+      <div class="rounded-2xl border border-secondary-soft bg-secondary-soft px-4 py-3">
+        <p class="text-2xl font-semibold text-secondary-strong">{{ todayPresent() }}</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.12em] text-secondary-strong">Présents aujourd'hui</p>
+      </div>
+      <div class="rounded-2xl border border-danger/20 bg-danger-soft px-4 py-3">
+        <p class="text-2xl font-semibold text-danger">{{ todayAbsent() }}</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.12em] text-danger">Absents aujourd'hui</p>
+      </div>
+      <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-3">
+        <p class="text-2xl font-semibold text-principalText">{{ todayOpen() }}</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Ouvertes aujourd'hui</p>
+      </div>
+      <div class="rounded-2xl border border-line bg-surface-subtle px-4 py-3">
+        <p class="text-2xl font-semibold text-principalText">{{ markedToday() }}</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Pointages totaux</p>
+      </div>
+      <div class="rounded-2xl border border-primary-soft bg-primary-soft px-4 py-3">
+        <p class="text-2xl font-semibold text-primary">{{ formatPercent(todayAttendanceRate()) }}</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.12em] text-primary">Taux du jour</p>
+      </div>
+    </div>
+
+    <div class="mt-6">
+      <app-absence-line-chart
+        [points]="analyticsPoints()"
+        (expandRequested)="openAnalytics()"
+      ></app-absence-line-chart>
+    </div>
+  </section>
+
+  <section class="grid gap-6 xl:grid-cols-2">
+    <article class="rounded-[1.75rem] border border-line bg-surface p-6 shadow-card">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Groupes</p>
+          <h2 class="mt-1 text-xl font-semibold text-principalText">Taux de présence par groupe</h2>
+        </div>
+        <div class="grid w-full gap-3 sm:w-auto sm:min-w-[28rem] sm:grid-cols-2">
+          <app-dropdown-filter
+            label="Filière"
+            identifier="dashboard-group-filiere"
+            allLabel="Toutes les filières"
+            [options]="groupFiliereOptions()"
+            [value]="groupFiliereFilter() === 'all' ? null : groupFiliereFilter()"
+            iconClass="fa-solid fa-layer-group"
+            iconBackgroundClass="bg-secondary-soft"
+            iconColor="secondary"
+            (filterChange)="setGroupFiliereFilter($event)"
+          ></app-dropdown-filter>
+
+          <app-dropdown-filter
+            label="Module"
+            identifier="dashboard-group-module"
+            allLabel="Tous les modules"
+            [options]="groupModuleOptions()"
+            [value]="groupModuleFilter() === 'all' ? null : groupModuleFilter()"
+            iconClass="fa-solid fa-book"
+            iconBackgroundClass="bg-primary-soft"
+            (filterChange)="setGroupModuleFilter($event)"
+          ></app-dropdown-filter>
+        </div>
       </div>
 
-      <div class="mt-5 hidden overflow-hidden rounded-2xl border border-line lg:block">
-        <div
-          class="grid grid-cols-[1.1fr_1.2fr_1.2fr_1.1fr_0.8fr] bg-background-elevated px-5 py-4 text-xs font-semibold uppercase tracking-[0.2em] text-muted"
-        >
-          <span>Date & time</span>
-          <span>Class / section</span>
-          <span>Module</span>
-          <span>Teacher</span>
-          <span>Method</span>
-        </div>
-
-        @for (session of sessions; track session.module) {
-          <div
-            class="grid grid-cols-[1.1fr_1.2fr_1.2fr_1.1fr_0.8fr] items-center gap-4 border-t border-line px-5 py-4"
-          >
-            <div>
-              <p class="font-medium text-principalText">{{ session.date }}</p>
-              <p class="text-sm text-secondaryText">{{ session.time }}</p>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2">
+        @for (row of groupPerformance(); track row.id) {
+          <article class="rounded-2xl border border-line bg-surface-subtle/60 p-4 shadow-sm">
+            <div class="flex items-center gap-4">
+              <div class="relative h-24 w-24 shrink-0">
+                <svg viewBox="0 0 120 120" class="-rotate-90" role="img" [attr.aria-label]="row.label + ' taux de présence ' + formatPercent(row.rate)">
+                  <circle cx="60" cy="60" r="44" fill="none" stroke="currentColor" stroke-width="12" class="text-line" />
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="44"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="12"
+                    stroke-linecap="round"
+                    pathLength="100"
+                    [attr.stroke-dasharray]="radialDash(row.rate)"
+                    [class.text-secondary]="row.variant === 'success'"
+                    [class.text-warning]="row.variant === 'warning'"
+                    [class.text-danger]="row.variant === 'error'"
+                    [class.text-line-strong]="row.variant === 'neutral'"
+                  />
+                </svg>
+                <span class="absolute inset-0 flex items-center justify-center text-lg font-semibold text-principalText">
+                  {{ formatPercent(row.rate) }}
+                </span>
+              </div>
+              <div class="min-w-0">
+                <h3 class="truncate font-semibold text-principalText">{{ row.label }}</h3>
+                <p class="mt-1 text-sm text-secondaryText">{{ row.meta }}</p>
+                <p class="mt-2 text-xs font-medium text-muted">{{ row.present }} présent(s) / {{ row.absent }} absent(s)</p>
+              </div>
             </div>
-            <p class="text-sm text-principalText">{{ session.classroom }}</p>
-            <p class="text-sm text-principalText">{{ session.module }}</p>
-            <p class="text-sm text-principalText">{{ session.teacher }}</p>
-            <app-status-badge
-              [label]="session.method"
-              [variant]="session.variant"
-            ></app-status-badge>
+          </article>
+        } @empty {
+          <div class="rounded-2xl border border-dashed border-line p-8 text-center text-sm text-secondaryText sm:col-span-2">
+            La performance des groupes apparaît après l'enregistrement de sessions de présence.
           </div>
         }
       </div>
+    </article>
 
-      <div class="mt-5 grid gap-3 lg:hidden">
-        @for (session of sessions; track session.module) {
-          <article class="rounded-2xl border border-line p-4 transition-colors duration-200 hover:border-primary-soft">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p class="font-medium text-principalText">{{ session.module }}</p>
-                <p class="text-sm text-secondaryText">{{ session.classroom }}</p>
+    <article class="rounded-[1.75rem] border border-line bg-surface p-6 shadow-card">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Enseignants</p>
+        <h2 class="mt-1 text-xl font-semibold text-principalText">Taux de présence par enseignant</h2>
+      </div>
+
+      <div class="mt-6 grid gap-4 sm:grid-cols-2">
+        @for (row of teacherPerformance(); track row.id) {
+          <article class="rounded-2xl border border-line bg-surface-subtle/60 p-4 shadow-sm">
+            <div class="flex items-center gap-4">
+              <div class="relative h-24 w-24 shrink-0">
+                <svg viewBox="0 0 120 120" class="-rotate-90" role="img" [attr.aria-label]="row.label + ' taux de présence ' + formatPercent(row.rate)">
+                  <circle cx="60" cy="60" r="44" fill="none" stroke="currentColor" stroke-width="12" class="text-line" />
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="44"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="12"
+                    stroke-linecap="round"
+                    pathLength="100"
+                    [attr.stroke-dasharray]="radialDash(row.rate)"
+                    [class.text-secondary]="row.variant === 'success'"
+                    [class.text-warning]="row.variant === 'warning'"
+                    [class.text-danger]="row.variant === 'error'"
+                    [class.text-line-strong]="row.variant === 'neutral'"
+                  />
+                </svg>
+                <span class="absolute inset-0 flex items-center justify-center text-lg font-semibold text-principalText">
+                  {{ formatPercent(row.rate) }}
+                </span>
               </div>
-              <app-status-badge
-                [label]="session.method"
-                [variant]="session.variant"
-              ></app-status-badge>
+              <div class="min-w-0">
+                <h3 class="truncate font-semibold text-principalText">{{ row.label }}</h3>
+                <p class="mt-1 text-sm text-secondaryText">{{ row.meta }}</p>
+                <p class="mt-2 text-xs font-medium text-muted">{{ row.present }} présent(s) / {{ row.absent }} absent(s)</p>
+              </div>
             </div>
+          </article>
+        } @empty {
+          <div class="rounded-2xl border border-dashed border-line p-8 text-center text-sm text-secondaryText sm:col-span-2">
+            Les taux de présence par enseignant apparaissent après l'enregistrement des sessions.
+          </div>
+        }
+      </div>
+    </article>
+  </section>
 
-            <div class="mt-4 grid gap-2 text-sm text-secondaryText sm:grid-cols-2">
-              <p>
-                <span class="font-medium text-principalText">Teacher:</span> {{ session.teacher }}
-              </p>
-              <p>
-                <span class="font-medium text-principalText">Time:</span> {{ session.date }} •
-                {{ session.time }}
-              </p>
-            </div>
+  <section class="grid gap-6 xl:grid-cols-[1fr_0.85fr]">
+    <section class="overflow-hidden rounded-[1.75rem] border border-line bg-surface shadow-card">
+      <div class="border-b border-line bg-surface px-5 py-5 sm:px-6">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Sessions récentes</p>
+            <h2 class="mt-1 text-xl font-semibold text-principalText">Dernière activité de présence</h2>
+          </div>
+          <a routerLink="/attendance" class="inline-flex items-center gap-2 rounded-xl border border-line bg-surface-subtle px-3 py-2 text-sm font-semibold text-primary transition hover:border-primary-soft hover:bg-primary-soft">
+            Voir tout
+            <i class="fa-solid fa-arrow-right text-xs" aria-hidden="true"></i>
+          </a>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto p-4">
+        <table class="min-w-full border-separate border-spacing-y-2 text-sm">
+          <thead class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+            <tr>
+              <th class="px-4 py-3 text-left">Enseignant</th>
+              <th class="px-4 py-3 text-left">Module</th>
+              <th class="px-4 py-3 text-left">Groupe</th>
+              <th class="px-4 py-3 text-left">Heure</th>
+              <th class="px-4 py-3 text-left">Taux</th>
+              <th class="px-4 py-3 text-left">Statut</th>
+              <th class="px-4 py-3 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (session of recentSessions(); track session.sessionId) {
+              <tr class="rounded-2xl bg-surface-subtle shadow-sm transition hover:-translate-y-0.5 hover:shadow-card">
+                <td class="rounded-l-2xl px-4 py-4 font-semibold text-principalText">
+                  {{ session.teacherFullName || 'Enseignant non renseigné' }}
+                </td>
+                <td class="px-4 py-4 text-principalText">{{ session.courseLabel }}</td>
+                <td class="px-4 py-4 text-secondaryText">{{ groupLabel(session.groupIds) }}</td>
+                <td class="px-4 py-4 text-secondaryText">{{ formatTimeRange(session) }}</td>
+                <td class="px-4 py-4">
+                  <div class="flex min-w-32 items-center gap-2">
+                    <span class="h-2 flex-1 overflow-hidden rounded-full bg-surface">
+                      <span
+                        class="block h-full rounded-full"
+                        [class.bg-secondary]="sessionRate(session) >= 85"
+                        [class.bg-warning]="sessionRate(session) >= 70 && sessionRate(session) < 85"
+                        [class.bg-danger]="sessionRate(session) < 70"
+                        [style.width.%]="sessionRate(session)"
+                      ></span>
+                    </span>
+                    <span class="text-xs font-semibold text-principalText">{{ formatPercent(sessionRate(session)) }}</span>
+                  </div>
+                </td>
+                <td class="px-4 py-4">
+                  <app-status-badge
+                    [label]="sessionStatusLabel(session)"
+                    [variant]="session.status === 'ACTIVE' ? 'info' : 'success'"
+                  ></app-status-badge>
+                </td>
+                <td class="rounded-r-2xl px-4 py-4 text-right">
+                  <a
+                    routerLink="/attendance"
+                    class="inline-flex h-9 items-center justify-center rounded-xl border border-line bg-surface px-3 text-xs font-semibold text-principalText transition hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
+                  >
+                    Détails
+                  </a>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="px-6 py-12 text-center text-sm text-secondaryText">
+                  Aucune session de présence trouvée.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <article class="rounded-[1.75rem] border border-line bg-surface p-6 shadow-card">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Actions requises</p>
+        <h2 class="mt-1 text-xl font-semibold text-principalText">File de décision</h2>
+      </div>
+
+      <div class="mt-6 space-y-3">
+        @for (alert of alerts(); track alert.title) {
+          <article class="rounded-2xl border border-line bg-surface-subtle/70 p-4">
+            <app-status-badge [label]="severityLabel(alert.severity)" [variant]="alertVariant(alert.severity)"></app-status-badge>
+            <h3 class="mt-3 font-semibold text-principalText">{{ alert.title }}</h3>
+            <p class="mt-1 text-sm leading-6 text-secondaryText">{{ alert.description }}</p>
+            <a
+              [routerLink]="alert.route"
+              class="mt-3 inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-primary transition hover:border-primary-soft hover:bg-primary-soft"
+            >
+              {{ alert.actionLabel }}
+              <i class="fa-solid fa-arrow-right text-xs" aria-hidden="true"></i>
+            </a>
           </article>
         }
       </div>
     </article>
+  </section>
 
-    <article class="rounded-3xl border border-line bg-surface p-5 shadow-card sm:p-6">
-      <h2 class="text-xl font-semibold text-principalText">Quick actions</h2>
-      <p class="mt-1 text-sm text-secondaryText">
-        These tiles stay usable on narrow screens without shrinking tap targets.
-      </p>
-
-      <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-        @for (action of quickActions; track action.label) {
-          <app-quick-action-tile
-            [label]="action.label"
-            [description]="action.description"
-            [icon]="action.icon"
-            [route]="action.route"
-            [tone]="action.tone"
-          ></app-quick-action-tile>
-        }
+  <app-modal
+    [open]="analyticsExpanded()"
+    title="Analyse des présences agrandie"
+    description="Faites défiler horizontalement pour examiner les pointages sur la période sélectionnée."
+    size="lg"
+    [showFooter]="false"
+    (closed)="closeAnalytics()"
+  >
+    <div modal-body>
+      <div class="mb-5 flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-surface-subtle px-3 py-3">
+        <div>
+          <p class="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted">Période</p>
+          <div class="flex flex-wrap gap-1.5 rounded-xl bg-surface p-1 shadow-sm">
+            @for (range of analyticsRanges; track range.value) {
+              <button
+                type="button"
+                class="rounded-lg px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                [class.bg-primary]="analyticsRange() === range.value"
+                [class.text-white]="analyticsRange() === range.value"
+                [class.text-secondaryText]="analyticsRange() !== range.value"
+                [class.hover:bg-primary-soft]="analyticsRange() !== range.value"
+                (click)="setAnalyticsRange(range.value)"
+              >
+                {{ range.label }}
+              </button>
+            }
+          </div>
+        </div>
+        <div>
+          <p class="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted">Vue</p>
+          <div class="flex flex-wrap gap-1.5 rounded-xl bg-surface p-1 shadow-sm">
+            @for (mode of analyticsModes; track mode.value) {
+              <button
+                type="button"
+                class="rounded-lg px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                [class.bg-primary]="analyticsMode() === mode.value"
+                [class.text-white]="analyticsMode() === mode.value"
+                [class.text-secondaryText]="analyticsMode() !== mode.value"
+                [class.hover:bg-primary-soft]="analyticsMode() !== mode.value"
+                (click)="setAnalyticsMode(mode.value)"
+              >
+                {{ mode.label }}
+              </button>
+            }
+          </div>
+        </div>
       </div>
-    </article>
-  </div>
+
+      <app-absence-line-chart
+        [points]="analyticsPoints()"
+        [expanded]="true"
+      ></app-absence-line-chart>
+    </div>
+  </app-modal>
 </section>

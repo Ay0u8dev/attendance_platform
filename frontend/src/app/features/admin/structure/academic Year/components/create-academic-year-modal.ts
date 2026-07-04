@@ -155,11 +155,11 @@ export class CreateAcademicYearModal {
 
     return normalizeLabel(this.form.name).length >= 4
       ? ''
-      : 'Indiquez un libelle de 4 caracteres minimum.';
+      : 'Indiquez un libellé de 4 caractères minimum.';
   }
 
   startDateError(): string {
-    return this.submitted() && !this.form.startDate ? 'Selectionnez une date de debut.' : '';
+    return this.submitted() && !this.form.startDate ? 'Sélectionnez une date de début.' : '';
   }
 
   endDateError(): string {
@@ -168,11 +168,11 @@ export class CreateAcademicYearModal {
     }
 
     if (!this.form.endDate) {
-      return 'Selectionnez une date de fin.';
+      return 'Sélectionnez une date de fin.';
     }
 
     return this.form.startDate && this.form.endDate <= this.form.startDate
-      ? 'La date de fin doit etre apres la date de debut.'
+      ? 'La date de fin doit être après la date de début.'
       : '';
   }
 

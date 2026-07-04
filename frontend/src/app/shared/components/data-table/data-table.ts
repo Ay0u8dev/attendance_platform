@@ -39,19 +39,23 @@ export class DataTable<T extends object> {
   readonly title = input('');
   readonly description = input('');
   readonly caption = input('');
-  readonly searchPlaceholder = input('Search rows...');
-  readonly emptyStateTitle = input('No rows found');
+  readonly searchPlaceholder = input('Rechercher des lignes...');
+  readonly emptyStateTitle = input('Aucune ligne trouvée');
   readonly emptyStateDescription = input(
-    'Try adjusting filters, search terms, or visible columns.',
+    'Essayez d’ajuster les filtres, les termes de recherche ou les colonnes visibles.',
   );
   readonly rows = input.required<readonly T[]>();
   readonly columns = input.required<readonly DataTableColumn<T>[]>();
   readonly pageSizeOptions = input<readonly number[]>([5, 10, 20, 50]);
   readonly initialPageSize = input(10);
   readonly showToolbar = input(true);
+  readonly showResultSummary = input(true);
+  readonly showColumnFilters = input(true);
+  readonly showColumnVisibility = input(true);
   readonly enableRowSelection = input(false);
   readonly rowId = input<((row: T, index: number) => string) | undefined>(undefined);
   readonly rowClickable = input(false);
+  readonly paginationPlacement = input<'top' | 'bottom'>('bottom');
 
   readonly selectionChange = output<readonly T[]>();
   readonly bulkDeleteRequested = output<readonly T[]>();
@@ -93,8 +97,12 @@ export class DataTable<T extends object> {
     this.columns().filter((column) => this.isColumnVisible(column)),
   );
 
-  readonly toolbarFilters = computed<readonly DataTableToolbarFilter[]>(() =>
-    this.columns()
+  readonly toolbarFilters = computed<readonly DataTableToolbarFilter[]>(() => {
+    if (!this.showColumnFilters()) {
+      return [];
+    }
+
+    return this.columns()
       .filter((column) => column.filter)
       .map((column) => ({
         columnId: column.id,
@@ -104,13 +112,17 @@ export class DataTable<T extends object> {
         placeholder:
           column.filter!.placeholder ??
           (column.filter!.type === 'select'
-            ? `All ${column.header.toLowerCase()}`
-            : `Filter ${column.header.toLowerCase()}`),
+            ? `Tous les ${column.header.toLowerCase()}`
+            : `Filtrer ${column.header.toLowerCase()}`),
         options: column.filter!.options ?? [],
-      })),
-  );
+      }));
+  });
 
   readonly columnVisibilityOptions = computed<readonly DataTableColumnVisibilityOption[]>(() => {
+    if (!this.showColumnVisibility()) {
+      return [];
+    }
+
     const hideableColumns = this.columns().filter((column) => column.hideable !== false);
     const visibleCount = hideableColumns.filter((column) => this.isColumnVisible(column)).length;
 
@@ -423,11 +435,11 @@ export class DataTable<T extends object> {
     }
 
     if (value instanceof Date) {
-      return value.toLocaleDateString();
+      return value.toLocaleDateString('fr-FR');
     }
 
     if (typeof value === 'boolean') {
-      return value ? 'Yes' : 'No';
+      return value ? 'Oui' : 'Non';
     }
 
     if (value === null || value === undefined || value === '') {
@@ -519,7 +531,7 @@ export class DataTable<T extends object> {
       return Number(left) - Number(right);
     }
 
-    return String(left).localeCompare(String(right), undefined, {
+    return String(left).localeCompare(String(right), 'fr-FR', {
       numeric: true,
       sensitivity: 'base',
     });

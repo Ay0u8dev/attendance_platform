@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -166,6 +167,69 @@ public class AttendanceQueryService {
                 totalPresent,
                 totalAbsent,
                 attendanceRate
+        );
+    }
+
+    public AdminStudentAttendanceSummaryResponse getAdminStudentSummary(Long studentId, LocalDate dateFrom, LocalDate dateTo) {
+        List<AttendanceRecord> records = attendanceRecordRepository.findStudentHistory(
+                studentId,
+                false, null,
+                dateFrom != null, atStartOfDay(dateFrom),
+                dateTo != null, startOfNextDay(dateTo),
+                Pageable.unpaged()
+        ).getContent();
+        Map<Long, AttendanceSession> sessionsById = loadSessions(records.stream()
+                .map(AttendanceRecord::getSessionId)
+                .distinct()
+                .toList());
+
+        long presents = 0;
+        long justifiedAbsences = 0;
+        long unjustifiedAbsences = 0;
+        double absenceMinutes = 0;
+        LocalDateTime lastAbsenceAt = null;
+
+        for (AttendanceRecord record : records) {
+            AttendanceSession session = sessionsById.get(record.getSessionId());
+            if (record.getStatus() == AttendanceStudentStatus.PRESENT) {
+                presents++;
+                continue;
+            }
+
+            if (record.getStatus() == AttendanceStudentStatus.ABSENT || record.getStatus() == AttendanceStudentStatus.JUSTIFIED) {
+                if (record.getStatus() == AttendanceStudentStatus.JUSTIFIED) {
+                    justifiedAbsences++;
+                } else {
+                    unjustifiedAbsences++;
+                }
+
+                if (session != null) {
+                    LocalDateTime absenceDate = session.getStartedAt();
+                    if (lastAbsenceAt == null || absenceDate.isAfter(lastAbsenceAt)) {
+                        lastAbsenceAt = absenceDate;
+                    }
+                    LocalDateTime end = session.getEndedAt() != null ? session.getEndedAt() : session.getEndsAt();
+                    if (end != null && end.isAfter(session.getStartedAt())) {
+                        absenceMinutes += Duration.between(session.getStartedAt(), end).toMinutes();
+                    }
+                }
+            }
+        }
+
+        long totalAbsences = justifiedAbsences + unjustifiedAbsences;
+        long resolved = presents + totalAbsences;
+        double attendanceRate = resolved == 0 ? 0.0 : (double) presents / resolved;
+
+        return new AdminStudentAttendanceSummaryResponse(
+                studentId,
+                records.size(),
+                presents,
+                totalAbsences,
+                justifiedAbsences,
+                unjustifiedAbsences,
+                Math.round((absenceMinutes / 60.0) * 10.0) / 10.0,
+                attendanceRate,
+                lastAbsenceAt
         );
     }
 

@@ -15,29 +15,14 @@ export class NotificationRealtimeService {
   private readonly toastedNotificationIds = new Set<number>();
 
   constructor() {
-    this.authService.currentUser$.subscribe((user) => {
-      if (!user) {
-        this.connectedUserId = null;
-        this.notificationWebSocketService.disconnect();
-        return;
-      }
-
-      if (this.connectedUserId === user.id) {
-        return;
-      }
-
-      this.connectedUserId = user.id;
-      this.notificationWebSocketService.connect().catch((error) => {
-        console.warn('Notification websocket connection failed:', error);
-      });
+    const currentUser$ = this.authService.currentUser$ as typeof this.authService.currentUser$ | undefined;
+    currentUser$?.subscribe((user) => {
+      this.syncConnection(user?.id ?? null);
     });
 
     const currentUser = this.authService.currentUser;
     if (currentUser) {
-      this.connectedUserId = currentUser.id;
-      this.notificationWebSocketService.connect().catch((error) => {
-        console.warn('Notification websocket connection failed:', error);
-      });
+      this.syncConnection(currentUser.id);
     }
 
     this.notificationWebSocketService.notifications$.subscribe((notification) => {
@@ -67,6 +52,23 @@ export class NotificationRealtimeService {
           this.toastService.info(notification.title, notification.message, 5000);
           break;
       }
+    });
+  }
+
+  private syncConnection(userId: string | null): void {
+    if (!userId) {
+      this.connectedUserId = null;
+      this.notificationWebSocketService.disconnect();
+      return;
+    }
+
+    if (this.connectedUserId === userId) {
+      return;
+    }
+
+    this.connectedUserId = userId;
+    this.notificationWebSocketService.connect().catch((error) => {
+      console.warn('Notification websocket connection failed:', error);
     });
   }
 

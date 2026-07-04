@@ -2,21 +2,31 @@ package ma.eniad.userservice.service.teacher;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import lombok.RequiredArgsConstructor;
+import ma.eniad.userservice.dto.teacher.TeacherProfileDto;
 import ma.eniad.userservice.dto.teacher.TeacherRequestDTO;
 import ma.eniad.userservice.dto.teacher.TeacherResponseDTO;
 import ma.eniad.userservice.entity.Teacher;
+import ma.eniad.userservice.entity.TeacherAssignment;
 import ma.eniad.userservice.entity.enums.Role;
+import ma.eniad.userservice.entity.structure.Filiere;
+import ma.eniad.userservice.entity.structure.Formation;
 import ma.eniad.userservice.exception.DuplicateResourceException;
 import ma.eniad.userservice.exception.InvalidDomainException;
 import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.repository.UserRepository;
+import ma.eniad.userservice.repository.inscription.TeacherAssignmentRepository;
 import ma.eniad.userservice.repository.teacher.TeacherRepository;
+import ma.eniad.userservice.service.CloudflareR2Service;
+import ma.eniad.userservice.service.UserContext;
 import ma.eniad.userservice.mapper.teacher.TeacherMapper;
 
 
@@ -27,7 +37,9 @@ public class TeacherService {
 
     private final TeacherRepository teacherRepository;
     private final UserRepository userRepository;
+    private final TeacherAssignmentRepository assignmentRepository;
     private final TeacherMapper      teacherMapper;
+    private final CloudflareR2Service r2Service;
 
     @Value("${app.allowed-domain}")
     private String allowedDomain;
@@ -45,8 +57,8 @@ public class TeacherService {
         if (teacher.getRoles() == null) {
             teacher.setRoles(new HashSet<>());
         }
-        teacher.getRoles().add(Role.TEACHER);        teacher.setEnabled(true);
-        teacher.setFirstLogin(true);
+        teacher.getRoles().add(Role.TEACHER);
+        applyAccountState(request, teacher, true, true);
 
         try {
             return teacherMapper.toResponse(teacherRepository.save(teacher));
@@ -73,6 +85,28 @@ public class TeacherService {
                 .toList();
     }
 
+    public TeacherProfileDto getCurrentProfile() {
+        Teacher teacher = findCurrentTeacher();
+        return buildCurrentProfile(teacher);
+    }
+
+    @Transactional
+    public TeacherProfileDto updateCurrentProfilePhoto(String pfpUrl) {
+        Teacher teacher = findCurrentTeacher();
+        teacher.setPfpUrl(pfpUrl);
+        teacherRepository.save(teacher);
+        return buildCurrentProfile(teacher);
+    }
+
+    @Transactional
+    public TeacherProfileDto removeCurrentProfilePhoto() {
+        Teacher teacher = findCurrentTeacher();
+        r2Service.deleteProfilePhotoIfOwned(teacher.getPfpUrl());
+        teacher.setPfpUrl(null);
+        teacherRepository.save(teacher);
+        return buildCurrentProfile(teacher);
+    }
+
     // -------------------------------------------------------------------------
     // Update
     // -------------------------------------------------------------------------
@@ -86,6 +120,7 @@ public class TeacherService {
         }
 
         teacherMapper.updateEntity(request, teacher);
+        applyAccountState(request, teacher, teacher.isEnabled(), teacher.isFirstLogin());
         try {
             return teacherMapper.toResponse(teacherRepository.save(teacher));
         } catch (DataIntegrityViolationException ex) {
@@ -121,6 +156,86 @@ public class TeacherService {
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher not found"));
     }
 
+    private Teacher findCurrentTeacher() {
+        UserContext.UserInfo context = UserContext.getCurrentUser();
+        if (context == null || context.getUserId() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing user context");
+        }
+
+        Long teacherId;
+        try {
+            teacherId = Long.parseLong(context.getUserId());
+        } catch (NumberFormatException ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid user id");
+        }
+
+        return teacherRepository.findById(teacherId)
+                .orElseThrow(() -> new ResourceNotFoundException("Teacher not found"));
+    }
+
+    private TeacherProfileDto buildCurrentProfile(Teacher teacher) {
+        List<TeacherAssignment> assignments = assignmentRepository.findByTeacherId(teacher.getId());
+        List<String> modules = distinctLabels(assignments.stream()
+                .map(TeacherAssignment::getModule)
+                .filter(Objects::nonNull)
+                .map(ma.eniad.userservice.entity.structure.Module::getName)
+                .toList());
+        List<String> groupes = distinctLabels(assignments.stream()
+                .map(TeacherAssignment::getGroupe)
+                .filter(Objects::nonNull)
+                .map(ma.eniad.userservice.entity.structure.Groupe::getName)
+                .toList());
+        List<String> formations = distinctLabels(assignments.stream()
+                .map(TeacherAssignment::getFormation)
+                .filter(Objects::nonNull)
+                .map(Formation::getName)
+                .toList());
+        List<String> filieres = distinctLabels(assignments.stream()
+                .map(TeacherAssignment::getFormation)
+                .filter(Objects::nonNull)
+                .map(Formation::getFiliere)
+                .filter(Objects::nonNull)
+                .map(Filiere::getCode)
+                .toList());
+
+        return TeacherProfileDto.builder()
+                .id(teacher.getId())
+                .email(teacher.getEmail())
+                .firstName(teacher.getFirstName())
+                .lastName(teacher.getLastName())
+                .pfpUrl(teacher.getPfpUrl())
+                .enabled(teacher.isEnabled())
+                .firstLogin(teacher.isFirstLogin())
+                .createdAt(teacher.getCreatedAt())
+                .updatedAt(teacher.getUpdatedAt())
+                .moduleCount(modules.size())
+                .groupCount(groupes.size())
+                .formationCount(formations.size())
+                .modules(modules)
+                .groupes(groupes)
+                .formations(formations)
+                .filieres(filieres)
+                .build();
+    }
+
+    private List<String> distinctLabels(List<String> values) {
+        return values.stream()
+                .map(this::normalizeLabel)
+                .filter(Objects::nonNull)
+                .distinct()
+                .sorted()
+                .toList();
+    }
+
+    private String normalizeLabel(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
     private void validateEmailDomain(String email) {
         if (email == null) {
             return;
@@ -153,5 +268,16 @@ public class TeacherService {
         }
 
         return email.trim().toLowerCase();
+    }
+
+    private void applyAccountState(TeacherRequestDTO request,
+                                   Teacher teacher,
+                                   boolean defaultEnabled,
+                                   boolean defaultFirstLogin) {
+        boolean enabled = request.getEnabled() == null ? defaultEnabled : request.getEnabled();
+        boolean firstLogin = request.getFirstLogin() == null ? defaultFirstLogin : request.getFirstLogin();
+
+        teacher.setEnabled(enabled);
+        teacher.setFirstLogin(enabled && firstLogin);
     }
 }

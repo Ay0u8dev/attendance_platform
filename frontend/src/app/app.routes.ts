@@ -65,6 +65,13 @@ export const routes: Routes = [
           import('./features/admin/teachers/teachers-page').then((module) => module.TeachersPage),
       },
       {
+        path: 'inscription',
+        loadComponent: () =>
+          import('./features/admin/inscription/inscription-page').then(
+            (module) => module.InscriptionPage,
+          ),
+      },
+      {
         path: 'structure',
         loadComponent: () =>
           import('./features/admin/structure/structure-page').then(

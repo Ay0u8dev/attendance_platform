@@ -10,10 +10,8 @@ public record SubmitJustificationRequest(
         @NotNull(message = "sessionId is required")
         Long sessionId,
 
-        @NotNull(message = "studentId is required")
         Long studentId,
 
-        @NotBlank(message = "studentName is required")
         String studentName,
 
         @Email(message = "studentEmail must be a valid email address")

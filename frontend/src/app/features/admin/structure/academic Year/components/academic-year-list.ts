@@ -2,7 +2,6 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 
 import { AnneeUniversitaire } from '../../../../../core/structure/models/annee-universitaire.model';
-import { Button } from '../../../../../shared/components/button/button';
 import { IconButton } from '../../../../../shared/components/button/icon-button';
 import { DataTable } from '../../../../../shared/components/data-table/data-table';
 import { DataTableCellDef } from '../../../../../shared/components/data-table/data-table-cell-def';
@@ -13,32 +12,23 @@ import { AcademicYearFilters } from './academic-year-filters';
 @Component({
   selector: 'app-academic-year-list',
   standalone: true,
-  imports: [Button, DataTable, DataTableCellDef, DatePipe, IconButton, StatusBadge, AcademicYearFilters],
+  imports: [DataTable, DataTableCellDef, DatePipe, IconButton, StatusBadge, AcademicYearFilters],
   template: `
-    <div class="mt-4 flex justify-end mb-4">
-      <app-button
-        label="Ajouter une année"
-        icon="fa-solid fa-plus"
-        variant="primary"
-        [fullWidth]="false"
-        (clicked)="createClicked.emit()"
-      ></app-button>
-    </div>
-
     <!-- Filters Section -->
     <app-academic-year-filters
       [searchValue]="searchQuery()"
       [statusValue]="selectedStatus()"
+      createLabel="Ajouter une année"
       (searchChange)="searchQuery.set($event)"
       (statusFilterChange)="selectedStatus.set($event)"
       (resetFilters)="resetFilters()"
+      (createClicked)="createClicked.emit()"
     ></app-academic-year-filters>
 
     <!-- Data Table Section -->
     <app-data-table
       title="Années universitaires"
       description="Périodes académiques officielles et statut d'activation."
-      [caption]="filteredYears().length + ' année(s)'"
       [rows]="filteredYears()"
       [columns]="columns"
       [rowId]="yearRowId"

@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import ma.eniad.attendanceservice.annotation.RequireRole;
 import ma.eniad.attendanceservice.dto.AttendanceUpdateResponse;
 import ma.eniad.attendanceservice.dto.InternalAttendanceUpdateRequest;
+import ma.eniad.attendanceservice.dto.JustificationContextResponse;
 import ma.eniad.attendanceservice.dto.JustifyAbsenceRequest;
 import ma.eniad.attendanceservice.dto.ManualAttendanceUpdateRequest;
 import ma.eniad.attendanceservice.service.AttendanceUpdateService;
@@ -65,5 +66,15 @@ public class AttendanceUpdateController {
                                                          @Valid @RequestBody JustifyAbsenceRequest request) {
         attendanceUpdateService.justifyFinalizedAbsence(requestSource, internalToken, sessionId, studentId, request);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/internal/sessions/{sessionId}/students/{studentId}/justification-context")
+    public JustificationContextResponse getJustificationContext(@PathVariable Long sessionId,
+                                                                @PathVariable Long studentId,
+                                                                @RequestHeader(value = "X-Request-Source", required = false)
+                                                                String requestSource,
+                                                                @RequestHeader(value = "X-Internal-Service-Token", required = false)
+                                                                String internalToken) {
+        return attendanceUpdateService.getJustificationContext(requestSource, internalToken, sessionId, studentId);
     }
 }

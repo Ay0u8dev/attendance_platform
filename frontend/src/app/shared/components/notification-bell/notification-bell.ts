@@ -165,8 +165,9 @@ export class NotificationBellComponent {
   constructor() {
     void this.notificationRealtimeService;
 
-    this.authService.currentUser$
-      .pipe(takeUntilDestroyed(this.destroyRef))
+    const currentUser$ = this.authService.currentUser$ as typeof this.authService.currentUser$ | undefined;
+    currentUser$
+      ?.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((user) => {
         if (!user) {
           this.loadedUserId = null;
@@ -184,7 +185,7 @@ export class NotificationBellComponent {
       });
 
     const currentUser = this.authService.currentUser;
-    if (currentUser) {
+    if (currentUser?.id) {
       this.loadedUserId = currentUser.id;
       this.loadInitialState();
     }

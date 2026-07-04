@@ -10,8 +10,9 @@ import {
   viewChild,
 } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 
+import { User } from '../../core/auth/models/auth.model';
 import { AuthService } from '../../core/auth/services/auth.service';
 import { AcademicYearContextService } from '../../core/structure/services/academic-year-context.service';
 import { NotificationBellComponent } from '../components/notification-bell/notification-bell';
@@ -19,11 +20,6 @@ import { NotificationBellComponent } from '../components/notification-bell/notif
 type NavItem = {
   label: string;
   route: string;
-  icon: string;
-};
-
-type UtilityItem = {
-  label: string;
   icon: string;
 };
 
@@ -46,14 +42,14 @@ type UtilityItem = {
             type="button"
             class="fixed inset-0 z-30 bg-slate-950/45 backdrop-blur-sm lg:hidden"
             (click)="closeSidebar()"
-            aria-label="Close navigation"
+            aria-label="Fermer la navigation"
           ></button>
         }
 
         <aside
           class="fixed inset-y-0 left-0 z-40 flex flex-col border-r border-line bg-surface/95 shadow-shell transition-[width,transform] duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0"
           [class]="sidebarShellClasses()"
-          aria-label="Admin navigation"
+          aria-label="Navigation administrateur"
         >
           <div
             class="flex h-16 items-center border-b border-line px-3"
@@ -71,7 +67,7 @@ type UtilityItem = {
                   ngSrc="assets/logo-app.png"
                   width="24"
                   height="24"
-                  alt="Attendance Platform"
+                  alt="Plateforme de présence"
                   class="h-fit w-auto object-contain"
                 />
               </div>
@@ -79,9 +75,9 @@ type UtilityItem = {
               @if (!isSidebarCollapsed()) {
                 <div class="min-w-0">
                   <p class="truncate text-sm font-semibold text-principalText">
-                    Attendance Platform
+                    Plateforme de présence
                   </p>
-                  <p class="truncate text-xs text-secondaryText">Admin dashboard</p>
+                  <p class="truncate text-xs text-secondaryText">Tableau de bord administrateur</p>
                 </div>
               }
             </div>
@@ -90,7 +86,7 @@ type UtilityItem = {
               type="button"
               class="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:hidden"
               (click)="closeSidebar()"
-              aria-label="Close menu"
+              aria-label="Fermer le menu"
             >
               <i class="fa-solid fa-xmark" aria-hidden="true"></i>
             </button>
@@ -100,7 +96,7 @@ type UtilityItem = {
             type="button"
             class="absolute top-5 right-0 hidden h-7 w-7 translate-x-1/2 items-center justify-center rounded-full border border-line bg-surface text-secondaryText shadow-card transition-all duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:inline-flex"
             (click)="toggleSidebarCollapsed()"
-            [attr.aria-label]="isSidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+            [attr.aria-label]="isSidebarCollapsed() ? 'Déplier la barre latérale' : 'Replier la barre latérale'"
           >
             <i
               class="fa-solid text-xs"
@@ -140,26 +136,6 @@ type UtilityItem = {
               </a>
             }
 
-            <div class="mt-auto pt-3">
-              @for (item of utilityItems; track item.label) {
-                <button
-                  type="button"
-                  class="mb-1.5 flex w-full min-h-10 items-center rounded-xl border border-transparent px-2.5 py-2 text-left text-sm font-medium text-secondaryText transition-colors duration-200 hover:border-line hover:bg-surface-subtle hover:text-principalText"
-                  [class.gap-3]="!isSidebarCollapsed()"
-                  [class.justify-center]="isSidebarCollapsed()"
-                  [attr.aria-label]="isSidebarCollapsed() ? item.label : null"
-                  [attr.title]="isSidebarCollapsed() ? item.label : null"
-                >
-                  <span class="flex h-8 w-8 shrink-0 items-center justify-center text-base">
-                    <i [class]="item.icon" aria-hidden="true"></i>
-                  </span>
-
-                  @if (!isSidebarCollapsed()) {
-                    <span>{{ item.label }}</span>
-                  }
-                </button>
-              }
-            </div>
           </nav>
         </aside>
 
@@ -175,7 +151,7 @@ type UtilityItem = {
                     class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:hidden"
                     (click)="toggleSidebar()"
                     [attr.aria-expanded]="isSidebarOpen()"
-                    aria-label="Open menu"
+                    aria-label="Ouvrir le menu"
                   >
                     <i class="fa-solid fa-bars" aria-hidden="true"></i>
                   </button>
@@ -184,10 +160,10 @@ type UtilityItem = {
                     <p
                       class="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-primary"
                     >
-                      Admin workspace
+                      Espace administrateur
                     </p>
                     <h1 class="truncate text-lg font-semibold tracking-tight text-principalText">
-                      Dashboard
+                      Tableau de bord
                     </h1>
                   </div>
                 </div>
@@ -200,7 +176,7 @@ type UtilityItem = {
                       (click)="toggleAcademicYearMenu()"
                       [attr.aria-expanded]="isAcademicYearMenuOpen()"
                       aria-haspopup="menu"
-                      aria-label="Select active academic year"
+                      aria-label="Sélectionner l'année universitaire active"
                       [disabled]="activeAcademicYears().length === 0"
                     >
                       <i class="fa-regular fa-calendar shrink-0 text-base" aria-hidden="true"></i>
@@ -265,15 +241,23 @@ type UtilityItem = {
                       (click)="toggleUserMenu()"
                       [attr.aria-expanded]="isUserMenuOpen()"
                       aria-haspopup="menu"
-                      aria-label="Open user menu"
+                      aria-label="Ouvrir le menu utilisateur"
                     >
-                      <span
-                        class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary"
-                      >
-                        <i class="fa-solid fa-user-shield text-xs" aria-hidden="true"></i>
-                      </span>
+                      @if (userProfileImageUrl(); as imageUrl) {
+                        <img
+                          [src]="imageUrl"
+                          [alt]="userDisplayName()"
+                          class="h-7 w-7 rounded-lg border border-primary-soft object-cover"
+                        />
+                      } @else {
+                        <span
+                          class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-xs font-semibold text-primary"
+                        >
+                          {{ userInitials() }}
+                        </span>
+                      }
                       <span class="hidden text-sm font-medium text-principalText md:inline"
-                        >Prof. Anderson</span
+                        >{{ userDisplayName() }}</span
                       >
                       <!-- <i
                       class="fa-solid text-[0.6rem] text-secondaryText"
@@ -287,23 +271,10 @@ type UtilityItem = {
                       <div
                         class="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-line bg-surface p-2 shadow-shell"
                       >
-                        <button
-                          type="button"
-                          class="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-secondaryText transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText"
-                          (click)="openProfile()"
-                        >
-                          <i class="fa-solid fa-gear" aria-hidden="true"></i>
-                          <span>Profile</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          class="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-secondaryText transition-colors duration-200 hover:bg-surface-subtle hover:text-principalText"
-                          (click)="openSettings()"
-                        >
-                          <i class="fa-solid fa-gear" aria-hidden="true"></i>
-                          <span>Settings</span>
-                        </button>
+                        <div class="rounded-xl bg-surface-subtle px-3 py-3">
+                          <p class="truncate text-sm font-semibold text-principalText">{{ userDisplayName() }}</p>
+                          <p class="mt-0.5 truncate text-xs text-secondaryText">{{ userEmail() }}</p>
+                        </div>
 
                         <button
                           type="button"
@@ -311,7 +282,7 @@ type UtilityItem = {
                           (click)="logout()"
                         >
                           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-                          <span>Logout</span>
+                          <span>Déconnexion</span>
                         </button>
                       </div>
                     }
@@ -328,6 +299,7 @@ type UtilityItem = {
           </div>
         </div>
       </div>
+
     </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -342,20 +314,25 @@ export class AdminLayout {
     viewChild<ElementRef<HTMLElement>>('academicYearMenuRoot');
 
   readonly navItems: NavItem[] = [
-    { label: 'Dashboard', route: '/dashboard', icon: 'fa-solid fa-table-cells-large' },
-    { label: 'Attendance', route: '/attendance', icon: 'fa-regular fa-square-check' },
+    { label: 'Tableau de bord', route: '/dashboard', icon: 'fa-solid fa-table-cells-large' },
+    { label: 'Présences', route: '/attendance', icon: 'fa-regular fa-square-check' },
     { label: 'Justifications', route: '/justifications', icon: 'fa-regular fa-file-lines' },
-    { label: 'Students', route: '/students', icon: 'fa-solid fa-user-graduate' },
-    { label: 'Teachers', route: '/teachers', icon: 'fa-solid fa-chalkboard-user' },
+    { label: 'Étudiants', route: '/students', icon: 'fa-solid fa-user-graduate' },
+    { label: 'Enseignants', route: '/teachers', icon: 'fa-solid fa-chalkboard-user' },
     { label: 'Structure', route: '/structure', icon: 'fa-solid fa-sitemap' },
   ];
-
-  readonly utilityItems: UtilityItem[] = [{ label: 'Settings', icon: 'fa-solid fa-gear' }];
 
   readonly isSidebarOpen = signal(false);
   readonly isSidebarCollapsed = signal(false);
   readonly isUserMenuOpen = signal(false);
   readonly isAcademicYearMenuOpen = signal(false);
+  readonly currentUser = toSignal(this.authService.currentUser$, {
+    initialValue: this.authService.currentUser,
+  });
+  readonly userDisplayName = computed(() => this.formatUserName(this.currentUser()));
+  readonly userEmail = computed(() => this.currentUser()?.email ?? 'admin@ump.ac.ma');
+  readonly userProfileImageUrl = computed(() => this.currentUser()?.profileImageUrl?.trim() || null);
+  readonly userInitials = computed(() => this.computeInitials(this.userDisplayName()));
   readonly activeAcademicYears = this.academicYearContext.activeAcademicYears;
   readonly selectedAcademicYearId = this.academicYearContext.selectedAcademicYearId;
   readonly selectedAcademicYearLabel = computed(
@@ -451,16 +428,33 @@ export class AdminLayout {
     return this.router.url === route;
   }
 
-  openSettings(): void {
-    this.isUserMenuOpen.set(false);
-  }
-
-  openProfile(): void {
-    this.isUserMenuOpen.set(false);
-  }
-
   logout(): void {
     this.isUserMenuOpen.set(false);
     this.authService.logout();
+  }
+
+  private formatUserName(user: User | null): string {
+    if (!user) {
+      return 'Admin';
+    }
+
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+    if (fullName) {
+      return fullName;
+    }
+
+    return user.email.split('@')[0] || user.email;
+  }
+
+  private computeInitials(value: string): string {
+    const initials = value
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase();
+
+    return initials || 'AD';
   }
 }

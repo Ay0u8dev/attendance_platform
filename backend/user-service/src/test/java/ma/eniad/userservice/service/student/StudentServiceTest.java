@@ -20,6 +20,7 @@ import org.mockito.Mock;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -47,6 +48,7 @@ import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
+import ma.eniad.userservice.service.CloudflareR2Service;
 import ma.eniad.userservice.service.UserContext;
 
 @ExtendWith(MockitoExtension.class)
@@ -66,6 +68,9 @@ class StudentServiceTest {
 
     @Mock
     private StudentMapper studentMapper;
+
+    @Mock
+    private CloudflareR2Service r2Service;
 
     @InjectMocks
     private StudentService studentService;
@@ -355,6 +360,49 @@ class StudentServiceTest {
         assertThat(student.getPfpUrl()).isEqualTo(newUrl);
         assertThat(profile.getPfpUrl()).isEqualTo(newUrl);
         verify(studentRepository).save(student);
+    }
+
+    @Test
+    void removeCurrentProfilePhotoDeletesOwnedObjectAndClearsCurrentStudentPhotoUrl() {
+        UserContext.setCurrentUser("1", "student@ump.ac.ma", Set.of("STUDENT"));
+
+        Student student = new Student();
+        student.setId(1L);
+        student.setEmail("student@ump.ac.ma");
+        student.setPfpUrl("https://pub.example.r2.dev/profile-photos/student.png");
+
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(studentRepository.save(student)).thenReturn(student);
+        when(anneeUniversitaireRepository.findByActiveTrue()).thenReturn(List.of());
+
+        StudentProfileDto profile = studentService.removeCurrentProfilePhoto();
+
+        assertThat(student.getPfpUrl()).isNull();
+        assertThat(profile.getPfpUrl()).isNull();
+        verify(r2Service).deleteProfilePhotoIfOwned("https://pub.example.r2.dev/profile-photos/student.png");
+        verify(studentRepository).save(student);
+    }
+
+    @Test
+    void removeCurrentProfilePhotoKeepsDatabaseValueWhenOwnedObjectDeleteFails() {
+        UserContext.setCurrentUser("1", "student@ump.ac.ma", Set.of("STUDENT"));
+
+        Student student = new Student();
+        student.setId(1L);
+        student.setEmail("student@ump.ac.ma");
+        student.setPfpUrl("https://pub.example.r2.dev/profile-photos/student.png");
+
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        doThrow(new RuntimeException("R2 delete failed"))
+                .when(r2Service)
+                .deleteProfilePhotoIfOwned("https://pub.example.r2.dev/profile-photos/student.png");
+
+        assertThatThrownBy(() -> studentService.removeCurrentProfilePhoto())
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("R2 delete failed");
+
+        assertThat(student.getPfpUrl()).isEqualTo("https://pub.example.r2.dev/profile-photos/student.png");
+        verify(studentRepository, never()).save(student);
     }
 
 

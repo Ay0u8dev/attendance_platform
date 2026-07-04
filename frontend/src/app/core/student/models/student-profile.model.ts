@@ -3,7 +3,7 @@ export interface StudentProfile {
   email: string;
   firstName?: string;
   lastName?: string;
-  pfpUrl?: string;
+  pfpUrl?: string | null;
   numApogee?: string;
   academicYear?: string;
   cycle?: string;

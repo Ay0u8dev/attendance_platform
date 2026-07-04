@@ -59,11 +59,11 @@
             >
               <div class="flex items-start justify-between gap-3">
                 <div class="flex min-w-0 items-center gap-3">
-                  <div
-                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary"
-                  >
-                    {{ getInitials(row.name) }}
-                  </div>
+                  <app-user-avatar
+                    [name]="row.name"
+                    [imageUrl]="row.raw.pfpUrl"
+                    size="sm"
+                  ></app-user-avatar>
                   <div class="min-w-0">
                     <p class="truncate text-sm font-semibold text-principalText">{{ row.name }}</p>
                     <p class="mt-1 truncate text-xs text-secondaryText">{{ row.email }}</p>
@@ -110,9 +110,9 @@
 
       <div class="teacher-table-shell hidden md:block">
         <div class="teacher-table-grid teacher-table-grid--students teacher-table-head">
-          <span>Etudiant</span>
-          <span>Email</span>
-          <span>Apogee</span>
+          <span>Étudiant</span>
+          <span>E-mail</span>
+          <span>Apogée</span>
           <span>Groupe</span>
         </div>
 
@@ -122,11 +122,11 @@
             (click)="selectStudent(row)"
           >
             <div class="flex min-w-0 items-center gap-2">
-              <div
-                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary"
-              >
-                {{ getInitials(row.name) }}
-              </div>
+              <app-user-avatar
+                [name]="row.name"
+                [imageUrl]="row.raw.pfpUrl"
+                size="sm"
+              ></app-user-avatar>
               <div class="min-w-0">
                 <p class="truncate font-semibold text-principalText">{{ row.name }}</p>
               </div>
@@ -153,19 +153,12 @@
       <div modal-body class="space-y-5 py-1">
         <!-- Profile summary -->
         <div class="flex items-center gap-4">
-          @if (student.raw.pfpUrl) {
-            <img
-              [src]="student.raw.pfpUrl"
-              alt="Photo de profil"
-              class="h-14 w-14 shrink-0 rounded-full border border-line object-cover shadow-sm"
-            />
-          } @else {
-            <div
-              class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary-soft text-base font-bold text-primary shadow-sm"
-            >
-              {{ getInitials(student.name) }}
-            </div>
-          }
+          <app-user-avatar
+            [name]="student.name"
+            [imageUrl]="student.raw.pfpUrl"
+            [alt]="'Photo de profil de ' + student.name"
+            size="lg"
+          ></app-user-avatar>
 
           <div class="min-w-0">
             <h3 class="truncate text-base font-bold text-principalText">{{ student.name }}</h3>
