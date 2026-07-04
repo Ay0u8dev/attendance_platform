@@ -14,12 +14,20 @@ import org.springframework.web.server.ResponseStatusException;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import ma.eniad.justificationservice.client.AttendanceServiceClient;
+import ma.eniad.justificationservice.client.UserServiceClient;
 import ma.eniad.justificationservice.dto.AttendanceJustificationRequest;
+import ma.eniad.justificationservice.dto.AttendanceSessionLookupResponse;
 import ma.eniad.justificationservice.dto.ReviewJustificationRequest;
 import ma.eniad.justificationservice.dto.SubmitJustificationRequest;
 import ma.eniad.justificationservice.entity.Justification;
-import ma.eniad.justificationservice.entity.JustificationStatus;
+import ma.eniad.justificationservice.entity.enums.JustificationStatus;
 import ma.eniad.justificationservice.repository.JustificationRepository;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 @Service
 @RequiredArgsConstructor
 public class JustificationService {
@@ -29,6 +37,8 @@ public class JustificationService {
 
     private final JustificationRepository repository;
     private final AttendanceServiceClient attendanceServiceClient;
+    private final UserServiceClient userServiceClient;
+    private final JustificationNotificationService justificationNotificationService;
 
     @Transactional
     public Justification submit(SubmitJustificationRequest request) {
@@ -41,6 +51,7 @@ public class JustificationService {
                 .sessionId(request.sessionId())
                 .studentId(request.studentId())
                 .studentName(request.studentName().trim())
+                .studentEmail(normalizeOptional(request.studentEmail()))
                 .studentCode(normalizeOptional(request.studentCode()))
                 .studentFormation(normalizeOptional(request.studentFormation()))
                 .studentClass(normalizeOptional(request.studentClass()))
@@ -53,7 +64,13 @@ public class JustificationService {
                 .documentUrl(normalizeDocumentUrl(request.documentUrl()))
                 .build();
 
-        return repository.save(justification);
+        Justification saved = repository.save(justification);
+        notifyAfterCommit(() -> {
+            justificationNotificationService.notifySubmitted(saved);
+            notifyResponsibleTeacher(saved);
+            notifyAdmins(saved);
+        });
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -108,7 +125,9 @@ public class JustificationService {
 
         justification.setStatus(JustificationStatus.APPROVED);
         applyReviewData(justification, request, reviewerRole);
-        return repository.save(justification);
+        Justification saved = repository.save(justification);
+        notifyAfterCommit(() -> justificationNotificationService.notifyApproved(saved));
+        return saved;
     }
 
     @Transactional
@@ -119,7 +138,84 @@ public class JustificationService {
         // Le refus ne modifie pas l'assiduite: l'absence reste ABSENT.
         justification.setStatus(JustificationStatus.REJECTED);
         applyReviewData(justification, request, reviewerRole);
-        return repository.save(justification);
+        Justification saved = repository.save(justification);
+        notifyAfterCommit(() -> justificationNotificationService.notifyRejected(saved));
+        return saved;
+    }
+
+    private static final Logger log = LoggerFactory.getLogger(JustificationService.class);
+
+    private void notifyAfterCommit(Runnable notification) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            safeRun(notification);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                safeRun(notification);
+            }
+        });
+    }
+
+    private void safeRun(Runnable notification) {
+        try {
+            notification.run();
+        } catch (Exception ex) {
+            log.warn("Failed to dispatch justification notification", ex);
+        }
+    }
+
+    private void notifyResponsibleTeacher(Justification justification) {
+        if (attendanceServiceClient == null || justificationNotificationService == null) {
+            return;
+        }
+
+        try {
+            AttendanceSessionLookupResponse session =
+                    attendanceServiceClient.getSession(justification.getSessionId(), JUSTIFICATION_SOURCE);
+
+            if (session.teacherId() == null) {
+                log.warn(
+                        "Skipping teacher justification notification because session={} has no teacherId",
+                        justification.getSessionId()
+                );
+                return;
+            }
+
+            justificationNotificationService.notifySubmittedForTeacher(justification, session.teacherId());
+        } catch (RuntimeException ex) {
+            log.warn(
+                    "Failed to resolve responsible teacher for justificationId={} sessionId={}: {}",
+                    justification.getId(),
+                    justification.getSessionId(),
+                    ex.getMessage(),
+                    ex
+            );
+        }
+    }
+
+    private void notifyAdmins(Justification justification) {
+        if (userServiceClient == null || justificationNotificationService == null) {
+            return;
+        }
+
+        try {
+            List<Long> adminIds = userServiceClient.getAdminIds(JUSTIFICATION_SOURCE);
+            for (Long adminId : adminIds) {
+                if (adminId != null) {
+                    justificationNotificationService.notifySubmittedForAdmin(justification, adminId);
+                }
+            }
+        } catch (RuntimeException ex) {
+            log.warn(
+                    "Failed to resolve admins for justificationId={}: {}",
+                    justification.getId(),
+                    ex.getMessage(),
+                    ex
+            );
+        }
     }
 
     private Justification requirePendingJustification(Long id) {

@@ -22,6 +22,8 @@ spring:
 services:
   attendance-service:
     url: http://attendance-service:8080
+  notification-service:
+    url: http://notification-service:8080
 
 app:
   internal:

@@ -313,6 +313,7 @@ export class StudentJustificationsPage {
             sessionId,
             studentId: profile.id,
             studentName: dbStudentName,
+            studentEmail: profile.email || null,
             studentCode,
             studentFormation: profile.filiere || null,
             studentClass: profile.cycle || profile.academicYear || null,

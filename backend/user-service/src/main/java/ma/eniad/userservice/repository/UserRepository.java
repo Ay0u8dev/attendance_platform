@@ -1,6 +1,7 @@
 package ma.eniad.userservice.repository;
 
 import ma.eniad.userservice.entity.User;
+import ma.eniad.userservice.entity.enums.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -19,6 +20,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("select u from User u where lower(u.email) in :emails")
     List<User> findByNormalizedEmailIn(@Param("emails") Set<String> emails);
+
+    @Query("select u.id from User u where :role member of u.roles and u.enabled = true")
+    List<Long> findEnabledUserIdsByRole(@Param("role") Role role);
 
     /**
      * Finds existing emails from the provided set.

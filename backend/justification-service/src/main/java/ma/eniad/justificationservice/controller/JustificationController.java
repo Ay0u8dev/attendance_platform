@@ -16,12 +16,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
-import ma.eniad.justificationservice.controller.dto.JustificationResponse;
-import ma.eniad.justificationservice.controller.dto.PresignedUrlResponse;
+import ma.eniad.justificationservice.dto.JustificationResponse;
+import ma.eniad.justificationservice.dto.PresignedUrlResponse;
 import ma.eniad.justificationservice.dto.ReviewJustificationRequest;
 import ma.eniad.justificationservice.dto.SubmitJustificationRequest;
 import ma.eniad.justificationservice.entity.Justification;
-import ma.eniad.justificationservice.entity.JustificationStatus;
+import ma.eniad.justificationservice.entity.enums.JustificationStatus;
 import ma.eniad.justificationservice.service.CloudflareR2Service;
 import ma.eniad.justificationservice.service.JustificationService;
 
@@ -54,6 +54,10 @@ public class JustificationController {
             @RequestParam(required = false) String sessionDay,
             @RequestParam(required = false) String sessionStartTime,
             @RequestParam(required = false) String sessionEndTime) {
+        if (!r2Service.isR2Configured()) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+
         String extension = ".pdf";
         if ("image/jpeg".equals(contentType) || "image/jpg".equals(contentType)) extension = ".jpg";
         else if ("image/png".equals(contentType)) extension = ".png";
@@ -166,6 +170,7 @@ public class JustificationController {
                 .sessionId(justification.getSessionId())
                 .studentId(justification.getStudentId())
                 .studentName(justification.getStudentName())
+                .studentEmail(justification.getStudentEmail())
                 .studentCode(justification.getStudentCode())
                 .studentFormation(justification.getStudentFormation())
                 .studentClass(justification.getStudentClass())

@@ -126,6 +126,10 @@ public class UserService {
         );
     }
 
+    public List<Long> getEnabledAdminIds() {
+        return userRepository.findEnabledUserIdsByRole(Role.ADMIN);
+    }
+
     private String normalizeProfilePhotoUrl(String pfpUrl) {
         if (pfpUrl == null) {
             return null;
