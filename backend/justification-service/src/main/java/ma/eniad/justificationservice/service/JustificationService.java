@@ -33,16 +33,18 @@ public class JustificationService {
     private final JustificationRepository repository;
     private final AttendanceServiceClient attendanceServiceClient;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<JustificationResponse> findForAdmin(RequestUser user, JustificationStatus status) {
         user.requireRole("ADMIN");
-        return filterByStatus(repository.findAllByOrderBySubmittedAtDesc(), status);
+        List<Justification> rows = repository.findAllByOrderBySubmittedAtDesc();
+        hydrateMissingContext(rows);
+        return filterByStatus(rows, status);
     }
 
     @Transactional
     public List<JustificationResponse> findForTeacher(RequestUser user, JustificationStatus status) {
         user.requireRole("TEACHER");
-        hydrateLegacyTeacherContext();
+        hydrateLegacyTeacherScope();
         return filterByStatus(repository.findByTeacherIdOrderBySubmittedAtDesc(user.id()), status);
     }
 
@@ -68,7 +70,7 @@ public class JustificationService {
     @Transactional
     public JustificationResponse findById(Long id, RequestUser user) {
         Justification justification = requireJustification(id);
-        if (!user.hasRole("ADMIN") && justification.getTeacherId() == null) {
+        if (shouldEnsureContext(justification)) {
             ensureContext(justification);
         }
         requireCanView(justification, user);
@@ -209,7 +211,7 @@ public class JustificationService {
                 .toList();
     }
 
-    private void hydrateLegacyTeacherContext() {
+    private void hydrateLegacyTeacherScope() {
         repository.findByTeacherIdIsNullAndSessionIdIsNotNull().forEach(justification -> {
             try {
                 ensureContext(justification);
@@ -219,10 +221,34 @@ public class JustificationService {
         });
     }
 
+    private void hydrateMissingContext(List<Justification> rows) {
+        rows.stream()
+                .filter(this::shouldEnsureContext)
+                .forEach(justification -> {
+                    try {
+                        ensureContext(justification);
+                    } catch (ResponseStatusException ignored) {
+                        // Legacy/demo rows may reference sessions that no longer exist.
+                    }
+                });
+    }
+
+    private boolean shouldEnsureContext(Justification justification) {
+        if (justification.getSessionId() == null || justification.getStudentId() == null) {
+            return false;
+        }
+        return justification.getTeacherId() == null
+                || justification.getTeacherName() == null
+                || justification.getAttendanceRecordId() == null
+                || justification.getGroupId() == null
+                || justification.getStudentEmail() == null
+                || justification.getStudentCode() == null
+                || justification.getModule() == null
+                || justification.getSessionDate() == null;
+    }
+
     private void ensureContext(Justification justification) {
-        if (justification.getTeacherId() != null
-                && justification.getAttendanceRecordId() != null
-                && justification.getGroupId() != null) {
+        if (!shouldEnsureContext(justification)) {
             return;
         }
 

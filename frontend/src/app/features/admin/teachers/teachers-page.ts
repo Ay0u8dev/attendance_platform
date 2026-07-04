@@ -19,7 +19,6 @@ import {
   accountState,
   accountStatus,
   fullName,
-  initials,
   statusVariant,
 } from '../../../core/admin/models/admin-user.model';
 import {
@@ -45,6 +44,7 @@ import { DropdownFilter } from '../../../shared/components/dropdown-filter/dropd
 import { Modal } from '../../../shared/components/modal/modal';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
 import { ToastService } from '../../../shared/components/toast/toast.service';
+import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
 
 type Option = { readonly value: string; readonly label: string };
 
@@ -81,6 +81,7 @@ interface TeacherRow {
     DropdownFilter,
     Modal,
     StatusBadge,
+    UserAvatar,
   ],
   template: `
     <section class="space-y-5">
@@ -224,20 +225,12 @@ interface TeacherRow {
       >
         <ng-template [appDataTableCell]="'teacher'" let-row="row">
           <div class="flex min-w-0 items-center gap-4">
-            @if (profileImage(row); as imageUrl) {
-              <img
-                [src]="imageUrl"
-                [alt]="row.name"
-                class="h-12 w-12 shrink-0 rounded-2xl border border-primary-soft object-cover shadow-sm"
-              />
-            } @else {
-              <span
-                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary-soft bg-gradient-to-br from-primary-soft to-surface text-sm font-semibold text-primary shadow-sm"
-                aria-hidden="true"
-              >
-                {{ initials(row.name) }}
-              </span>
-            }
+            <app-user-avatar
+              [name]="row.name"
+              [imageUrl]="row.pfpUrl"
+              size="lg"
+              shape="rounded"
+            ></app-user-avatar>
             <div class="min-w-0">
               <p class="truncate text-[0.95rem] font-semibold text-principalText">{{ row.name }}</p>
               <p class="mt-0.5 truncate text-[0.8rem] text-secondaryText">{{ row.email }}</p>
@@ -381,13 +374,12 @@ interface TeacherRow {
         @if (selectedTeacher(); as teacher) {
           <div class="space-y-5">
             <section class="flex flex-col gap-4 rounded-3xl border border-line bg-surface-subtle p-5 sm:flex-row sm:items-center">
-              @if (profileImage(teacher); as imageUrl) {
-                <img [src]="imageUrl" [alt]="teacher.name" class="h-16 w-16 shrink-0 rounded-3xl border border-primary-soft object-cover shadow-sm" />
-              } @else {
-                <span class="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl border border-primary-soft bg-gradient-to-br from-primary-soft to-surface text-lg font-semibold text-primary shadow-sm">
-                  {{ initials(teacher.name) }}
-                </span>
-              }
+              <app-user-avatar
+                [name]="teacher.name"
+                [imageUrl]="teacher.pfpUrl"
+                size="lg"
+                shape="rounded"
+              ></app-user-avatar>
               <div class="min-w-0 flex-1">
                 <h3 class="truncate text-2xl font-semibold text-principalText">{{ teacher.name }}</h3>
                 <p class="mt-1 text-sm text-secondaryText">{{ teacher.email }}</p>
@@ -494,13 +486,12 @@ interface TeacherRow {
       <div modal-body>
         @if (assignmentTeacher(); as teacher) {
           <section class="mb-5 flex items-center gap-3 rounded-2xl border border-line bg-surface-subtle p-4">
-            @if (profileImage(teacher); as imageUrl) {
-              <img [src]="imageUrl" [alt]="teacher.name" class="h-12 w-12 rounded-2xl border border-primary-soft object-cover shadow-sm" />
-            } @else {
-              <span class="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary-soft bg-gradient-to-br from-primary-soft to-surface text-sm font-semibold text-primary shadow-sm">
-                {{ initials(teacher.name) }}
-              </span>
-            }
+            <app-user-avatar
+              [name]="teacher.name"
+              [imageUrl]="teacher.pfpUrl"
+              size="lg"
+              shape="rounded"
+            ></app-user-avatar>
             <div class="min-w-0">
               <h3 class="truncate font-semibold text-principalText">{{ teacher.name }}</h3>
               <p class="truncate text-sm text-secondaryText">{{ teacher.email }}</p>
@@ -1239,14 +1230,6 @@ export class TeachersPage {
 
   statusVariant(status: AdminDirectoryStatus): 'success' | 'warning' | 'error' | 'neutral' {
     return statusVariant(status);
-  }
-
-  initials(name: string): string {
-    return initials(name);
-  }
-
-  profileImage(row: TeacherRow): string | null {
-    return row.pfpUrl?.trim() || null;
   }
 
   assignmentsForTeacher(teacherId: number): readonly AdminTeacherAssignmentDto[] {

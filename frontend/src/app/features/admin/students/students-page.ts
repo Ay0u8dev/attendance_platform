@@ -19,7 +19,6 @@ import {
   accountState,
   accountStatus,
   fullName,
-  initials,
   statusVariant,
 } from '../../../core/admin/models/admin-user.model';
 import {
@@ -45,6 +44,7 @@ import { DropdownFilter } from '../../../shared/components/dropdown-filter/dropd
 import { Modal } from '../../../shared/components/modal/modal';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
 import { ToastService } from '../../../shared/components/toast/toast.service';
+import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
 
 type Option = { readonly value: string; readonly label: string };
 
@@ -79,6 +79,7 @@ interface StudentRow {
     DropdownFilter,
     Modal,
     StatusBadge,
+    UserAvatar,
   ],
   template: `
     <section class="space-y-5">
@@ -210,20 +211,12 @@ interface StudentRow {
       >
         <ng-template [appDataTableCell]="'student'" let-row="row">
           <div class="flex min-w-0 items-center gap-4">
-            @if (profileImage(row); as imageUrl) {
-              <img
-                [src]="imageUrl"
-                [alt]="row.name"
-                class="h-12 w-12 shrink-0 rounded-2xl border border-primary-soft object-cover shadow-sm"
-              />
-            } @else {
-              <span
-                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary-soft bg-gradient-to-br from-primary-soft to-surface text-sm font-semibold text-primary shadow-sm"
-                aria-hidden="true"
-              >
-                {{ initials(row.name) }}
-              </span>
-            }
+            <app-user-avatar
+              [name]="row.name"
+              [imageUrl]="row.pfpUrl"
+              size="lg"
+              shape="rounded"
+            ></app-user-avatar>
             <div class="min-w-0">
               <p class="truncate text-[0.95rem] font-semibold text-principalText">{{ row.name }}</p>
               <p class="mt-0.5 truncate text-[0.8rem] text-secondaryText">{{ row.email }}</p>
@@ -365,13 +358,12 @@ interface StudentRow {
             <section class="rounded-[1.5rem] border border-line bg-linear-to-br from-primary-soft/70 via-surface to-secondary-soft/40 p-5 shadow-card">
               <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex min-w-0 items-center gap-4">
-                  @if (profileImage(student); as imageUrl) {
-                    <img [src]="imageUrl" [alt]="student.name" class="h-16 w-16 shrink-0 rounded-2xl border border-primary-soft object-cover shadow-card" />
-                  } @else {
-                    <span class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-primary-soft bg-surface text-lg font-semibold text-primary shadow-card">
-                      {{ initials(student.name) }}
-                    </span>
-                  }
+                  <app-user-avatar
+                    [name]="student.name"
+                    [imageUrl]="student.pfpUrl"
+                    size="lg"
+                    shape="rounded"
+                  ></app-user-avatar>
                   <div class="min-w-0">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Student profile</p>
                     <h3 class="mt-1 truncate text-2xl font-semibold text-principalText">{{ student.name }}</h3>
@@ -1130,14 +1122,6 @@ export class StudentsPage {
 
   statusVariant(status: AdminDirectoryStatus): 'success' | 'warning' | 'error' | 'neutral' {
     return statusVariant(status);
-  }
-
-  initials(name: string): string {
-    return initials(name);
-  }
-
-  profileImage(row: StudentRow): string | null {
-    return row.pfpUrl?.trim() || null;
   }
 
   importStatusMessage(result: AdminImportResult | null): string {

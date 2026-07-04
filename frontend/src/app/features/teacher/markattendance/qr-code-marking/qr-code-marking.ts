@@ -29,12 +29,13 @@ import {
   AttendanceWebSocketService,
   AttendanceUpdateNotification,
 } from '../../../../core/websocket/websocket.service';
+import { UserAvatar } from '../../../../shared/components/user-avatar/user-avatar';
 
 interface ScannedStudent {
   id: number;
   name: string;
   studentId: string;
-  initials: string;
+  pfpUrl?: string | null;
   scannedAt: string;
 }
 
@@ -44,12 +45,13 @@ interface ManualStudent {
   id: number;
   name: string;
   studentId: string;
-  initials: string;
+  pfpUrl?: string | null;
   status: ManualAttendanceStatus;
 }
 
 @Component({
   selector: 'app-qr-code-marking',
+  imports: [UserAvatar],
   templateUrl: './qr-code-marking.html',
   styleUrl: './qr-code-marking.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -201,7 +203,7 @@ export class QrCodeMarking implements OnInit, OnDestroy {
         id: notification.studentId,
         name,
         studentId: student.numApogee,
-        initials: this.getInitials(name),
+        pfpUrl: student.pfpUrl,
         scannedAt: new Date(notification.markedAt).toLocaleTimeString([], {
           hour: '2-digit',
           minute: '2-digit',
@@ -471,13 +473,7 @@ export class QrCodeMarking implements OnInit, OnDestroy {
       id: student.studentId,
       name,
       studentId: student.numApogee,
-      initials: name
-        .split(' ')
-        .filter(Boolean)
-        .map((part) => part[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase(),
+      pfpUrl: student.pfpUrl,
       scannedAt: student.markedAt
         ? new Date(student.markedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         : '--:--',
@@ -490,19 +486,9 @@ export class QrCodeMarking implements OnInit, OnDestroy {
       id: student.studentId,
       name,
       studentId: student.numApogee,
-      initials: this.getInitials(name),
+      pfpUrl: student.pfpUrl,
       status: this.fromApiStatus(student.status),
     };
-  }
-
-  private getInitials(name: string): string {
-    return name
-      .split(' ')
-      .filter(Boolean)
-      .map((part) => part[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
   }
 
   private fromApiStatus(status: AttendanceStudentStatus): ManualAttendanceStatus {

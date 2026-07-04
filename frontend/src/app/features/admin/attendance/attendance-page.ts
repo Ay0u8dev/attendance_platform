@@ -10,6 +10,7 @@ import {
   AttendanceStudentStatus,
 } from '../../../core/admin/models/admin-attendance.model';
 import { AdminAttendanceService } from '../../../core/admin/services/admin-attendance.service';
+import { AdminStudentService } from '../../../core/admin/services/admin-student.service';
 import { AnneeUniversitaire } from '../../../core/structure/models/annee-universitaire.model';
 import { Filiere } from '../../../core/structure/models/filiere.model';
 import { Formation } from '../../../core/structure/models/formation.model';
@@ -23,12 +24,13 @@ import { ModuleService } from '../../../core/structure/services/module.service';
 import { Button } from '../../../shared/components/button/button';
 import { Modal } from '../../../shared/components/modal/modal';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
+import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
 
 type RosterFilter = 'ALL' | AttendanceStudentStatus;
 
 @Component({
   selector: 'app-attendance-page',
-  imports: [Button, Modal, StatusBadge],
+  imports: [Button, Modal, StatusBadge, UserAvatar],
   template: `
     <section class="space-y-7">
       <header class="rounded-[1.75rem] border border-line bg-surface px-5 py-6 shadow-card sm:px-7">
@@ -217,17 +219,12 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
                               >
                                 <div class="grid gap-4 xl:grid-cols-[minmax(16rem,1fr)_minmax(18rem,1fr)_auto] xl:items-center">
                                   <div class="flex min-w-0 items-center gap-4">
-                                    @if (hasProfileImage(student)) {
-                                      <img
-                                        [src]="student.pfpUrl!"
-                                        [alt]="student.firstName + ' ' + student.lastName"
-                                        class="h-12 w-12 shrink-0 rounded-2xl border border-primary-soft object-cover shadow-sm"
-                                      />
-                                    } @else {
-                                      <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary-soft bg-gradient-to-br from-primary-soft to-surface text-sm font-semibold text-primary shadow-sm">
-                                        {{ studentInitials(student) }}
-                                      </span>
-                                    }
+                                    <app-user-avatar
+                                      [name]="student.firstName + ' ' + student.lastName"
+                                      [imageUrl]="studentPfpUrl(student)"
+                                      size="lg"
+                                      shape="rounded"
+                                    ></app-user-avatar>
                                     <div class="min-w-0">
                                       <p class="truncate text-[0.95rem] font-semibold text-principalText">
                                         {{ student.firstName }} {{ student.lastName }}
@@ -342,17 +339,12 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
               <section class="rounded-[1.5rem] border border-line bg-linear-to-br from-primary-soft/70 via-surface to-secondary-soft/40 p-5 shadow-card">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div class="flex min-w-0 items-center gap-4">
-                @if (hasProfileImage(student)) {
-                  <img
-                    [src]="student.pfpUrl!"
-                    [alt]="student.firstName + ' ' + student.lastName"
-                    class="h-16 w-16 shrink-0 rounded-2xl border border-primary-soft object-cover shadow-card"
-                  />
-                } @else {
-                  <span class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-primary-soft bg-surface text-lg font-semibold text-primary shadow-card">
-                    {{ studentInitials(student) }}
-                  </span>
-                }
+                    <app-user-avatar
+                      [name]="student.firstName + ' ' + student.lastName"
+                      [imageUrl]="studentPfpUrl(student)"
+                      size="lg"
+                      shape="rounded"
+                    ></app-user-avatar>
                     <div class="min-w-0">
                       <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Student profile</p>
                       <h3 class="mt-1 truncate text-2xl font-semibold text-principalText">{{ student.firstName }} {{ student.lastName }}</h3>
@@ -500,6 +492,7 @@ type RosterFilter = 'ALL' | AttendanceStudentStatus;
 })
 export class AttendancePage {
   private readonly attendanceService = inject(AdminAttendanceService);
+  private readonly studentService = inject(AdminStudentService);
   private readonly yearService = inject(AnneeUniversitaireService);
   private readonly formationService = inject(FormationService);
   private readonly groupService = inject(GroupeService);
@@ -525,6 +518,7 @@ export class AttendancePage {
   readonly groups = signal<readonly Groupe[]>([]);
   readonly modules = signal<readonly Module[]>([]);
   readonly filieres = signal<readonly Filiere[]>([]);
+  readonly studentPhotoUrls = signal<ReadonlyMap<number, string>>(new Map());
   readonly rosterStatusFilter = signal<RosterFilter>('ALL');
   readonly rosterSearchQuery = signal('');
   readonly rosterPage = signal(1);
@@ -594,10 +588,11 @@ export class AttendancePage {
       groups: this.groupService.getAll().pipe(catchError(() => of([] as readonly Groupe[]))),
       modules: this.moduleService.getAll().pipe(catchError(() => of([] as readonly Module[]))),
       filieres: this.filiereService.getAll().pipe(catchError(() => of([] as readonly Filiere[]))),
+      students: this.studentService.getAll().pipe(catchError(() => of([]))),
     })
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: ({ overview, sessions, academicYears, formations, groups, modules, filieres }) => {
+        next: ({ overview, sessions, academicYears, formations, groups, modules, filieres, students }) => {
           this.overview.set(overview);
           this.sessions.set(sessions.items);
           this.academicYears.set(academicYears);
@@ -605,6 +600,13 @@ export class AttendancePage {
           this.groups.set(groups);
           this.modules.set(modules);
           this.filieres.set(filieres);
+          this.studentPhotoUrls.set(
+            new Map(
+              students
+                .map((student) => [student.id, student.pfpUrl?.trim() || null] as const)
+                .filter((entry): entry is readonly [number, string] => Boolean(entry[1])),
+            ),
+          );
           const selectedId = this.selectedSessionId();
           if (selectedId && !sessions.items.some((session) => session.sessionId === selectedId)) {
             this.clearSelectedRoster();
@@ -665,6 +667,10 @@ export class AttendancePage {
         next: (summary) => this.selectedStudentSummary.set(summary),
         error: () => this.selectedStudentSummary.set(null),
       });
+  }
+
+  studentPfpUrl(student: AdminAttendanceStudentViewDto): string | null {
+    return student.pfpUrl?.trim() || this.studentPhotoUrls().get(student.studentId) || null;
   }
 
   closeStudentProfile(): void {
@@ -781,14 +787,6 @@ export class AttendancePage {
       default:
         return 'Not marked';
     }
-  }
-
-  studentInitials(student: AdminAttendanceStudentViewDto): string {
-    return `${student.firstName?.[0] ?? ''}${student.lastName?.[0] ?? ''}`.toUpperCase() || 'ST';
-  }
-
-  hasProfileImage(student: AdminAttendanceStudentViewDto): boolean {
-    return Boolean(student.pfpUrl?.trim());
   }
 
   formatPercent(value: number): string {

@@ -7,7 +7,7 @@ import {
   AdminStudentInscriptionDto,
   AdminTeacherAssignmentDto,
 } from '../../../core/admin/models/admin-inscription.model';
-import { AdminStudentDto, AdminTeacherDto, fullName, initials } from '../../../core/admin/models/admin-user.model';
+import { AdminStudentDto, AdminTeacherDto, fullName } from '../../../core/admin/models/admin-user.model';
 import { AdminInscriptionService } from '../../../core/admin/services/admin-inscription.service';
 import { AdminStudentService } from '../../../core/admin/services/admin-student.service';
 import { AdminTeacherService } from '../../../core/admin/services/admin-teacher.service';
@@ -30,6 +30,7 @@ import { Modal } from '../../../shared/components/modal/modal';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
 import { ToastService } from '../../../shared/components/toast/toast.service';
+import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
 
 type InscriptionSection = 'students' | 'teachers';
 type Option = { readonly label: string; readonly value: string };
@@ -47,6 +48,7 @@ type Option = { readonly label: string; readonly value: string };
     Modal,
     PageHeader,
     StatusBadge,
+    UserAvatar,
   ],
   template: `
     <section class="space-y-5">
@@ -118,12 +120,12 @@ type Option = { readonly label: string; readonly value: string };
         >
           <ng-template [appDataTableCell]="'student'" let-row="row">
             <div class="flex min-w-0 items-center gap-4">
-              <span
-                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary-soft bg-gradient-to-br from-primary-soft to-surface text-sm font-semibold text-primary shadow-sm"
-                aria-hidden="true"
-              >
-                {{ initials(studentName(row)) }}
-              </span>
+              <app-user-avatar
+                [name]="studentName(row)"
+                [imageUrl]="studentPfpUrl(row)"
+                size="lg"
+                shape="rounded"
+              ></app-user-avatar>
               <div class="min-w-0">
                 <p class="truncate text-[0.95rem] font-semibold text-principalText">{{ studentName(row) }}</p>
                 <p class="mt-0.5 truncate text-[0.8rem] text-secondaryText">Student #{{ row.studentId }}</p>
@@ -181,12 +183,12 @@ type Option = { readonly label: string; readonly value: string };
         >
           <ng-template [appDataTableCell]="'teacher'" let-row="row">
             <div class="flex min-w-0 items-center gap-4">
-              <span
-                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary-soft bg-gradient-to-br from-primary-soft to-surface text-sm font-semibold text-primary shadow-sm"
-                aria-hidden="true"
-              >
-                {{ initials(teacherName(row)) }}
-              </span>
+              <app-user-avatar
+                [name]="teacherName(row)"
+                [imageUrl]="teacherPfpUrl(row)"
+                size="lg"
+                shape="rounded"
+              ></app-user-avatar>
               <div class="min-w-0">
                 <p class="truncate text-[0.95rem] font-semibold text-principalText">{{ teacherName(row) }}</p>
                 <p class="mt-0.5 truncate text-[0.8rem] text-secondaryText">{{ row.teacherEmail }}</p>
@@ -936,8 +938,12 @@ export class InscriptionPage {
     return fullName(row.teacherFirstName, row.teacherLastName) || row.teacherEmail;
   }
 
-  initials(name: string): string {
-    return initials(name);
+  studentPfpUrl(row: AdminStudentInscriptionDto): string | null {
+    return this.students().find((student) => student.id === row.studentId)?.pfpUrl?.trim() || null;
+  }
+
+  teacherPfpUrl(row: AdminTeacherAssignmentDto): string | null {
+    return this.teachers().find((teacher) => teacher.id === row.teacherId)?.pfpUrl?.trim() || null;
   }
 
   studentAssignmentValue(controlName: 'studentId' | 'academicYearId' | 'formationId' | 'groupeId'): string {

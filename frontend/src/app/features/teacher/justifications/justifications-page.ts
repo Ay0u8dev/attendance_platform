@@ -13,21 +13,25 @@ import { finalize } from 'rxjs/operators';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { JustificationDto } from '../../../core/justifications/justification.model';
 import { JustificationService } from '../../../core/justifications/justification.service';
-import { StudentUser } from '../../../core/users/models/student.model';
 import { StudentUserService } from '../../../core/users/services/student-user.service';
 import { Modal } from '../../../shared/components/modal/modal';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
 import { ToastService } from '../../../shared/components/toast/toast.service';
+import {
+  buildJustificationStudentDirectory,
+  cleanJustificationAttachmentName,
+  formatJustificationDate,
+  formatJustificationDateTime,
+  JustificationStudentDirectory,
+  normalizeLookupKey,
+  normalizeOptional,
+  presentJustificationReview,
+  presentJustificationStudent,
+} from '../../../shared/justifications/justification-presenter';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 type TeacherJustificationStatus = 'En attente' | 'Approuvee' | 'Declinee';
 type TeacherJustificationVariant = 'warning' | 'success' | 'error' | 'neutral';
-
-type StudentAcademicMeta = {
-  readonly formation: string | null;
-  readonly className: string | null;
-  readonly group: string | null;
-};
 
 interface TeacherJustificationRow {
   readonly id: number;
@@ -47,9 +51,12 @@ interface TeacherJustificationRow {
   readonly status: TeacherJustificationStatus;
   readonly statusVariant: TeacherJustificationVariant;
   readonly reviewComment: string;
+  readonly reviewInputLabel: string;
   readonly reviewedBy: string | null;
   readonly reviewedAt: string | null;
 }
+
+const EMPTY_TEACHER_REVIEW_COMMENT = 'Aucun commentaire enseignant.';
 
 function createAttachmentPreview(title: string, subtitle: string, color: string): string {
   const svg = `
@@ -93,8 +100,8 @@ export class TeacherJustificationsPage implements OnInit {
   readonly reviewingId = signal<number | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly reviewCommentDraft = signal('');
-  private readonly studentMetadataByCode = signal<ReadonlyMap<string, StudentAcademicMeta>>(
-    new Map(),
+  private readonly studentDirectory = signal<JustificationStudentDirectory>(
+    buildJustificationStudentDirectory(),
   );
 
   readonly pendingCount = computed(
@@ -109,7 +116,7 @@ export class TeacherJustificationsPage implements OnInit {
   loadStudentMetadata(): void {
     this.studentService.getAll().subscribe({
       next: (students) => {
-        this.studentMetadataByCode.set(this.buildStudentMetadataMap(students));
+        this.studentDirectory.set(buildJustificationStudentDirectory(students));
         this.enrichRowsWithStudentMetadata();
       },
       error: () => {
@@ -178,7 +185,7 @@ export class TeacherJustificationsPage implements OnInit {
   openDetails(row: TeacherJustificationRow): void {
     this.selectedJustification.set(row);
     this.reviewCommentDraft.set(
-      row.reviewComment === 'Aucun commentaire enseignant.' ? '' : row.reviewComment,
+      row.reviewComment === EMPTY_TEACHER_REVIEW_COMMENT ? '' : row.reviewComment,
     );
   }
 
@@ -229,38 +236,36 @@ export class TeacherJustificationsPage implements OnInit {
   private toRow(justification: JustificationDto): TeacherJustificationRow {
     const statusData = this.statusData(justification.status);
     const documentUrl = this.justificationService.resolveDocumentUrl(justification.documentUrl);
-    const rosterMeta = this.studentMetadataByCode().get(
-      this.normalizeCode(justification.studentCode),
-    );
-    const studentFormation =
-      this.normalizeOptional(justification.studentFormation) ?? rosterMeta?.formation ?? null;
-    const studentClass =
-      this.normalizeOptional(justification.studentClass) ?? rosterMeta?.className ?? null;
-    const studentGroup =
-      this.normalizeOptional(justification.studentGroup) ?? rosterMeta?.group ?? null;
+    const student = presentJustificationStudent(justification, this.studentDirectory());
+    const review = presentJustificationReview(justification);
 
     return {
       id: justification.id,
-      studentName: justification.studentName || 'Etudiant non renseigne',
-      studentCode: justification.studentCode || '-',
-      studentFormation,
-      studentClass,
-      studentGroup,
-      studentMeta: this.buildStudentMeta(studentFormation, studentGroup),
-      module: justification.module || 'Module non renseigne',
-      sessionDate: this.formatDateTime(justification.sessionDate),
-      submittedAt: this.formatDate(justification.submittedAt),
+      studentName: student.name || 'Etudiant non renseigne',
+      studentCode: student.code || '-',
+      studentFormation: student.formation,
+      studentClass: student.className,
+      studentGroup: student.group,
+      studentMeta: student.meta,
+      module: normalizeOptional(justification.module) ?? normalizeOptional(justification.courseLabel) ?? 'Module non renseigne',
+      sessionDate: formatJustificationDateTime(justification.sessionDate),
+      submittedAt: formatJustificationDate(justification.submittedAt),
       reason: justification.reason || 'Motif non renseigne',
-      attachmentName: this.attachmentName(justification, documentUrl),
+      attachmentName: cleanJustificationAttachmentName(
+        justification.documentName,
+        documentUrl,
+        'Aucune piece jointe',
+      ),
       attachmentPreviewUrl:
         documentUrl ??
         createAttachmentPreview('Justificatif', 'Piece jointe non disponible', '#64748b'),
       comment: justification.reason || 'Aucun commentaire etudiant.',
       status: statusData.status,
       statusVariant: statusData.variant,
-      reviewComment: justification.teacherComment || 'Aucun commentaire enseignant.',
-      reviewedBy: justification.reviewedBy,
-      reviewedAt: justification.reviewedAt ? this.formatDateTime(justification.reviewedAt) : null,
+      reviewComment: review.comment || EMPTY_TEACHER_REVIEW_COMMENT,
+      reviewInputLabel: 'Commentaire de decision',
+      reviewedBy: review.reviewer,
+      reviewedAt: review.reviewedAt ? formatJustificationDateTime(review.reviewedAt) : null,
     };
   }
 
@@ -278,51 +283,6 @@ export class TeacherJustificationsPage implements OnInit {
     }
   }
 
-  private attachmentName(justification: JustificationDto, resolvedUrl: string | null): string {
-    if (justification.documentName) {
-      return justification.documentName;
-    }
-    if (!resolvedUrl) {
-      return 'Aucune piece jointe';
-    }
-
-    const cleanUrl = resolvedUrl.split('?')[0].split('#')[0];
-    let name = decodeURIComponent(cleanUrl.split('/').pop() || 'Piece jointe');
-    name = name.replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[_-]/i, '');
-    name = name.replace(
-      /[_-][0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\.[a-zA-Z0-9]+$|$)/i,
-      '',
-    );
-    return name;
-  }
-
-  private normalizeOptional(value: string | null | undefined): string | null {
-    const normalized = value?.trim();
-    return normalized ? normalized : null;
-  }
-
-  private buildStudentMetadataMap(
-    students: readonly StudentUser[],
-  ): ReadonlyMap<string, StudentAcademicMeta> {
-    const metadata = new Map<string, StudentAcademicMeta>();
-
-    for (const student of students) {
-      const code = this.normalizeCode(student.numApogee);
-      if (!code) {
-        continue;
-      }
-
-      metadata.set(code, {
-        formation: this.normalizeOptional(student.filiere),
-        className:
-          this.normalizeOptional(student.cycle) ?? this.normalizeOptional(student.academicYear),
-        group: this.normalizeOptional(student.groupeName),
-      });
-    }
-
-    return metadata;
-  }
-
   private enrichRowsWithStudentMetadata(): void {
     let updatedRows: readonly TeacherJustificationRow[] = [];
     this.rows.update((rows) => {
@@ -333,14 +293,17 @@ export class TeacherJustificationsPage implements OnInit {
   }
 
   private enrichRowWithStudentMetadata(row: TeacherJustificationRow): TeacherJustificationRow {
-    const rosterMeta = this.studentMetadataByCode().get(this.normalizeCode(row.studentCode));
-    if (!rosterMeta) {
+    const rosterStudent = this.studentDirectory().byCode.get(normalizeLookupKey(row.studentCode));
+    if (!rosterStudent) {
       return row;
     }
 
-    const studentFormation = row.studentFormation ?? rosterMeta.formation;
-    const studentClass = row.studentClass ?? rosterMeta.className;
-    const studentGroup = row.studentGroup ?? rosterMeta.group;
+    const studentFormation = row.studentFormation ?? normalizeOptional(rosterStudent.filiere);
+    const studentClass =
+      row.studentClass ??
+      normalizeOptional(rosterStudent.cycle) ??
+      normalizeOptional(rosterStudent.academicYear);
+    const studentGroup = row.studentGroup ?? normalizeOptional(rosterStudent.groupeName);
 
     return {
       ...row,
@@ -359,28 +322,6 @@ export class TeacherJustificationsPage implements OnInit {
       studentFormation ? { label: 'Formation', value: studentFormation } : null,
       studentGroup ? { label: 'Groupe', value: studentGroup } : null,
     ].filter((item): item is { label: string; value: string } => item !== null);
-  }
-
-  private normalizeCode(value: string | null | undefined): string {
-    return value?.trim().toLowerCase() ?? '';
-  }
-
-  private formatDate(value: string): string {
-    return new Intl.DateTimeFormat('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    }).format(new Date(value));
-  }
-
-  private formatDateTime(value: string): string {
-    return new Intl.DateTimeFormat('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(value));
   }
 
   private errorLabel(error: HttpErrorResponse): string {

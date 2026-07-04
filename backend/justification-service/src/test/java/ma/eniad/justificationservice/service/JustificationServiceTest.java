@@ -1,6 +1,7 @@
 package ma.eniad.justificationservice.service;
 
 import ma.eniad.justificationservice.client.AttendanceServiceClient;
+import ma.eniad.justificationservice.dto.AttendanceJustificationContext;
 import ma.eniad.justificationservice.dto.AttendanceJustificationRequest;
 import ma.eniad.justificationservice.dto.DecisionJustificationRequest;
 import ma.eniad.justificationservice.dto.SubmitJustificationRequest;
@@ -142,6 +143,37 @@ class JustificationServiceTest {
 
         assertThat(rows).hasSize(1);
         verify(repository).findByTeacherIdOrderBySubmittedAtDesc(77L);
+    }
+
+    @Test
+    void adminListHydratesMissingTeacherNameFromAttendanceContext() {
+        Justification justification = pendingJustification(77L);
+        justification.setTeacherName(null);
+        when(repository.findAllByOrderBySubmittedAtDesc()).thenReturn(List.of(justification));
+        when(repository.save(justification)).thenReturn(justification);
+        when(attendanceServiceClient.getJustificationContext(100L, 10L, "justification-service"))
+                .thenReturn(new AttendanceJustificationContext(
+                        501L,
+                        100L,
+                        10L,
+                        20L,
+                        77L,
+                        "Prof. Idrissi",
+                        "Aya Bennani",
+                        "aya@ump.ac.ma",
+                        "A001",
+                        "Distributed Systems",
+                        "B12",
+                        LocalDateTime.of(2026, 6, 20, 9, 0),
+                        LocalDateTime.of(2026, 6, 20, 10, 30),
+                        "ABSENT"
+                ));
+
+        var rows = service.findForAdmin(user(5L, "ADMIN"), null);
+
+        assertThat(rows).hasSize(1);
+        assertThat(rows.getFirst().teacherName()).isEqualTo("Prof. Idrissi");
+        verify(repository).save(justification);
     }
 
     @Test

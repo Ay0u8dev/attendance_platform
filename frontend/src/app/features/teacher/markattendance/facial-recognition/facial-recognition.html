@@ -123,9 +123,11 @@
           @for (student of autoIdentified(); track student.id) {
             <div class="panel-row">
               <div class="student-cell">
-                <div class="avatar" [style.background]="student.avatarBg" [style.color]="student.avatarColor">
-                  {{ student.avatarInitials }}
-                </div>
+                <app-user-avatar
+                  [name]="student.name"
+                  [imageUrl]="student.pfpUrl"
+                  size="sm"
+                ></app-user-avatar>
                 <div class="student-info">
                   <span class="student-name">{{ student.name }}</span>
                   <span class="apogee">{{ student.apogee }}</span>
@@ -168,9 +170,11 @@
             @for (student of manualSearchResults(); track student.id) {
               <div class="manual-result-row">
                 <div class="student-cell">
-                  <div class="avatar" [style.background]="student.avatarBg" [style.color]="student.avatarColor">
-                    {{ student.avatarInitials }}
-                  </div>
+                  <app-user-avatar
+                    [name]="student.name"
+                    [imageUrl]="student.pfpUrl"
+                    size="sm"
+                  ></app-user-avatar>
                   <div class="student-info">
                     <span class="student-name">{{ student.name }}</span>
                     <span class="apogee">{{ student.apogee }}</span>

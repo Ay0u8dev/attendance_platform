@@ -201,9 +201,12 @@
         @for (student of session.students ?? []; track student.studentId) {
           <div class="student-row">
             <div class="student-main">
-              <div class="avatar">
-                {{ student.firstName.charAt(0) }}{{ student.lastName.charAt(0) }}
-              </div>
+              <app-user-avatar
+                [name]="student.firstName + ' ' + student.lastName"
+                [imageUrl]="student.pfpUrl"
+                size="md"
+                shape="rounded"
+              ></app-user-avatar>
               <div class="min-w-0">
                 <p class="student-name">{{ student.firstName }} {{ student.lastName }}</p>
                 <p class="student-meta">

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { UserAvatar } from '../../../../shared/components/user-avatar/user-avatar';
 
 type Student = {
   readonly id: string;
@@ -10,11 +11,13 @@ type Student = {
   readonly status: 'Active' | 'Pending' | 'Suspended';
   readonly variant: 'success' | 'warning' | 'error';
   readonly avatar: string;
+  readonly imageUrl?: string | null;
 };
 
 @Component({
   selector: 'app-student-details-modal',
   standalone: true,
+  imports: [UserAvatar],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (open()) {
@@ -35,11 +38,11 @@ type Student = {
           @if (student(); as s) {
             <div class="mt-6 space-y-4">
               <div class="flex items-center gap-3">
-                <span
-                  class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary"
-                >
-                  {{ s.avatar }}
-                </span>
+                <app-user-avatar
+                  [name]="s.name"
+                  [imageUrl]="s.imageUrl"
+                  size="lg"
+                ></app-user-avatar>
                 <div>
                   <p class="font-semibold text-principalText">{{ s.name }}</p>
                   <p class="text-sm text-secondaryText">{{ s.email }}</p>

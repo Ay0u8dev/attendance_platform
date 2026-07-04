@@ -1,17 +1,35 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
+import { catchError, finalize, forkJoin, of } from 'rxjs';
 
 import {
   JustificationDto,
   JustificationStatus,
 } from '../../../core/justifications/justification.model';
 import { JustificationService } from '../../../core/justifications/justification.service';
-import { initials } from '../../../core/admin/models/admin-user.model';
+import { StudentUserService } from '../../../core/users/services/student-user.service';
 import { Button } from '../../../shared/components/button/button';
 import { DropdownFilter } from '../../../shared/components/dropdown-filter/dropdown-filter';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
+import {
+  buildJustificationStudentDirectory,
+  cleanJustificationAttachmentName,
+  formatJustificationDateTime,
+  groupLabelForJustification,
+  JustificationStudentDirectory,
+  normalizeOptional,
+  presentJustificationReview,
+  presentJustificationStudent,
+} from '../../../shared/justifications/justification-presenter';
 import { ToastService } from '../../../shared/components/toast/toast.service';
+import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
 
 type TabKey = 'ALL' | JustificationStatus;
 type FilterKey = 'module' | 'group' | 'search';
@@ -19,12 +37,16 @@ type Option = { readonly value: string; readonly label: string };
 
 @Component({
   selector: 'app-justifications-page',
-  imports: [Button, DropdownFilter, StatusBadge],
+  imports: [Button, DropdownFilter, StatusBadge, UserAvatar],
   template: `
     <section class="space-y-6">
       <header class="rounded-[1.75rem] border border-line bg-surface px-5 py-6 shadow-card sm:px-7">
-        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Academic attendance</p>
-        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-principalText">Justifications</h1>
+        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+          Academic attendance
+        </p>
+        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-principalText">
+          Justifications
+        </h1>
       </header>
 
       <div class="grid gap-3 md:grid-cols-4">
@@ -55,7 +77,9 @@ type Option = { readonly value: string; readonly label: string };
                 <i [class]="metric.icon" aria-hidden="true"></i>
               </span>
               <div class="min-w-0">
-                <p class="text-2xl font-semibold leading-none text-principalText">{{ metric.value }}</p>
+                <p class="text-2xl font-semibold leading-none text-principalText">
+                  {{ metric.value }}
+                </p>
                 <p class="mt-1 text-sm font-semibold text-principalText">{{ metric.label }}</p>
                 <p class="mt-0.5 truncate text-xs text-secondaryText">{{ metric.caption }}</p>
               </div>
@@ -106,7 +130,9 @@ type Option = { readonly value: string; readonly label: string };
         ></app-button>
       </div>
 
-      <div class="grid gap-3 rounded-3xl border border-line bg-surface p-4 shadow-card lg:grid-cols-3">
+      <div
+        class="grid gap-3 rounded-3xl border border-line bg-surface p-4 shadow-card lg:grid-cols-3"
+      >
         <app-dropdown-filter
           label="Module"
           identifier="admin-justification-module"
@@ -173,7 +199,9 @@ type Option = { readonly value: string; readonly label: string };
       }
 
       @if (errorMessage()) {
-        <div class="rounded-2xl border border-danger/20 bg-danger-soft px-4 py-3 text-sm font-medium text-danger">
+        <div
+          class="rounded-2xl border border-danger/20 bg-danger-soft px-4 py-3 text-sm font-medium text-danger"
+        >
           {{ errorMessage() }}
         </div>
       }
@@ -207,29 +235,22 @@ type Option = { readonly value: string; readonly label: string };
                       class="flex min-w-0 flex-1 items-center gap-3 text-left"
                       (click)="select(item)"
                     >
-                      @if (studentImageUrl(item); as imageUrl) {
-                        <img
-                          [src]="imageUrl"
-                          [alt]="studentName(item)"
-                          class="h-12 w-12 shrink-0 rounded-2xl border border-primary-soft object-cover shadow-sm"
-                        />
-                      } @else {
-                        <span
-                          class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-sm font-semibold text-primary"
-                          aria-hidden="true"
-                        >
-                          {{ avatar(item) }}
-                        </span>
-                      }
+                      <app-user-avatar
+                        [name]="studentName(item)"
+                        [imageUrl]="studentPfpUrl(item)"
+                        size="lg"
+                        shape="rounded"
+                      ></app-user-avatar>
                       <span class="min-w-0">
                         <span class="block truncate font-semibold text-principalText">
                           {{ studentName(item) }}
                         </span>
                         <span class="mt-1 block truncate text-sm text-secondaryText">
-                          {{ item.courseLabel }} - {{ groupLabel(item.groupId) }}
+                          {{ moduleLabel(item) }} - {{ groupLabel(item) }}
                         </span>
                         <span class="mt-0.5 block truncate text-xs text-muted">
-                          Apogee {{ item.studentCode || '-' }} - {{ formatDateTime(item.absenceStartedAt) }}
+                          Apogee {{ studentCode(item) || '-' }} -
+                          {{ formatDateTime(item.absenceStartedAt || item.sessionDate) }}
                         </span>
                       </span>
                     </button>
@@ -274,7 +295,9 @@ type Option = { readonly value: string; readonly label: string };
               }
             } @else {
               <div class="px-5 py-16 text-center sm:px-6">
-                <p class="text-base font-semibold text-principalText">No justification requests found</p>
+                <p class="text-base font-semibold text-principalText">
+                  No justification requests found
+                </p>
                 <p class="mt-1 text-sm text-secondaryText">
                   Adjust filters or make sure absent records exist in attendance-service.
                 </p>
@@ -304,26 +327,18 @@ type Option = { readonly value: string; readonly label: string };
 
             <div class="space-y-5 px-5 py-5">
               <div class="flex items-center gap-3">
-                @if (studentImageUrl(detail); as imageUrl) {
-                  <img
-                    [src]="imageUrl"
-                    [alt]="studentName(detail)"
-                    class="h-16 w-16 shrink-0 rounded-2xl border border-primary-soft object-cover shadow-sm"
-                  />
-                } @else {
-                  <span
-                    class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-lg font-semibold text-primary"
-                    aria-hidden="true"
-                  >
-                    {{ avatar(detail) }}
-                  </span>
-                }
+                <app-user-avatar
+                  [name]="studentName(detail)"
+                  [imageUrl]="studentPfpUrl(detail)"
+                  size="lg"
+                  shape="rounded"
+                ></app-user-avatar>
                 <div class="min-w-0">
                   <p class="truncate font-semibold text-principalText">
-                    {{ detail.studentEmail || 'Email not provided' }}
+                    {{ studentEmail(detail) || 'Email not provided' }}
                   </p>
                   <p class="mt-1 text-sm text-secondaryText">
-                    Apogee {{ detail.studentCode || '-' }} - {{ groupLabel(detail.groupId) }}
+                    Apogee {{ studentCode(detail) || '-' }} - {{ groupLabel(detail) }}
                   </p>
                 </div>
               </div>
@@ -333,32 +348,34 @@ type Option = { readonly value: string; readonly label: string };
                   <p class="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted">
                     Module
                   </p>
-                  <p class="mt-1 text-sm font-semibold text-principalText">{{ detail.courseLabel }}</p>
+                  <p class="mt-1 text-sm font-semibold text-principalText">
+                    {{ moduleLabel(detail) }}
+                  </p>
                 </div>
                 <div class="rounded-2xl border border-line p-3">
                   <p class="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted">
                     Teacher
                   </p>
                   <p class="mt-1 text-sm font-semibold text-principalText">
-                    {{ detail.teacherName || 'Not provided' }}
+                    {{ teacherLabel(detail) }}
                   </p>
                 </div>
                 <div class="rounded-2xl border border-line p-3">
                   <p class="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted">
-                    Absence start
+                    Session date
                   </p>
                   <p class="mt-1 text-sm font-semibold text-principalText">
-                    {{ formatDateTime(detail.absenceStartedAt) }}
+                    {{ formatDateTime(detail.absenceStartedAt || detail.sessionDate) }}
                   </p>
                 </div>
-                <div class="rounded-2xl border border-line p-3">
+                <!-- <div class="rounded-2xl border border-line p-3">
                   <p class="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted">
                     Duration
                   </p>
                   <p class="mt-1 text-sm font-semibold text-principalText">
                     {{ durationLabel(detail) }}
                   </p>
-                </div>
+                </div> -->
               </div>
 
               <section class="rounded-2xl border border-line p-4">
@@ -383,16 +400,20 @@ type Option = { readonly value: string; readonly label: string };
                   </span>
                   <div class="min-w-0">
                     <p class="truncate text-sm font-semibold text-principalText">
-                      {{ attachmentName(detail.attachmentUrl) }}
+                      {{ attachmentName(attachmentUrl(detail)) }}
                     </p>
                     <p class="text-xs text-secondaryText">
-                      {{ detail.attachmentUrl ? 'Student-provided attachment' : 'No attachment provided' }}
+                      {{
+                        attachmentUrl(detail)
+                          ? 'Student-provided attachment'
+                          : 'No attachment provided'
+                      }}
                     </p>
                   </div>
-                  @if (detail.attachmentUrl) {
+                  @if (attachmentUrl(detail); as url) {
                     <a
                       class="ml-auto inline-flex h-10 items-center rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-primary transition hover:border-primary-soft hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                      [href]="detail.attachmentUrl"
+                      [href]="url"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -405,7 +426,7 @@ type Option = { readonly value: string; readonly label: string };
               <section class="rounded-2xl border border-line p-4">
                 <label class="block">
                   <span class="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted">
-                    Admin comment
+                    {{ reviewInfo(detail).commentLabel }}
                   </span>
                   <textarea
                     rows="3"
@@ -416,12 +437,9 @@ type Option = { readonly value: string; readonly label: string };
                     class="mt-2 w-full resize-none rounded-xl border border-line bg-surface-subtle px-3 py-2.5 text-sm leading-6 text-principalText outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-soft disabled:cursor-not-allowed disabled:text-muted"
                   ></textarea>
                 </label>
-                @if (detail.decidedAt) {
+                @if (reviewSummary(detail); as summary) {
                   <p class="mt-2 text-xs text-secondaryText">
-                    Reviewed {{ formatDateTime(detail.decidedAt) }}
-                    @if (detail.decidedBy) {
-                      <span> by {{ detail.decidedByRole || 'reviewer' }} #{{ detail.decidedBy }}</span>
-                    }
+                    {{ summary }}
                   </p>
                 }
               </section>
@@ -450,11 +468,10 @@ type Option = { readonly value: string; readonly label: string };
                 >
                   <i class="fa-regular fa-file-lines" aria-hidden="true"></i>
                 </span>
-                <p class="mt-4 text-base font-semibold text-principalText">
-                  Select a request
-                </p>
+                <p class="mt-4 text-base font-semibold text-principalText">Select a request</p>
                 <p class="mt-1 text-sm leading-6 text-secondaryText">
-                  Open a row to inspect the absence, student motive, attachment label, and review state.
+                  Open a row to inspect the absence, student motive, attachment label, and review
+                  state.
                 </p>
               </div>
             </div>
@@ -467,6 +484,7 @@ type Option = { readonly value: string; readonly label: string };
 })
 export class JustificationsPage {
   private readonly justificationService = inject(JustificationService);
+  private readonly studentService = inject(StudentUserService);
   private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -487,6 +505,9 @@ export class JustificationsPage {
   readonly isLoading = signal(false);
   readonly savingReviewId = signal<number | null>(null);
   readonly errorMessage = signal<string | null>(null);
+  readonly studentDirectory = signal<JustificationStudentDirectory>(
+    buildJustificationStudentDirectory(),
+  );
 
   readonly metrics = computed(() => [
     {
@@ -520,21 +541,25 @@ export class JustificationsPage {
   ]);
 
   readonly moduleOptions = computed<Option[]>(() => {
-    const labels = new Set(this.justifications().map((item) => item.courseLabel).filter(Boolean));
+    const labels = new Set(
+      this.justifications()
+        .map((item) => this.moduleLabel(item))
+        .filter((label) => label !== 'Module not provided'),
+    );
     return Array.from(labels)
       .sort((a, b) => a.localeCompare(b))
       .map((label) => ({ value: label, label }));
   });
 
   readonly groupOptions = computed<Option[]>(() => {
-    const groupIds = new Set(
+    const labels = new Set(
       this.justifications()
-        .map((item) => item.groupId)
-        .filter((id): id is number => id !== null),
+        .map((item) => this.groupLabel(item))
+        .filter((label) => label !== 'Group not provided'),
     );
-    return Array.from(groupIds)
-      .sort((a, b) => a - b)
-      .map((id) => ({ value: String(id), label: this.groupLabel(id) }));
+    return Array.from(labels)
+      .sort((a, b) => a.localeCompare(b))
+      .map((label) => ({ value: label, label }));
   });
 
   readonly visibleJustifications = computed(() => {
@@ -547,10 +572,10 @@ export class JustificationsPage {
       if (tab !== 'ALL' && item.status !== tab) {
         return false;
       }
-      if (moduleValue !== 'all' && item.courseLabel !== moduleValue) {
+      if (moduleValue !== 'all' && this.moduleLabel(item) !== moduleValue) {
         return false;
       }
-      if (groupValue !== 'all' && String(item.groupId) !== groupValue) {
+      if (groupValue !== 'all' && this.groupLabel(item) !== groupValue) {
         return false;
       }
       if (!search) {
@@ -583,7 +608,7 @@ export class JustificationsPage {
       chips.push({ key: 'module', label: 'Module', value: this.moduleFilter() });
     }
     if (this.groupFilter() !== 'all') {
-      chips.push({ key: 'group', label: 'Group', value: this.groupLabel(Number(this.groupFilter())) });
+      chips.push({ key: 'group', label: 'Group', value: this.groupFilter() });
     }
     if (this.searchQuery().trim()) {
       chips.push({ key: 'search', label: 'Search', value: this.searchQuery().trim() });
@@ -599,15 +624,18 @@ export class JustificationsPage {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    this.justificationService
-      .getAdminJustifications()
+    forkJoin({
+      justifications: this.justificationService.getAdminJustifications(),
+      students: this.studentService.getAll().pipe(catchError(() => of([]))),
+    })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isLoading.set(false)),
       )
       .subscribe({
-        next: (items) => {
+        next: ({ justifications: items, students }) => {
           this.justifications.set(items);
+          this.studentDirectory.set(buildJustificationStudentDirectory(students));
           const selectedId = this.selectedId();
           const selectedStillExists = selectedId
             ? items.some((item) => item.id === selectedId)
@@ -616,7 +644,7 @@ export class JustificationsPage {
           if (!selectedStillExists) {
             const firstItem = items[0] ?? null;
             this.selectedId.set(firstItem?.id ?? null);
-            this.reviewComment.set(firstItem?.decisionComment ?? '');
+            this.reviewComment.set(firstItem ? (this.reviewInfo(firstItem).comment ?? '') : '');
           }
         },
         error: () => {
@@ -678,7 +706,7 @@ export class JustificationsPage {
 
   select(item: JustificationDto): void {
     this.selectedId.set(item.id);
-    this.reviewComment.set(item.decisionComment ?? '');
+    this.reviewComment.set(this.reviewInfo(item).comment ?? '');
   }
 
   review(id: number, status: Exclude<JustificationStatus, 'PENDING'>): void {
@@ -702,8 +730,10 @@ export class JustificationsPage {
             items.map((candidate) => (candidate.id === updated.id ? updated : candidate)),
           );
           this.selectedId.set(updated.id);
-          this.reviewComment.set(updated.decisionComment ?? '');
-          this.toast.success(status === 'APPROVED' ? 'Justification approved' : 'Justification rejected');
+          this.reviewComment.set(this.reviewInfo(updated).comment ?? '');
+          this.toast.success(
+            status === 'APPROVED' ? 'Justification approved' : 'Justification rejected',
+          );
         },
         error: () => {
           this.toast.error('Review failed', 'Check your admin session and backend logs.');
@@ -716,19 +746,33 @@ export class JustificationsPage {
   }
 
   studentName(item: JustificationDto): string {
-    return item.studentName || item.studentEmail || `Student #${item.studentId}`;
+    return presentJustificationStudent(item, this.studentDirectory()).name;
   }
 
-  avatar(item: JustificationDto): string {
-    return initials(this.studentName(item));
+  studentEmail(item: JustificationDto): string | null {
+    return presentJustificationStudent(item, this.studentDirectory()).email;
   }
 
-  studentImageUrl(item: JustificationDto): string | null {
-    return item.studentProfileImageUrl?.trim() || null;
+  studentCode(item: JustificationDto): string | null {
+    return presentJustificationStudent(item, this.studentDirectory()).code;
   }
 
-  groupLabel(groupId: number | null): string {
-    return groupId ? `Group #${groupId}` : 'Group not provided';
+  studentPfpUrl(item: JustificationDto): string | null {
+    return presentJustificationStudent(item, this.studentDirectory()).pfpUrl;
+  }
+
+  groupLabel(item: JustificationDto): string {
+    return groupLabelForJustification(item, this.studentDirectory());
+  }
+
+  teacherLabel(item: JustificationDto): string {
+    return normalizeOptional(item.teacherName) ?? 'Not provided';
+  }
+
+  moduleLabel(item: JustificationDto): string {
+    return (
+      normalizeOptional(item.courseLabel) ?? normalizeOptional(item.module) ?? 'Module not provided'
+    );
   }
 
   statusLabel(status: JustificationStatus): string {
@@ -754,22 +798,7 @@ export class JustificationsPage {
   }
 
   formatDateTime(value: string | null): string {
-    if (!value) {
-      return 'Not provided';
-    }
-
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-      return value;
-    }
-
-    return new Intl.DateTimeFormat('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(parsed);
+    return formatJustificationDateTime(value);
   }
 
   durationLabel(item: JustificationDto): string {
@@ -796,23 +825,43 @@ export class JustificationsPage {
   }
 
   attachmentName(url: string | null): string {
-    if (!url) {
-      return 'No attachment';
+    return cleanJustificationAttachmentName(null, url);
+  }
+
+  attachmentUrl(item: JustificationDto): string | null {
+    return (
+      normalizeOptional(item.attachmentUrl) ??
+      this.justificationService.resolveDocumentUrl(item.documentUrl)
+    );
+  }
+
+  reviewInfo(item: JustificationDto) {
+    return presentJustificationReview(item);
+  }
+
+  reviewSummary(item: JustificationDto): string | null {
+    const review = this.reviewInfo(item);
+    if (!review.reviewedAt) {
+      return null;
     }
 
-    const cleanUrl = url.split('?')[0].split('#')[0];
-    return decodeURIComponent(cleanUrl.split('/').pop() || 'Attachment');
+    const reviewer = review.reviewer ? ` by ${review.reviewerRoleLabel} ${review.reviewer}` : '';
+    return `Reviewed ${this.formatDateTime(review.reviewedAt)}${reviewer}`;
   }
 
   private searchText(item: JustificationDto): string {
+    const student = presentJustificationStudent(item, this.studentDirectory());
     return [
       this.studentName(item),
-      item.studentEmail,
-      item.studentCode,
-      item.courseLabel,
+      student.email,
+      student.code,
+      student.formation,
+      student.className,
+      student.group,
+      this.moduleLabel(item),
       item.roomLabel,
-      item.teacherName,
-      this.groupLabel(item.groupId),
+      this.teacherLabel(item),
+      this.groupLabel(item),
       item.reason,
     ]
       .join(' ')

@@ -9,6 +9,7 @@ import { StatusBadge } from '../../../shared/components/status-badge/status-badg
 import { Modal } from '../../../shared/components/modal/modal';
 import { AttendanceService } from '../../../core/attendance/services/attendance.service';
 import { StudentAttendanceSessionSummaryDto } from '../../../core/attendance/models/student-attendance.model';
+import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
 
 type StudentStatusVariant = 'success' | 'warning' | 'error';
 
@@ -28,7 +29,7 @@ type StudentRow = {
 @Component({
   selector: 'app-teacher-students-page',
   standalone: true,
-  imports: [PageHeader, StatusBadge, Modal],
+  imports: [PageHeader, StatusBadge, Modal, UserAvatar],
   templateUrl: './students-page.html',
   styleUrl: './students-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -7,6 +7,7 @@ import {
   AttendanceStudentView,
 } from '../../../../core/attendance/models/attendance.model';
 import { AttendanceService } from '../../../../core/attendance/services/attendance.service';
+import { UserAvatar } from '../../../../shared/components/user-avatar/user-avatar';
 
 export type AttendanceStatus = 'present' | 'absent' | null;
 
@@ -14,9 +15,7 @@ export interface RecognizedStudent {
   id: number;
   name: string;
   apogee: string;
-  avatarInitials: string;
-  avatarBg: string;
-  avatarColor: string;
+  pfpUrl?: string | null;
   status: AttendanceStatus;
 }
 
@@ -32,7 +31,7 @@ export interface DetectionBox {
 
 @Component({
   selector: 'app-facial-recognition',
-  imports: [FormsModule],
+  imports: [FormsModule, UserAvatar],
   templateUrl: './facial-recognition.html',
   styleUrl: './facial-recognition.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -175,21 +174,9 @@ export class FacialRecognition implements OnInit {
       id: student.studentId,
       name,
       apogee: student.numApogee,
-      avatarInitials: this.initials(name),
-      avatarBg: '#dbeafe',
-      avatarColor: '#2563eb',
+      pfpUrl: student.pfpUrl,
       status:
         student.status === 'PRESENT' ? 'present' : student.status === 'ABSENT' ? 'absent' : null,
     };
-  }
-
-  private initials(name: string): string {
-    return name
-      .split(' ')
-      .filter(Boolean)
-      .map((part) => part[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
   }
 }

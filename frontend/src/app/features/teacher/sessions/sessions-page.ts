@@ -23,6 +23,7 @@ import {
 import { AttendanceService } from '../../../core/attendance/services/attendance.service';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { StatusBadge } from '../../../shared/components/status-badge/status-badge';
+import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
 
 interface PendingChange {
   studentId: number;
@@ -48,7 +49,7 @@ interface ZipEntry {
 @Component({
   selector: 'app-teacher-sessions-page',
   standalone: true,
-  imports: [DatePipe, PageHeader, RouterLink, StatusBadge],
+  imports: [DatePipe, PageHeader, RouterLink, StatusBadge, UserAvatar],
   templateUrl: './sessions-page.html',
   styleUrl: './sessions-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
