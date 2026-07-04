@@ -14,6 +14,7 @@ import { filter } from 'rxjs/operators';
 
 import { AuthService } from '../../core/auth/services/auth.service';
 import { StudentProfileService } from '../../core/student/services/student-profile.service';
+import { NotificationBellComponent } from '../components/notification-bell/notification-bell';
 
 type NavItem = {
   label: string;
@@ -28,7 +29,7 @@ type UtilityItem = {
 
 @Component({
   selector: 'app-student-layout',
-  imports: [NgOptimizedImage, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [NgOptimizedImage, NotificationBellComponent, RouterLink, RouterLinkActive, RouterOutlet],
   host: {
     '(document:click)': 'handleDocumentClick($event)',
     '(document:keydown.escape)': 'handleEscape()',
@@ -193,13 +194,7 @@ type UtilityItem = {
                 </div>
 
                 <div class="flex shrink-0 items-center gap-1 sm:gap-2">
-                  <button
-                    type="button"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
-                    aria-label="Notifications"
-                  >
-                    <i class="fa-regular fa-bell" aria-hidden="true"></i>
-                  </button>
+                  <app-notification-bell />
 
                   <div #userMenuRoot class="relative">
                     <button

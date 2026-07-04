@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import ma.eniad.justificationservice.entity.Justification;
-import ma.eniad.justificationservice.entity.JustificationStatus;
+import ma.eniad.justificationservice.entity.enums.JustificationStatus;
 
 import jakarta.persistence.LockModeType;
 import java.util.List;

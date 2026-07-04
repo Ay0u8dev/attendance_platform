@@ -10,17 +10,17 @@ import org.springframework.context.annotation.Configuration;
 
 import ma.eniad.attendanceservice.entity.AttendanceRecord;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
-import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
-import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionMethod;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.repository.AttendanceRecordRepository;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 
 @Configuration
 public class DatabaseSeeder {
 
-    private static final Long TEACHER_ID = 5L;
-    private static final String TEACHER_FULL_NAME = "Ayoub Elebbar";
+    private static final Long TEACHER_ID = 2L;
+    private static final String TEACHER_FULL_NAME = "Mariam Fahim";
     private static final String GPS_LAT = "34.6894";
     private static final String GPS_LON = "-1.9123";
 
@@ -36,7 +36,8 @@ public class DatabaseSeeder {
             }
 
             List<SeedStudent> groupOneStudents = List.of(
-                    new SeedStudent(6L, 1L, "Ayoub", "Elebbar", "ayoubelebbar15@gmail.com", "24000001"),
+                    new SeedStudent(6L, 1L, "Mariam", "Fahim", "mariamfahim@uma.ac.ma", "250001"),
+                    new SeedStudent(6L, 1L, "Ayoub", "Elebbar", "ayoubelebbar15@gmail.com", "250011"),
                     new SeedStudent(7L, 1L, "Yassine", "Bennani", "student.g1.02@gmail.com", "24000002"),
                     new SeedStudent(8L, 1L, "Salma", "Naciri", "student.g1.03@gmail.com", "24000003"),
                     new SeedStudent(9L, 1L, "Omar", "Ait Lahcen", "student.g1.04@gmail.com", "24000004"),
@@ -100,16 +101,6 @@ public class DatabaseSeeder {
                     AttendanceSessionMethod.FACE_ID,
                     LocalDateTime.now().minusDays(10),
                     List.of(11L, 13L, 14L)
-            );
-            seedFinalizedSession(
-                    attendanceSessionRepository,
-                    attendanceRecordRepository,
-                    groupTwoStudents,
-                    "Reseaux",
-                    "Amphi A",
-                    AttendanceSessionMethod.MANUAL,
-                    LocalDateTime.now().minusDays(5),
-                    List.of(12L, 13L, 15L)
             );
 
             System.out.println("Attendance history seeded successfully!");

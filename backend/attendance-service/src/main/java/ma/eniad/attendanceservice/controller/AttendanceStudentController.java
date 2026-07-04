@@ -7,7 +7,7 @@ import ma.eniad.attendanceservice.dto.StudentActiveAttendanceSessionResponse;
 import ma.eniad.attendanceservice.dto.StudentAttendanceOverviewResponse;
 import ma.eniad.attendanceservice.dto.StudentAttendanceSessionDetailResponse;
 import ma.eniad.attendanceservice.dto.StudentAttendanceSessionSummaryResponse;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.service.AttendanceQueryService;
 import ma.eniad.attendanceservice.service.UserContext;
 import org.springframework.data.domain.Pageable;

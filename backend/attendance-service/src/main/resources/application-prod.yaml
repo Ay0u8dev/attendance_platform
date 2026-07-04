@@ -23,6 +23,8 @@ services:
     url: http://auth-service:8080
   user-service:
     url: http://user-service:8080
+  notification:
+    url: http://notification-service:8080
 
 attendance:
   internal:
@@ -33,8 +35,16 @@ attendance:
     auto-finalize-poll-interval: PT30S
   self-mark:
     max-distance-meters: ${ATTENDANCE_SELF_MARK_MAX_DISTANCE_METERS:100}
+  self-mark:
+    max-distance-meters: 100
   websocket:
-    allowed-origin-patterns: http://*
+    allowed-origin-patterns:
+      - http://localhost:[*]
+      - http://127.0.0.1:[*]
+      - http://host.docker.internal:[*]
+      - http://192.168.100.73:[*]
+      - http://attendance-platform.ma
+      - http://attendance-platform.duckdns.org
   lock:
     lease-duration: ${ATTENDANCE_LOCK_LEASE_DURATION:PT2M}
     acquire-timeout: ${ATTENDANCE_LOCK_ACQUIRE_TIMEOUT:PT2S}

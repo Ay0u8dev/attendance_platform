@@ -18,6 +18,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import ma.eniad.justificationservice.entity.enums.JustificationStatus;
 
 @Entity
 @Table(

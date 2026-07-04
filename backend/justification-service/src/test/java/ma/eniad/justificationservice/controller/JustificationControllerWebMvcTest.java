@@ -1,7 +1,7 @@
 package ma.eniad.justificationservice.controller;
 
 import ma.eniad.justificationservice.dto.JustificationResponse;
-import ma.eniad.justificationservice.entity.JustificationStatus;
+import ma.eniad.justificationservice.entity.enums.JustificationStatus;
 import ma.eniad.justificationservice.service.CloudflareR2Service;
 import ma.eniad.justificationservice.service.JustificationService;
 import ma.eniad.justificationservice.service.RequestUser;
@@ -77,30 +77,28 @@ class JustificationControllerWebMvcTest {
 
     private JustificationResponse response(JustificationStatus status) {
         LocalDateTime now = LocalDateTime.of(2026, 6, 20, 9, 0);
-        return new JustificationResponse(
-                1L,
-                501L,
-                100L,
-                10L,
-                20L,
-                77L,
-                "Prof. Idrissi",
-                "Aya Bennani",
-                "aya@ump.ac.ma",
-                "A001",
-                "Distributed Systems",
-                "B12",
-                now,
-                now.plusMinutes(90),
-                "Medical appointment",
-                null,
-                status,
-                null,
-                null,
-                null,
-                null,
-                now,
-                now
-        );
+        return JustificationResponse.builder()
+                .id(1L)
+                .attendanceRecordId(501L)
+                .sessionId(100L)
+                .studentId(10L)
+                .groupId(20L)
+                .teacherId(77L)
+                .teacherName("Prof. Idrissi")
+                .studentName("Aya Bennani")
+                .studentEmail("aya@ump.ac.ma")
+                .studentCode("A001")
+                .courseLabel("Distributed Systems")
+                .module("Distributed Systems")
+                .roomLabel("B12")
+                .absenceStartedAt(now)
+                .sessionDate(now)
+                .absenceEndedAt(now.plusMinutes(90))
+                .reason("Medical appointment")
+                .status(status)
+                .createdAt(now)
+                .submittedAt(now)
+                .updatedAt(now)
+                .build();
     }
 }

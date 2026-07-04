@@ -15,6 +15,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/auth/services/auth.service';
 import { User } from '../../core/auth/models/auth.model';
 import { TeacherProfileService } from '../../core/teacher/services/teacher-profile.service';
+import { NotificationBellComponent } from '../components/notification-bell/notification-bell';
 
 type NavItem = {
   label: string;
@@ -29,7 +30,13 @@ type UtilityItem = {
 
 @Component({
   selector: 'app-teacher-layout',
-  imports: [NgOptimizedImage, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [
+    NgOptimizedImage,
+    NotificationBellComponent,
+    RouterLink,
+    RouterLinkActive,
+    RouterOutlet,
+  ],
   host: {
     '(document:click)': 'handleDocumentClick($event)',
     '(document:keydown.escape)': 'handleEscape()',
@@ -100,7 +107,9 @@ type UtilityItem = {
             type="button"
             class="absolute top-20 right-0 hidden h-7 w-7 translate-x-1/2 items-center justify-center rounded-full border border-line bg-surface text-secondaryText shadow-card transition-all duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:inline-flex"
             (click)="toggleSidebarCollapsed()"
-            [attr.aria-label]="isSidebarCollapsed() ? 'Déplier la barre latérale' : 'Replier la barre latérale'"
+            [attr.aria-label]="
+              isSidebarCollapsed() ? 'Déplier la barre latérale' : 'Replier la barre latérale'
+            "
           >
             <i
               class="fa-solid text-xs"
@@ -194,13 +203,7 @@ type UtilityItem = {
                 </div>
 
                 <div class="flex shrink-0 items-center gap-1 sm:gap-2">
-                  <button
-                    type="button"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
-                    aria-label="Notifications"
-                  >
-                    <i class="fa-regular fa-bell" aria-hidden="true"></i>
-                  </button>
+                  <app-notification-bell />
 
                   <div #userMenuRoot class="relative">
                     <button
@@ -227,9 +230,9 @@ type UtilityItem = {
                           </span>
                         }
                       </span>
-                      <span class="hidden text-sm font-medium text-principalText md:inline"
-                        >{{ userDisplayName() }}</span
-                      >
+                      <span class="hidden text-sm font-medium text-principalText md:inline">{{
+                        userDisplayName()
+                      }}</span>
                       <!-- <i
                       class="fa-solid text-[0.6rem] text-secondaryText"
                       [class.fa-chevron-up]="isUserMenuOpen()"
@@ -294,7 +297,11 @@ export class TeacherLayout {
   private readonly userMenuRoot = viewChild<ElementRef<HTMLElement>>('userMenuRoot');
 
   readonly navItems: NavItem[] = [
-    { label: 'Tableau de bord', route: '/teacher/dashboard', icon: 'fa-solid fa-table-cells-large' },
+    {
+      label: 'Tableau de bord',
+      route: '/teacher/dashboard',
+      icon: 'fa-solid fa-table-cells-large',
+    },
     { label: 'Présences', route: '/teacher/sessions', icon: 'fa-regular fa-calendar-check' },
     { label: 'Modules', route: '/teacher/modules', icon: 'fa-solid fa-cube' },
     { label: 'Groupes', route: '/teacher/groups', icon: 'fa-solid fa-users-rectangle' },

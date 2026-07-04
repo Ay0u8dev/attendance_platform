@@ -3,18 +3,24 @@ package ma.eniad.justificationservice.service;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import ma.eniad.justificationservice.client.AttendanceServiceClient;
+import ma.eniad.justificationservice.client.UserServiceClient;
 import ma.eniad.justificationservice.dto.AttendanceJustificationContext;
 import ma.eniad.justificationservice.dto.AttendanceJustificationRequest;
+import ma.eniad.justificationservice.dto.AttendanceSessionLookupResponse;
 import ma.eniad.justificationservice.dto.DecisionJustificationRequest;
 import ma.eniad.justificationservice.dto.JustificationResponse;
 import ma.eniad.justificationservice.dto.ReviewJustificationRequest;
 import ma.eniad.justificationservice.dto.SubmitJustificationRequest;
 import ma.eniad.justificationservice.entity.Justification;
-import ma.eniad.justificationservice.entity.JustificationStatus;
+import ma.eniad.justificationservice.entity.enums.JustificationStatus;
 import ma.eniad.justificationservice.repository.JustificationRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
@@ -27,11 +33,14 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class JustificationService {
 
+    private static final Logger log = LoggerFactory.getLogger(JustificationService.class);
     private static final Set<String> REVIEWER_ROLES = Set.of("ADMIN", "TEACHER");
     private static final String JUSTIFICATION_SOURCE = "justification-service";
 
     private final JustificationRepository repository;
     private final AttendanceServiceClient attendanceServiceClient;
+    private final UserServiceClient userServiceClient;
+    private final JustificationNotificationService justificationNotificationService;
 
     @Transactional
     public List<JustificationResponse> findForAdmin(RequestUser user, JustificationStatus status) {
@@ -54,31 +63,32 @@ public class JustificationService {
         return filterByStatus(repository.findByStudentIdOrderBySubmittedAtDesc(user.id()), status);
     }
 
-    @Transactional(readOnly = true)
-    public List<Justification> findAll(JustificationStatus status, Long studentId) {
+    @Transactional
+    public List<JustificationResponse> findAll(JustificationStatus status, Long studentId) {
         List<Justification> rows = studentId != null
                 ? repository.findByStudentIdOrderBySubmittedAtDesc(studentId)
                 : repository.findAllByOrderBySubmittedAtDesc();
-        if (status == null) {
-            return rows;
-        }
-        return rows.stream()
-                .filter(row -> row.getStatus() == status)
-                .toList();
+        hydrateMissingContext(rows);
+        return filterByStatus(rows, status);
     }
 
     @Transactional
     public JustificationResponse findById(Long id, RequestUser user) {
         Justification justification = requireJustification(id);
-        if (shouldEnsureContext(justification)) {
-            ensureContext(justification);
-        }
+        ensureContext(justification);
         requireCanView(justification, user);
         return toResponse(justification);
     }
 
+    @Transactional
+    public JustificationResponse findById(Long id) {
+        Justification justification = requireJustification(id);
+        ensureContext(justification);
+        return toResponse(justification);
+    }
+
     @Transactional(readOnly = true)
-    public Justification findById(Long id) {
+    public Justification findEntityById(Long id) {
         return requireJustification(id);
     }
 
@@ -94,57 +104,60 @@ public class JustificationService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Only an absent attendance record can be justified");
         }
 
-        Justification justification = Justification.builder()
-                .sessionId(context.sessionId())
-                .attendanceRecordId(context.attendanceRecordId())
-                .studentId(context.studentId())
-                .groupId(context.groupId())
-                .teacherId(context.teacherId())
-                .teacherName(context.teacherFullName())
-                .studentName(context.studentName())
-                .studentEmail(context.studentEmail())
-                .studentCode(context.studentCode())
-                .module(context.courseLabel())
-                .roomLabel(context.roomLabel())
-                .sessionDate(context.sessionStartedAt())
-                .sessionEndedAt(context.sessionEndedAt())
-                .status(JustificationStatus.PENDING)
-                .reason(request.reason().trim())
-                .documentUrl(normalizeDocumentUrl(request.documentUrl()))
-                .submittedAt(LocalDateTime.now())
-                .build();
-
-        return toResponse(repository.save(justification));
+        Justification saved = saveSubmittedJustification(
+                Justification.builder()
+                        .sessionId(context.sessionId())
+                        .attendanceRecordId(context.attendanceRecordId())
+                        .studentId(context.studentId())
+                        .groupId(context.groupId())
+                        .teacherId(context.teacherId())
+                        .teacherName(context.teacherFullName())
+                        .studentName(context.studentName())
+                        .studentEmail(context.studentEmail())
+                        .studentCode(context.studentCode())
+                        .module(context.courseLabel())
+                        .roomLabel(context.roomLabel())
+                        .sessionDate(context.sessionStartedAt())
+                        .sessionEndedAt(context.sessionEndedAt())
+                        .status(JustificationStatus.PENDING)
+                        .reason(request.reason().trim())
+                        .documentUrl(normalizeDocumentUrl(request.documentUrl()))
+                        .submittedAt(LocalDateTime.now())
+                        .build()
+        );
+        return toResponse(saved);
     }
 
     @Transactional
-    public Justification submit(SubmitJustificationRequest request) {
+    public JustificationResponse submit(SubmitJustificationRequest request) {
         Long studentId = requirePresent(request.studentId(), "studentId is required");
         if (repository.existsBySessionIdAndStudentId(request.sessionId(), studentId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "A justification already exists for this absence");
         }
 
-        Justification justification = Justification.builder()
-                .sessionId(request.sessionId())
-                .studentId(studentId)
-                .studentName(requireNonBlank(request.studentName(), "studentName is required"))
-                .studentCode(normalizeOptional(request.studentCode()))
-                .studentFormation(normalizeOptional(request.studentFormation()))
-                .studentClass(normalizeOptional(request.studentClass()))
-                .studentGroup(normalizeOptional(request.studentGroup()))
-                .module(requireNonBlank(request.module(), "module is required"))
-                .sessionDate(requirePresent(request.sessionDate(), "sessionDate is required"))
-                .status(JustificationStatus.PENDING)
-                .reason(request.reason().trim())
-                .submittedAt(LocalDateTime.now())
-                .documentUrl(normalizeDocumentUrl(request.documentUrl()))
-                .build();
-
-        return repository.save(justification);
+        Justification saved = saveSubmittedJustification(
+                Justification.builder()
+                        .sessionId(request.sessionId())
+                        .studentId(studentId)
+                        .studentName(requireNonBlank(request.studentName(), "studentName is required"))
+                        .studentEmail(normalizeOptional(request.studentEmail()))
+                        .studentCode(normalizeOptional(request.studentCode()))
+                        .studentFormation(normalizeOptional(request.studentFormation()))
+                        .studentClass(normalizeOptional(request.studentClass()))
+                        .studentGroup(normalizeOptional(request.studentGroup()))
+                        .module(requireNonBlank(request.module(), "module is required"))
+                        .sessionDate(requirePresent(request.sessionDate(), "sessionDate is required"))
+                        .status(JustificationStatus.PENDING)
+                        .reason(request.reason().trim())
+                        .submittedAt(LocalDateTime.now())
+                        .documentUrl(normalizeDocumentUrl(request.documentUrl()))
+                        .build()
+        );
+        return toResponse(saved);
     }
 
     @Transactional
-    public List<Justification> markAllAsPending() {
+    public List<JustificationResponse> markAllAsPending() {
         List<Justification> justifications = repository.findAll();
         justifications.forEach(justification -> {
             justification.setStatus(JustificationStatus.PENDING);
@@ -153,7 +166,9 @@ public class JustificationService {
             justification.setReviewerRole(null);
             justification.setReviewedAt(null);
         });
-        return repository.saveAll(justifications);
+        return repository.saveAll(justifications).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional
@@ -176,32 +191,106 @@ public class JustificationService {
 
         if (request.status() == JustificationStatus.APPROVED) {
             justifyAttendanceRecord(saved, String.valueOf(user.id()), decisionRole);
+            notifyAfterCommit(() -> justificationNotificationService.notifyApproved(saved));
+        } else {
+            notifyAfterCommit(() -> justificationNotificationService.notifyRejected(saved));
         }
 
         return toResponse(saved);
     }
 
     @Transactional
-    public Justification approve(Long id, ReviewJustificationRequest request) {
+    public JustificationResponse approve(Long id, ReviewJustificationRequest request) {
         Justification justification = requirePendingJustification(id);
         String reviewerRole = requireReviewerRole(request.reviewerRole());
         String reviewerLabel = buildReviewerLabel(request);
 
+        ensureContext(justification);
         justifyAttendanceRecord(justification, reviewerLabel, reviewerRole);
-
         justification.setStatus(JustificationStatus.APPROVED);
         applyReviewData(justification, request, reviewerRole);
-        return repository.save(justification);
+
+        Justification saved = repository.save(justification);
+        notifyAfterCommit(() -> justificationNotificationService.notifyApproved(saved));
+        return toResponse(saved);
     }
 
     @Transactional
-    public Justification decline(Long id, ReviewJustificationRequest request) {
+    public JustificationResponse decline(Long id, ReviewJustificationRequest request) {
         Justification justification = requirePendingJustification(id);
         String reviewerRole = requireReviewerRole(request.reviewerRole());
 
+        ensureContext(justification);
         justification.setStatus(JustificationStatus.REJECTED);
         applyReviewData(justification, request, reviewerRole);
-        return repository.save(justification);
+
+        Justification saved = repository.save(justification);
+        notifyAfterCommit(() -> justificationNotificationService.notifyRejected(saved));
+        return toResponse(saved);
+    }
+
+    private Justification saveSubmittedJustification(Justification justification) {
+        Justification saved = repository.save(justification);
+        notifyAfterCommit(() -> {
+            justificationNotificationService.notifySubmitted(saved);
+            notifyResponsibleTeacher(saved);
+            notifyAdmins(saved);
+        });
+        return saved;
+    }
+
+    private void notifyAfterCommit(Runnable notification) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            safeRun(notification);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                safeRun(notification);
+            }
+        });
+    }
+
+    private void safeRun(Runnable notification) {
+        try {
+            notification.run();
+        } catch (RuntimeException ex) {
+            log.warn("Failed to dispatch justification notification", ex);
+        }
+    }
+
+    private void notifyResponsibleTeacher(Justification justification) {
+        try {
+            Long teacherId = justification.getTeacherId();
+            if (teacherId == null && justification.getSessionId() != null) {
+                AttendanceSessionLookupResponse session =
+                        attendanceServiceClient.getSession(justification.getSessionId(), JUSTIFICATION_SOURCE);
+                teacherId = session.teacherId();
+            }
+
+            if (teacherId == null) {
+                log.warn("Skipping teacher notification because justificationId={} has no teacherId", justification.getId());
+                return;
+            }
+
+            justificationNotificationService.notifySubmittedForTeacher(justification, teacherId);
+        } catch (RuntimeException ex) {
+            log.warn("Failed to resolve responsible teacher for justificationId={}", justification.getId(), ex);
+        }
+    }
+
+    private void notifyAdmins(Justification justification) {
+        try {
+            for (Long adminId : userServiceClient.getAdminIds(JUSTIFICATION_SOURCE)) {
+                if (adminId != null) {
+                    justificationNotificationService.notifySubmittedForAdmin(justification, adminId);
+                }
+            }
+        } catch (RuntimeException ex) {
+            log.warn("Failed to resolve admins for justificationId={}", justification.getId(), ex);
+        }
     }
 
     private List<JustificationResponse> filterByStatus(List<Justification> rows, JustificationStatus status) {
@@ -317,11 +406,12 @@ public class JustificationService {
     }
 
     private String buildReviewerLabel(ReviewJustificationRequest request) {
+        String reviewerName = requireNonBlank(request.reviewerName(), "reviewerName is required");
         String reviewerId = normalizeOptional(request.reviewerId());
         if (reviewerId == null) {
-            return request.reviewerName().trim();
+            return reviewerName;
         }
-        return request.reviewerName().trim() + " (" + reviewerId + ")";
+        return reviewerName + " (" + reviewerId + ")";
     }
 
     private void justifyAttendanceRecord(Justification justification, String decidedBy, String decisionRole) {
@@ -378,31 +468,48 @@ public class JustificationService {
     }
 
     private JustificationResponse toResponse(Justification justification) {
-        return new JustificationResponse(
-                justification.getId(),
-                justification.getAttendanceRecordId(),
-                justification.getSessionId(),
-                justification.getStudentId(),
-                justification.getGroupId(),
-                justification.getTeacherId(),
-                justification.getTeacherName(),
-                justification.getStudentName(),
-                justification.getStudentEmail(),
-                justification.getStudentCode(),
-                justification.getModule(),
-                justification.getRoomLabel(),
-                justification.getSessionDate(),
-                justification.getSessionEndedAt(),
-                justification.getReason(),
-                justification.getDocumentUrl(),
-                justification.getStatus(),
-                justification.getTeacherComment(),
-                justification.getReviewedBy(),
-                justification.getReviewerRole(),
-                justification.getReviewedAt(),
-                justification.getSubmittedAt(),
-                justification.getUpdatedAt()
-        );
+        String documentUrl = justification.getDocumentUrl();
+        String documentName = extractFileName(documentUrl);
+        String downloadUrl = documentUrl == null ? null : "/api/justifications/" + justification.getId() + "/download";
+
+        return JustificationResponse.builder()
+                .id(justification.getId())
+                .attendanceRecordId(justification.getAttendanceRecordId())
+                .sessionId(justification.getSessionId())
+                .studentId(justification.getStudentId())
+                .groupId(justification.getGroupId())
+                .teacherId(justification.getTeacherId())
+                .teacherName(justification.getTeacherName())
+                .studentName(justification.getStudentName())
+                .studentEmail(justification.getStudentEmail())
+                .studentCode(justification.getStudentCode())
+                .studentFormation(justification.getStudentFormation())
+                .studentClass(justification.getStudentClass())
+                .studentGroup(justification.getStudentGroup())
+                .courseLabel(justification.getModule())
+                .module(justification.getModule())
+                .roomLabel(justification.getRoomLabel())
+                .absenceStartedAt(justification.getSessionDate())
+                .sessionDate(justification.getSessionDate())
+                .absenceEndedAt(justification.getSessionEndedAt())
+                .reason(justification.getReason())
+                .attachmentUrl(documentUrl)
+                .documentUrl(documentUrl)
+                .documentName(documentName)
+                .downloadUrl(downloadUrl)
+                .status(justification.getStatus())
+                .decisionComment(justification.getTeacherComment())
+                .teacherComment(justification.getTeacherComment())
+                .decidedBy(justification.getReviewedBy())
+                .reviewedBy(justification.getReviewedBy())
+                .decidedByRole(justification.getReviewerRole())
+                .reviewerRole(justification.getReviewerRole())
+                .decidedAt(justification.getReviewedAt())
+                .reviewedAt(justification.getReviewedAt())
+                .createdAt(justification.getSubmittedAt())
+                .submittedAt(justification.getSubmittedAt())
+                .updatedAt(justification.getUpdatedAt())
+                .build();
     }
 
     private String normalizeDocumentUrl(String documentUrl) {
@@ -431,6 +538,18 @@ public class JustificationService {
         } catch (Exception ex) {
             return normalized;
         }
+    }
+
+    private String extractFileName(String documentUrl) {
+        String normalized = normalizeOptional(documentUrl);
+        if (normalized == null) {
+            return null;
+        }
+
+        String path = normalized.split("\\?")[0];
+        String fileName = path.substring(path.lastIndexOf('/') + 1);
+        fileName = fileName.replaceFirst("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[_-]", "");
+        return fileName.replaceFirst("[_-][0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?=\\.[a-zA-Z0-9]+$|$)", "");
     }
 
     private <T> T requirePresent(T value, String message) {

@@ -1,8 +1,8 @@
 package ma.eniad.attendanceservice.dto;
 
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
-
 import java.util.Map;
+
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
 
 public record TeacherAttendanceReportStudentResponse(
         Long studentId,

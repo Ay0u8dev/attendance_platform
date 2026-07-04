@@ -15,6 +15,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { User } from '../../core/auth/models/auth.model';
 import { AuthService } from '../../core/auth/services/auth.service';
 import { AcademicYearContextService } from '../../core/structure/services/academic-year-context.service';
+import { NotificationBellComponent } from '../components/notification-bell/notification-bell';
 
 type NavItem = {
   label: string;
@@ -24,7 +25,7 @@ type NavItem = {
 
 @Component({
   selector: 'app-admin-layout',
-  imports: [NgOptimizedImage, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [NgOptimizedImage, NotificationBellComponent, RouterLink, RouterLinkActive, RouterOutlet],
   host: {
     '(document:click)': 'handleDocumentClick($event)',
     '(document:keydown.escape)': 'handleEscape()',
@@ -231,13 +232,7 @@ type NavItem = {
                     }
                   </div>
 
-                  <button
-                    type="button"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
-                    aria-label="Notifications"
-                  >
-                    <i class="fa-regular fa-bell" aria-hidden="true"></i>
-                  </button>
+                  <app-notification-bell />
 
                   <div #userMenuRoot class="relative">
                     <button

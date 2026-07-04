@@ -2,14 +2,9 @@ package ma.eniad.attendanceservice.controller;
 
 import lombok.AllArgsConstructor;
 import ma.eniad.attendanceservice.annotation.RequireRole;
-import ma.eniad.attendanceservice.dto.AdminStudentAttendanceSummaryResponse;
-import ma.eniad.attendanceservice.dto.AdminOverviewResponse;
-import ma.eniad.attendanceservice.dto.AttendanceSessionDetailsResponse;
-import ma.eniad.attendanceservice.dto.AttendanceSessionSummaryResponse;
-import ma.eniad.attendanceservice.dto.PagedResponse;
-import ma.eniad.attendanceservice.dto.StudentAttendanceSessionSummaryResponse;
-import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.dto.*;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.service.AttendanceQueryService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;

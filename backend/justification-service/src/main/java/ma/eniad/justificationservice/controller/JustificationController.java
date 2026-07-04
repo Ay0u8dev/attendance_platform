@@ -1,12 +1,13 @@
 package ma.eniad.justificationservice.controller;
 
 import jakarta.validation.Valid;
-import ma.eniad.justificationservice.controller.dto.PresignedUrlResponse;
 import ma.eniad.justificationservice.dto.DecisionJustificationRequest;
+import ma.eniad.justificationservice.dto.JustificationResponse;
+import ma.eniad.justificationservice.dto.PresignedUrlResponse;
 import ma.eniad.justificationservice.dto.ReviewJustificationRequest;
 import ma.eniad.justificationservice.dto.SubmitJustificationRequest;
 import ma.eniad.justificationservice.entity.Justification;
-import ma.eniad.justificationservice.entity.JustificationStatus;
+import ma.eniad.justificationservice.entity.enums.JustificationStatus;
 import ma.eniad.justificationservice.service.CloudflareR2Service;
 import ma.eniad.justificationservice.service.JustificationService;
 import ma.eniad.justificationservice.service.RequestUser;
@@ -40,17 +41,15 @@ public class JustificationController {
     }
 
     @GetMapping
-    public List<ma.eniad.justificationservice.controller.dto.JustificationResponse> findAll(
+    public List<JustificationResponse> findAll(
             @RequestParam(required = false) JustificationStatus status,
             @RequestParam(required = false) Long studentId
     ) {
-        return service.findAll(status, studentId).stream()
-                .map(this::toDocumentResponse)
-                .toList();
+        return service.findAll(status, studentId);
     }
 
     @GetMapping("/admin")
-    public List<ma.eniad.justificationservice.dto.JustificationResponse> findForAdmin(
+    public List<JustificationResponse> findForAdmin(
             @RequestParam(required = false) JustificationStatus status,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Roles") String roles,
@@ -60,7 +59,7 @@ public class JustificationController {
     }
 
     @GetMapping("/teacher")
-    public List<ma.eniad.justificationservice.dto.JustificationResponse> findForTeacher(
+    public List<JustificationResponse> findForTeacher(
             @RequestParam(required = false) JustificationStatus status,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Roles") String roles,
@@ -70,7 +69,7 @@ public class JustificationController {
     }
 
     @GetMapping("/student")
-    public List<ma.eniad.justificationservice.dto.JustificationResponse> findForStudent(
+    public List<JustificationResponse> findForStudent(
             @RequestParam(required = false) JustificationStatus status,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Roles") String roles,
@@ -88,6 +87,10 @@ public class JustificationController {
             @RequestParam(required = false) String sessionDay,
             @RequestParam(required = false) String sessionStartTime,
             @RequestParam(required = false) String sessionEndTime) {
+        if (!r2Service.isR2Configured()) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+
         String extension = ".pdf";
         if ("image/jpeg".equals(contentType) || "image/jpg".equals(contentType)) {
             extension = ".jpg";
@@ -134,13 +137,13 @@ public class JustificationController {
     }
 
     @GetMapping("/{id}")
-    public ma.eniad.justificationservice.controller.dto.JustificationResponse findById(@PathVariable Long id) {
-        return toDocumentResponse(service.findById(id));
+    public JustificationResponse findById(@PathVariable Long id) {
+        return service.findById(id);
     }
 
     @GetMapping("/{id}/download")
     public ResponseEntity<Void> downloadDocument(@PathVariable Long id) {
-        Justification justification = service.findById(id);
+        Justification justification = service.findEntityById(id);
         String documentKey = justification.getDocumentUrl();
         if (documentKey == null || documentKey.isBlank()) {
             return ResponseEntity.notFound().build();
@@ -156,14 +159,14 @@ public class JustificationController {
     }
 
     @PostMapping
-    public ma.eniad.justificationservice.controller.dto.JustificationResponse submit(
+    public JustificationResponse submit(
             @Valid @RequestBody SubmitJustificationRequest request
     ) {
-        return toDocumentResponse(service.submit(request));
+        return service.submit(request);
     }
 
     @PostMapping("/student")
-    public ma.eniad.justificationservice.dto.JustificationResponse submitForStudent(
+    public JustificationResponse submitForStudent(
             @Valid @RequestBody SubmitJustificationRequest request,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Roles") String roles,
@@ -173,14 +176,12 @@ public class JustificationController {
     }
 
     @PatchMapping("/pending")
-    public List<ma.eniad.justificationservice.controller.dto.JustificationResponse> markAllAsPending() {
-        return service.markAllAsPending().stream()
-                .map(this::toDocumentResponse)
-                .toList();
+    public List<JustificationResponse> markAllAsPending() {
+        return service.markAllAsPending();
     }
 
     @PatchMapping("/{id}/decision")
-    public ma.eniad.justificationservice.dto.JustificationResponse decide(
+    public JustificationResponse decide(
             @PathVariable Long id,
             @Valid @RequestBody DecisionJustificationRequest request,
             @RequestHeader("X-User-Id") String userId,
@@ -191,53 +192,19 @@ public class JustificationController {
     }
 
     @PatchMapping("/{id}/approve")
-    public ma.eniad.justificationservice.controller.dto.JustificationResponse approve(
+    public JustificationResponse approve(
             @PathVariable Long id,
             @Valid @RequestBody ReviewJustificationRequest request
     ) {
-        return toDocumentResponse(service.approve(id, request));
+        return service.approve(id, request);
     }
 
     @PatchMapping("/{id}/decline")
-    public ma.eniad.justificationservice.controller.dto.JustificationResponse decline(
+    public JustificationResponse decline(
             @PathVariable Long id,
             @Valid @RequestBody ReviewJustificationRequest request
     ) {
-        return toDocumentResponse(service.decline(id, request));
-    }
-
-    private ma.eniad.justificationservice.controller.dto.JustificationResponse toDocumentResponse(Justification justification) {
-        String documentUrl = justification.getDocumentUrl();
-        String documentName = null;
-        String downloadUrl = null;
-
-        if (documentUrl != null && !documentUrl.isBlank()) {
-            documentName = extractFileName(documentUrl);
-            downloadUrl = "/api/justifications/" + justification.getId() + "/download";
-        }
-
-        return ma.eniad.justificationservice.controller.dto.JustificationResponse.builder()
-                .id(justification.getId())
-                .sessionId(justification.getSessionId())
-                .studentId(justification.getStudentId())
-                .studentName(justification.getStudentName())
-                .studentCode(justification.getStudentCode())
-                .studentFormation(justification.getStudentFormation())
-                .studentClass(justification.getStudentClass())
-                .studentGroup(justification.getStudentGroup())
-                .module(justification.getModule())
-                .sessionDate(justification.getSessionDate())
-                .status(justification.getStatus())
-                .reason(justification.getReason())
-                .submittedAt(justification.getSubmittedAt())
-                .documentUrl(documentUrl)
-                .documentName(documentName)
-                .downloadUrl(downloadUrl)
-                .teacherComment(justification.getTeacherComment())
-                .reviewedBy(justification.getReviewedBy())
-                .reviewerRole(justification.getReviewerRole())
-                .reviewedAt(justification.getReviewedAt())
-                .build();
+        return service.decline(id, request);
     }
 
     private String sanitizeForFilename(String input) {
@@ -251,16 +218,4 @@ public class JustificationController {
         return normalized;
     }
 
-    private String extractFileName(String documentUrl) {
-        if (documentUrl == null || documentUrl.isBlank()) {
-            return null;
-        }
-        int queryIndex = documentUrl.indexOf('?');
-        String path = queryIndex >= 0 ? documentUrl.substring(0, queryIndex) : documentUrl;
-        int slashIndex = path.lastIndexOf('/');
-        String fileName = slashIndex >= 0 ? path.substring(slashIndex + 1) : path;
-        fileName = fileName.replaceFirst("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[_-]", "");
-        fileName = fileName.replaceFirst("[_-][0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?=\\.[a-zA-Z0-9]+$|$)", "");
-        return fileName;
-    }
 }

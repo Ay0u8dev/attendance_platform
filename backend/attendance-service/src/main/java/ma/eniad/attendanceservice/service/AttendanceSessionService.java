@@ -7,9 +7,9 @@ import ma.eniad.attendanceservice.client.UserServiceClient;
 import ma.eniad.attendanceservice.config.AttendanceSessionProperties;
 import ma.eniad.attendanceservice.dto.*;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
-import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
-import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionMethod;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -27,6 +27,7 @@ public class AttendanceSessionService {
     private final UserServiceClient userServiceClient;
     private final LiveAttendanceSessionStore liveAttendanceSessionStore;
     private final AttendanceSessionProperties attendanceSessionProperties;
+    private final AttendanceNotificationService attendanceNotificationService;
 
     @Transactional
     public AttendanceSessionResponse createSession(Long teacherId, CreateAttendanceSessionRequest request) {
@@ -102,6 +103,9 @@ public class AttendanceSessionService {
             attendanceSessionRepository.flush();
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to initialize live session state", ex);
         }
+
+        attendanceNotificationService.notifySessionStarted(savedSession, roster);
+
         return new AttendanceSessionResponse(
                 savedSession.getId(),
                 savedSession.getTeacherId(),

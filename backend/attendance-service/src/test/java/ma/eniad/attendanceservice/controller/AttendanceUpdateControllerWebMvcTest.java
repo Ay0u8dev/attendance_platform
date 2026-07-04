@@ -4,8 +4,8 @@ import ma.eniad.attendanceservice.config.RoleCheckInterceptor;
 import ma.eniad.attendanceservice.config.WebConfig;
 import ma.eniad.attendanceservice.dto.AttendanceUpdateResponse;
 import ma.eniad.attendanceservice.dto.JustificationContextResponse;
-import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionMethod;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.exception.GlobalExceptionHandler;
 import ma.eniad.attendanceservice.service.AttendanceUpdateService;
 import org.junit.jupiter.api.Test;
@@ -17,18 +17,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 
-import static ma.eniad.attendanceservice.controller.TestRequestHeaders.internalSource;
-import static ma.eniad.attendanceservice.controller.TestRequestHeaders.teacherUser;
-import static ma.eniad.attendanceservice.controller.TestRequestHeaders.user;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
+import static ma.eniad.attendanceservice.controller.TestRequestHeaders.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -87,7 +81,7 @@ class AttendanceUpdateControllerWebMvcTest {
                         LocalDateTime.of(2026, 4, 28, 12, 0), 1, 0, 1
                 ));
 
-                mockMvc.perform(post("/attendance/internal/sessions/100/attendance")
+        mockMvc.perform(post("/attendance/internal/sessions/100/attendance")
                         .with(internalSource("qr-service"))
                         .header("X-Internal-Service-Token", "test-token")
                         .contentType(APPLICATION_JSON)
@@ -154,7 +148,7 @@ class AttendanceUpdateControllerWebMvcTest {
 
     @Test
     void justificationContextRouteAllowsCanonicalService() throws Exception {
-        when(attendanceUpdateService.getJustificationContext("justification-service", 100L, 10L))
+        when(attendanceUpdateService.getJustificationContext("justification-service", "test-token", 100L, 10L))
                 .thenReturn(new JustificationContextResponse(
                         501L,
                         100L,
@@ -173,7 +167,8 @@ class AttendanceUpdateControllerWebMvcTest {
                 ));
 
         mockMvc.perform(get("/attendance/internal/sessions/100/students/10/justification-context")
-                        .with(internalSource("justification-service")))
+                        .with(internalSource("justification-service"))
+                        .header("X-Internal-Service-Token", "test-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.attendanceRecordId").value(501))
                 .andExpect(jsonPath("$.teacherId").value(77))

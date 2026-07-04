@@ -1,12 +1,13 @@
 package ma.eniad.justificationservice.service;
 
 import ma.eniad.justificationservice.client.AttendanceServiceClient;
+import ma.eniad.justificationservice.client.UserServiceClient;
 import ma.eniad.justificationservice.dto.AttendanceJustificationContext;
 import ma.eniad.justificationservice.dto.AttendanceJustificationRequest;
 import ma.eniad.justificationservice.dto.DecisionJustificationRequest;
 import ma.eniad.justificationservice.dto.SubmitJustificationRequest;
 import ma.eniad.justificationservice.entity.Justification;
-import ma.eniad.justificationservice.entity.JustificationStatus;
+import ma.eniad.justificationservice.entity.enums.JustificationStatus;
 import ma.eniad.justificationservice.repository.JustificationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,13 +32,22 @@ class JustificationServiceTest {
 
     private JustificationRepository repository;
     private AttendanceServiceClient attendanceServiceClient;
+    private UserServiceClient userServiceClient;
+    private JustificationNotificationService justificationNotificationService;
     private JustificationService service;
 
     @BeforeEach
     void setUp() {
         repository = mock(JustificationRepository.class);
         attendanceServiceClient = mock(AttendanceServiceClient.class);
-        service = new JustificationService(repository, attendanceServiceClient);
+        userServiceClient = mock(UserServiceClient.class);
+        justificationNotificationService = mock(JustificationNotificationService.class);
+        service = new JustificationService(
+                repository,
+                attendanceServiceClient,
+                userServiceClient,
+                justificationNotificationService
+        );
     }
 
     @Test
@@ -52,9 +62,9 @@ class JustificationServiceTest {
                 new DecisionJustificationRequest(JustificationStatus.APPROVED, "Medical document accepted")
         );
 
-        assertThat(response.status()).isEqualTo(JustificationStatus.APPROVED);
-        assertThat(response.decidedBy()).isEqualTo("5");
-        assertThat(response.decidedByRole()).isEqualTo("ADMIN");
+        assertThat(response.getStatus()).isEqualTo(JustificationStatus.APPROVED);
+        assertThat(response.getDecidedBy()).isEqualTo("5");
+        assertThat(response.getDecidedByRole()).isEqualTo("ADMIN");
         verify(attendanceServiceClient).justifyAbsence(
                 100L,
                 10L,
@@ -75,7 +85,7 @@ class JustificationServiceTest {
                 new DecisionJustificationRequest(JustificationStatus.REJECTED, "Document invalid")
         );
 
-        assertThat(response.status()).isEqualTo(JustificationStatus.REJECTED);
+        assertThat(response.getStatus()).isEqualTo(JustificationStatus.REJECTED);
         verify(attendanceServiceClient, never()).justifyAbsence(any(), any(), any(), any());
     }
 
@@ -91,7 +101,7 @@ class JustificationServiceTest {
                 new DecisionJustificationRequest(JustificationStatus.APPROVED, null)
         );
 
-        assertThat(response.decidedByRole()).isEqualTo("TEACHER");
+        assertThat(response.getDecidedByRole()).isEqualTo("TEACHER");
         verify(attendanceServiceClient).justifyAbsence(
                 100L,
                 10L,
@@ -172,17 +182,18 @@ class JustificationServiceTest {
         var rows = service.findForAdmin(user(5L, "ADMIN"), null);
 
         assertThat(rows).hasSize(1);
-        assertThat(rows.getFirst().teacherName()).isEqualTo("Prof. Idrissi");
+        assertThat(rows.getFirst().getTeacherName()).isEqualTo("Prof. Idrissi");
         verify(repository).save(justification);
     }
 
     @Test
-    void submitStoresDocumentUrlAsProvided() {
+    void submitStoresDocumentUrlAsObjectKeyAndNotifiesStudentAndTeacher() {
         String documentUrl = "https://pub-example.r2.dev/justifications/ceebfcf0-4a33-4d09-ae13-3a95a63400a6.pdf";
         SubmitJustificationRequest request = new SubmitJustificationRequest(
                 123L,
                 456L,
                 "Student Name",
+                "student.name@ump.ac.ma",
                 "STU001",
                 null,
                 null,
@@ -196,7 +207,7 @@ class JustificationServiceTest {
         when(repository.existsBySessionIdAndStudentId(123L, 456L)).thenReturn(false);
         when(repository.save(Mockito.any(Justification.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Justification justification = service.submit(request);
+        var justification = service.submit(request);
 
         assertThat(justification.getDocumentUrl()).isEqualTo("justifications/ceebfcf0-4a33-4d09-ae13-3a95a63400a6.pdf");
     }
@@ -207,6 +218,7 @@ class JustificationServiceTest {
                 123L,
                 456L,
                 "Student Name",
+                "student.name@ump.ac.ma",
                 "STU001",
                 null,
                 null,

@@ -72,7 +72,9 @@ public class AttendanceUpdateController {
     public JustificationContextResponse getJustificationContext(@PathVariable Long sessionId,
                                                                 @PathVariable Long studentId,
                                                                 @RequestHeader(value = "X-Request-Source", required = false)
-                                                                String requestSource) {
-        return attendanceUpdateService.getJustificationContext(requestSource, sessionId, studentId);
+                                                                String requestSource,
+                                                                @RequestHeader(value = "X-Internal-Service-Token", required = false)
+                                                                String internalToken) {
+        return attendanceUpdateService.getJustificationContext(requestSource, internalToken, sessionId, studentId);
     }
 }

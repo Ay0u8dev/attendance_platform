@@ -77,7 +77,7 @@ describe('StudentLayout profile avatar', () => {
 
   function findUserMenuButton(): HTMLElement {
     const element = fixture.nativeElement as HTMLElement;
-    const button = element.querySelector('button[aria-haspopup="menu"]');
+    const button = element.querySelector('button[aria-label="Ouvrir le menu utilisateur"]');
     expect(button).not.toBeNull();
     return button as HTMLElement;
   }

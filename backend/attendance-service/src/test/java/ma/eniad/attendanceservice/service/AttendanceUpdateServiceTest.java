@@ -11,9 +11,9 @@ import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 import ma.eniad.attendanceservice.dto.ManualAttendanceUpdateRequest;
 import ma.eniad.attendanceservice.entity.AttendanceRecord;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
-import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
-import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionMethod;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.repository.AttendanceRecordRepository;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +44,7 @@ class AttendanceUpdateServiceTest {
     private AttendanceUpdateService attendanceUpdateService;
     private AttendanceRecordRepository attendanceRecordRepository;
     private AttendanceSessionRepository attendanceSessionRepository;
+    private AttendanceNotificationService attendanceNotificationService;
 
     @BeforeEach
     void setUp() {
@@ -51,6 +52,7 @@ class AttendanceUpdateServiceTest {
         liveAttendanceSessionStore = new InMemoryLiveAttendanceSessionStore();
         attendanceRecordRepository = mock(AttendanceRecordRepository.class);
         attendanceSessionRepository = mock(AttendanceSessionRepository.class);
+        attendanceNotificationService = mock(AttendanceNotificationService.class);
         AttendanceSessionLock directLock = new AttendanceSessionLock() {
             @Override
             public <T> T execute(Long sessionId, java.util.function.Supplier<T> operation) {
@@ -63,7 +65,8 @@ class AttendanceUpdateServiceTest {
                 messagingTemplate,
                 directLock,
                 attendanceRecordRepository,
-                attendanceSessionRepository
+                attendanceSessionRepository,
+                attendanceNotificationService
         );
 
         // Ensure internal updates pass auth checks during unit tests
@@ -249,6 +252,7 @@ class AttendanceUpdateServiceTest {
 
         JustificationContextResponse response = attendanceUpdateService.getJustificationContext(
                 "justification-service",
+                "test-internal-token",
                 100L,
                 10L
         );
@@ -263,6 +267,7 @@ class AttendanceUpdateServiceTest {
     void justificationContextRejectsUntrustedCaller() {
         assertThatThrownBy(() -> attendanceUpdateService.getJustificationContext(
                 "browser",
+                "test-internal-token",
                 100L,
                 10L
         ))

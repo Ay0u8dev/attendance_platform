@@ -1,6 +1,6 @@
 package ma.eniad.attendanceservice.dto;
 
-import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
 
 public record SessionFinalizedEvent(
         String eventType,

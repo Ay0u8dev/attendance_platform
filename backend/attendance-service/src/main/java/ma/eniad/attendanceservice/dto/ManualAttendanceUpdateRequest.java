@@ -1,7 +1,7 @@
 package ma.eniad.attendanceservice.dto;
 
 import jakarta.validation.constraints.NotNull;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
 
 public record ManualAttendanceUpdateRequest(
         @NotNull(message = "studentId is required")

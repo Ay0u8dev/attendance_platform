@@ -2,6 +2,7 @@ package ma.eniad.justificationservice.client;
 
 import ma.eniad.justificationservice.dto.AttendanceJustificationContext;
 import ma.eniad.justificationservice.dto.AttendanceJustificationRequest;
+import ma.eniad.justificationservice.dto.AttendanceSessionLookupResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -24,4 +25,8 @@ public interface AttendanceServiceClient {
             @PathVariable("studentId") Long studentId,
             @RequestHeader(value = "X-Request-Source") String requestSource
     );
+
+    @GetMapping("/attendance/internal/sessions/{sessionId}")
+    AttendanceSessionLookupResponse getSession(@PathVariable("sessionId") Long sessionId,
+                                                @RequestHeader(value = "X-Request-Source") String requestSource);
 }

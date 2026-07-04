@@ -130,7 +130,7 @@ export class TeacherJustificationsPage implements OnInit {
     this.errorMessage.set(null);
 
     this.justificationService
-      .getJustifications()
+      .getTeacherJustifications()
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (justifications) => {

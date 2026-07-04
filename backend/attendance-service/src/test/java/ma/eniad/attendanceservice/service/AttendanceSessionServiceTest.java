@@ -11,8 +11,8 @@ import ma.eniad.attendanceservice.dto.LiveAttendanceSessionMeta;
 import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 import ma.eniad.attendanceservice.dto.StudentRosterDto;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
-import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +41,7 @@ class AttendanceSessionServiceTest {
     private AttendanceSessionRepository attendanceSessionRepository;
     private UserServiceClient userServiceClient;
     private LiveAttendanceSessionStore liveAttendanceSessionStore;
+    private AttendanceNotificationService attendanceNotificationService;
     private AttendanceSessionService attendanceSessionService;
 
     @BeforeEach
@@ -48,11 +49,13 @@ class AttendanceSessionServiceTest {
         attendanceSessionRepository = mock(AttendanceSessionRepository.class);
         userServiceClient = mock(UserServiceClient.class);
         liveAttendanceSessionStore = mock(LiveAttendanceSessionStore.class);
+        attendanceNotificationService = mock(AttendanceNotificationService.class);
         attendanceSessionService = new AttendanceSessionService(
                 attendanceSessionRepository,
                 userServiceClient,
                 liveAttendanceSessionStore,
-                new AttendanceSessionProperties(Duration.ofMinutes(30), Duration.ofHours(1), Duration.ofMinutes(1))
+                new AttendanceSessionProperties(Duration.ofMinutes(30), Duration.ofHours(1), Duration.ofMinutes(1)),
+                attendanceNotificationService
         );
     }
 
@@ -117,6 +120,7 @@ class AttendanceSessionServiceTest {
                         && student.deviceId() == null
                         && student.markedGpsLat() == null
                         && student.markedGpsLon() == null);
+        verify(attendanceNotificationService).notifySessionStarted(any(AttendanceSession.class), any());
     }
 
     @Test
@@ -181,6 +185,7 @@ class AttendanceSessionServiceTest {
 
         verify(attendanceSessionRepository).delete(savedSession);
         verify(attendanceSessionRepository).flush();
+        verify(attendanceNotificationService, never()).notifySessionStarted(any(), any());
     }
 
     @Test
