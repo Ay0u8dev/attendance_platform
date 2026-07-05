@@ -1,5 +1,6 @@
 package ma.eniad.notificationservice.messaging;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import ma.eniad.notificationservice.dto.CreateNotificationRequest;
 import ma.eniad.notificationservice.dto.NotificationRequestedEvent;
 import ma.eniad.notificationservice.entity.enums.NotificationChannel;
@@ -23,12 +24,12 @@ import static org.mockito.Mockito.verifyNoInteractions;
 class NotificationEventConsumerTest {
 
     private NotificationService notificationService;
-    private NotificationEventConsumer consumer;
+    private NotificationEventHandler handler;
 
     @BeforeEach
     void setUp() {
         notificationService = mock(NotificationService.class);
-        consumer = new NotificationEventConsumer(notificationService);
+        handler = new NotificationEventHandler(notificationService, new SimpleMeterRegistry());
     }
 
     @Test
@@ -51,7 +52,7 @@ class NotificationEventConsumerTest {
                 LocalDateTime.now()
         );
 
-        consumer.handle(event);
+        handler.handle(event);
 
         ArgumentCaptor<CreateNotificationRequest> captor = ArgumentCaptor.forClass(CreateNotificationRequest.class);
         verify(notificationService).createNotification(captor.capture());
@@ -84,7 +85,7 @@ class NotificationEventConsumerTest {
                 LocalDateTime.now()
         );
 
-        consumer.handle(event);
+        handler.handle(event);
 
         verifyNoInteractions(notificationService);
     }

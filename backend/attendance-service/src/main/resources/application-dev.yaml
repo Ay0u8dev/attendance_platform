@@ -18,6 +18,12 @@ spring:
       ddl-auto: update
     show-sql: true
 
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
   devtools:
     restart:
       enabled: true
@@ -31,6 +37,12 @@ services:
     url: http://localhost:8082
   notification:
     url: http://localhost:8086
+
+app:
+  rabbitmq:
+    notifications:
+      exchange: ${NOTIFICATIONS_EXCHANGE:notifications.exchange}
+      routing-key: ${NOTIFICATIONS_ROUTING_KEY:notification.requested}
 
 attendance:
   internal:

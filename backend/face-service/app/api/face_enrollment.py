@@ -9,6 +9,7 @@ from app.api.dependencies import (
     get_user_service_client,
 )
 from app.clients.user_service_client import UserServiceClient
+from app.observability import FACE_ENROLLMENT_RESULTS
 from app.schemas.enrollment import (
     FaceEnrollmentResponse,
     FaceProfilePersistenceRequest,
@@ -31,16 +32,21 @@ async def enroll_student_face(
         Depends(get_user_service_client),
     ],
 ) -> FaceEnrollmentResponse:
-    prepared = await verification_service.prepare_student_enrollment(image)
-    persisted = await user_service_client.persist_face_profile(
-        student.student_id,
-        FaceProfilePersistenceRequest(
-            embedding=prepared.encoded_embedding,
-            dimension=prepared.dimension,
-            model=prepared.model,
-            format=prepared.format,
-        ),
-    )
+    try:
+        prepared = await verification_service.prepare_student_enrollment(image)
+        persisted = await user_service_client.persist_face_profile(
+            student.student_id,
+            FaceProfilePersistenceRequest(
+                embedding=prepared.encoded_embedding,
+                dimension=prepared.dimension,
+                model=prepared.model,
+                format=prepared.format,
+            ),
+        )
+    except Exception:
+        FACE_ENROLLMENT_RESULTS.labels(outcome="failure").inc()
+        raise
+    FACE_ENROLLMENT_RESULTS.labels(outcome="success").inc()
     return FaceEnrollmentResponse(
         **persisted.model_dump(),
     )

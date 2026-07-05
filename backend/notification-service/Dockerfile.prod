@@ -1,0 +1,28 @@
+# ================= BUILD STAGE =================
+FROM maven:3.9-eclipse-temurin-21 AS build
+
+WORKDIR /app
+
+COPY pom.xml .
+
+COPY src ./src
+
+RUN mvn clean package -DskipTests
+
+# ================= RUNTIME STAGE =================
+FROM eclipse-temurin:21-jre-alpine
+
+WORKDIR /app
+
+RUN addgroup -S spring && adduser -S spring -G spring
+
+COPY --from=build /app/target/*.jar app.jar
+ADD https://github.com/microsoft/ApplicationInsights-Java/releases/download/3.7.8/applicationinsights-agent-3.7.8.jar applicationinsights-agent.jar
+
+RUN chown spring:spring app.jar applicationinsights-agent.jar
+
+USER spring
+
+EXPOSE 8080
+
+ENTRYPOINT ["sh", "-c", "if [ -n \"$APPLICATIONINSIGHTS_CONNECTION_STRING\" ]; then exec java -javaagent:/app/applicationinsights-agent.jar -jar app.jar; else exec java -jar app.jar; fi"]

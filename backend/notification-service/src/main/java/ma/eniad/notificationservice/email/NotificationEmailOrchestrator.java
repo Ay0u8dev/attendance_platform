@@ -2,6 +2,7 @@ package ma.eniad.notificationservice.email;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ma.eniad.notificationservice.entity.Notification;
@@ -23,28 +24,33 @@ public class NotificationEmailOrchestrator {
     private final NotificationEmailProperties properties;
     private final NotificationEmailJobPublisher publisher;
     private final NotificationEmailStatusService statusService;
+    private final MeterRegistry meterRegistry;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public void applyInitialEmailState(Notification notification) {
         if (!requiresEmail(notification)) {
             notification.setEmailStatus(EmailStatus.NOT_REQUIRED);
+            incrementInitialState("not_required");
             return;
         }
 
         if (!properties.enabled()) {
             notification.setEmailStatus(EmailStatus.SKIPPED);
             notification.setEmailError("Email notifications are disabled");
+            incrementInitialState("disabled");
             return;
         }
 
         if (!hasText(notification.getRecipientEmail())) {
             notification.setEmailStatus(EmailStatus.SKIPPED);
             notification.setEmailError("Missing recipient email");
+            incrementInitialState("missing_recipient_email");
             return;
         }
 
         notification.setEmailStatus(EmailStatus.PENDING);
         notification.setEmailError(null);
+        incrementInitialState("pending");
     }
 
     public void enqueueAfterCommit(Notification notification) {
@@ -70,7 +76,9 @@ public class NotificationEmailOrchestrator {
         Runnable publish = () -> {
             try {
                 publisher.publish(message);
+                incrementEnqueue("success");
             } catch (RuntimeException ex) {
+                incrementEnqueue("failure");
                 log.warn(
                         "Failed to enqueue notification email job notificationId={} recipientUserId={} type={}: {}",
                         notification.getId(),
@@ -175,5 +183,19 @@ public class NotificationEmailOrchestrator {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private void incrementInitialState(String outcome) {
+        meterRegistry.counter(
+                "notification_email_initial_state_total",
+                "outcome", outcome
+        ).increment();
+    }
+
+    private void incrementEnqueue(String outcome) {
+        meterRegistry.counter(
+                "notification_email_enqueue_total",
+                "outcome", outcome
+        ).increment();
     }
 }

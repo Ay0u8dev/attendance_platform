@@ -1,6 +1,8 @@
 fastapi
 uvicorn[standard]
 httpx
+prometheus-fastapi-instrumentator
+azure-monitor-opentelemetry
 Pillow
 python-dotenv
 python-multipart

@@ -2,3 +2,5 @@ fastapi
 uvicorn[standard]
 httpx
 pydantic
+prometheus-fastapi-instrumentator
+azure-monitor-opentelemetry
