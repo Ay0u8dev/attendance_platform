@@ -1,24 +1,59 @@
 name: Pull Request CI
 
+# This workflow is both the main-branch PR quality gate and the reusable
+# validation stage called before release images are built.
 on:
   pull_request:
     branches:
-      - dev
+      - main
   workflow_call:
     secrets:
       SONAR_TOKEN:
-        required: false
+        required: true
 
 permissions:
   contents: read
 
 env:
   SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
-  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
 
 jobs:
+  # Missing SonarCloud configuration is an operational error. This check never
+  # prints the token; it only reports which repository setting is absent.
+  sonar_configuration:
+    name: Require SonarCloud configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate required SonarCloud settings
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          missing=0
+          if [[ -z "$SONAR_HOST_URL" ]]; then
+            echo "::error title=Missing SonarCloud configuration::Repository variable SONAR_HOST_URL is required."
+            missing=1
+          fi
+          if [[ -z "$SONAR_ORGANIZATION" ]]; then
+            echo "::error title=Missing SonarCloud configuration::Repository variable SONAR_ORGANIZATION is required."
+            missing=1
+          fi
+          if [[ -z "$SONAR_TOKEN" ]]; then
+            echo "::error title=Missing SonarCloud configuration::Repository secret SONAR_TOKEN is required."
+            missing=1
+          fi
+          if (( missing != 0 )); then
+            exit 1
+          fi
+          echo "::notice title=SonarCloud enabled::Required CI-based analysis is configured; Quality Gate results remain informational."
+
+  # The matrix applies the same compile, test, coverage, and SonarCloud policy
+  # to every Spring Boot service without duplicating five jobs.
   java:
     name: Java - ${{ matrix.service }}
+    needs: sonar_configuration
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -70,25 +105,19 @@ jobs:
             verify \
             org.jacoco:jacoco-maven-plugin:0.8.13:report
 
-      - name: Analyze with SonarQube
-        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' }}
-        continue-on-error: true
+      - name: Analyze with SonarCloud
         shell: bash
+        env:
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           ./mvnw -B \
             org.sonarsource.scanner.maven:sonar-maven-plugin:5.2.0.4988:sonar \
             -Dsonar.projectKey=attendance-platform-${{ matrix.sonar_key }} \
+            -Dsonar.organization="${SONAR_ORGANIZATION}" \
             -Dsonar.host.url="${SONAR_HOST_URL}" \
-            -Dsonar.token="${SONAR_TOKEN}" \
             -Dsonar.qualitygate.wait=false
-
-      - name: Report skipped SonarQube analysis
-        if: ${{ env.SONAR_HOST_URL == '' || env.SONAR_TOKEN == '' }}
-        shell: bash
-        run: |
-          echo "::warning title=SonarQube skipped::Configure SONAR_HOST_URL and SONAR_TOKEN to enable analysis for ${{ matrix.service }}."
-          echo "### SonarQube - ${{ matrix.service }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Skipped because SONAR_HOST_URL or SONAR_TOKEN is not configured." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Java test and coverage reports
         if: ${{ always() }}
@@ -101,8 +130,10 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  # Validate the Angular application before scanning its TypeScript sources.
   frontend:
     name: Frontend - build and tests
+    needs: sonar_configuration
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -130,26 +161,23 @@ jobs:
       - name: Build production frontend
         run: npm run build -- --configuration production
 
-      - name: Analyze with SonarQube
-        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' }}
-        continue-on-error: true
+      - name: Analyze with SonarCloud
         uses: SonarSource/sonarqube-scan-action@8c71dc039c2dd71d3821e89a2b58ecc7fee6ced9 # v5.3.0
+        env:
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           projectBaseDir: frontend
           args: >-
             -Dsonar.projectKey=attendance-platform-frontend
+            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
             -Dsonar.qualitygate.wait=false
 
-      - name: Report skipped SonarQube analysis
-        if: ${{ env.SONAR_HOST_URL == '' || env.SONAR_TOKEN == '' }}
-        shell: bash
-        run: |
-          echo "::warning title=SonarQube skipped::Configure SONAR_HOST_URL and SONAR_TOKEN to enable frontend analysis."
-          echo "### SonarQube - frontend" >> "$GITHUB_STEP_SUMMARY"
-          echo "Skipped because SONAR_HOST_URL or SONAR_TOKEN is not configured." >> "$GITHUB_STEP_SUMMARY"
-
+  # pytest produces coverage.xml so SonarCloud can include Python coverage.
   face:
     name: Face service - tests
+    needs: sonar_configuration
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -180,24 +208,19 @@ jobs:
           PYTHONPATH: .
         run: pytest -q --junitxml=test-results.xml --cov=app --cov-report=xml:coverage.xml
 
-      - name: Analyze with SonarQube
-        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' }}
-        continue-on-error: true
+      - name: Analyze with SonarCloud
         uses: SonarSource/sonarqube-scan-action@8c71dc039c2dd71d3821e89a2b58ecc7fee6ced9 # v5.3.0
+        env:
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           projectBaseDir: backend/face-service
           args: >-
             -Dsonar.projectKey=attendance-platform-face-service
+            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
             -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.qualitygate.wait=false
-
-      - name: Report skipped SonarQube analysis
-        if: ${{ env.SONAR_HOST_URL == '' || env.SONAR_TOKEN == '' }}
-        shell: bash
-        run: |
-          echo "::warning title=SonarQube skipped::Configure SONAR_HOST_URL and SONAR_TOKEN to enable face-service analysis."
-          echo "### SonarQube - face-service" >> "$GITHUB_STEP_SUMMARY"
-          echo "Skipped because SONAR_HOST_URL or SONAR_TOKEN is not configured." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload face-service reports
         if: ${{ always() }}
@@ -210,8 +233,11 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  # QR has no automated suite yet, so compilation and application import are
+  # mandatory until real tests are added.
   qr:
     name: QR service - source validation
+    needs: sonar_configuration
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -241,20 +267,15 @@ jobs:
           python -c "from main import app; assert app is not None"
           echo "::notice title=QR tests::No automated QR test suite currently exists; source compilation and application import passed."
 
-      - name: Analyze with SonarQube
-        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' }}
-        continue-on-error: true
+      - name: Analyze with SonarCloud
         uses: SonarSource/sonarqube-scan-action@8c71dc039c2dd71d3821e89a2b58ecc7fee6ced9 # v5.3.0
+        env:
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           projectBaseDir: backend/qr-service
           args: >-
             -Dsonar.projectKey=attendance-platform-qr-service
+            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
             -Dsonar.qualitygate.wait=false
-
-      - name: Report skipped SonarQube analysis
-        if: ${{ env.SONAR_HOST_URL == '' || env.SONAR_TOKEN == '' }}
-        shell: bash
-        run: |
-          echo "::warning title=SonarQube skipped::Configure SONAR_HOST_URL and SONAR_TOKEN to enable QR-service analysis."
-          echo "### SonarQube - qr-service" >> "$GITHUB_STEP_SUMMARY"
-          echo "Skipped because SONAR_HOST_URL or SONAR_TOKEN is not configured." >> "$GITHUB_STEP_SUMMARY"
