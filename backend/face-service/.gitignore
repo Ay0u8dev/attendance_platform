@@ -59,13 +59,13 @@ temp/
 data/generated/
 
 # ML model files
-models/*.onnx
-models/*.pt
-models/*.pth
-models/*.h5
-models/*.tflite
-models/*.bin
+# models/*.onnx
+# models/*.pt
+# models/*.pth
+# models/*.h5
+# models/*.tflite
+# models/*.bin
 
 # Keep model directory in Git
-!models/.gitkeep
-!models/README.md
+# !models/.gitkeep
+# !models/README.md
