@@ -46,7 +46,7 @@ import { NotificationWebSocketService } from '../../../core/notifications/notifi
 
       @if (isOpen()) {
         <div
-          class="absolute right-0 z-50 mt-2 flex max-h-[28rem] w-[min(22rem,calc(100vw-1rem))] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-shell"
+          class="notification-menu"
           role="menu"
         >
           <div class="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
@@ -76,7 +76,7 @@ import { NotificationWebSocketService } from '../../../core/notifications/notifi
             </div>
           </div>
 
-          <div class="max-h-80 overflow-y-auto p-2">
+          <div class="notification-list">
             @if (isLoading()) {
               <div class="px-3 py-6 text-center text-sm text-secondaryText">Loading...</div>
             } @else if (hasError()) {
@@ -139,6 +139,47 @@ import { NotificationWebSocketService } from '../../../core/notifications/notifi
       }
     </div>
   `,
+  styles: [
+    `
+      .notification-menu {
+        position: fixed;
+        left: max(0.5rem, env(safe-area-inset-left, 0px));
+        right: max(0.5rem, env(safe-area-inset-right, 0px));
+        top: calc(5.25rem + env(safe-area-inset-top, 0px));
+        z-index: 120;
+        display: flex;
+        max-height: min(72dvh, 30rem);
+        flex-direction: column;
+        overflow: hidden;
+        border-radius: 1rem;
+        border: 1px solid var(--color-line);
+        background: var(--color-surface);
+        box-shadow: var(--shadow-shell);
+      }
+
+      .notification-list {
+        min-height: 0;
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.5rem;
+      }
+
+      @media (min-width: 640px) {
+        .notification-menu {
+          position: absolute;
+          inset: auto 0 auto auto;
+          top: 100%;
+          margin-top: 0.5rem;
+          width: min(22rem, calc(100vw - 1rem));
+          max-height: 28rem;
+        }
+
+        .notification-list {
+          max-height: 20rem;
+        }
+      }
+    `,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NotificationBellComponent {

@@ -5,32 +5,32 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
   template: `
     <button
       type="button"
-      class="flex h-full w-full flex-col rounded-[1.7rem] border bg-surface p-5 text-left shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-strong"
+      class="flex h-full w-full flex-col rounded-2xl border bg-surface p-4 text-left shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-strong sm:rounded-[1.7rem] sm:p-5"
       [class]="shellClasses()"
       (click)="clicked.emit()"
     >
       <div class="flex items-start justify-between gap-3">
         <div class="space-y-1">
           <p class="text-sm font-medium text-secondaryText">{{ title() }}</p>
-          <p class="text-[2.15rem] font-semibold leading-none tracking-tight text-principalText">
+          <p class="text-3xl font-semibold leading-none tracking-tight text-principalText sm:text-[2.15rem]">
             {{ value() }}
           </p>
           @if (subtitle()) {
-            <p class="text-xs font-medium uppercase tracking-[0.18em] text-secondaryText">
+            <p class="text-[0.68rem] font-medium uppercase tracking-[0.16em] text-secondaryText sm:text-xs sm:tracking-[0.18em]">
               {{ subtitle() }}
             </p>
           }
         </div>
 
         <span
-          class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-base"
+          class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm sm:h-11 sm:w-11 sm:rounded-2xl sm:text-base"
           [class]="iconClasses()"
         >
           <i [class]="icon()" aria-hidden="true"></i>
         </span>
       </div>
 
-      <div class="mt-6 flex items-center justify-between gap-3">
+      <div class="mt-4 flex items-center justify-between gap-3 sm:mt-6">
         @if (footnote()) {
           <span
             class="rounded-full bg-surface-subtle px-3 py-1 text-xs font-medium text-secondaryText"

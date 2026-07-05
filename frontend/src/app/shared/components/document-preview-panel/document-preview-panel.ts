@@ -7,19 +7,19 @@ import { Button } from '../button/button';
   selector: 'app-document-preview-panel',
   imports: [Button],
   host: {
-    class: 'block',
+    class: 'block min-w-0',
   },
   template: `
-    <section class="rounded-[1.75rem] border border-line bg-surface p-5 shadow-card">
-      <div class="flex items-center justify-between gap-3">
-        <div>
+    <section class="min-w-0 rounded-[1.5rem] border border-line bg-surface p-4 shadow-card sm:rounded-[1.75rem] sm:p-5">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
           <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
             Pièce jointe
           </p>
-          <h3 class="mt-1 text-lg font-semibold text-principalText">{{ fileName() }}</h3>
+          <h3 class="mt-1 break-all text-base font-semibold text-principalText sm:text-lg">{{ fileName() }}</h3>
         </div>
 
-        <i class="fa-regular fa-file-lines text-lg text-primary" aria-hidden="true"></i>
+        <i class="fa-regular fa-file-lines shrink-0 text-lg text-primary" aria-hidden="true"></i>
       </div>
 
       @if (previewUrl()) {
@@ -28,7 +28,7 @@ import { Button } from '../button/button';
             @case ('pdf') {
               <iframe
                 [src]="getSafeUrl(previewUrl()!)"
-                class="w-full h-[500px] border-0 rounded-[1.5rem]"
+                class="h-[55dvh] min-h-80 w-full max-h-[500px] rounded-[1.5rem] border-0"
                 title="Aperçu du justificatif"
               ></iframe>
             }
@@ -36,7 +36,7 @@ import { Button } from '../button/button';
               <img
                 [src]="previewUrl()!"
                 [alt]="'Aperçu de ' + fileName()"
-                class="w-full max-h-[500px] object-contain rounded-[1.5rem] mx-auto block"
+                class="mx-auto block max-h-[55dvh] w-full rounded-[1.5rem] object-contain sm:max-h-[500px]"
               />
             }
             @default {
@@ -63,25 +63,29 @@ import { Button } from '../button/button';
         </div>
       }
 
-      <div class="mt-5 flex flex-wrap gap-3">
-        <app-button
-          label="Télécharger"
-          icon="fa-solid fa-download"
-          variant="outline"
-          size="sm"
-          [fullWidth]="false"
-          [disabled]="!previewUrl() && !downloadUrl()"
-          (clicked)="download()"
-        ></app-button>
-        <app-button
-          label="Ouvrir dans un nouvel onglet"
-          icon="fa-solid fa-arrow-up-right-from-square"
-          variant="primary"
-          size="sm"
-          [fullWidth]="false"
-          [disabled]="!previewUrl()"
-          (clicked)="openInNewTab()"
-        ></app-button>
+      <div class="mt-5 grid gap-3 sm:flex sm:flex-wrap">
+        <div class="w-full sm:w-auto">
+          <app-button
+            label="Télécharger"
+            icon="fa-solid fa-download"
+            variant="outline"
+            size="sm"
+            [fullWidth]="true"
+            [disabled]="!previewUrl() && !downloadUrl()"
+            (clicked)="download()"
+          ></app-button>
+        </div>
+        <div class="w-full sm:w-auto">
+          <app-button
+            label="Ouvrir dans un nouvel onglet"
+            icon="fa-solid fa-arrow-up-right-from-square"
+            variant="primary"
+            size="sm"
+            [fullWidth]="true"
+            [disabled]="!previewUrl()"
+            (clicked)="openInNewTab()"
+          ></app-button>
+        </div>
       </div>
     </section>
   `,

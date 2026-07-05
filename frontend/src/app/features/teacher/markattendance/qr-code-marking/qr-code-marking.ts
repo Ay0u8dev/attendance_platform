@@ -94,6 +94,7 @@ export class QrCodeMarking implements OnInit, OnDestroy {
   private qrRefreshTimer?: number;
   private qrCountdownTimer?: number;
   private webSocketSubscription?: Subscription;
+  private webSocketConnectionSubscription?: Subscription;
 
   ngOnInit(): void {
     const sessionId = Number(this.route.snapshot.queryParamMap.get('sessionId'));
@@ -112,6 +113,7 @@ export class QrCodeMarking implements OnInit, OnDestroy {
     clearInterval(this.refreshTimer);
     this.clearQrTimers();
     this.webSocketSubscription?.unsubscribe();
+    this.webSocketConnectionSubscription?.unsubscribe();
     this.webSocketService.disconnect();
   }
 
@@ -150,18 +152,11 @@ export class QrCodeMarking implements OnInit, OnDestroy {
         console.warn('⚠️ WebSocket non disponible, fallback sur polling:', error);
         this.webSocketEnabled.set(false);
         this.webSocketConnected.set(false);
-        this.error.set('Mode hors ligne: les mises à jour seront moins fréquentes');
-
-        // Afficher un message temporaire
-        setTimeout(() => {
-          if (this.error() === 'Mode hors ligne: les mises à jour seront moins fréquentes') {
-            this.error.set(null);
-          }
-        }, 5000);
       });
 
     // Surveiller les changements de connexion WebSocket
-    this.webSocketService.connection$.subscribe((connected) => {
+    this.webSocketConnectionSubscription?.unsubscribe();
+    this.webSocketConnectionSubscription = this.webSocketService.connection$.subscribe((connected) => {
       this.webSocketConnected.set(connected);
       this.startRefreshTimer(); // Réajuster l'intervalle
     });

@@ -1,4 +1,4 @@
-<section class="space-y-6">
+<section class="min-w-0 space-y-5 sm:space-y-6">
   <div class="space-y-4">
     @if (detail(); as d) {
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -14,8 +14,8 @@
         </div>
       </div>
 
-      <div class="grid gap-4 xl:grid-cols-[0.95fr_1.35fr] xl:gap-6">
-        <div class="grid gap-4 xl:gap-6">
+      <div class="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)] xl:gap-6">
+        <div class="grid min-w-0 gap-4 xl:gap-6">
           <app-justification-summary-card
             label="Séance concernée"
             [items]="sessionSummary()"
@@ -27,12 +27,12 @@
           ></app-justification-summary-card>
 
           <section
-            class="rounded-[1.5rem] border border-line bg-surface p-4 shadow-card sm:rounded-[1.75rem] sm:p-5"
+            class="min-w-0 rounded-[1.5rem] border border-line bg-surface p-4 shadow-card sm:rounded-[1.75rem] sm:p-5"
           >
             <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondaryText">
               Commentaire administratif
             </p>
-            <p class="mt-4 text-sm leading-7 text-principalText">
+            <p class="mt-4 break-words text-sm leading-7 text-principalText">
               {{ d.teacherComment || 'Aucun commentaire administratif pour le moment.' }}
             </p>
           </section>
@@ -40,7 +40,7 @@
           <app-justification-timeline [items]="history()"></app-justification-timeline>
         </div>
 
-        <div class="grid content-start gap-4 xl:gap-6">
+        <div class="grid min-w-0 content-start gap-4 xl:gap-6">
           <app-document-preview-panel
             [fileName]="attachmentName()"
             [previewUrl]="previewUrl()"
