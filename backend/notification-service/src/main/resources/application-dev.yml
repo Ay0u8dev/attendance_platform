@@ -25,10 +25,10 @@ spring:
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
     properties:
-        mail:
+      mail:
         smtp:
-            auth: ${MAIL_SMTP_AUTH:false}
-            starttls:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
             enable: ${MAIL_SMTP_STARTTLS:false}
 
 springdoc:
@@ -43,18 +43,18 @@ app:
 
   rabbitmq:
     notifications:
-        exchange: ${NOTIFICATIONS_EXCHANGE:notifications.exchange}
-        queue: ${NOTIFICATIONS_QUEUE:notification-service.notifications.queue}
-        routing-key: ${NOTIFICATIONS_ROUTING_KEY:notification.requested}
+      exchange: ${NOTIFICATIONS_EXCHANGE:notifications.exchange}
+      queue: ${NOTIFICATIONS_QUEUE:notification-service.notifications.queue}
+      routing-key: ${NOTIFICATIONS_ROUTING_KEY:notification.requested}
   notifications:
     email:
-        enabled: ${NOTIFICATION_EMAIL_ENABLED:false}
-        from: ${MAIL_FROM:no-reply@attendance.local}
-        sender-name: ${MAIL_SENDER_NAME:Plateforme de gestion de l'assiduite}
-        frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:4200}
-        exchange: ${NOTIFICATION_EMAIL_EXCHANGE:notifications.email.exchange}
-        queue: ${NOTIFICATION_EMAIL_QUEUE:notification-service.email.queue}
-        routing-key: ${NOTIFICATION_EMAIL_ROUTING_KEY:notification.email.send}
+      enabled: ${NOTIFICATION_EMAIL_ENABLED:false}
+      from: ${MAIL_FROM:no-reply@attendance.local}
+      sender-name: ${MAIL_SENDER_NAME:Plateforme de gestion de l'assiduite}
+      frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:4200}
+      exchange: ${NOTIFICATION_EMAIL_EXCHANGE:notifications.email.exchange}
+      queue: ${NOTIFICATION_EMAIL_QUEUE:notification-service.email.queue}
+      routing-key: ${NOTIFICATION_EMAIL_ROUTING_KEY:notification.email.send}
 
 services:
   auth:

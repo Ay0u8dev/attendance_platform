@@ -24,7 +24,7 @@ class NotificationEmailListenerTest {
     private NotificationEmailTemplateService templateService;
     private NotificationEmailSender sender;
     private NotificationEmailStatusService statusService;
-    private NotificationEmailListener listener;
+    private NotificationEmailJobHandler handler;
 
     @BeforeEach
     void setUp() {
@@ -32,7 +32,7 @@ class NotificationEmailListenerTest {
         templateService = mock(NotificationEmailTemplateService.class);
         sender = mock(NotificationEmailSender.class);
         statusService = mock(NotificationEmailStatusService.class);
-        listener = new NotificationEmailListener(notificationRepository, templateService, sender, statusService);
+        handler = new NotificationEmailJobHandler(notificationRepository, templateService, sender, statusService);
     }
 
     @Test
@@ -42,7 +42,7 @@ class NotificationEmailListenerTest {
         when(notificationRepository.findById(99L)).thenReturn(Optional.of(notification));
         when(templateService.build(message, notification)).thenReturn(new EmailTemplateContent("Subject", "Plain", "<p>Html</p>"));
 
-        listener.handle(message);
+        handler.handle(message);
 
         verify(sender).send(any(EmailNotificationMessage.class), any(EmailTemplateContent.class));
         verify(statusService).markSent(99L);
@@ -57,7 +57,7 @@ class NotificationEmailListenerTest {
         doThrow(new NotificationEmailSendException("failed", new RuntimeException("smtp down")))
                 .when(sender).send(any(EmailNotificationMessage.class), any(EmailTemplateContent.class));
 
-        listener.handle(message);
+        handler.handle(message);
 
         verify(statusService).markFailed(99L, "smtp down");
     }
@@ -67,7 +67,7 @@ class NotificationEmailListenerTest {
         Notification notification = notification(EmailStatus.SENT);
         when(notificationRepository.findById(99L)).thenReturn(Optional.of(notification));
 
-        listener.handle(message());
+        handler.handle(message());
 
         verify(sender, never()).send(any(), any());
         verify(statusService, never()).markSent(99L);

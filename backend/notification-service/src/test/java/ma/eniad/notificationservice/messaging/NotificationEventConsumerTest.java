@@ -23,12 +23,12 @@ import static org.mockito.Mockito.verifyNoInteractions;
 class NotificationEventConsumerTest {
 
     private NotificationService notificationService;
-    private NotificationEventConsumer consumer;
+    private NotificationEventHandler handler;
 
     @BeforeEach
     void setUp() {
         notificationService = mock(NotificationService.class);
-        consumer = new NotificationEventConsumer(notificationService);
+        handler = new NotificationEventHandler(notificationService);
     }
 
     @Test
@@ -51,7 +51,7 @@ class NotificationEventConsumerTest {
                 LocalDateTime.now()
         );
 
-        consumer.handle(event);
+        handler.handle(event);
 
         ArgumentCaptor<CreateNotificationRequest> captor = ArgumentCaptor.forClass(CreateNotificationRequest.class);
         verify(notificationService).createNotification(captor.capture());
@@ -84,7 +84,7 @@ class NotificationEventConsumerTest {
                 LocalDateTime.now()
         );
 
-        consumer.handle(event);
+        handler.handle(event);
 
         verifyNoInteractions(notificationService);
     }

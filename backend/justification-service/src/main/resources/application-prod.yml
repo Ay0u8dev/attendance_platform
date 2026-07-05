@@ -28,6 +28,10 @@ services:
 app:
   internal:
     service-token: ${INTERNAL_SERVICE_TOKEN}
+  azure:
+    servicebus:
+      connection-string: ${AZURE_SERVICEBUS_CONNECTION_STRING}
+      notifications-queue: ${AZURE_SERVICEBUS_NOTIFICATIONS_QUEUE:notification-service-notifications}
 
 cloudflare:
   r2:

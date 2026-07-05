@@ -1,16 +1,9 @@
 spring:
   application:
     name: attendance-service
-  rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:backend/attendance-service/.env[.properties]
   profiles:
     active: ${PROFILE:dev}
-
-app:
-  rabbitmq:
-    notifications:
-      exchange: ${NOTIFICATIONS_EXCHANGE:notifications.exchange}
-      routing-key: ${NOTIFICATIONS_ROUTING_KEY:notification.requested}

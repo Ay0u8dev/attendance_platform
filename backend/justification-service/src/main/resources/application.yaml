@@ -1,11 +1,6 @@
 spring:
     application:
         name: justification-service
-    rabbitmq:
-        host: ${RABBITMQ_HOST:localhost}
-        port: ${RABBITMQ_PORT:5672}
-        username: ${RABBITMQ_USERNAME:guest}
-        password: ${RABBITMQ_PASSWORD:guest}
 
     config:
         import:
@@ -14,9 +9,3 @@ spring:
 
     profiles:
         active: ${PROFILE:dev}
-
-app:
-    rabbitmq:
-        notifications:
-            exchange: ${NOTIFICATIONS_EXCHANGE:notifications.exchange}
-            routing-key: ${NOTIFICATIONS_ROUTING_KEY:notification.requested}
