@@ -354,6 +354,7 @@ jobs:
       - name: Run face-service tests and coverage
         env:
           PYTHONPATH: .
+          INTERNAL_SERVICE_TOKEN: test-token
         run: pytest -q --junitxml=test-results.xml --cov=app --cov-report=xml:coverage.xml
 
       - name: Analyze with SonarCloud
