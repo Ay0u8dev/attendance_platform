@@ -1,0 +1,538 @@
+name: Main Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  attestations: write
+  id-token: write
+
+concurrency:
+  group: main-release
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: ay0u8dev
+  INFRA_REPOSITORY: Ay0u8dev/attendance-infra
+  INFRA_AUTOMATION_BRANCH: automation/update-attendance-images
+
+jobs:
+  # A main release starts only after selective validation for changed runtime
+  # services (plus required SonarCloud configuration checks) has succeeded.
+  validation:
+    name: Mandatory validation
+    uses: ./.github/workflows/pr-ci.yml
+    with:
+      base_sha: ${{ github.event.before }}
+      head_sha: ${{ github.sha }}
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  prepare:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      short_sha: ${{ steps.release.outputs.short_sha }}
+    steps:
+      - name: Compute immutable release version
+        id: release
+        shell: bash
+        run: |
+          # This workflow owns the immutable 0.0.N release sequence.
+          echo "version=0.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+  # Build the eight images in parallel, publish them to GHCR, then scan the exact
+  # pushed digests so the evidence always matches the stored image content.
+  build_scan:
+    name: Build and scan - ${{ matrix.id }}
+    needs:
+      - validation
+      - prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: frontend
+            image: attendance-platform-frontend
+            context: frontend
+            dockerfile: frontend/Dockerfile.prod
+          - id: auth
+            image: attendance-platform-auth
+            context: backend/auth-service
+            dockerfile: backend/auth-service/Dockerfile.prod
+          - id: user
+            image: attendance-platform-user
+            context: backend/user-service
+            dockerfile: backend/user-service/Dockerfile.prod
+          - id: attendance
+            image: attendance-platform-attendance
+            context: backend/attendance-service
+            dockerfile: backend/attendance-service/Dockerfile.prod
+          - id: justification
+            image: attendance-platform-justification
+            context: backend/justification-service
+            dockerfile: backend/justification-service/Dockerfile.prod
+          - id: notification
+            image: attendance-platform-notification
+            context: backend/notification-service
+            dockerfile: backend/notification-service/Dockerfile.prod
+          - id: qr
+            image: attendance-platform-qr
+            context: backend/qr-service
+            dockerfile: backend/qr-service/Dockerfile.prod
+          - id: face
+            image: attendance-platform-face
+            context: backend/face-service
+            dockerfile: backend/face-service/Dockerfile.prod
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push release image
+        id: build
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: ./${{ matrix.context }}
+          file: ./${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:${{ needs.prepare.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:sha-${{ needs.prepare.outputs.short_sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
+          cache-from: type=gha,scope=release-${{ matrix.id }}
+          cache-to: type=gha,mode=max,scope=release-${{ matrix.id }}
+          provenance: mode=max
+          sbom: true
+
+      - name: Scan image and produce JSON report
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}@${{ steps.build.outputs.digest }}
+          format: json
+          output: trivy-${{ matrix.id }}.json
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "0"
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Produce SARIF report
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}@${{ steps.build.outputs.digest }}
+          format: sarif
+          output: trivy-${{ matrix.id }}.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "0"
+          skip-setup-trivy: true
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summarize vulnerability findings
+        shell: bash
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+          SERVICE_ID: ${{ matrix.id }}
+        run: |
+          critical=$(jq '[.Results[]? | .Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' "trivy-${SERVICE_ID}.json")
+          high=$(jq '[.Results[]? | .Vulnerabilities[]? | select(.Severity == "HIGH")] | length' "trivy-${SERVICE_ID}.json")
+
+          jq -n \
+            --arg service "$SERVICE_ID" \
+            --arg image "$IMAGE_REF" \
+            --arg version "$RELEASE_VERSION" \
+            --arg digest "$IMAGE_DIGEST" \
+            --argjson critical "$critical" \
+            --argjson high "$high" \
+            '{service: $service, image: $image, version: $version, digest: $digest, critical: $critical, high: $high}' \
+            > "metadata-${SERVICE_ID}.json"
+
+          if (( critical > 0 || high > 0 )); then
+            echo "::warning title=Trivy findings - ${SERVICE_ID}::${critical} CRITICAL and ${high} HIGH vulnerabilities found."
+          fi
+
+      - name: Upload image reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-image-${{ matrix.id }}
+          path: |
+            trivy-${{ matrix.id }}.json
+            trivy-${{ matrix.id }}.sarif
+            metadata-${{ matrix.id }}.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload SARIF to GitHub Security
+        if: ${{ always() && hashFiles(format('trivy-{0}.sarif', matrix.id)) != '' }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4
+        with:
+          sarif_file: trivy-${{ matrix.id }}.sarif
+          category: trivy-release-${{ matrix.id }}
+
+  # Aggregate per-image JSON metadata into one release record used by Slack and
+  # by the infrastructure pull request.
+  aggregate:
+    name: Aggregate release evidence
+    needs:
+      - prepare
+      - build_scan
+    runs-on: ubuntu-latest
+    outputs:
+      critical: ${{ steps.summary.outputs.critical }}
+      high: ${{ steps.summary.outputs.high }}
+    steps:
+      - name: Download image reports
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: release-image-*
+          path: reports
+          merge-multiple: true
+
+      - name: Create release metadata and summary
+        id: summary
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          test "$(find reports -maxdepth 1 -name 'metadata-*.json' | wc -l)" -eq 8
+          jq -s 'sort_by(.service)' reports/metadata-*.json > release-metadata.json
+          critical=$(jq '[.[].critical] | add // 0' release-metadata.json)
+          high=$(jq '[.[].high] | add // 0' release-metadata.json)
+          {
+            echo "critical=$critical"
+            echo "high=$high"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Release ${RELEASE_VERSION}"
+            echo "| Service | Image digest | CRITICAL | HIGH |"
+            echo "| --- | --- | ---: | ---: |"
+            jq -r '.[] | "| \(.service) | `\(.digest)` | \(.critical) | \(.high) |"' release-metadata.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload combined release metadata
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-metadata
+          path: release-metadata.json
+          retention-days: 90
+
+  # GitOps handoff: update only the eight existing manifest image tags on an
+  # automation branch, validate the manifests, and open/update a reviewable PR.
+  update_infra:
+    name: Open or update infra PR
+    needs:
+      - prepare
+      - aggregate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      pr_url: ${{ steps.pull_request.outputs.pr_url }}
+    steps:
+      - name: Require scoped infrastructure token
+        shell: bash
+        env:
+          INFRA_REPO_TOKEN: ${{ secrets.INFRA_REPO_TOKEN }}
+        run: |
+          if [[ -z "$INFRA_REPO_TOKEN" ]]; then
+            echo "::error title=Missing credential::INFRA_REPO_TOKEN must be a fine-grained token scoped to ${INFRA_REPOSITORY}."
+            exit 1
+          fi
+
+      - name: Check out infrastructure repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: ${{ env.INFRA_REPOSITORY }}
+          ref: main
+          path: infra
+          fetch-depth: 0
+          token: ${{ secrets.INFRA_REPO_TOKEN }}
+
+      - name: Download release metadata
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-metadata
+          path: metadata
+
+      - name: Prepare automation branch
+        working-directory: infra
+        shell: bash
+        run: |
+          git fetch origin main "$INFRA_AUTOMATION_BRANCH" || git fetch origin main
+          if git show-ref --verify --quiet "refs/remotes/origin/${INFRA_AUTOMATION_BRANCH}"; then
+            git switch -C "$INFRA_AUTOMATION_BRANCH" "origin/$INFRA_AUTOMATION_BRANCH"
+            git merge --no-edit origin/main
+          else
+            git switch -c "$INFRA_AUTOMATION_BRANCH" origin/main
+          fi
+
+      - name: Update exactly eight image tags
+        working-directory: infra
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          backend="k8s/aks/Workloads/backend-workloads.yaml"
+          frontend="k8s/aks/Workloads/frontend-workload.yaml"
+
+          replace_image() {
+            local file="$1"
+            local image="$2"
+            local escaped="${image//./\\.}"
+            local count
+            count=$(grep -Ec "^[[:space:]]+image: ${escaped}:[^[:space:]]+[[:space:]]*$" "$file")
+            if [[ "$count" -ne 1 ]]; then
+              echo "Expected exactly one image reference for ${image} in ${file}; found ${count}." >&2
+              exit 1
+            fi
+            sed -i -E "s#^([[:space:]]+image: ${escaped}:)[^[:space:]]+([[:space:]]*)$#\\1${RELEASE_VERSION}\\2#" "$file"
+          }
+
+          replace_image "$backend" "ghcr.io/ay0u8dev/attendance-platform-auth"
+          replace_image "$backend" "ghcr.io/ay0u8dev/attendance-platform-user"
+          replace_image "$backend" "ghcr.io/ay0u8dev/attendance-platform-attendance"
+          replace_image "$backend" "ghcr.io/ay0u8dev/attendance-platform-justification"
+          replace_image "$backend" "ghcr.io/ay0u8dev/attendance-platform-notification"
+          replace_image "$backend" "ghcr.io/ay0u8dev/attendance-platform-qr"
+          replace_image "$backend" "ghcr.io/ay0u8dev/attendance-platform-face"
+          replace_image "$frontend" "ghcr.io/ay0u8dev/attendance-platform-frontend"
+
+          mapfile -t changed_files < <(git diff --name-only)
+          if [[ "${#changed_files[@]}" -eq 0 ]]; then
+            echo "Infrastructure already references ${RELEASE_VERSION}."
+            exit 0
+          fi
+
+          if [[ "${#changed_files[@]}" -ne 2 ]] \
+            || [[ " ${changed_files[*]} " != *" $backend "* ]] \
+            || [[ " ${changed_files[*]} " != *" $frontend "* ]]; then
+            printf 'Unexpected changed files:\n%s\n' "${changed_files[*]}" >&2
+            exit 1
+          fi
+
+          changed_image_lines=$(git diff --unified=0 -- "$backend" "$frontend" | grep -Ec '^[+-][[:space:]]+image: ghcr\.io/ay0u8dev/attendance-platform-')
+          if [[ "$changed_image_lines" -ne 16 ]]; then
+            echo "Expected exactly 16 changed image diff lines (8 removals and 8 additions); found ${changed_image_lines}." >&2
+            exit 1
+          fi
+
+          unexpected=$(git diff --unified=0 -- "$backend" "$frontend" \
+            | grep -E '^[+-]' \
+            | grep -Ev '^(---|\+\+\+|[-+][[:space:]]+image: ghcr\.io/ay0u8dev/attendance-platform-)' || true)
+          if [[ -n "$unexpected" ]]; then
+            echo "Non-image manifest changes detected:" >&2
+            echo "$unexpected" >&2
+            exit 1
+          fi
+
+          git diff --check
+
+      - name: Render and validate AKS manifests
+        working-directory: infra
+        shell: bash
+        run: |
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            registry.k8s.io/kustomize/kustomize:v5.7.1 \
+            build k8s/aks > "$RUNNER_TEMP/rendered-aks.yaml"
+
+          docker run --rm \
+            -v "$RUNNER_TEMP:/work:ro" \
+            ghcr.io/yannh/kubeconform:v0.7.0 \
+            -strict \
+            -summary \
+            -ignore-missing-schemas \
+            /work/rendered-aks.yaml
+
+      - name: Commit and push automation branch
+        id: push
+        working-directory: infra
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          git config user.name "attendance-platform-ci"
+          git config user.email "attendance-platform-ci@users.noreply.github.com"
+
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git add -- \
+              k8s/aks/Workloads/backend-workloads.yaml \
+              k8s/aks/Workloads/frontend-workload.yaml
+            git commit -m "chore(deploy): attendance platform ${RELEASE_VERSION}"
+            git push --set-upstream origin "$INFRA_AUTOMATION_BRANCH"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open or update infrastructure pull request
+        id: pull_request
+        working-directory: infra
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.INFRA_REPO_TOKEN }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+          CRITICAL_COUNT: ${{ needs.aggregate.outputs.critical }}
+          HIGH_COUNT: ${{ needs.aggregate.outputs.high }}
+        run: |
+          metadata_table=$(jq -r '.[] | "| \(.service) | `\(.image):\(.version)` | `\(.digest)` |"' ../metadata/release-metadata.json)
+          body_file="$RUNNER_TEMP/infra-pr-body.md"
+          {
+            echo "## Attendance platform ${RELEASE_VERSION}"
+            echo
+            echo "Automated GitOps image update from [application run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})."
+            echo
+            echo "- Source repository: \`${GITHUB_REPOSITORY}\`"
+            echo "- Source commit: \`${GITHUB_SHA}\`"
+            echo "- Trivy findings: ${CRITICAL_COUNT} CRITICAL, ${HIGH_COUNT} HIGH (warning-only policy)"
+            echo
+            echo "| Service | Image | Digest |"
+            echo "| --- | --- | --- |"
+            echo "$metadata_table"
+            echo
+            echo "Only the eight existing image references under \`k8s/aks/Workloads\` are changed."
+          } > "$body_file"
+
+          existing_url=$(gh pr list \
+            --repo "$INFRA_REPOSITORY" \
+            --state open \
+            --head "$INFRA_AUTOMATION_BRANCH" \
+            --json url \
+            --jq '.[0].url // empty')
+
+          if [[ -n "$existing_url" ]]; then
+            gh pr edit "$existing_url" \
+              --repo "$INFRA_REPOSITORY" \
+              --title "chore(deploy): attendance platform ${RELEASE_VERSION}" \
+              --body-file "$body_file"
+            pr_url="$existing_url"
+          elif [[ "${{ steps.push.outputs.changed }}" == "true" ]]; then
+            pr_url=$(gh pr create \
+              --repo "$INFRA_REPOSITORY" \
+              --base main \
+              --head "$INFRA_AUTOMATION_BRANCH" \
+              --title "chore(deploy): attendance platform ${RELEASE_VERSION}" \
+              --body-file "$body_file")
+          else
+            pr_url="No PR required; infra main already references ${RELEASE_VERSION}."
+          fi
+
+          echo "pr_url=$pr_url" >> "$GITHUB_OUTPUT"
+          echo "### Infrastructure handoff" >> "$GITHUB_STEP_SUMMARY"
+          echo "$pr_url" >> "$GITHUB_STEP_SUMMARY"
+
+  # Always publish one final status. Slack delivery is warning-only, but failures
+  # in validation, image evidence, or the GitOps handoff still fail the workflow.
+  notify:
+    name: Release summary
+    if: ${{ always() }}
+    needs:
+      - validation
+      - prepare
+      - build_scan
+      - aggregate
+      - update_infra
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build release summary
+        id: summary
+        shell: bash
+        env:
+          VALIDATION_RESULT: ${{ needs.validation.result }}
+          BUILD_RESULT: ${{ needs.build_scan.result }}
+          AGGREGATE_RESULT: ${{ needs.aggregate.result }}
+          INFRA_RESULT: ${{ needs.update_infra.result }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+          INFRA_PR_URL: ${{ needs.update_infra.outputs.pr_url }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+        run: |
+          version="${RELEASE_VERSION:-0.0.${GITHUB_RUN_NUMBER}}"
+          if [[ "$VALIDATION_RESULT" == "success" \
+            && "$BUILD_RESULT" == "success" \
+            && "$AGGREGATE_RESULT" == "success" \
+            && "$INFRA_RESULT" == "success" ]]; then
+            status="SUCCESS"
+          else
+            status="FAILED"
+          fi
+
+          if [[ "$VALIDATION_RESULT" == "success" ]]; then
+            sonar="required analysis submitted to ${SONAR_ORGANIZATION}; Quality Gate is informational"
+          else
+            sonar="required analysis failed; inspect the validation jobs"
+          fi
+
+          infra="${INFRA_PR_URL:-not created}"
+          message="Main release ${status}\nVersion: ${version}\nCommit: ${GITHUB_SHA}\nValidation: ${VALIDATION_RESULT}\nImages and Trivy: ${BUILD_RESULT}\nSonarQube: ${sonar}\nInfra: ${infra}\nRun: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          {
+            echo "message<<EOF"
+            echo -e "$message"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Main release ${version}: ${status}"
+            echo "- Validation: ${VALIDATION_RESULT}"
+            echo "- Images and Trivy: ${BUILD_RESULT}"
+            echo "- SonarQube: ${sonar}"
+            echo "- Infrastructure: ${infra}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Send Slack summary
+        continue-on-error: true
+        shell: bash
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          MESSAGE: ${{ steps.summary.outputs.message }}
+        run: |
+          if [[ -z "$SLACK_WEBHOOK_URL" ]]; then
+            echo "::warning title=Slack skipped::SLACK_WEBHOOK_URL is not configured."
+            exit 0
+          fi
+          payload=$(jq -n --arg text "$MESSAGE" '{text: $text}')
+          curl --fail --silent --show-error \
+            -H "Content-Type: application/json" \
+            -X POST \
+            --data "$payload" \
+            "$SLACK_WEBHOOK_URL"
+
+      - name: Fail when mandatory release jobs failed
+        if: >-
+          ${{ needs.validation.result != 'success'
+              || needs.build_scan.result != 'success'
+              || needs.aggregate.result != 'success'
+              || needs.update_infra.result != 'success' }}
+        shell: bash
+        run: exit 1

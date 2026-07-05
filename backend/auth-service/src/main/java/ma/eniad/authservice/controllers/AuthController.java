@@ -1,0 +1,173 @@
+package ma.eniad.authservice.controllers;
+
+import feign.FeignException;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import jakarta.servlet.http.HttpServletRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import ma.eniad.authservice.client.UserServiceClient;
+import ma.eniad.authservice.dto.UserDto;
+import ma.eniad.authservice.exceptions.AccountDisabledException;
+import ma.eniad.authservice.exceptions.AccountNotFoundException;
+import ma.eniad.authservice.exceptions.MissingGoogleTokenException;
+import ma.eniad.authservice.services.GoogleTokenService;
+import ma.eniad.authservice.services.JwtService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Objects;
+
+@RestController
+@RequestMapping("/auth")
+@RequiredArgsConstructor
+@Slf4j
+public class AuthController {
+    private final UserServiceClient userServiceClient;
+    private final JwtService jwtService;
+    private final GoogleTokenService googleTokenService;
+
+    @GetMapping("/validate")
+    @Operation(
+            summary = "Validation du JWT",
+            description = "Endpoint ForwardAuth: valide un access token et renvoie les headers X-User-*."
+    )
+    public ResponseEntity<?> validateToken(
+            @RequestHeader(name = "Authorization", required = false) String authorizationHeader,
+            HttpServletRequest request
+    ) {
+        if ("OPTIONS".equalsIgnoreCase(request.getHeader("X-Forwarded-Method"))
+                || request.getHeader("Access-Control-Request-Method") != null) {
+            return ResponseEntity.ok().build();
+        }
+
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token d'accès manquant ou mal formé");
+        }
+
+        String token = authorizationHeader.substring(7);
+
+        try {
+            Claims claims = jwtService.parseAndValidateAccessToken(token);
+            String userId = jwtService.extractUserId(claims);
+            String email = claims.get("email", String.class);
+            String roles = String.join(",", jwtService.extractRoles(claims));
+            log.debug("User roles: {}", roles);
+            return ResponseEntity.ok()
+                    .header("X-User-Id", userId)
+                    .header("X-User-Roles", roles)
+                    .header("X-User-Email", email)
+                    .build();
+        } catch (RuntimeException ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token d'accès invalide: " + ex.getMessage());
+        }
+    }
+
+    // ── Login avec Google ──
+    @PostMapping("/login")
+    @Operation(
+            summary = "Connexion via Google",
+            description = "Envoyer le id_token Google reçu depuis le frontend. " +
+                    "L'email doit avoir le domaine @ump.ac.ma pour accéder à l'application."
+    )
+    public ResponseEntity<?> loginWithGoogle(@RequestBody Map<String, String> body) {
+        try {
+            // 1. Valider et récupérer le token
+            String googleToken = body.get("idToken");
+
+            if (googleToken == null || googleToken.isEmpty()) {
+                log.warn("[AUTH] Tentative de connexion sans token");
+                throw new MissingGoogleTokenException();
+            }
+
+            log.info("[AUTH] Validation du token Google en cours...");
+
+            // 2. Valider le token avec l'API Google et extraire les claims
+            // Cette étape vérifie aussi le domaine @ump.ac.ma
+            Map<String, String> googleClaims = googleTokenService.validateWithGoogleApi(googleToken);
+            String email = googleClaims.get("email");
+
+            log.info("[AUTH] Token validé avec succès pour: {}", email);
+            log.debug("[AUTH] Token validé avec succès pour: {}", email);
+            log.debug("[AUTH] ✓ Domaine @ump.ac.ma vérifié pour {}", email);            // 3. user-service est le seul propriétaire du cycle de vie des utilisateurs
+            Map<String, String> userData = new HashMap<>();
+            userData.put("email", email);
+            String picture = googleClaims.get("picture");
+            if (picture != null && !picture.isBlank()) {
+                userData.put("pfpUrl", picture.trim());
+            }
+
+            UserDto user;
+            try {
+                user = userServiceClient.authUser(userData);
+            } catch (FeignException.NotFound ex) {
+                throw new AccountNotFoundException();
+            }
+
+            if (!user.isEnabled()) {
+                throw new AccountDisabledException();
+            }
+
+            // 4. Générer notre propre JWT interne
+            String jwtToken = jwtService.generateToken(user);
+
+            log.info("[AUTH] ✓ Connexion réussie pour {}", email);
+            log.warn(jwtToken);
+
+            return ResponseEntity.ok(Map.of("accessToken", jwtToken));
+
+        } catch (RuntimeException ex) {
+            // Let custom exceptions and others propagate to GlobalExceptionHandler
+            log.error("[AUTH] ✗ Erreur lors de la validation: {}", ex.getMessage());
+            throw ex;
+        }
+    }
+
+    @PostMapping("/refresh")
+    @Operation(
+            summary = "Renouvellement du JWT interne",
+            description = "Valide le JWT courant, recharge l'utilisateur et émet un JWT avec ses claims à jour."
+    )
+    public ResponseEntity<?> refreshAccessToken(
+            @RequestHeader(name = "Authorization", required = false) String authorizationHeader
+    ) {
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token d'accès manquant ou mal formé");
+        }
+
+        try {
+            Claims claims = jwtService.parseAndValidateAccessToken(authorizationHeader.substring(7));
+            Long userId = Long.valueOf(jwtService.extractUserId(claims));
+            String tokenEmail = claims.get("email", String.class);
+            UserDto user = userServiceClient.findById(userId);
+
+            if (!Objects.equals(tokenEmail, user.getEmail())) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Identité du token incohérente");
+            }
+            if (!user.isEnabled()) {
+                throw new AccountDisabledException();
+            }
+
+            return ResponseEntity.ok(Map.of("accessToken", jwtService.generateToken(user)));
+        } catch (FeignException.NotFound ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur du token introuvable");
+        } catch (NumberFormatException | JwtException ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token d'accès invalide");
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (AccountDisabledException ex) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Compte utilisateur désactivé");
+        } catch (FeignException ex) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Service utilisateur indisponible", ex);
+        } catch (RuntimeException ex) {
+            throw ex;
+        }
+    }
+
+
+}

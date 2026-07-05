@@ -1,0 +1,294 @@
+<div class="flex min-h-dvh flex-col overflow-x-hidden bg-background text-principalText">
+  <header class="border-b border-line bg-surface">
+    <div class="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+      <div class="flex min-w-0 items-center gap-3">
+        <span
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-primary-soft bg-primary-soft"
+        >
+          <img
+            ngSrc="assets/logo-app.png"
+            width="26"
+            height="26"
+            alt=""
+            class="h-auto w-6 object-contain"
+          />
+        </span>
+        <div class="min-w-0">
+          <p class="truncate text-sm font-semibold text-principalText">Plateforme de présence</p>
+          <p class="truncate text-xs text-secondaryText">Configuration du compte</p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm font-semibold text-secondaryText transition-colors duration-200 hover:border-danger/30 hover:bg-danger-soft hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2"
+        (click)="logout()"
+        aria-label="Se déconnecter"
+        title="Se déconnecter"
+      >
+        <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+        <span class="hidden sm:inline">Déconnexion</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="flex flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:py-10">
+    <div class="mx-auto w-full max-w-6xl">
+      <section aria-labelledby="enrollment-title">
+        <div class="max-w-3xl">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            Première connexion
+          </p>
+          <h1
+            id="enrollment-title"
+            class="mt-2 text-2xl font-semibold tracking-tight text-principalText sm:text-3xl"
+          >
+            Enregistrez votre visage
+          </h1>
+          <p class="mt-3 max-w-2xl text-sm leading-6 text-secondaryText sm:text-base">
+            Cette étape est obligatoire avant d’accéder à votre espace étudiant. Elle permettra de
+            préparer l’identification utilisée lors de vos futures sessions de présence.
+          </p>
+        </div>
+
+        <nav class="mt-6 sm:mt-8" aria-label="Progression de la configuration du compte">
+          <div class="relative">
+            <span
+              class="absolute left-[16.66%] right-[16.66%] top-4 h-px bg-line"
+              aria-hidden="true"
+            ></span>
+
+            <ol class="relative grid grid-cols-3 gap-2 sm:gap-6">
+              <li class="relative flex min-w-0 flex-col items-center text-center">
+                <span
+                  class="z-10 flex h-8 w-8 items-center justify-center rounded-full bg-success text-xs text-white ring-4 ring-background"
+                >
+                  <i class="fa-solid fa-check" aria-hidden="true"></i>
+                  <span class="sr-only">Étape terminée</span>
+                </span>
+                <span class="mt-2 text-xs font-semibold text-principalText sm:text-sm"
+                  >Connexion</span
+                >
+              </li>
+
+              <li
+                class="relative flex min-w-0 flex-col items-center text-center"
+                aria-current="step"
+              >
+                <span
+                  class="z-10 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-white ring-4 ring-background"
+                >
+                  2
+                </span>
+                <span class="mt-2 text-xs font-semibold text-primary sm:text-sm">
+                  Enrôlement facial
+                </span>
+              </li>
+
+              <li class="relative flex min-w-0 flex-col items-center text-center">
+                <span
+                  class="z-10 flex h-8 w-8 items-center justify-center rounded-full border border-line-strong bg-surface text-xs font-bold text-muted ring-4 ring-background"
+                >
+                  3
+                </span>
+                <span class="mt-2 text-xs font-medium leading-4 text-secondaryText sm:text-sm">
+                  Accès à l’espace étudiant
+                </span>
+              </li>
+            </ol>
+          </div>
+        </nav>
+
+        <div
+          class="mt-6 overflow-hidden rounded-lg border border-line bg-surface shadow-card sm:mt-8 lg:grid lg:grid-cols-[minmax(0,1.25fr)_minmax(19rem,0.75fr)]"
+        >
+          <section class="p-4 sm:p-6 lg:p-8" aria-labelledby="camera-preview-title">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="camera-preview-title" class="text-base font-semibold text-principalText">
+                  Capture du visage
+                </h2>
+                <p class="mt-1 text-sm text-secondaryText">
+                  Autorisez la caméra, centrez votre visage puis prenez la photo.
+                </p>
+              </div>
+              <span
+                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary"
+                aria-hidden="true"
+              >
+                <i class="fa-solid fa-camera"></i>
+              </span>
+            </div>
+
+            <div
+              class="relative mt-5 aspect-[4/3] w-full overflow-hidden rounded-lg border border-line-strong bg-surface-subtle sm:aspect-video lg:aspect-[4/3]"
+            >
+              <video
+                #faceVideo
+                autoplay
+                muted
+                playsinline
+                class="h-full w-full object-cover"
+                [class.invisible]="phase() !== 'preview'"
+                aria-label="Aperçu en direct de la caméra"
+              ></video>
+
+              @if (capturedImage(); as image) {
+                <img
+                  [src]="image"
+                  alt="Aperçu de la photo capturée"
+                  class="absolute inset-0 h-full w-full object-cover"
+                />
+              } @else if (phase() === 'idle' || phase() === 'camera-starting') {
+                <div
+                  class="absolute inset-0 flex flex-col items-center justify-center px-6 text-center"
+                >
+                  <span
+                    class="flex h-12 w-12 items-center justify-center rounded-full bg-surface text-primary shadow-sm"
+                    aria-hidden="true"
+                  >
+                    <i
+                      [class]="
+                        phase() === 'camera-starting'
+                          ? 'fa-solid fa-spinner fa-spin'
+                          : 'fa-solid fa-video'
+                      "
+                    ></i>
+                  </span>
+                  <p class="mt-3 text-sm font-medium text-secondaryText">
+                    {{
+                      phase() === 'camera-starting'
+                        ? 'Ouverture de la caméra…'
+                        : 'La caméra est désactivée.'
+                    }}
+                  </p>
+                </div>
+              }
+
+              @if (phase() === 'preview') {
+                <div class="pointer-events-none absolute inset-0 bg-black/5" aria-hidden="true">
+                  <div
+                    class="absolute left-1/2 top-[46%] aspect-[3/4] h-[64%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-2 border-dashed border-white/90 shadow-[0_0_0_999px_rgba(0,0,0,0.10)]"
+                  ></div>
+                </div>
+              }
+            </div>
+
+            @if (cameraError()) {
+              <div class="mt-4 border-l-2 border-danger bg-danger-soft px-4 py-3" role="alert">
+                <p class="text-sm font-medium text-danger">{{ cameraError() }}</p>
+              </div>
+            }
+            @if (enrollmentError()) {
+              <div class="mt-4 border-l-2 border-danger bg-danger-soft px-4 py-3" role="alert">
+                <p class="text-sm font-medium text-danger">{{ enrollmentError() }}</p>
+              </div>
+            }
+            @if (successMessage()) {
+              <div class="mt-4 border-l-2 border-success bg-success-soft px-4 py-3" role="status">
+                <p class="text-sm font-semibold text-success">{{ successMessage() }}</p>
+              </div>
+            }
+
+            <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              @if (phase() === 'idle') {
+                <button
+                  type="button"
+                  class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:w-auto"
+                  (click)="startCamera()"
+                >
+                  <i class="fa-solid fa-video" aria-hidden="true"></i>
+                  Autoriser la caméra
+                </button>
+              } @else if (phase() === 'camera-starting') {
+                <button
+                  type="button"
+                  class="inline-flex min-h-11 w-full cursor-wait items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white opacity-60 sm:w-auto"
+                  disabled
+                >
+                  <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+                  Ouverture…
+                </button>
+              } @else if (phase() === 'preview') {
+                <button
+                  type="button"
+                  class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:w-auto"
+                  (click)="captureImage()"
+                >
+                  <i class="fa-solid fa-camera" aria-hidden="true"></i>
+                  Prendre la photo
+                </button>
+              } @else if (phase() === 'captured' || phase() === 'submitting') {
+                <button
+                  type="button"
+                  class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-principalText transition-colors hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                  (click)="retakeImage()"
+                  [disabled]="phase() === 'submitting'"
+                >
+                  <i class="fa-solid fa-camera-rotate" aria-hidden="true"></i>
+                  Reprendre
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                  (click)="submitEnrollment()"
+                  [disabled]="phase() === 'submitting'"
+                >
+                  <i
+                    [class]="
+                      phase() === 'submitting'
+                        ? 'fa-solid fa-spinner fa-spin'
+                        : 'fa-solid fa-shield-halved'
+                    "
+                    aria-hidden="true"
+                  ></i>
+                  {{ phase() === 'submitting' ? 'Enregistrement…' : 'Confirmer l’enrôlement' }}
+                </button>
+              }
+            </div>
+          </section>
+
+          <aside class="border-t border-line p-4 sm:p-6 lg:border-l lg:border-t-0 lg:p-8">
+            <h2 class="text-base font-semibold text-principalText">Pour une capture réussie</h2>
+            <ul class="mt-4 space-y-3" aria-label="Recommandations pour l’enrôlement facial">
+              <li class="flex items-start gap-3 text-sm leading-5 text-secondaryText">
+                <i class="fa-solid fa-check mt-1 text-xs text-secondary" aria-hidden="true"></i>
+                <span>Gardez le visage visible et centré.</span>
+              </li>
+              <li class="flex items-start gap-3 text-sm leading-5 text-secondaryText">
+                <i class="fa-solid fa-check mt-1 text-xs text-secondary" aria-hidden="true"></i>
+                <span>Placez-vous dans un environnement bien éclairé.</span>
+              </li>
+              <li class="flex items-start gap-3 text-sm leading-5 text-secondaryText">
+                <i class="fa-solid fa-check mt-1 text-xs text-secondary" aria-hidden="true"></i>
+                <span>Retirez tout élément couvrant votre visage.</span>
+              </li>
+              <li class="flex items-start gap-3 text-sm leading-5 text-secondaryText">
+                <i class="fa-solid fa-check mt-1 text-xs text-secondary" aria-hidden="true"></i>
+                <span>Assurez-vous d’être la seule personne dans le cadre.</span>
+              </li>
+            </ul>
+
+            <div class="mt-6 border-l-2 border-secondary bg-secondary-soft px-4 py-3">
+              <div class="flex items-start gap-3">
+                <i
+                  class="fa-solid fa-shield-halved mt-0.5 text-secondary-strong"
+                  aria-hidden="true"
+                ></i>
+                <div>
+                  <h2 class="text-sm font-semibold text-principalText">
+                    Respect de votre vie privée
+                  </h2>
+                  <p class="mt-1 text-xs leading-5 text-secondaryText">
+                    Lors de la mise en service, la photo brute ne sera pas conservée. Seule la
+                    représentation biométrique nécessaire à l’identification sera utilisée.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>

@@ -1,3 +1,20 @@
 .env
+.env.prod
 stuff
 stuff/*
+.vscode
+.vscode/*
+.agents
+.agents/*
+.agent
+.agent/*
+.claude
+.claude/*
+.idea/
+.idea/*
+devops-learning-notes/*
+devops-learning-notes/
+PROJECT_CONTEXT_REPORT.md
+ADMIN_BACKEND_FRONTEND_INTEGRATION_REPORT.md
+ADMIN_CHANGE_SUMMARY.md
+Rapport PFA

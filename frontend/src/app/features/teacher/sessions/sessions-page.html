@@ -1,0 +1,284 @@
+<section class="teacher-page">
+  <app-page-header
+    title="Sessions de présence"
+  ></app-page-header>
+
+  <section class="teacher-page-panel">
+    <div>
+      <p class="teacher-page-panel-title">Historique des sessions</p>
+      <p class="teacher-page-panel-subtitle">
+        @if (courseFilter()) {
+          {{ filteredSessions().length }} session(s) trouvée(s) pour ce module
+        } @else {
+          {{ finalizedCount() }} sessions finalisées chargées
+        }
+      </p>
+    </div>
+    <div class="sessions-panel-actions">
+      <button
+        type="button"
+        class="teacher-secondary-btn report-export-btn"
+        [disabled]="exportLoading()"
+        (click)="exportFullReport()"
+      >
+        @if (exportLoading()) {
+          <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+          Exportation...
+        } @else {
+          <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+          Exporter le rapport
+        }
+      </button>
+      <a routerLink="/teacher/mark-attendance/start-session" class="teacher-primary-btn">
+        Démarrer une nouvelle session
+      </a>
+    </div>
+  </section>
+
+  @if (error()) {
+    <div class="teacher-page-alert">{{ error() }}</div>
+  }
+
+  <section class="teacher-page-section">
+    @if (courseFilter()) {
+      <div class="mb-4 flex items-center justify-between rounded-2xl border border-primary-soft bg-primary-soft/10 px-4 py-3 text-sm text-principalText">
+        <span class="inline-flex items-center gap-2">
+          <i class="fa-solid fa-filter text-primary"></i>
+          <span>Sessions filtrées par le module : <strong>{{ courseFilter() }}</strong></span>
+        </span>
+        <button
+          type="button"
+          class="font-semibold text-primary hover:text-primary-dark transition-colors"
+          (click)="clearFilter()"
+        >
+          Effacer le filtre
+        </button>
+      </div>
+    }
+
+    @if (loading()) {
+      <div class="teacher-page-loading">Chargement...</div>
+    } @else if (sessions().length === 0) {
+      <div class="teacher-page-empty">
+        <div
+          class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-soft text-primary"
+        >
+          <i class="fa-regular fa-calendar-check text-2xl"></i>
+        </div>
+        <h3 class="mt-6 text-xl font-bold text-principalText">Aucune session</h3>
+        <p class="mt-2 text-secondaryText">Démarrez une session pour voir l’historique ici.</p>
+      </div>
+    } @else {
+      <div class="teacher-page-section-header md:hidden">
+        <h2>Historique</h2>
+        <p>{{ sessions().length }} session(s)</p>
+      </div>
+
+      <section class="space-y-3 md:hidden">
+        <div class="space-y-3">
+          @for (session of filteredSessions(); track session.sessionId) {
+            <button
+              type="button"
+              class="block w-full rounded-2xl border border-line bg-surface px-4 py-4 text-left shadow-sm transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft/25"
+              (click)="openDetails(session)"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-principalText">{{ session.courseLabel }}</p>
+                  <p class="mt-1 truncate text-xs text-secondaryText">
+                    {{ session.roomLabel || 'Salle non renseignée' }} · Groupes
+                    {{ session.groupIds.join(', ') }}
+                  </p>
+                </div>
+                <app-status-badge
+                  [label]="sessionStatusLabel(session)"
+                  [variant]="statusVariant(session)"
+                ></app-status-badge>
+              </div>
+
+              <div class="mt-4 grid gap-2 text-xs text-secondaryText">
+                <span class="inline-flex items-center gap-2">
+                  <i class="fa-regular fa-calendar text-muted" aria-hidden="true"></i>
+                  {{ sessionDateLabel(session) }} · {{ sessionTimeLabel(session) }}
+                </span>
+                <span class="inline-flex items-center gap-2">
+                  <i class="fa-solid fa-location-dot text-muted" aria-hidden="true"></i>
+                  {{ session.roomLabel || 'Salle non renseignée' }} · {{ methodLabel(session.method) }}
+                </span>
+              </div>
+
+              <div class="mt-4 flex items-center justify-between gap-3">
+                <app-status-badge
+                  [label]="attendanceRate(session) + '% · ' + session.presentCount + ' présent(s)'"
+                  variant="neutral"
+                ></app-status-badge>
+                <span class="text-xs font-semibold text-primary">Détails</span>
+              </div>
+            </button>
+          }
+        </div>
+      </section>
+
+      <div class="teacher-table-shell hidden md:block">
+        <div class="teacher-table-grid teacher-table-grid--sessions teacher-table-head">
+          <span>Cours</span>
+          <span>Date</span>
+          <span>Présence</span>
+          <span>Statut</span>
+        </div>
+
+        @for (session of filteredSessions(); track session.sessionId) {
+          <div
+            class="teacher-table-grid teacher-table-grid--sessions teacher-table-row clickable"
+            (click)="openDetails(session)"
+          >
+            <div class="min-w-0">
+              <p class="truncate font-semibold text-principalText">{{ session.courseLabel }}</p>
+              <p class="truncate text-xs text-secondaryText">
+                {{ session.roomLabel || 'Salle non renseignée' }} | Groupes
+                {{ session.groupIds.join(', ') }}
+              </p>
+            </div>
+            <span class="text-sm text-secondaryText">{{
+              session.startedAt | date: 'dd/MM/yyyy HH:mm'
+            }}</span>
+            <div class="text-sm text-secondaryText">
+              <span class="font-bold text-principalText">{{ attendanceRate(session) }}%</span>
+              <span> ({{ session.presentCount }} présent(s))</span>
+            </div>
+            <div class="teacher-table-status-cell">
+              <app-status-badge
+                [label]="sessionStatusLabel(session)"
+                [variant]="statusVariant(session)"
+              ></app-status-badge>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </section>
+</section>
+
+@if (selectedSession(); as session) {
+  <div class="modal-backdrop" (click)="closeDetails()">
+    <div class="details-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="min-w-0">
+          <p class="modal-eyebrow">Session</p>
+          <h2 class="modal-title">{{ session.courseLabel }}</h2>
+          <p class="modal-subtitle">
+            {{ session.roomLabel || 'Salle non renseignée' }} -
+            {{ session.startedAt | date: 'dd/MM/yyyy HH:mm' }}
+          </p>
+        </div>
+        <button type="button" class="icon-btn" aria-label="Fermer" (click)="closeDetails()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="details-summary">
+        <span><strong>{{ session.presentCount ?? 0 }}</strong> présents</span>
+        <span><strong>{{ session.absentCount ?? 0 }}</strong> absents</span>
+        <span><strong>{{ session.unknownCount ?? 0 }}</strong> inconnus</span>
+      </div>
+
+      @if (session.status !== 'FINALIZED') {
+        <a
+          class="resume-session-btn"
+          [routerLink]="resumeSessionRoute(session)"
+          [queryParams]="{ sessionId: session.sessionId }"
+        >
+          <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+          Continuer et terminer la session
+        </a>
+      }
+
+      @if (detailError()) {
+        <div class="teacher-page-alert">{{ detailError() }}</div>
+      }
+
+      <div class="students-list">
+        @for (student of session.students ?? []; track student.studentId) {
+          <div class="student-row">
+            <div class="student-main">
+              <app-user-avatar
+                [name]="student.firstName + ' ' + student.lastName"
+                [imageUrl]="student.pfpUrl"
+                size="md"
+                shape="rounded"
+              ></app-user-avatar>
+              <div class="min-w-0">
+                <p class="student-name">{{ student.firstName }} {{ student.lastName }}</p>
+                <p class="student-meta">
+                  Apogée {{ student.numApogee }} - Groupe {{ student.groupId }}
+                </p>
+              </div>
+            </div>
+
+            <app-status-badge
+              [label]="studentStatusLabel(student.status)"
+              [variant]="studentStatusVariant(student.status)"
+            ></app-status-badge>
+
+            <div class="student-actions">
+              <button
+                type="button"
+                class="status-btn present"
+                [class.active]="student.status === 'PRESENT'"
+                [disabled]="updatingStudentId() === student.studentId || isSaving()"
+                (click)="updateStudentStatus(student, 'PRESENT')"
+              >
+                Présent
+              </button>
+              <button
+                type="button"
+                class="status-btn absent"
+                [class.active]="student.status === 'ABSENT'"
+                [disabled]="updatingStudentId() === student.studentId || isSaving()"
+                (click)="updateStudentStatus(student, 'ABSENT')"
+              >
+                Absent
+              </button>
+            </div>
+          </div>
+        } @empty {
+          <div class="empty-students">Aucun étudiant dans cette session.</div>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="btn-cancel"
+            [disabled]="isSaving()"
+            (click)="cancelChanges()"
+          >
+            <i class="fa-solid fa-times" aria-hidden="true"></i>
+            Annuler
+          </button>
+          <button
+            type="button"
+            class="btn-confirm"
+            [disabled]="!hasChanges() || isSaving()"
+            (click)="confirmChanges()"
+          >
+            @if (isSaving()) {
+              <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+              Sauvegarde...
+            } @else {
+              <i class="fa-solid fa-check" aria-hidden="true"></i>
+              Confirmer
+            }
+          </button>
+        </div>
+        @if (pendingChangesCount() > 0) {
+          <div class="pending-changes">
+            <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+            {{ pendingChangesCount() }} modification{{ pendingChangesCount() > 1 ? 's' : '' }} en attente
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

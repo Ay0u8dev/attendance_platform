@@ -1,0 +1,7 @@
+@import '../teacher-page.css';
+
+.groups-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+}

@@ -1,0 +1,390 @@
+@import '../teacher-page.css';
+
+.action-btn {
+  display: inline-flex;
+  min-height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-line);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
+}
+
+.action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.48);
+  padding: 1rem;
+}
+
+.details-modal {
+  width: min(58rem, 100%);
+  max-height: min(44rem, calc(100vh - 2rem));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-shell);
+  padding: 1.25rem;
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.modal-eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-secondaryText);
+}
+
+.modal-title {
+  margin: 0;
+  color: var(--color-principalText);
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.modal-subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--color-secondaryText);
+  font-size: 0.85rem;
+}
+
+.icon-btn {
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-line);
+  border-radius: 0.65rem;
+  background: var(--color-surface);
+  color: var(--color-secondaryText);
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.icon-btn:hover {
+  background: var(--color-surface-subtle);
+  color: var(--color-principalText);
+}
+
+.details-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.details-summary span {
+  display: inline-flex;
+  gap: 0.3rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.65rem;
+  background: var(--color-surface-subtle);
+  padding: 0.55rem 0.75rem;
+  color: var(--color-secondaryText);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.details-summary strong {
+  color: var(--color-principalText);
+}
+
+.resume-session-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-primary-soft);
+  background: var(--color-primary-soft);
+  padding: 0.65rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.students-list {
+  overflow-y: auto;
+  border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.student-row {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1fr) auto auto;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid var(--color-line);
+  padding: 0.85rem;
+}
+
+.student-row:last-child {
+  border-bottom: 0;
+}
+
+.student-main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.avatar {
+  display: inline-flex;
+  height: 2.4rem;
+  width: 2.4rem;
+  flex: 0 0 2.4rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.student-name {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-principalText);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.student-meta {
+  margin: 0.15rem 0 0;
+  color: var(--color-secondaryText);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.student-actions {
+  display: inline-flex;
+  gap: 0.45rem;
+}
+
+.status-btn {
+  min-height: 2rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  padding: 0.4rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
+}
+
+.status-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.status-btn.present {
+  color: var(--color-secondary);
+}
+
+.status-btn.present.active,
+.status-btn.present:not(:disabled):hover {
+  border-color: var(--color-success);
+  background: var(--color-success-soft);
+}
+
+.status-btn.absent {
+  color: var(--color-danger);
+}
+
+.status-btn.absent.active,
+.status-btn.absent:not(:disabled):hover {
+  border-color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.empty-students {
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-secondaryText);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.modal-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-line);
+  flex-shrink: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.pending-changes {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-secondaryText);
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface-subtle);
+  border-radius: 0.5rem;
+}
+
+.pending-changes i {
+  color: var(--color-primary);
+}
+
+.btn-cancel,
+.btn-confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.5rem;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 120px;
+}
+
+.btn-cancel {
+  background: var(--color-surface-subtle);
+  color: var(--color-secondaryText);
+  border: 1px solid var(--color-line);
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: var(--color-surface);
+  border-color: var(--color-secondaryText);
+}
+
+.btn-cancel:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.btn-confirm {
+  background: var(--color-success);
+  color: white;
+  border: 1px solid var(--color-success);
+}
+
+.btn-confirm:hover:not(:disabled) {
+  background: var(--color-success-strong);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+}
+
+.btn-confirm:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+}
+
+.btn-confirm:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+@media (max-width: 900px) {
+  .student-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .student-actions {
+    width: 100%;
+  }
+
+  .status-btn {
+    flex: 1;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .btn-cancel,
+  .btn-confirm {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .pending-changes {
+    justify-content: center;
+  }
+}
+
+.sessions-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.report-export-btn {
+  color: #166534;
+}
+
+.report-export-btn .fa-file-excel {
+  color: #16a34a;
+}
+
+.report-export-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+@media (max-width: 640px) {
+  .sessions-panel-actions,
+  .sessions-panel-actions .teacher-primary-btn,
+  .sessions-panel-actions .teacher-secondary-btn {
+    width: 100%;
+  }
+}

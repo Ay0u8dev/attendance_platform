@@ -1,0 +1,80 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://attendance-db:5432/attendance_db}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:3}
+      minimum-idle: ${DB_MIN_IDLE:0}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:30000}
+      idle-timeout: ${DB_IDLE_TIMEOUT_MS:600000}
+      max-lifetime: ${DB_MAX_LIFETIME_MS:1800000}
+
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: 6379
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+services:
+  auth-service:
+    url: http://auth-service:8080
+  user-service:
+    url: http://user-service:8080
+  notification:
+    url: http://notification-service:8080
+
+app:
+  azure:
+    servicebus:
+      connection-string: ${AZURE_SERVICEBUS_CONNECTION_STRING}
+      notifications-queue: ${AZURE_SERVICEBUS_NOTIFICATIONS_QUEUE:notification-service-notifications}
+
+attendance:
+  internal:
+    service-token: ${INTERNAL_SERVICE_TOKEN}
+  session:
+    auto-end-duration: PT30M
+    finalized-state-retention: PT1H
+    auto-finalize-poll-interval: PT30S
+  self-mark:
+    max-distance-meters: ${ATTENDANCE_SELF_MARK_MAX_DISTANCE_METERS:100}
+  websocket:
+    allowed-origin-patterns:
+      - http://localhost:[*]
+      - http://127.0.0.1:[*]
+      - http://host.docker.internal:[*]
+      - http://192.168.100.73:[*]
+      - http://attendance-platform.ma
+      - http://attendance-platform.duckdns.org
+  lock:
+    lease-duration: ${ATTENDANCE_LOCK_LEASE_DURATION:PT2M}
+    acquire-timeout: ${ATTENDANCE_LOCK_ACQUIRE_TIMEOUT:PT2S}
+    retry-interval: ${ATTENDANCE_LOCK_RETRY_INTERVAL:PT0.05S}
+
+management:
+  health:
+    rabbit:
+      enabled: false
+  metrics:
+    tags:
+      application: attendance-service
+      environment: prod
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,info
+      discovery:
+        enabled: false
+  endpoint:
+    health:
+      probes:
+        enabled: true

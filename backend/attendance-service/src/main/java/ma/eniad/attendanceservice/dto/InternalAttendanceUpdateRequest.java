@@ -1,0 +1,19 @@
+package ma.eniad.attendanceservice.dto;
+
+import jakarta.validation.constraints.NotNull;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionMethod;
+
+public record InternalAttendanceUpdateRequest(
+        @NotNull(message = "studentId is required")
+        Long studentId,
+
+        @NotNull(message = "method is required")
+        AttendanceSessionMethod method,
+
+        String deviceId,
+
+        String gpsLat,
+
+        String gpsLon
+) {
+}

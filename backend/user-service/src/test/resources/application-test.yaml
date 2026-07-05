@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:user_service_test;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+app:
+  database-seeding:
+    enabled: false
+
+cloudflare:
+  r2:
+    endpoint: https://dummy.r2.test
+    access-key: dummy-access-key
+    secret-key: dummy-secret-key
+    bucket-name: dummy-bucket

@@ -1,0 +1,259 @@
+<section class="teacher-page">
+  <app-page-header
+    eyebrow="Espace enseignant"
+    title="Justifications d'absence"
+  ></app-page-header>
+
+  <section class="teacher-page-section">
+    @if (loading()) {
+      <div class="teacher-page-loading">Chargement...</div>
+    } @else if (rows().length === 0) {
+      <div class="teacher-page-empty">
+        <div
+          class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-soft text-primary"
+        >
+          <i class="fa-regular fa-file-circle-check text-2xl"></i>
+        </div>
+        <h3 class="mt-6 text-xl font-bold text-principalText">Aucune justification</h3>
+        <p class="mt-2 text-secondaryText">{{ errorMessage() ?? 'Les nouvelles demandes apparaitront ici.' }}</p>
+      </div>
+    } @else {
+      <div class="teacher-page-section-header md:hidden">
+        <h2>Demandes recues</h2>
+        <p>{{ rows().length }} demande(s)</p>
+      </div>
+
+      <section class="space-y-3 md:hidden">
+        <div class="space-y-3">
+          @for (row of rows(); track row.id) {
+            <button
+              type="button"
+              class="block w-full rounded-2xl border border-line bg-surface px-4 py-4 text-left shadow-sm transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft/25"
+              (click)="openDetails(row)"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-principalText">{{ row.studentName }}</p>
+                  <p class="mt-1 text-xs text-secondaryText">Apogee {{ row.studentCode }}</p>
+                </div>
+                <app-status-badge [label]="row.status" [variant]="row.statusVariant"></app-status-badge>
+              </div>
+
+              <div class="mt-4 grid gap-2 text-xs text-secondaryText">
+                <span class="inline-flex items-center gap-2">
+                  <i class="fa-regular fa-calendar text-muted" aria-hidden="true"></i>
+                  {{ row.sessionDate }}
+                </span>
+                <span class="inline-flex items-center gap-2">
+                  <i class="fa-solid fa-book text-muted" aria-hidden="true"></i>
+                  {{ row.module }}
+                </span>
+              </div>
+
+              <p class="mt-3 line-clamp-2 text-sm leading-6 text-secondaryText">{{ row.reason }}</p>
+
+              <div class="mt-4 flex items-center justify-between gap-3">
+                <span class="inline-flex min-w-0 items-center gap-2 text-xs text-secondaryText">
+                  <i class="fa-regular fa-file-lines text-muted" aria-hidden="true"></i>
+                  <span class="truncate">{{ row.attachmentName }}</span>
+                </span>
+                <span class="shrink-0 text-xs font-semibold text-primary">Détails</span>
+              </div>
+            </button>
+          }
+        </div>
+      </section>
+
+      <div class="teacher-table-shell hidden md:block">
+        <div
+          class="teacher-table-grid teacher-table-grid--justifications teacher-table-head"
+        >
+          <span>Etudiant</span>
+          <span>Module</span>
+          <span>Seance</span>
+          <span>Motif</span>
+          <span>Statut</span>
+        </div>
+
+        @for (row of rows(); track row.id) {
+          <div
+            class="teacher-table-grid teacher-table-grid--justifications teacher-table-row clickable"
+            (click)="openDetails(row)"
+          >
+            <div class="min-w-0">
+              <p class="font-semibold text-principalText">{{ row.studentName }}</p>
+              <p class="text-xs text-secondaryText">Apogee {{ row.studentCode }}</p>
+            </div>
+
+            <div class="min-w-0">
+              <p class="font-medium text-principalText">{{ row.module }}</p>
+              <p class="truncate text-xs text-secondaryText">{{ row.attachmentName }}</p>
+            </div>
+
+            <span class="text-sm text-secondaryText">{{ row.sessionDate }}</span>
+
+            <p class="line-clamp-2 text-sm text-secondaryText" [title]="row.comment">
+              {{ row.reason }}
+            </p>
+
+            <app-status-badge [label]="row.status" [variant]="row.statusVariant"></app-status-badge>
+          </div>
+        }
+      </div>
+    }
+  </section>
+</section>
+
+<app-modal
+  title="Details de la justification"
+  description="Informations envoyees par l'etudiant pour cette absence."
+  [open]="selectedJustification() !== null"
+  size="lg"
+  (closed)="closeDetails()"
+>
+  <div modal-body class="space-y-6">
+    @if (selectedJustification(); as justification) {
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p class="text-lg font-bold text-principalText">{{ justification.studentName }}</p>
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <span
+              class="inline-flex items-center rounded-full border border-line bg-surface-subtle px-3 py-1 text-xs font-semibold text-secondaryText"
+            >
+              Apogee {{ justification.studentCode }}
+            </span>
+            @for (item of justification.studentMeta; track item.label) {
+              <span
+                class="inline-flex items-center gap-1 rounded-full border border-primary-soft bg-primary-soft px-3 py-1 text-xs font-semibold text-primary"
+              >
+                <span class="text-primary/70">{{ item.label }}</span>
+                {{ item.value }}
+              </span>
+            }
+          </div>
+        </div>
+        <app-status-badge
+          [label]="justification.status"
+          [variant]="justification.statusVariant"
+        ></app-status-badge>
+      </div>
+
+      <div class="details-grid">
+        <div class="detail-box">
+          <span class="detail-label">Module</span>
+          <p class="detail-value">{{ justification.module }}</p>
+        </div>
+        <div class="detail-box">
+          <span class="detail-label">Seance absente</span>
+          <p class="detail-value">{{ justification.sessionDate }}</p>
+        </div>
+        <div class="detail-box">
+          <span class="detail-label">Soumise le</span>
+          <p class="detail-value">{{ justification.submittedAt }}</p>
+        </div>
+      </div>
+
+      <div class="review-notes-grid">
+        <div class="detail-box">
+          <span class="detail-label">Motif</span>
+          <p class="detail-value detail-value--long">{{ justification.comment }}</p>
+        </div>
+
+        <label class="detail-box">
+          <span class="detail-label">{{ justification.reviewInputLabel }}</span>
+          <textarea
+            rows="4"
+            class="admin-comment-input"
+            placeholder="Ajoutez un commentaire visible dans la décision..."
+            [disabled]="justification.status !== 'En attente' || reviewingId() === justification.id"
+            [ngModel]="reviewCommentDraft()"
+            (ngModelChange)="reviewCommentDraft.set($event)"
+          ></textarea>
+        </label>
+      </div>
+
+      @if (justification.reviewedBy || justification.reviewedAt) {
+        <div class="rounded-2xl border border-line bg-surface-subtle p-4">
+          <span class="detail-label">Decision</span>
+          <p class="mt-2 text-sm leading-6 text-secondaryText">
+            {{ justification.reviewComment }}
+            @if (justification.reviewedBy) {
+              <span> - {{ justification.reviewedBy }}</span>
+            }
+            @if (justification.reviewedAt) {
+              <span>, {{ justification.reviewedAt }}</span>
+            }
+          </p>
+        </div>
+      }
+
+      @if (justification.attachmentPreviewUrl) {
+        <figure class="justification-preview">
+          <div class="attachment-preview-header">
+            <div class="min-w-0">
+              <span class="detail-label">Apercu de la piece jointe</span>
+              <p class="attachment-preview-name">{{ justification.attachmentName }}</p>
+            </div>
+            <button
+              type="button"
+              class="attachment-open-icon"
+              aria-label="Ouvrir la pièce jointe"
+              [disabled]="!justification.attachmentPreviewUrl"
+              (click)="openAttachment(justification)"
+            >
+              <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <div class="attachment-preview-body">
+            @switch (getAttachmentType(justification.attachmentPreviewUrl)) {
+              @case ('pdf') {
+                <iframe
+                  [src]="getSafeUrl(justification.attachmentPreviewUrl)"
+                  class="attachment-frame"
+                  title="Apercu du justificatif"
+                ></iframe>
+              }
+              @case ('image') {
+                <img
+                  [src]="justification.attachmentPreviewUrl"
+                  [alt]="'Apercu de ' + justification.attachmentName"
+                  class="attachment-image"
+                />
+              }
+              @default {
+                <div class="attachment-fallback">{{ justification.attachmentName }}</div>
+              }
+            }
+          </div>
+        </figure>
+      }
+    }
+  </div>
+
+  <div modal-footer class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+    @if (selectedJustification(); as justification) {
+      <button type="button" class="action-btn action-btn-neutral" (click)="closeDetails()">
+        Fermer
+      </button>
+      <button
+        type="button"
+        class="action-btn action-btn-danger"
+        [disabled]="justification.status !== 'En attente' || reviewingId() === justification.id"
+        (click)="decline(justification)"
+      >
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        Decliner
+      </button>
+      <button
+        type="button"
+        class="action-btn action-btn-success"
+        [disabled]="justification.status !== 'En attente' || reviewingId() === justification.id"
+        (click)="approve(justification)"
+      >
+        <i class="fa-solid fa-check" aria-hidden="true"></i>
+        Approuver
+      </button>
+    }
+  </div>
+</app-modal>

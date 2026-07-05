@@ -1,0 +1,304 @@
+<section class="space-y-6">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <app-page-header
+      eyebrow="Gestion des justificatifs"
+      title="Justifications"
+      description="Suivez l'état de vos demandes, déposez les pièces nécessaires et consultez les décisions sans quitter votre espace étudiant."
+    ></app-page-header>
+
+    <div class="w-full lg:w-auto">
+      <app-button
+        label="Déposer un justificatif"
+        icon="fa-solid fa-plus"
+        size="sm"
+        [fullWidth]="true"
+        [motion]="false"
+        (clicked)="openSubmissionModal()"
+      ></app-button>
+    </div>
+  </div>
+
+  <div class="rounded-[1.75rem] border border-line bg-surface p-4 shadow-card sm:p-5">
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <label class="relative w-full md:max-w-sm">
+        <span class="sr-only">Rechercher une justification</span>
+        <i
+          class="fa-solid fa-magnifying-glass pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted"
+          aria-hidden="true"
+        ></i>
+        <input
+          type="search"
+          class="h-11 w-full rounded-2xl border border-line bg-surface pl-10 pr-4 text-sm font-medium text-principalText outline-none transition-colors duration-200 placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary-soft"
+          placeholder="Rechercher par module, motif, document..."
+          [value]="searchQuery()"
+          (input)="updateSearchQuery(($any($event.target).value ?? '').toString())"
+        />
+      </label>
+
+      <app-status-filter-tabs
+        class="w-full md:w-auto"
+        [tabs]="tabs()"
+        [selected]="selectedFilter()"
+        (selectedChange)="selectFilter($event)"
+      ></app-status-filter-tabs>
+    </div>
+  </div>
+
+  <section class="space-y-3 md:hidden">
+    <div>
+      <h2 class="text-lg font-semibold text-principalText">Demandes déposées</h2>
+      <p class="text-sm text-secondaryText">{{ filteredRows().length }} demande(s)</p>
+    </div>
+
+    @if (filteredRows().length > 0) {
+      <div class="space-y-3">
+        @for (row of filteredRows(); track row.id) {
+          <button
+            type="button"
+            class="block w-full rounded-2xl border border-line bg-surface px-4 py-4 text-left shadow-sm transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft/25"
+            (click)="openDetail(row.id)"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-principalText">{{ row.module }}</p>
+                <p class="mt-1 text-xs text-secondaryText">{{ row.submittedAt }} · {{ row.sessionSlot }}</p>
+              </div>
+              <app-status-badge [label]="row.status" [variant]="row.statusVariant"></app-status-badge>
+            </div>
+
+            <p class="mt-3 line-clamp-2 text-sm leading-6 text-secondaryText">{{ row.reason }}</p>
+
+            <div class="mt-4 flex items-center justify-between gap-3 text-xs">
+              <span class="inline-flex min-w-0 items-center gap-2 text-secondaryText">
+                <i class="fa-regular fa-file-lines text-muted" aria-hidden="true"></i>
+                <span class="truncate">{{ row.attachmentName }}</span>
+              </span>
+              <span class="shrink-0 font-semibold text-primary">Détails</span>
+            </div>
+          </button>
+        }
+      </div>
+    } @else {
+      <div class="rounded-2xl border border-dashed border-line bg-surface-subtle px-4 py-8 text-center">
+        <p class="text-sm font-semibold text-principalText">Aucune justification ne correspond aux filtres</p>
+        <p class="mt-1 text-xs text-secondaryText">Ajustez vos filtres ou revenez à la vue globale.</p>
+      </div>
+    }
+  </section>
+
+  <div class="hidden md:block">
+    <app-data-table
+      title="Demandes déposées"
+      description="Consultez et suivez l'état de vos demandes soumises."
+      [rows]="filteredRows()"
+      [columns]="columns"
+      [rowId]="justificationRowId"
+      [rowClickable]="true"
+      [showToolbar]="false"
+      (rowClicked)="openDetail($event.id)"
+      [pageSizeOptions]="[5, 10]"
+      [initialPageSize]="5"
+      emptyStateTitle="Aucune justification ne correspond aux filtres"
+      emptyStateDescription="Ajustez vos filtres ou revenez à la vue globale."
+    >
+      <ng-template [appDataTableCell]="'submittedAt'" let-row="row">
+        <div class="min-w-0">
+          <p class="font-medium text-principalText">{{ row.submittedAt }}</p>
+          <p class="truncate text-xs text-secondaryText">{{ row.sessionSlot }}</p>
+        </div>
+      </ng-template>
+
+      <ng-template [appDataTableCell]="'module'" let-row="row">
+        <div class="min-w-0">
+          <p class="font-medium text-principalText">{{ row.module }}</p>
+          <div class="mt-0.5 flex items-center gap-1.5 text-xs text-secondaryText">
+            <i class="fa-regular fa-file-lines" aria-hidden="true"></i>
+            <span class="truncate">{{ row.attachmentName }}</span>
+          </div>
+        </div>
+      </ng-template>
+
+      <ng-template [appDataTableCell]="'reason'" let-row="row">
+        <div class="line-clamp-2 text-sm text-secondaryText" [title]="row.reason">
+          {{ row.reason }}
+        </div>
+      </ng-template>
+
+      <ng-template [appDataTableCell]="'status'" let-row="row">
+        <div class="flex justify-end">
+          <app-status-badge [label]="row.status" [variant]="row.statusVariant"></app-status-badge>
+        </div>
+      </ng-template>
+    </app-data-table>
+  </div>
+</section>
+
+<app-modal
+  title="Déposer un justificatif"
+  description="Sélectionnez une séance absente, ajoutez une pièce jointe et laissez un commentaire utile. Pas de bruit, juste ce qu'il faut."
+  [open]="isModalOpen()"
+  size="lg"
+  (closed)="closeSubmissionModal()"
+>
+  <div modal-body class="space-y-6">
+    <div class="space-y-4">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p class="text-sm font-semibold uppercase tracking-[0.16em] text-secondaryText">
+            Séances concernées
+          </p>
+          <p class="mt-1 text-xs text-secondaryText">
+            {{ selectedSessionCount() }} sélectionnée(s)
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-principalText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
+            [disabled]="filteredAbsentSessions().length === 0"
+            (click)="selectAllFilteredSessions()"
+          >
+            Tout sélectionner
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft"
+            [disabled]="selectedSessionCount() === 0"
+            (click)="clearSelectedSessions()"
+          >
+            Tout désélectionner
+          </button>
+        </div>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2">
+        <label class="relative">
+          <span
+            class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-[0.12em] text-muted"
+          >
+            Du
+          </span>
+          <input
+            type="date"
+            class="h-11 w-full rounded-2xl border border-line bg-surface pl-12 pr-4 text-sm font-medium text-principalText outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary-soft"
+            [value]="dateFrom()"
+            (input)="updateDateFrom(($any($event.target).value ?? '').toString())"
+          />
+        </label>
+
+        <label class="relative">
+          <span
+            class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-[0.12em] text-muted"
+          >
+            Au
+          </span>
+          <input
+            type="date"
+            class="h-11 w-full rounded-2xl border border-line bg-surface pl-12 pr-4 text-sm font-medium text-principalText outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary-soft"
+            [value]="dateTo()"
+            (input)="updateDateTo(($any($event.target).value ?? '').toString())"
+          />
+        </label>
+      </div>
+
+      @if (filteredAbsentSessions().length > 0) {
+        <div class="grid gap-3 max-h-[38vh] overflow-y-auto pr-2">
+          @for (session of filteredAbsentSessions(); track session.id) {
+            <button
+              type="button"
+              class="flex items-start justify-between gap-4 rounded-[1.35rem] border p-4 text-left transition-colors duration-200"
+              [class]="
+                isSessionSelected(session.id)
+                  ? 'border-primary bg-primary-soft'
+                  : 'border-line bg-surface hover:border-primary-soft hover:bg-surface-subtle'
+              "
+              (click)="toggleSession(session.id)"
+            >
+              <div class="space-y-1">
+                <p class="font-medium text-principalText">{{ session.module }}</p>
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-secondaryText">
+                  <span class="inline-flex items-center gap-1.5"
+                    ><i class="fa-regular fa-calendar" aria-hidden="true"></i>
+                    {{ session.date }}</span
+                  >
+                  <span class="inline-flex items-center gap-1.5"
+                    ><i class="fa-regular fa-clock" aria-hidden="true"></i> {{ session.time }}</span
+                  >
+                  <span class="inline-flex items-center gap-1.5"
+                    ><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i>
+                    {{ session.teacherFullName }}</span
+                  >
+                </div>
+              </div>
+
+              <span
+                class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs transition-colors"
+                [class]="
+                  isSessionSelected(session.id)
+                    ? 'border-primary bg-primary text-white'
+                    : 'border-line bg-surface text-secondaryText'
+                "
+              >
+                <i
+                  class="fa-solid fa-check"
+                  [class.opacity-0]="!isSessionSelected(session.id)"
+                  aria-hidden="true"
+                ></i>
+              </span>
+            </button>
+          }
+        </div>
+      } @else {
+        <div
+          class="rounded-[1.35rem] border border-dashed border-line bg-surface-subtle px-4 py-8 text-center"
+        >
+          <i class="fa-solid fa-check-circle mb-3 text-2xl text-success" aria-hidden="true"></i>
+          <p class="text-sm font-medium text-principalText">Aucune absence sans justificatif</p>
+          <p class="mt-1 text-xs text-secondaryText">
+            Ajustez la période ou revenez quand une nouvelle absence sera disponible.
+          </p>
+        </div>
+      }
+    </div>
+
+    <div class="grid items-stretch gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+      <app-file-upload-dropzone
+        class="block h-full"
+        [selectedFileName]="selectedFileName()"
+        (fileSelected)="handleFileSelection($event)"
+      ></app-file-upload-dropzone>
+
+      <label class="flex h-full flex-col space-y-2">
+        <span class="text-sm font-semibold uppercase tracking-[0.16em] text-secondaryText">
+          Motif / commentaire
+        </span>
+        <textarea
+          rows="8"
+          class="min-h-56 flex-1 resize-y rounded-[1.35rem] border border-line bg-surface px-4 py-3 text-sm text-principalText outline-none transition-colors duration-200 placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary-soft"
+          placeholder="Décrivez brièvement la raison de votre absence..."
+          [ngModel]="commentDraft()"
+          (ngModelChange)="commentDraft.set($event)"
+        ></textarea>
+      </label>
+    </div>
+  </div>
+
+  <div modal-footer class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+    <app-button
+      label="Annuler"
+      variant="outline"
+      size="sm"
+      [fullWidth]="false"
+      (clicked)="closeSubmissionModal()"
+    ></app-button>
+    <app-button
+      label="Envoyer la demande"
+      icon="fa-solid fa-paper-plane"
+      size="sm"
+      [fullWidth]="false"
+      [disabled]="!canSubmit()"
+      (clicked)="submitDraft()"
+    ></app-button>
+  </div>
+</app-modal>

@@ -1,0 +1,67 @@
+server:
+  port: 8083
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5434/attendance_db
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+
+services:
+  auth-service:
+    url: http://localhost:8081
+  user-service:
+    url: http://localhost:8082
+  notification:
+    url: http://localhost:8086
+
+app:
+  rabbitmq:
+    notifications:
+      exchange: ${NOTIFICATIONS_EXCHANGE:notifications.exchange}
+      routing-key: ${NOTIFICATIONS_ROUTING_KEY:notification.requested}
+
+attendance:
+  internal:
+    service-token: ${INTERNAL_SERVICE_TOKEN:internal_service_token_abdoelfadili}
+  session:
+    auto-end-duration: PT30M
+    finalized-state-retention: PT1H
+    auto-finalize-poll-interval: PT1M
+  self-mark:
+    max-distance-meters: 100
+  websocket:
+    allowed-origin-patterns:
+      - http://localhost:[*]
+      - http://127.0.0.1:[*]
+      - http://host.docker.internal:[*]
+      - http://192.168.100.73:[*]
+      - http://attendance-platform.ma
+      - http://attendance-platform.duckdns.org
+  lock:
+    lease-duration: ${ATTENDANCE_LOCK_LEASE_DURATION:PT2M}
+    acquire-timeout: ${ATTENDANCE_LOCK_ACQUIRE_TIMEOUT:PT2S}
+    retry-interval: ${ATTENDANCE_LOCK_RETRY_INTERVAL:PT0.05S}

@@ -1,0 +1,14 @@
+node_modules
+dist
+.git
+.angular
+.vscode
+coverage
+Dockerfile*
+docker-compose*
+DESIGN_LANGUAGE.md
+PROJECT_STRUCTURE.md
+AGENTS.md
+README.md
+.env
+.env.prod

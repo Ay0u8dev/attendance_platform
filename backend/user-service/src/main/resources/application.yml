@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: user-service
+
+  profiles:
+    active: ${PROFILE:dev}
+
+app:
+  allowed-domain: "ump.ac.ma"
+
+#logging:
+#  level:
+#    root: debug

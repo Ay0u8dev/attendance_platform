@@ -1,0 +1,42 @@
+<section class="space-y-5">
+  <app-fields-list
+    [fields]="filteredFields()"
+    (createClicked)="openCreate()"
+    (editClicked)="openEdit($event)"
+    (deleteClicked)="openDelete($event)"
+    (bulkDeleteRequested)="onBulkDeleteRequested($event)"
+  ></app-fields-list>
+
+  <app-delete-modal
+    [open]="isBulkDeleteOpen()"
+    title="Supprimer les filières sélectionnées ?"
+    [itemName]="bulkDeleteItems().length + ' filière(s)'"
+    confirmMessage="Vous êtes sur le point de supprimer :"
+    warningMessage="Cette action est irréversible."
+    deleteButtonLabel="Supprimer"
+    [requireConfirmation]="true"
+    confirmationText="SUPPRIMER"
+    (closeRequested)="closeBulkDelete()"
+    (confirmDelete)="onBulkDeleteConfirmed()"
+  ></app-delete-modal>
+
+  <app-create-field-modal
+    [open]="activeModal === 'create'"
+    (closeRequested)="closeModal()"
+    (createRequested)="onCreate($event)"
+  ></app-create-field-modal>
+
+  <app-edit-field-modal
+    [open]="activeModal === 'edit'"
+    [field]="selectedField"
+    (closeRequested)="closeModal()"
+    (updateRequested)="onUpdate($event)"
+  ></app-edit-field-modal>
+
+  <app-delete-field-modal
+    [open]="activeModal === 'delete'"
+    [field]="selectedField"
+    (closeRequested)="closeModal()"
+    (confirmDelete)="onDelete()"
+  ></app-delete-field-modal>
+</section>

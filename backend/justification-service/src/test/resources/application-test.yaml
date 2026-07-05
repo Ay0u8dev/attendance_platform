@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:justification_service_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop 
+    show-sql: false
+
+  main:
+    banner-mode: off
+  rabbitmq:
+    dynamic: false
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+app:
+  rabbitmq:
+    notifications:
+      exchange: notifications.exchange
+      routing-key: notification.requested
+
+cloudflare:
+  r2:
+    endpoint: https://dummy.r2.test
+    access-key: dummy-access-key
+    secret-key: dummy-secret-key
+    bucket-name: dummy-bucket

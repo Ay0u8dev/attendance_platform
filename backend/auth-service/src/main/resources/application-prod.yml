@@ -1,0 +1,33 @@
+server:
+  port: 8080
+
+app:
+  allowed-domain: "ump.ac.ma"
+  allow-all-domains: ${ALLOW_ALL_DOMAINS:false}
+  jwt:
+    issuer: "auth-service"
+    secret: ${JWT_SECRET}
+    expiration: ${JWT_EXPIRATION}
+
+google:
+  client-id: ${GOOGLE_CLIENT_ID}
+
+services:
+  user-service:
+    url: http://user-service:8080
+
+management:
+  metrics:
+    tags:
+      application: auth-service
+      environment: prod
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,info
+      discovery:
+        enabled: false
+  endpoint:
+    health:
+      probes:
+        enabled: true

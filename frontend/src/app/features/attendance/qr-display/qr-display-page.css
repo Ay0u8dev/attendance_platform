@@ -1,0 +1,13 @@
+.qr-output {
+  display: flex;
+  width: min(100%, 420px);
+  aspect-ratio: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-output svg {
+  width: 100%;
+  height: auto;
+  max-height: 420px;
+}

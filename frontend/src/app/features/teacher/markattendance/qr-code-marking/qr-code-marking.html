@@ -1,0 +1,177 @@
+<div class="qr-marking-page">
+  <header class="session-header">
+    <div class="session-info">
+      <div class="session-badge">
+        <span class="session-dot"></span>
+        SESSION EN COURS
+      </div>
+      <span class="session-date">
+        <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+        {{ sessionInfo.date }}
+      </span>
+    </div>
+
+    <div class="session-main">
+      <h1 class="session-title">{{ sessionInfo.module }}</h1>
+      <button type="button" class="btn-end" [disabled]="ending()" (click)="endSession()">
+        <i class="fa-solid fa-circle-stop" aria-hidden="true"></i>
+        {{ ending() ? 'Finalisation...' : 'Terminer la session' }}
+      </button>
+    </div>
+
+    <div class="session-meta">
+      <span>
+        <i class="fa-solid fa-users" aria-hidden="true"></i>
+        {{ sessionInfo.group }}
+      </span>
+      <span>
+        <i class="fa-regular fa-clock" aria-hidden="true"></i>
+        {{ sessionInfo.time }}
+      </span>
+      <span>
+        <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+        {{ sessionInfo.location }}
+      </span>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm font-semibold text-danger">
+      {{ error() }}
+    </div>
+  }
+
+  <!-- Section QR Code + Étudiants scannés combinée -->
+  <section class="qr-section">
+    <div class="qr-container">
+      <div class="qr-code-box">
+        <div class="qr-placeholder" [class.has-code]="activePayload()">
+          @if (qrLoading() && !activePayload()) {
+            <p class="qr-label">Génération du QR...</p>
+          } @else if (qrError()) {
+            <i class="fa-solid fa-triangle-exclamation qr-icon" aria-hidden="true"></i>
+            <p class="qr-label">{{ qrError() }}</p>
+          } @else {
+            <div #qrContainer class="qr-output" aria-live="polite"></div>
+            @if (!activePayload()) {
+              <i class="fa-solid fa-qrcode qr-icon" aria-hidden="true"></i>
+              <p class="qr-label">Code QR</p>
+            }
+          }
+        </div>
+      </div>
+
+      <!-- Section des étudiants scannés à droite du QR -->
+      <div class="qr-scanned-section">
+        <div class="scanned-header">
+          <i class="fa-solid fa-check-circle text-success" aria-hidden="true"></i>
+          <h3 class="scanned-title">Étudiants scannés</h3>
+          <span class="scanned-count">{{ scannedStudents().length }}/{{ totalStudents() }}</span>
+        </div>
+
+        <div class="scanned-list-container">
+          @if (scannedStudents().length === 0) {
+            <div class="empty-scanned">
+              <i class="fa-solid fa-qrcode empty-icon" aria-hidden="true"></i>
+              <p class="empty-text">Aucun scan pour le moment</p>
+              <p class="empty-subtext">Le QR code est actif, les étudiants peuvent scanner</p>
+            </div>
+          } @else {
+            <div class="scanned-list">
+              @for (student of scannedStudents(); track student.id) {
+                <!-- Style identique à la liste manuelle mais sans boutons -->
+                <div class="scanned-item">
+                  <app-user-avatar
+                    [name]="student.name"
+                    [imageUrl]="student.pfpUrl"
+                    size="md"
+                  ></app-user-avatar>
+                  <div class="scanned-details">
+                    <p class="scanned-name">{{ student.name }}</p>
+                    <span class="scanned-id">{{ student.studentId }}</span>
+                  </div>
+                  <span class="scanned-time-badge">
+                    <i class="fa-solid fa-clock" aria-hidden="true"></i>
+                    {{ student.scannedAt }}
+                  </span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section Marquage manuel -->
+  <section class="students-section">
+    <div class="section-header">
+      <i class="fa-solid fa-hand-pointer text-primary" aria-hidden="true"></i>
+      <h2 class="section-title">Marquage manuel</h2>
+      <div class="manual-counters">
+        <span class="manual-counter present">{{ presentCount() }} présents</span>
+        <span class="manual-counter absent">{{ absentCount() }} absents</span>
+      </div>
+    </div>
+
+    <div class="manual-actions">
+      <button
+        type="button"
+        class="btn-all-present"
+        [disabled]="manualStudents().length === 0 || savingStudentId() !== null"
+        (click)="markAllPresent()"
+      >
+        <i class="fa-solid fa-check-double" aria-hidden="true"></i>
+        Tous présents
+      </button>
+    </div>
+
+    <div class="students-list">
+      @if (manualStudents().length === 0) {
+        <div class="empty-state">
+          <i class="fa-solid fa-inbox empty-icon" aria-hidden="true"></i>
+          <p class="empty-text">Aucun étudiant dans cette session.</p>
+        </div>
+      } @else {
+        @for (student of manualStudents(); track student.id) {
+          <div
+            class="student-item manual-item"
+            [class.row-present]="student.status === 'present'"
+            [class.row-absent]="student.status === 'absent'"
+          >
+            <app-user-avatar
+              [name]="student.name"
+              [imageUrl]="student.pfpUrl"
+              size="md"
+            ></app-user-avatar>
+            <div class="student-details">
+              <p class="student-name">{{ student.name }}</p>
+              <span class="student-id manual-student-id">{{ student.studentId }}</span>
+            </div>
+
+            <div class="status-buttons">
+              <button
+                type="button"
+                class="btn-status present"
+                [class.active]="student.status === 'present'"
+                [disabled]="savingStudentId() === student.id"
+                (click)="setManualStatus(student.id, 'present')"
+              >
+                PRÉSENT
+              </button>
+              <button
+                type="button"
+                class="btn-status absent"
+                [class.active]="student.status === 'absent'"
+                [disabled]="savingStudentId() === student.id"
+                (click)="setManualStatus(student.id, 'absent')"
+              >
+                ABSENT
+              </button>
+            </div>
+          </div>
+        }
+      }
+    </div>
+  </section>
+</div>

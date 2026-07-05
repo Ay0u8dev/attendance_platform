@@ -1,0 +1,33 @@
+# ================= BUILD STAGE =================
+FROM node:20-alpine AS build
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build -- --configuration production
+
+
+# ================= RUNTIME STAGE =================
+FROM node:20-alpine
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+RUN addgroup -g 1001 -S nodejs \
+    && adduser -S nodejs -u 1001 -G nodejs \
+    && chown nodejs:nodejs /app
+
+COPY --chown=nodejs:nodejs --from=build /app/dist ./dist
+COPY --chown=nodejs:nodejs --from=build /app/package*.json ./
+
+USER nodejs
+
+RUN npm ci --omit=dev && npm cache clean --force
+
+EXPOSE 4000
+
+CMD ["node", "dist/frontend/server/server.mjs"]

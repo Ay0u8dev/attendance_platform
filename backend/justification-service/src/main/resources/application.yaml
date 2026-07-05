@@ -1,0 +1,11 @@
+spring:
+    application:
+        name: justification-service
+
+    config:
+        import:
+            - optional:file:.env[.properties]
+            - optional:file:backend/justification-service/.env[.properties]
+
+    profiles:
+        active: ${PROFILE:dev}

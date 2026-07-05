@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: attendance-service
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:backend/attendance-service/.env[.properties]
+  profiles:
+    active: ${PROFILE:dev}

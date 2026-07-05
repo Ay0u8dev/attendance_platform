@@ -1,0 +1,52 @@
+<section class="space-y-5">
+  <app-formations-list
+    [formations]="filteredFormations()"
+    (createClicked)="openCreate()"
+    (manageClicked)="openEdit($event)"
+    (deleteClicked)="openDelete($event)"
+    (bulkDeleteRequested)="onBulkDeleteRequested($event)"
+  ></app-formations-list>
+
+  <app-delete-modal
+    [open]="isBulkDeleteOpen()"
+    title="Supprimer les formations sélectionnées ?"
+    [itemName]="bulkDeleteItems().length + ' formation(s)'"
+    confirmMessage="Vous êtes sur le point de supprimer :"
+    warningMessage="Cette action est irréversible."
+    deleteButtonLabel="Supprimer"
+    [requireConfirmation]="true"
+    confirmationText="SUPPRIMER"
+    (closeRequested)="closeBulkDelete()"
+    (confirmDelete)="onBulkDeleteConfirmed()"
+  ></app-delete-modal>
+
+  <app-create-formation-modal
+    [open]="activeModal === 'create'"
+    [cycles]="cycles()"
+    [defaultAcademicYearId]="selectedAcademicYear()"
+    [cycleOptions]="cycleOptions()"
+    [fieldOptions]="fieldOptions()"
+    [academicYearOptions]="academicYearOptions()"
+    (closeRequested)="closeModal()"
+    (createRequested)="onCreate($event)"
+  ></app-create-formation-modal>
+
+  <app-edit-formation-modal
+    [open]="activeModal === 'edit'"
+    [formation]="selectedFormation"
+    [cycles]="cycles()"
+    [defaultAcademicYearId]="selectedAcademicYear()"
+    [cycleOptions]="cycleOptions()"
+    [fieldOptions]="fieldOptions()"
+    [academicYearOptions]="academicYearOptions()"
+    (closeRequested)="closeModal()"
+    (updateRequested)="onUpdate($event)"
+  ></app-edit-formation-modal>
+
+  <app-delete-formation-modal
+    [open]="activeModal === 'delete'"
+    [formation]="selectedFormation"
+    (closeRequested)="closeModal()"
+    (confirmDelete)="onDelete()"
+  ></app-delete-formation-modal>
+</section>

@@ -20,7 +20,9 @@ api:
 providers:
   file:
     filename: /etc/traefik/routes.dev.yml
-    watch: true # Traefik reloads routes automatically when you edit this file
+    watch: true
+  docker:
+    exposedByDefault: false
 
 # replace with this if running service in docker for dynamic config in prod:
 # providers:

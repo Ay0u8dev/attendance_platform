@@ -1,0 +1,66 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    openfeign:
+      okhttp:
+        enabled: true
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://attendance-db:5432/attendance_db}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:3}
+      minimum-idle: ${DB_MIN_IDLE:0}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:30000}
+      idle-timeout: ${DB_IDLE_TIMEOUT_MS:600000}
+      max-lifetime: ${DB_MAX_LIFETIME_MS:1800000}
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+services:
+  attendance-service:
+    url: http://attendance-service:8080
+  notification-service:
+    url: http://notification-service:8080
+
+app:
+  internal:
+    service-token: ${INTERNAL_SERVICE_TOKEN}
+  azure:
+    servicebus:
+      connection-string: ${AZURE_SERVICEBUS_CONNECTION_STRING}
+      notifications-queue: ${AZURE_SERVICEBUS_NOTIFICATIONS_QUEUE:notification-service-notifications}
+
+cloudflare:
+  r2:
+    endpoint: ${R2_ENDPOINT}
+    access-key: ${R2_ACCESS_KEY}
+    secret-key: ${R2_SECRET_KEY}
+    bucket-name: ${R2_BUCKET_NAME}
+
+management:
+  health:
+    rabbit:
+      enabled: false
+  metrics:
+    tags:
+      application: justification-service
+      environment: prod
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,info
+      discovery:
+        enabled: false
+  endpoint:
+    health:
+      probes:
+        enabled: true

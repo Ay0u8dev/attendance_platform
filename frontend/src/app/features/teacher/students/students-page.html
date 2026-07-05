@@ -1,0 +1,317 @@
+<section class="teacher-page">
+  <app-page-header
+    [title]="selectedGroupName() ? 'Étudiants - ' + selectedGroupName() : 'Gestion des étudiants'"
+    [description]="
+      selectedGroupName()
+        ? 'Liste des étudiants inscrits dans le groupe ' + selectedGroupName()
+        : 'Vue d\'ensemble des étudiants inscrits dans vos modules'
+    "
+  ></app-page-header>
+
+  @if (error()) {
+    <div class="teacher-page-alert">{{ error() }}</div>
+  }
+
+  <section class="teacher-page-panel">
+    <div>
+      <p class="teacher-page-panel-title">Liste des etudiants</p>
+      <p class="teacher-page-panel-subtitle">
+        @if (selectedGroupName()) {
+          Etudiants inscrits dans {{ selectedGroupName() }}
+        } @else {
+          Vue d'ensemble des etudiants inscrits dans vos modules
+        }
+      </p>
+    </div>
+    <label class="teacher-search-field md:max-w-sm">
+      <span class="sr-only">Rechercher un etudiant</span>
+      <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+      <input
+        type="search"
+        class="teacher-search-input"
+        placeholder="Nom, email ou apogee..."
+        [value]="searchQuery()"
+        (input)="updateSearchQuery(($any($event.target).value ?? '').toString())"
+      />
+    </label>
+  </section>
+
+  <section class="teacher-page-section">
+    <div class="teacher-page-section-header md:hidden">
+      <h2>Mes etudiants</h2>
+      <p>{{ filteredStudents().length }} etudiant(s)</p>
+    </div>
+
+    @if (loading()) {
+      <div class="teacher-page-loading">Chargement...</div>
+    } @else if (filteredStudents().length === 0) {
+      <div class="teacher-page-empty">
+        <p class="text-sm font-semibold text-principalText">Aucun etudiant trouve</p>
+        <p class="mt-1 text-xs text-secondaryText">Ajustez votre recherche ou vos filtres.</p>
+      </div>
+    } @else {
+      <section class="space-y-3 md:hidden">
+        <div class="space-y-3">
+          @for (row of filteredStudents(); track row.email) {
+            <article
+              class="rounded-2xl border border-line bg-surface px-4 py-4 shadow-sm cursor-pointer transition-colors hover:bg-surface-subtle"
+              (click)="selectStudent(row)"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex min-w-0 items-center gap-3">
+                  <app-user-avatar
+                    [name]="row.name"
+                    [imageUrl]="row.raw.pfpUrl"
+                    size="sm"
+                  ></app-user-avatar>
+                  <div class="min-w-0">
+                    <p class="truncate text-sm font-semibold text-principalText">{{ row.name }}</p>
+                    <p class="mt-1 truncate text-xs text-secondaryText">{{ row.email }}</p>
+                  </div>
+                </div>
+                <app-status-badge [label]="row.status" [variant]="row.variant"></app-status-badge>
+              </div>
+
+              <div class="mt-4 grid gap-2 text-xs text-secondaryText">
+                <span class="inline-flex items-center gap-2">
+                  <i class="fa-solid fa-id-card text-muted" aria-hidden="true"></i>
+                  Apogee {{ row.apogee }}
+                </span>
+                <span class="inline-flex items-center gap-2">
+                  <i class="fa-regular fa-clock text-muted" aria-hidden="true"></i>
+                  Derniere activite · {{ row.lastSeen }}
+                </span>
+              </div>
+
+              <div class="mt-4 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  class="teacher-table-icon-btn"
+                  title="Voir l historique"
+                  aria-label="Voir l historique"
+                  (click)="openHistory(); $event.stopPropagation()"
+                >
+                  <i class="fa-solid fa-clock-rotate-left text-xs" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  class="teacher-table-icon-btn"
+                  title="Envoyer un message"
+                  aria-label="Envoyer un message"
+                  (click)="messageStudent(row); $event.stopPropagation()"
+                >
+                  <i class="fa-regular fa-envelope text-xs" aria-hidden="true"></i>
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+
+      <div class="teacher-table-shell hidden md:block">
+        <div class="teacher-table-grid teacher-table-grid--students teacher-table-head">
+          <span>Étudiant</span>
+          <span>E-mail</span>
+          <span>Apogée</span>
+          <span>Groupe</span>
+        </div>
+
+        @for (row of filteredStudents(); track row.email) {
+          <div
+            class="teacher-table-grid teacher-table-grid--students teacher-table-row clickable"
+            (click)="selectStudent(row)"
+          >
+            <div class="flex min-w-0 items-center gap-2">
+              <app-user-avatar
+                [name]="row.name"
+                [imageUrl]="row.raw.pfpUrl"
+                size="sm"
+              ></app-user-avatar>
+              <div class="min-w-0">
+                <p class="truncate font-semibold text-principalText">{{ row.name }}</p>
+              </div>
+            </div>
+
+            <p class="truncate text-sm text-secondaryText">{{ row.email }}</p>
+            <span class="text-sm text-secondaryText">{{ row.apogee }}</span>
+            <span class="text-sm text-secondaryText">{{ row.groupName }}</span>
+          </div>
+        }
+      </div>
+    }
+  </section>
+
+  <!-- Modal Détails Étudiant -->
+  <app-modal
+    title="Détails de l'étudiant"
+    [open]="!!selectedStudent()"
+    (closed)="closeStudentDetails()"
+    [showFooter]="true"
+    size="md"
+  >
+    @if (selectedStudent(); as student) {
+      <div modal-body class="space-y-5 py-1">
+        <!-- Profile summary -->
+        <div class="flex items-center gap-4">
+          <app-user-avatar
+            [name]="student.name"
+            [imageUrl]="student.raw.pfpUrl"
+            [alt]="'Photo de profil de ' + student.name"
+            size="lg"
+          ></app-user-avatar>
+
+          <div class="min-w-0">
+            <h3 class="truncate text-base font-bold text-principalText">{{ student.name }}</h3>
+            <p class="mt-0.5 truncate text-sm text-secondaryText">{{ student.email }}</p>
+            @if (student.formation || student.groupName) {
+              <div
+                class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-secondaryText"
+              >
+                @if (student.formation) {
+                  <span>Formation: {{ student.formation }}</span>
+                }
+                @if (student.groupName) {
+                  <span>Groupe: {{ student.groupName }}</span>
+                }
+                @if (student.apogee) {
+                  <span>Code Apogée: {{ student.apogee }}</span>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Info Grid -->
+        <!-- <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div class="p-3 bg-surface rounded-xl border border-line flex items-center gap-3">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+              <i class="fa-solid fa-id-card text-sm"></i>
+            </div>
+            <div class="min-w-0">
+              <p class="text-xxs uppercase tracking-wider font-bold text-secondaryText">Code Apogée</p>
+              <p class="text-xs font-bold text-principalText mt-0.5 truncate">{{ student.apogee }}</p>
+            </div>
+          </div>
+
+          <div class="p-3 bg-surface rounded-xl border border-line flex items-center gap-3">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success-soft text-success">
+              <i class="fa-regular fa-calendar text-sm"></i>
+            </div>
+            <div class="min-w-0">
+              <p class="text-xxs uppercase tracking-wider font-bold text-secondaryText">Date d'inscription</p>
+              <p class="text-xs font-bold text-principalText mt-0.5 truncate">{{ student.joinedDate }}</p>
+            </div>
+          </div>
+
+          <div class="p-3 bg-surface rounded-xl border border-line flex items-center gap-3">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-danger-soft text-danger">
+              <i class="fa-regular fa-calendar-times text-sm"></i>
+            </div>
+            <div class="min-w-0">
+              <p class="text-xxs uppercase tracking-wider font-bold text-secondaryText">Absences par module</p>
+              <p class="text-xs font-bold text-principalText mt-0.5 truncate">
+                {{ absentSessions().length }}
+              </p>
+            </div>
+          </div>
+        </div> -->
+
+        <!-- Section Historique des Absences -->
+        <div class="p-4 bg-surface rounded-xl border border-line space-y-3.5">
+          <div class="flex justify-between items-center pb-2 border-b border-line">
+            <span class="font-bold text-secondaryText text-xs">Historique des Absences</span>
+            <span
+              class="px-2 py-0.5 bg-danger-soft text-danger font-bold rounded text-xxs uppercase tracking-wider"
+            >
+              {{ absentSessions().length }} au total
+            </span>
+          </div>
+
+          <div>
+            <label
+              class="block text-xxs font-bold uppercase tracking-wider text-secondaryText mb-1.5"
+              >Filtrer par module :</label
+            >
+            <select
+              class="w-full text-xs border border-line rounded-lg bg-surface px-2.5 py-2 font-medium text-principalText focus:outline-none focus:border-primary"
+              (change)="onModuleFilterChange($any($event.target).value)"
+            >
+              <option value="">Tous les modules ({{ absentSessions().length }} absences)</option>
+              @for (mod of modulesWithAbsencesCount(); track mod.name) {
+                <option [value]="mod.name">
+                  {{ mod.name }} ({{ mod.count }} {{ mod.count > 1 ? 'absences' : 'absence' }})
+                </option>
+              }
+            </select>
+          </div>
+
+          @if (loadingAbsences()) {
+            <div class="text-xs text-secondaryText text-center py-4">
+              Chargement des absences...
+            </div>
+          } @else if (filteredAbsentSessions().length === 0) {
+            <div
+              class="text-xs text-secondaryText text-center py-4 bg-surface-subtle rounded-lg border border-line border-dashed"
+            >
+              Aucune absence enregistrée pour ce filtre.
+            </div>
+          } @else {
+            <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+              @for (session of filteredAbsentSessions(); track session.sessionId) {
+                <div
+                  class="p-2.5 bg-surface rounded-lg border border-line flex items-center justify-between text-xs transition-colors hover:bg-surface-subtle"
+                >
+                  <div class="min-w-0">
+                    <p class="font-bold text-principalText truncate">{{ session.courseLabel }}</p>
+                    <p class="text-xxs text-secondaryText mt-0.5">
+                      {{ formatDate(session.startedAt) }} ·
+                      {{ formatTimeRange(session.startedAt, session.endedAt) }}
+                    </p>
+                  </div>
+                  <span
+                    class="px-2 py-0.5 bg-danger-soft text-danger font-semibold rounded text-xxs uppercase tracking-wider shrink-0"
+                  >
+                    Absent
+                  </span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Additional details / roles -->
+        <div class="p-4 bg-surface rounded-xl border border-line space-y-3.5">
+          <div class="flex flex-wrap justify-between items-center gap-2 text-xs">
+            <span class="font-bold text-secondaryText">Rôles système</span>
+            <div class="flex flex-wrap gap-1">
+              @for (role of student.raw.roles; track role) {
+                <span
+                  class="px-2 py-0.5 bg-line rounded text-xxs font-bold uppercase tracking-wider text-secondaryText"
+                >
+                  {{ role }}
+                </span>
+              }
+            </div>
+          </div>
+
+          <div class="border-t border-line pt-3 flex justify-between items-center text-xs">
+            <span class="font-bold text-secondaryText">Contacter l'étudiant</span>
+            <button
+              type="button"
+              class="teacher-secondary-btn !py-1 !px-2.5 text-xs flex items-center gap-1.5"
+              (click)="messageStudent(student)"
+            >
+              <i class="fa-regular fa-envelope"></i>
+              Envoyer un email
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+    <div modal-footer class="flex w-full items-center justify-end">
+      <button type="button" class="teacher-secondary-btn" (click)="closeStudentDetails()">
+        Fermer
+      </button>
+    </div>
+  </app-modal>
+</section>

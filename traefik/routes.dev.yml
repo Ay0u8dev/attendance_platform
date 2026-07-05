@@ -12,19 +12,62 @@ http:
       middlewares: ["strip-api-auth"]
       service: auth-service
 
-    # Attendance routes — protected, JWT required
+
+    user:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/users`) && !PathPrefix(`/api/users/internal`)"
+      middlewares: ["forward-auth", "strip-api-user"]
+      service: user-service
+
+    # Attendance WebSocket handshake route — no forward-auth here.
+    # WebSocket/STOMP auth is handled inside attendance-service on CONNECT.
+    attendance-ws:
+      entryPoints: ["web"]
+      rule: "Path(`/api/ws/attendance/ws`)"
+      middlewares: ["strip-api-ws-attendance"]
+      service: attendance-service
+
     attendance:
       entryPoints: ["web"]
-      rule: "PathPrefix(`/api/attendance`)"
+      rule: "PathPrefix(`/api/attendance`) && !PathPrefix(`/api/attendance/internal`)"
       middlewares: ["forward-auth", "strip-api-attendance"]
       service: attendance-service
 
-    # Face recognition routes — protected, JWT required
+    justification:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/justifications`)"
+      middlewares: [
+          # "cors",
+          "forward-auth",
+          "strip-api-justification",
+        ]
+      service: justification-service
+
+    qr:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/qr`)"
+      middlewares: ["forward-auth", "strip-api-qr"]
+      service: qr-service
+
+    # # Face recognition routes — protected, JWT required
     face:
       entryPoints: ["web"]
       rule: "PathPrefix(`/api/face`)"
       middlewares: ["forward-auth", "strip-api-face"]
       service: face-service
+
+    # Notification routes — protected, JWT required
+    notification:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/api/notifications`) && !PathPrefix(`/api/notifications/internal`)"
+      middlewares: ["forward-auth", "strip-api-notification"]
+      service: notification-service
+
+    notifications-ws:
+      entryPoints: ["web"]
+      rule: "Path(`/api/ws/notifications/ws`)"
+      middlewares: ["strip-api-ws-notifications"]
+      service: notification-service
 
     # Frontend — catches everything else, no auth needed
     # Priority is lowest because PathPrefix(/) matches everything.
@@ -40,37 +83,59 @@ http:
   middlewares:
     # StripPrefix removes the path prefix before forwarding.
     # Your Spring Boot service doesn't know it's behind a gateway,
-    # so it expects /login not /api/auth/login.
-    # We strip /api/auth so Spring Boot receives just /login.
+    # so it expects /auth/login not /api/auth/login.
+    # We strip /api so Spring Boot receives just /auth/login.
     strip-api-auth:
       stripPrefix:
-        prefixes: ["/api/auth"]
+        prefixes: ["/api"]
 
     strip-api-attendance:
       stripPrefix:
-        prefixes: ["/api/attendance"]
+        prefixes: ["/api"]
+
+    strip-api-justification:
+      stripPrefix:
+        prefixes: ["/api"]
+
+    strip-api-qr:
+      stripPrefix:
+        prefixes: ["/api"]
+
+    strip-api-ws-attendance:
+      stripPrefix:
+        prefixes: ["/api/ws"]
 
     strip-api-face:
       stripPrefix:
-        prefixes: ["/api/face"]
+        prefixes: ["/api"]
 
+    strip-api-user:
+      stripPrefix:
+        prefixes: ["/api"]
+
+    strip-api-notification:
+      stripPrefix:
+        prefixes: ["/api"]
+
+    strip-api-ws-notifications:
+      stripPrefix:
+        prefixes: ["/api/ws"]
     # ForwardAuth — this is the JWT validation middleware.
     # Before forwarding any request to a protected service, Traefik
     # makes a request to your auth service's /validate endpoint.
     # If it returns 200, the request goes through + headers are injected.
     # If it returns 401, the request is blocked and the client gets 401.
 
-    # ======== WARNING : turn on when endpoint is ready ========
-    # forward-auth:
-    #   forwardAuth:
-    #     address: "http://host.docker.internal:8081/auth/validate"
-    #     # These are the headers the auth service returns on success.
-    #     # Traefik copies them and injects them into the forwarded request.
-    #     # Your other services read these instead of dealing with JWT at all.
-    #     authResponseHeaders:
-    #       - "X-User-Id"
-    #       - "X-User-Role"
-    #       - "X-User-Email"
+    forward-auth:
+      forwardAuth:
+        address: "http://host.docker.internal:8081/auth/validate"
+        # These are the headers the auth service returns on success.
+        # Traefik copies them and injects them into the forwarded request.
+        # Your other services read these instead of dealing with JWT at all.
+        authResponseHeaders:
+          - "X-User-Id"
+          - "X-User-Roles"
+          - "X-User-Email"
 
   # ── Services ─────────────────────────────────────────────────
   # A service is the actual backend. Traefik forwards the request here
@@ -84,17 +149,38 @@ http:
         servers:
           - url: "http://host.docker.internal:8081"
 
-    attendance-service:
+    user-service:
       loadBalancer:
         servers:
           - url: "http://host.docker.internal:8082"
 
-    face-service:
+    attendance-service:
       loadBalancer:
         servers:
-          - url: "http://host.docker.internal:8000"
+          - url: "http://host.docker.internal:8083"
+
+    justification-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8085"
+
+    qr-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8001"
 
     frontend-service:
       loadBalancer:
         servers:
           - url: "http://host.docker.internal:4200"
+
+    face-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8002"
+
+    notification-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8086"
+

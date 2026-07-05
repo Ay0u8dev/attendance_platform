@@ -1,0 +1,39 @@
+server:
+  port: 8082
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/users_db
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  devtools:
+    livereload:
+      enabled: true
+    restart:
+      enabled: true
+      poll-interval: 2s
+      quiet-period: 1s
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+app:
+  internal:
+    service-token: ${INTERNAL_SERVICE_TOKEN:internal_service_token_abdoelfadili}
+
+cloudflare:
+  r2:
+    endpoint: ${R2_ENDPOINT:https://dummy.r2.cloudflarestorage.com}
+    access-key: ${R2_ACCESS_KEY:dummy-access-key}
+    secret-key: ${R2_SECRET_KEY:dummy-secret-key}
+    bucket-name: ${R2_BUCKET_NAME:dummy-bucket}
+    public-url: ${R2_PUBLIC_URL:}

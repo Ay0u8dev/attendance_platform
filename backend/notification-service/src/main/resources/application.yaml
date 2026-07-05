@@ -1,6 +1,12 @@
 spring:
-  application:
-    name: notification-service
+    application:
+        name: notification-service
 
-server:
-  port: 9000
+    config:
+
+        import:
+            - optional:file:.env[.properties]
+            - optional:file:backend/notification-service/.env[.properties]
+
+    profiles:
+        active: ${PROFILE:dev}

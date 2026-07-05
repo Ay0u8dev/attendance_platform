@@ -1,0 +1,55 @@
+server:
+  port: 8085
+
+spring:
+  cloud:
+    openfeign:
+      okhttp:
+        enabled: true
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5434/attendance_db}
+    username: ${POSTGRES_USER:admin}
+    password: ${POSTGRES_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+
+services:
+  attendance-service:
+    url: http://localhost:8083
+  notification-service:
+    url: http://localhost:8086
+  user-service:
+    url: http://localhost:8082
+
+app:
+  internal:
+    service-token: ${INTERNAL_SERVICE_TOKEN:internal_service_token_abdoelfadili}
+  rabbitmq:
+    notifications:
+      exchange: ${NOTIFICATIONS_EXCHANGE:notifications.exchange}
+      routing-key: ${NOTIFICATIONS_ROUTING_KEY:notification.requested}
+
+cloudflare:
+  r2:
+    endpoint: ${R2_ENDPOINT:https://dummy.r2.cloudflarestorage.com}
+    access-key: ${R2_ACCESS_KEY:dummy-access-key}
+    secret-key: ${R2_SECRET_KEY:dummy-secret-key}
+    bucket-name: ${R2_BUCKET_NAME:dummy-bucket}

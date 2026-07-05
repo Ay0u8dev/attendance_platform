@@ -1,0 +1,88 @@
+package ma.eniad.attendanceservice.controller;
+
+import ma.eniad.attendanceservice.config.RoleCheckInterceptor;
+import ma.eniad.attendanceservice.config.WebConfig;
+import ma.eniad.attendanceservice.dto.PagedResponse;
+import ma.eniad.attendanceservice.dto.StudentAttendanceOverviewResponse;
+import ma.eniad.attendanceservice.dto.StudentAttendanceSessionDetailResponse;
+import ma.eniad.attendanceservice.dto.StudentAttendanceSessionSummaryResponse;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionMethod;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.exception.GlobalExceptionHandler;
+import ma.eniad.attendanceservice.service.AttendanceQueryService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import static ma.eniad.attendanceservice.controller.TestRequestHeaders.studentUser;
+import static ma.eniad.attendanceservice.controller.TestRequestHeaders.teacherUser;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(AttendanceStudentController.class)
+@Import({WebConfig.class, RoleCheckInterceptor.class, GlobalExceptionHandler.class})
+class AttendanceStudentControllerWebMvcTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private AttendanceQueryService attendanceQueryService;
+
+    @Test
+    void studentHistorySucceedsForStudent() throws Exception {
+        when(attendanceQueryService.getStudentSessions(anyLong(), any(), any(), any(), any()))
+                .thenReturn(new PagedResponse<>(
+                        List.of(new StudentAttendanceSessionSummaryResponse(
+                                100L, "Ayoub Elebbar", "Distributed Systems", "Room B12", List.of(1L),
+                                AttendanceSessionStatus.FINALIZED, LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30),
+                                AttendanceStudentStatus.PRESENT, AttendanceSessionMethod.QR_CODE, LocalDateTime.of(2026, 4, 28, 12, 5)
+                        )),
+                        0, 20, 1, 1
+                ));
+
+        mockMvc.perform(get("/attendance/student/sessions").with(studentUser()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].attendanceStatus").value("PRESENT"));
+    }
+
+    @Test
+    void studentDetailAndOverviewUseStudentRole() throws Exception {
+        when(attendanceQueryService.getStudentSession(12L, 100L))
+                .thenReturn(new StudentAttendanceSessionDetailResponse(
+                        100L, "Ayoub Elebbar", "Distributed Systems", "Room B12", List.of(1L),
+                        AttendanceSessionStatus.FINALIZED, LocalDateTime.of(2026, 4, 28, 12, 0), LocalDateTime.of(2026, 4, 28, 12, 30), LocalDateTime.of(2026, 4, 28, 12, 30),
+                        12L, 1L, "Aya", "Bennani", "aya@ump.ac.ma", "https://cdn.example.com/aya.jpg", "A001",
+                        AttendanceStudentStatus.PRESENT, AttendanceSessionMethod.QR_CODE, LocalDateTime.of(2026, 4, 28, 12, 5)
+                ));
+        when(attendanceQueryService.getStudentOverview(12L))
+                .thenReturn(new StudentAttendanceOverviewResponse(10, 9, 1, 0.9));
+
+        mockMvc.perform(get("/attendance/student/sessions/100").with(studentUser()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.studentId").value(12))
+                .andExpect(jsonPath("$.teacherFullName").value("Ayoub Elebbar"))
+                .andExpect(jsonPath("$.markedGpsLat").doesNotExist());
+
+        mockMvc.perform(get("/attendance/student/overview").with(studentUser()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.attendanceRate").value(0.9));
+    }
+
+    @Test
+    void studentEndpointsRejectNonStudent() throws Exception {
+        mockMvc.perform(get("/attendance/student/overview").with(teacherUser()))
+                .andExpect(status().isForbidden());
+    }
+}
