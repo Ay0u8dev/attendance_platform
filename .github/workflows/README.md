@@ -4,7 +4,7 @@ The new CI/CD is main-only and contains two connected workflows:
 
 ```text
 Pull request to main -> tests + coverage + SonarCloud
-Push to main         -> validation -> 7 images -> Trivy -> infra PR -> Slack
+Push to main         -> validation -> 8 images -> Trivy -> infra PR -> Slack
 ```
 
 The restored legacy `backend-ci.yml` remains unchanged from `dev` and therefore
@@ -39,7 +39,7 @@ vulnerability counts and SARIF feeds GitHub Security. HIGH/CRITICAL findings are
 warnings, while a scanner execution failure stops the infrastructure handoff.
 
 After all images and scans succeed, the workflow temporarily checks out
-`Ay0u8dev/attendance-infra`, changes exactly seven existing image tags, validates
+`Ay0u8dev/attendance-infra`, changes exactly eight existing image tags, validates
 the AKS manifests, and opens or updates a pull request. GitHub Actions never
 receives AKS credentials or runs `kubectl apply`; Argo CD deploys after review.
 
@@ -86,7 +86,7 @@ the SonarCloud Quality Gate a required GitHub check while it is warning-only.
 1. Open a pull request targeting `main` and confirm all validation jobs pass.
 2. Merge only after review; the resulting push starts `Main Release`.
 3. Confirm eight SonarCloud projects received the source commit.
-4. Confirm seven `0.0.N` images and Trivy reports exist.
+4. Confirm eight `0.0.N` images and Trivy reports exist.
 5. Confirm Slack receives one summary and the infra change is only a pull request.
 
 Common failures:
