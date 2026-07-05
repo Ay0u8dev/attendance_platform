@@ -1,6 +1,7 @@
 package ma.eniad.notificationservice.config;
 
 import com.azure.messaging.servicebus.ServiceBusClientBuilder;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import ma.eniad.notificationservice.messaging.AzureServiceBusProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -16,5 +17,10 @@ public class AzureServiceBusConfig {
     public ServiceBusClientBuilder serviceBusClientBuilder(AzureServiceBusProperties properties) {
         return new ServiceBusClientBuilder()
                 .connectionString(properties.requiredConnectionString());
+    }
+
+    @Bean
+    public ObjectMapper serviceBusObjectMapper() {
+        return new ObjectMapper().findAndRegisterModules();
     }
 }
