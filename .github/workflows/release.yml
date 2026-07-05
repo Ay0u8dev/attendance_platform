@@ -309,14 +309,28 @@ jobs:
           replace_image() {
             local file="$1"
             local image="$2"
-            local escaped="${image//./\\.}"
-            local count
-            count=$(grep -Ec "^[[:space:]]+image: ${escaped}:[^[:space:]]+[[:space:]]*$" "$file")
-            if [[ "$count" -ne 1 ]]; then
-              echo "Expected exactly one image reference for ${image} in ${file}; found ${count}." >&2
-              exit 1
-            fi
-            sed -i -E "s#^([[:space:]]+image: ${escaped}:)[^[:space:]]+([[:space:]]*)$#\\1${RELEASE_VERSION}\\2#" "$file"
+            python3 - "$file" "$image" "$RELEASE_VERSION" <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          image = sys.argv[2]
+          version = sys.argv[3]
+          text = path.read_text()
+          pattern = re.compile(rf"^(\s+image: {re.escape(image)}:)[^\s]+(\s*)$", re.MULTILINE)
+          matches = list(pattern.finditer(text))
+
+          if len(matches) != 1:
+              print(
+                  f"Expected exactly one image reference for {image} in {path}; found {len(matches)}.",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+
+          text = pattern.sub(lambda match: f"{match.group(1)}{version}{match.group(2)}", text)
+          path.write_text(text)
+          PY
           }
 
           replace_image "$backend" "ghcr.io/ay0u8dev/attendance-platform-auth"
