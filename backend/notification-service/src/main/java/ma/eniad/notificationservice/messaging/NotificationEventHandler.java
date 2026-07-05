@@ -1,5 +1,6 @@
 package ma.eniad.notificationservice.messaging;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ma.eniad.notificationservice.dto.CreateNotificationRequest;
@@ -16,9 +17,11 @@ import java.util.Set;
 public class NotificationEventHandler {
 
     private final NotificationService notificationService;
+    private final MeterRegistry meterRegistry;
 
     public void handle(NotificationRequestedEvent event) {
         if (!isValid(event)) {
+            increment("invalid");
             log.warn(
                     "Ignoring invalid notification event eventId={} eventSource={} type={} recipientUserId={}",
                     event == null ? null : event.eventId(),
@@ -31,6 +34,7 @@ public class NotificationEventHandler {
 
         Set<NotificationChannel> channels = event.channels();
         if (channels != null && !channels.isEmpty() && !channels.contains(NotificationChannel.IN_APP)) {
+            increment("ignored_no_in_app_channel");
             log.info(
                     "Ignoring notification event without IN_APP channel eventId={} eventSource={} type={} recipientUserId={}",
                     event.eventId(),
@@ -54,6 +58,14 @@ public class NotificationEventHandler {
                 event.relatedEntityId(),
                 event.metadataJson()
         ));
+        increment("created");
+    }
+
+    private void increment(String outcome) {
+        meterRegistry.counter(
+                "notification_events_consumed_total",
+                "outcome", outcome
+        ).increment();
     }
 
     private boolean isValid(NotificationRequestedEvent event) {

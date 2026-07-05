@@ -1,5 +1,6 @@
 package ma.eniad.notificationservice.email;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import ma.eniad.notificationservice.entity.Notification;
 import ma.eniad.notificationservice.entity.enums.EmailStatus;
 import ma.eniad.notificationservice.entity.enums.NotificationType;
@@ -107,7 +108,8 @@ class NotificationEmailOrchestratorTest {
         return new NotificationEmailOrchestrator(
                 properties,
                 publisher,
-                mock(NotificationEmailStatusService.class)
+                mock(NotificationEmailStatusService.class),
+                new SimpleMeterRegistry()
         );
     }
 

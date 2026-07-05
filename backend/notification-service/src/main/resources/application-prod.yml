@@ -63,10 +63,14 @@ management:
   health:
     rabbit:
       enabled: false
+  metrics:
+    tags:
+      application: notification-service
+      environment: prod
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,prometheus,info
       discovery:
         enabled: false
   endpoint:

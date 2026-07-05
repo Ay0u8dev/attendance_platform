@@ -17,10 +17,14 @@ services:
     url: http://user-service:8080
 
 management:
+  metrics:
+    tags:
+      application: auth-service
+      environment: prod
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,prometheus,info
       discovery:
         enabled: false
   endpoint:

@@ -2,6 +2,7 @@ package ma.eniad.attendanceservice.messaging;
 
 import ma.eniad.attendanceservice.dto.NotificationRequestedEvent;
 import ma.eniad.attendanceservice.entity.enums.NotificationChannel;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -21,7 +22,8 @@ class RabbitNotificationEventPublisherTest {
         RabbitTemplate rabbitTemplate = mock(RabbitTemplate.class);
         RabbitNotificationEventPublisher publisher = new RabbitNotificationEventPublisher(
                 rabbitTemplate,
-                new NotificationRabbitProperties("notifications.exchange", "notification.requested")
+                new NotificationRabbitProperties("notifications.exchange", "notification.requested"),
+                new SimpleMeterRegistry()
         );
         NotificationRequestedEvent event = event();
 

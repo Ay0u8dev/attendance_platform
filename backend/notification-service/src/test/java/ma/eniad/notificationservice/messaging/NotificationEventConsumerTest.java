@@ -1,5 +1,6 @@
 package ma.eniad.notificationservice.messaging;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import ma.eniad.notificationservice.dto.CreateNotificationRequest;
 import ma.eniad.notificationservice.dto.NotificationRequestedEvent;
 import ma.eniad.notificationservice.entity.enums.NotificationChannel;
@@ -28,7 +29,7 @@ class NotificationEventConsumerTest {
     @BeforeEach
     void setUp() {
         notificationService = mock(NotificationService.class);
-        handler = new NotificationEventHandler(notificationService);
+        handler = new NotificationEventHandler(notificationService, new SimpleMeterRegistry());
     }
 
     @Test

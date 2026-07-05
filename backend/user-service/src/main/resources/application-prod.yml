@@ -31,10 +31,14 @@ cloudflare:
     public-url: ${R2_PUBLIC_URL:}
 
 management:
+  metrics:
+    tags:
+      application: user-service
+      environment: prod
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,prometheus,info
       discovery:
         enabled: false
   endpoint:

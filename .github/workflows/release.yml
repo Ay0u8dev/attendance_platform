@@ -23,11 +23,14 @@ env:
   INFRA_AUTOMATION_BRANCH: automation/update-attendance-images
 
 jobs:
-  # A main release starts only after the same tests and required SonarCloud
-  # scans used by pull requests have succeeded.
+  # A main release starts only after selective validation for changed runtime
+  # services (plus required SonarCloud configuration checks) has succeeded.
   validation:
     name: Mandatory validation
     uses: ./.github/workflows/pr-ci.yml
+    with:
+      base_sha: ${{ github.event.before }}
+      head_sha: ${{ github.sha }}
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 

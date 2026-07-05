@@ -4,6 +4,7 @@ import com.azure.messaging.servicebus.ServiceBusClientBuilder;
 import com.azure.messaging.servicebus.ServiceBusMessage;
 import com.azure.messaging.servicebus.ServiceBusSenderClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import ma.eniad.justificationservice.dto.NotificationRequestedEvent;
 import ma.eniad.justificationservice.entity.enums.NotificationChannel;
 import org.junit.jupiter.api.Test;
@@ -31,7 +32,8 @@ class AzureServiceBusNotificationEventPublisherTest {
         AzureServiceBusNotificationEventPublisher publisher = new AzureServiceBusNotificationEventPublisher(
                 serviceBusClientBuilder,
                 new AzureServiceBusProperties("Endpoint=sb://example.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=test", "notification-service-notifications"),
-                new ObjectMapper().findAndRegisterModules()
+                new ObjectMapper().findAndRegisterModules(),
+                new SimpleMeterRegistry()
         );
 
         publisher.publish(event());

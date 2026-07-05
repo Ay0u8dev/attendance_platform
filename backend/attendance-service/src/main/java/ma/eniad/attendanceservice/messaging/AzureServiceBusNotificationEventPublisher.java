@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import ma.eniad.attendanceservice.dto.NotificationRequestedEvent;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +19,7 @@ public class AzureServiceBusNotificationEventPublisher implements NotificationEv
     private final ServiceBusClientBuilder serviceBusClientBuilder;
     private final AzureServiceBusProperties properties;
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
 
     @Override
     public void publish(NotificationRequestedEvent event) {
@@ -30,8 +32,21 @@ public class AzureServiceBusNotificationEventPublisher implements NotificationEv
                 message.setMessageId(event.eventId());
             }
             senderClient.sendMessage(message);
+            increment("success");
         } catch (JsonProcessingException ex) {
+            increment("serialization_failure");
             throw new IllegalArgumentException("Failed to serialize notification event", ex);
+        } catch (RuntimeException ex) {
+            increment("failure");
+            throw ex;
         }
+    }
+
+    private void increment(String outcome) {
+        meterRegistry.counter(
+                "notification_events_published_total",
+                "transport", "azure_service_bus",
+                "outcome", outcome
+        ).increment();
     }
 }

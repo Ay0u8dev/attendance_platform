@@ -4,6 +4,7 @@ import base64
 import binascii
 import hashlib
 import hmac
+import logging
 import os
 import time
 from datetime import datetime, timezone
@@ -13,8 +14,67 @@ import httpx
 from fastapi import FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, Field
 
+try:
+    from prometheus_client import Counter
+    from prometheus_fastapi_instrumentator import Instrumentator
+except ImportError:  # pragma: no cover - keeps local imports usable before pip install
+    Counter = None
+    Instrumentator = None
+
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="QR Attendance Service")
+
+
+def configure_tracing() -> None:
+    if not os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+        return
+    try:
+        from azure.monitor.opentelemetry import configure_azure_monitor
+    except ImportError:
+        logger.warning("Azure Monitor OpenTelemetry package is not installed")
+        return
+    configure_azure_monitor(logger_name=__name__)
+
+
+def expose_metrics() -> None:
+    if Instrumentator is None:
+        return
+    Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+
+
+class _NoopCounter:
+    def labels(self, **_: str) -> "_NoopCounter":
+        return self
+
+    def inc(self) -> None:
+        return None
+
+
+def counter(name: str, documentation: str, labelnames: list[str] | None = None):
+    if Counter is None:
+        return _NoopCounter()
+    return Counter(name, documentation, labelnames or [])
+
+
+QR_PAYLOADS_CREATED = counter(
+    "qr_payloads_created_total",
+    "Teacher QR payloads created successfully.",
+)
+QR_SCAN_ATTEMPTS = counter(
+    "qr_scan_attempts_total",
+    "Student QR scan attempts.",
+)
+QR_SCAN_RESULTS = counter(
+    "qr_scan_results_total",
+    "Student QR scan results by outcome.",
+    ["outcome"],
+)
+
+
+configure_tracing()
+expose_metrics()
 
 
 def _env(name: str, default: str) -> str:
@@ -76,6 +136,7 @@ async def create_teacher_qr_payload(
     now = int(time.time())
     expires_at_epoch = now + QR_TOKEN_TTL_SECONDS
     payload = sign_payload(session_id, now, expires_at_epoch)
+    QR_PAYLOADS_CREATED.inc()
     return TeacherQrPayloadResponse(
         sessionId=session_id,
         payload=payload,
@@ -91,13 +152,19 @@ async def scan_student_qr(
     x_user_id: str | None = Header(default=None, alias="X-User-Id"),
     x_user_roles: str | None = Header(default=None, alias="X-User-Roles"),
 ) -> Any:
+    QR_SCAN_ATTEMPTS.inc()
     require_role(x_user_id, x_user_roles, "STUDENT")
-    token_data = verify_payload(request.payload)
+    try:
+        token_data = verify_payload(request.payload)
+    except HTTPException:
+        QR_SCAN_RESULTS.labels(outcome="invalid_payload").inc()
+        raise
     session_id = token_data["sid"]
 
     try:
         student_id = int(x_user_id)
     except (TypeError, ValueError) as exc:
+        QR_SCAN_RESULTS.labels(outcome="invalid_user").inc()
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid user ID") from exc
 
     body = {
@@ -109,6 +176,7 @@ async def scan_student_qr(
     }
 
     if not INTERNAL_SERVICE_TOKEN:
+        QR_SCAN_RESULTS.labels(outcome="misconfigured").inc()
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             "Internal attendance authentication is not configured",
@@ -125,12 +193,16 @@ async def scan_student_qr(
         )
 
     if attendance_response.status_code >= 400:
+        QR_SCAN_RESULTS.labels(outcome="attendance_upstream_error").inc()
         raise HTTPException(attendance_response.status_code, extract_error_message(attendance_response))
 
     try:
-        return attendance_response.json()
+        response_body = attendance_response.json()
     except ValueError:
+        QR_SCAN_RESULTS.labels(outcome="invalid_upstream_response").inc()
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Invalid attendance service response")
+    QR_SCAN_RESULTS.labels(outcome="success").inc()
+    return response_body
 
 
 async def fetch_teacher_session(

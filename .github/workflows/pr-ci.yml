@@ -7,6 +7,15 @@ on:
     branches:
       - main
   workflow_call:
+    inputs:
+      base_sha:
+        description: Base commit SHA used to compute changed paths.
+        required: false
+        type: string
+      head_sha:
+        description: Head commit SHA used to compute changed paths.
+        required: false
+        type: string
     secrets:
       SONAR_TOKEN:
         required: true
@@ -19,6 +28,138 @@ env:
   SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
 
 jobs:
+  detect_changes:
+    name: Detect changed services
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      java_matrix: ${{ steps.detect.outputs.java_matrix }}
+      run_frontend: ${{ steps.detect.outputs.run_frontend }}
+      run_face: ${{ steps.detect.outputs.run_face }}
+      run_qr: ${{ steps.detect.outputs.run_qr }}
+      no_runtime_changes: ${{ steps.detect.outputs.no_runtime_changes }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed service paths
+        id: detect
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          INPUT_BASE_SHA: ${{ inputs.base_sha }}
+          INPUT_HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          base_sha=""
+          head_sha=""
+
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            base_sha="${PR_BASE_SHA}"
+            head_sha="${PR_HEAD_SHA}"
+          elif [[ "${GITHUB_EVENT_NAME}" == "workflow_call" ]]; then
+            base_sha="${INPUT_BASE_SHA}"
+            head_sha="${INPUT_HEAD_SHA}"
+          fi
+
+          if [[ -z "${head_sha}" ]]; then
+            head_sha="${GITHUB_SHA}"
+          fi
+
+          if ! git cat-file -e "${head_sha}^{commit}" 2>/dev/null; then
+            echo "::warning title=Change detection fallback::Head SHA '${head_sha}' not found locally; using checked out HEAD."
+            head_sha="$(git rev-parse HEAD)"
+          fi
+
+          if [[ -n "${base_sha}" ]] && ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
+            echo "::warning title=Change detection fallback::Base SHA '${base_sha}' not found locally; falling back to previous commit."
+            base_sha=""
+          fi
+
+          if [[ -z "${base_sha}" ]]; then
+            if git rev-parse "${head_sha}^" >/dev/null 2>&1; then
+              base_sha="$(git rev-parse "${head_sha}^")"
+            else
+              base_sha="${head_sha}"
+            fi
+          fi
+
+          changed_files="$(git diff --name-only "${base_sha}" "${head_sha}")"
+
+          declare -A java_changed=(
+            ["auth-service"]=false
+            ["user-service"]=false
+            ["attendance-service"]=false
+            ["justification-service"]=false
+            ["notification-service"]=false
+          )
+          run_frontend=false
+          run_face=false
+          run_qr=false
+
+          while IFS= read -r file; do
+            [[ -z "${file}" ]] && continue
+            case "${file}" in
+              backend/auth-service/*)
+                java_changed["auth-service"]=true
+                ;;
+              backend/user-service/*)
+                java_changed["user-service"]=true
+                ;;
+              backend/attendance-service/*)
+                java_changed["attendance-service"]=true
+                ;;
+              backend/justification-service/*)
+                java_changed["justification-service"]=true
+                ;;
+              backend/notification-service/*)
+                java_changed["notification-service"]=true
+                ;;
+              backend/face-service/*)
+                run_face=true
+                ;;
+              backend/qr-service/*)
+                run_qr=true
+                ;;
+              frontend/*)
+                run_frontend=true
+                ;;
+            esac
+          done <<< "${changed_files}"
+
+          java_matrix='[]'
+          for service in auth-service user-service attendance-service justification-service notification-service; do
+            if [[ "${java_changed[${service}]}" == "true" ]]; then
+              java_matrix="$(jq --arg service "${service}" '. + [{service: $service, sonar_key: $service}]' <<< "${java_matrix}")"
+            fi
+          done
+
+          runtime_changes=false
+          if [[ "${run_frontend}" == "true" || "${run_face}" == "true" || "${run_qr}" == "true" ]]; then
+            runtime_changes=true
+          elif [[ "$(jq 'length' <<< "${java_matrix}")" -gt 0 ]]; then
+            runtime_changes=true
+          fi
+
+          no_runtime_changes=true
+          if [[ "${runtime_changes}" == "true" ]]; then
+            no_runtime_changes=false
+          fi
+
+          {
+            echo "java_matrix=${java_matrix}"
+            echo "run_frontend=${run_frontend}"
+            echo "run_face=${run_face}"
+            echo "run_qr=${run_qr}"
+            echo "no_runtime_changes=${no_runtime_changes}"
+          } >> "${GITHUB_OUTPUT}"
+
+          if [[ "${no_runtime_changes}" == "true" ]]; then
+            echo "::notice title=Selective CI::No mapped runtime service paths changed; heavy service jobs will be skipped."
+          fi
+
   # Missing SonarCloud configuration is an operational error. This check never
   # prints the token; it only reports which repository setting is absent.
   sonar_configuration:
@@ -53,23 +194,16 @@ jobs:
   # to every Spring Boot service without duplicating five jobs.
   java:
     name: Java - ${{ matrix.service }}
-    needs: sonar_configuration
+    needs:
+      - detect_changes
+      - sonar_configuration
+    if: ${{ needs.detect_changes.outputs.java_matrix != '[]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - service: auth-service
-            sonar_key: auth-service
-          - service: user-service
-            sonar_key: user-service
-          - service: attendance-service
-            sonar_key: attendance-service
-          - service: justification-service
-            sonar_key: justification-service
-          - service: notification-service
-            sonar_key: notification-service
+        include: ${{ fromJSON(needs.detect_changes.outputs.java_matrix) }}
     defaults:
       run:
         working-directory: backend/${{ matrix.service }}
@@ -133,7 +267,10 @@ jobs:
   # Validate the Angular application before scanning its TypeScript sources.
   frontend:
     name: Frontend - build and tests
-    needs: sonar_configuration
+    needs:
+      - detect_changes
+      - sonar_configuration
+    if: ${{ needs.detect_changes.outputs.run_frontend == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -177,7 +314,10 @@ jobs:
   # pytest produces coverage.xml so SonarCloud can include Python coverage.
   face:
     name: Face service - tests
-    needs: sonar_configuration
+    needs:
+      - detect_changes
+      - sonar_configuration
+    if: ${{ needs.detect_changes.outputs.run_face == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -237,7 +377,10 @@ jobs:
   # mandatory until real tests are added.
   qr:
     name: QR service - source validation
-    needs: sonar_configuration
+    needs:
+      - detect_changes
+      - sonar_configuration
+    if: ${{ needs.detect_changes.outputs.run_qr == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -279,3 +422,18 @@ jobs:
             -Dsonar.projectKey=attendance-platform-qr-service
             -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
             -Dsonar.qualitygate.wait=false
+
+  no_runtime_changes:
+    name: No runtime service changes
+    needs:
+      - detect_changes
+      - sonar_configuration
+    if: ${{ needs.detect_changes.outputs.no_runtime_changes == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Report selective skip
+        shell: bash
+        run: |
+          echo "No mapped runtime service path changed."
+          echo "Service jobs were skipped by selective CI policy."
