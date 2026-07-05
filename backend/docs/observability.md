@@ -40,14 +40,24 @@ Python services expose Prometheus metrics at:
 
 These endpoints are internal only. They are scraped by Azure Monitor managed Prometheus through pod annotations and are not exposed through Traefik ingress.
 
-All backend pods receive:
+All backend pods keep service identity metadata:
 
 ```text
-APPLICATIONINSIGHTS_CONNECTION_STRING
 OTEL_SERVICE_NAME
 APPLICATIONINSIGHTS_ROLE_NAME
 OTEL_RESOURCE_ATTRIBUTES=deployment.environment=prod,service.namespace=attendance-platform
 ```
+
+Python backend pods also receive `APPLICATIONINSIGHTS_CONNECTION_STRING` for the Python OpenTelemetry setup.
+
+Java backend pods expose Prometheus metrics, but the Application Insights Java agent is gated behind:
+
+```text
+ENABLE_APPLICATIONINSIGHTS_JAVA_AGENT=true
+APPLICATIONINSIGHTS_CONNECTION_STRING
+```
+
+Do not enable the Java agent on every service blindly. Validate one service first, check startup time and `kubectl logs --previous`, then roll it out service by service.
 
 `APPLICATIONINSIGHTS_CONNECTION_STRING` is not a manual secret. Terraform creates Application Insights, outputs the connection string, and Ansible creates the Kubernetes secret named `application-insights-secret`.
 
