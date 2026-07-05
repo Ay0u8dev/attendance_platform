@@ -1,0 +1,267 @@
+:host {
+  display: block;
+}
+
+.chart-shell {
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: 1.25rem;
+  background: var(--color-surface);
+}
+
+.chart-shell-interactive {
+  cursor: zoom-in;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.chart-shell-interactive:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-line));
+  box-shadow: var(--shadow-card);
+}
+
+.chart-shell-interactive:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.chart-scroll {
+  min-height: 25rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-color: var(--color-line-strong) var(--color-surface-subtle);
+  scrollbar-width: thin;
+}
+
+.chart-scroll-expanded {
+  min-height: 29.375rem;
+}
+
+.chart {
+  display: block;
+  min-width: 100%;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-primary-soft) 25%, transparent), transparent 42%),
+    var(--color-surface);
+}
+
+.grid-line {
+  stroke: var(--color-line);
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+}
+
+.x-tick { stroke: var(--color-line-strong); }
+
+.axis-label {
+  fill: var(--color-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.axis-label-y {
+  text-anchor: end;
+  paint-order: stroke;
+  stroke: var(--color-surface);
+  stroke-width: 3px;
+}
+
+.axis-label-x {
+  text-anchor: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.axis-title {
+  fill: var(--color-secondaryText);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  paint-order: stroke;
+  stroke: var(--color-surface);
+  stroke-width: 3px;
+  text-transform: uppercase;
+}
+
+.bar-group {
+  outline: none;
+}
+
+.bar-hit-area {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+.chart-bar {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  transition:
+    filter 140ms ease,
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.chart-bar-present {
+  fill: var(--color-secondary);
+}
+
+.chart-bar-absent {
+  fill: var(--color-danger);
+}
+
+.chart-bar-open {
+  fill: var(--color-line-strong);
+}
+
+.bar-group:hover .chart-bar {
+  filter: drop-shadow(0 7px 9px color-mix(in srgb, var(--color-primary-strong) 18%, transparent));
+  opacity: 0.94;
+  transform: scaleY(1.025);
+}
+
+.chart-bar-peak {
+  filter: drop-shadow(0 7px 10px color-mix(in srgb, var(--color-danger) 26%, transparent));
+}
+
+.cursor-line {
+  pointer-events: none;
+  stroke: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.chart-tooltip {
+  pointer-events: none;
+}
+
+.chart-tooltip rect {
+  fill: var(--color-surface);
+  stroke: var(--color-line-strong);
+  filter: drop-shadow(0 8px 14px color-mix(in srgb, var(--color-primary-strong) 16%, transparent));
+}
+
+.tooltip-title {
+  fill: var(--color-secondaryText);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tooltip-value {
+  fill: var(--color-principalText);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.tooltip-present {
+  fill: var(--color-secondary-strong);
+}
+
+.tooltip-absent {
+  fill: var(--color-danger);
+}
+
+.tooltip-meta {
+  fill: var(--color-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.chart-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top: 1px solid var(--color-line);
+  background: var(--color-surface-subtle);
+  padding: 0.75rem 1rem;
+  color: var(--color-secondaryText);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.chart-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chart-legend {
+  color: var(--color-muted);
+}
+
+.chart-legend .legend-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 999px;
+}
+
+.legend-present {
+  background: var(--color-secondary);
+}
+
+.legend-absent {
+  background: var(--color-danger);
+}
+
+.legend-open {
+  background: var(--color-line-strong);
+}
+
+.empty-state {
+  min-height: 21.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: left;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-primary-soft) 25%, transparent), transparent),
+    var(--color-surface);
+}
+
+.empty-state-icon {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.875rem;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.empty-state p {
+  margin: 0;
+  color: var(--color-principalText);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.empty-state span {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--color-secondaryText);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 640px) {
+  .chart-scroll,
+  .empty-state {
+    min-height: 22rem;
+  }
+
+  .chart-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-shell-interactive,
+  .chart-bar {
+    transition: none;
+  }
+}

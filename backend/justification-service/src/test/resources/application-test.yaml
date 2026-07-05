@@ -12,6 +12,18 @@ spring:
 
   main:
     banner-mode: off
+  rabbitmq:
+    dynamic: false
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+app:
+  rabbitmq:
+    notifications:
+      exchange: notifications.exchange
+      routing-key: notification.requested
 
 cloudflare:
   r2:

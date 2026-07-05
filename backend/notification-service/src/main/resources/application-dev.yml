@@ -1,0 +1,71 @@
+server:
+  port: 8086
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5435/notification_db
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+        mail:
+        smtp:
+            auth: ${MAIL_SMTP_AUTH:false}
+            starttls:
+            enable: ${MAIL_SMTP_STARTTLS:false}
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+app:
+  internal:
+    service-token: ${INTERNAL_SERVICE_TOKEN}
+
+  rabbitmq:
+    notifications:
+        exchange: ${NOTIFICATIONS_EXCHANGE:notifications.exchange}
+        queue: ${NOTIFICATIONS_QUEUE:notification-service.notifications.queue}
+        routing-key: ${NOTIFICATIONS_ROUTING_KEY:notification.requested}
+  notifications:
+    email:
+        enabled: ${NOTIFICATION_EMAIL_ENABLED:false}
+        from: ${MAIL_FROM:no-reply@attendance.local}
+        sender-name: ${MAIL_SENDER_NAME:Plateforme de gestion de l'assiduite}
+        frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:4200}
+        exchange: ${NOTIFICATION_EMAIL_EXCHANGE:notifications.email.exchange}
+        queue: ${NOTIFICATION_EMAIL_QUEUE:notification-service.email.queue}
+        routing-key: ${NOTIFICATION_EMAIL_ROUTING_KEY:notification.email.send}
+
+services:
+  auth:
+    url: http://localhost:8081
+
+notification:
+  websocket:
+    allowed-origin-patterns:
+      - http://localhost:[*]
+      - http://127.0.0.1:[*]
+      - http://host.docker.internal:[*]
+      - http://192.168.100.73:[*]
+      - http://attendance-platform.ma
+      - http://attendance-platform.duckdns.org

@@ -7,7 +7,10 @@ public record JustifyAbsenceRequest(
         @NotNull(message = "justificationId is required")
         Long justificationId,
 
-        @NotBlank(message = "approvedBy is required")
-        String approvedBy
+        @NotBlank(message = "decidedBy is required")
+        String decidedBy,
+
+        @NotBlank(message = "decidedByRole is required")
+        String decidedByRole
 ) {
 }

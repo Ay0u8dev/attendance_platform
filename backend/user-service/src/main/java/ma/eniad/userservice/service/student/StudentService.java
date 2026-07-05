@@ -34,6 +34,7 @@ import ma.eniad.userservice.repository.UserRepository;
 import ma.eniad.userservice.repository.student.StudentRepository;
 import ma.eniad.userservice.repository.structure.AnneeUniversitaireRepository;
 import ma.eniad.userservice.repository.structure.GroupeRepository;
+import ma.eniad.userservice.service.CloudflareR2Service;
 import ma.eniad.userservice.service.UserContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +50,7 @@ public class StudentService {
     private final AnneeUniversitaireRepository anneeUniversitaireRepository;
     private final GroupeRepository groupeRepository;
     private final StudentMapper      studentMapper;
+    private final CloudflareR2Service r2Service;
 
     @Value("${app.allowed-domain}")
     private String allowedDomain;
@@ -71,8 +73,7 @@ public class StudentService {
             student.setRoles(new HashSet<>());
         }
         student.getRoles().add(Role.STUDENT);
-        student.setEnabled(true);
-        student.setFirstLogin(true);
+        applyAccountState(request, student, true, true);
         try {
             StudentResponseDTO dto = studentMapper.toResponse(studentRepository.save(student));
             populateEnrollmentDetails(dto);
@@ -129,6 +130,15 @@ public class StudentService {
         return buildCurrentProfile(student);
     }
 
+    @Transactional
+    public StudentProfileDto removeCurrentProfilePhoto() {
+        Student student = findCurrentStudent();
+        r2Service.deleteProfilePhotoIfOwned(student.getPfpUrl());
+        student.setPfpUrl(null);
+        studentRepository.save(student);
+        return buildCurrentProfile(student);
+    }
+
     private Student findCurrentStudent() {
         UserContext.UserInfo context = UserContext.getCurrentUser();
         if (context == null || context.getUserId() == null) {
@@ -179,6 +189,7 @@ public class StudentService {
         }
 
         studentMapper.updateEntity(request, student);
+        applyAccountState(request, student, student.isEnabled(), student.isFirstLogin());
         try {
             StudentResponseDTO dto = studentMapper.toResponse(studentRepository.save(student));
             populateEnrollmentDetails(dto);
@@ -296,6 +307,17 @@ public class StudentService {
         return email.trim().toLowerCase();
     }
 
+    private void applyAccountState(StudentRequestDTO request,
+                                   Student student,
+                                   boolean defaultEnabled,
+                                   boolean defaultFirstLogin) {
+        boolean enabled = request.getEnabled() == null ? defaultEnabled : request.getEnabled();
+        boolean firstLogin = request.getFirstLogin() == null ? defaultFirstLogin : request.getFirstLogin();
+
+        student.setEnabled(enabled);
+        student.setFirstLogin(enabled && firstLogin);
+    }
+
     private void populateEnrollmentDetails(StudentResponseDTO dto) {
         if (dto == null) {
             return;
@@ -322,7 +344,6 @@ public class StudentService {
         if (inscriptions == null) {
             return;
         }
-        
         java.util.Map<Long, Inscription> studentEnrollmentMap = inscriptions.stream()
                 .filter(i -> i.getStudent() != null)
                 .collect(java.util.stream.Collectors.toMap(

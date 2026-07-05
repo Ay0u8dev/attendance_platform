@@ -141,7 +141,37 @@ class StudentImportServiceTest {
     }
 
     @Test
-    void importFromExcel_marksDuplicateRowsInsideFileAsFailed() {
+    void importFromExcel_rejectsMissingAcademicYearBeforeCreatingStudent() {
+        MockMultipartFile file = excelFile();
+        StudentExcelRowDTO row = row(2, "Sara", "Alaoui", "sara@ump.ac.ma", "A123", "2099/2100", "GI", "GI-1");
+
+        when(parser.parse(file)).thenReturn(List.of(row));
+        when(validator.validate(row)).thenReturn(List.of());
+        when(studentRepository.findByEmailIn(anySet())).thenReturn(List.of());
+        when(userRepository.findByNormalizedEmailIn(anySet())).thenReturn(List.of());
+        when(studentRepository.findByNumApogeeIn(anySet())).thenReturn(List.of());
+        when(anneeUniversitaireRepository.findByNameIn(anySet())).thenReturn(List.of());
+        when(formationRepository.findByNameIn(anySet())).thenReturn(List.of());
+        when(groupeRepository.findByNameIn(anySet())).thenReturn(List.of());
+
+        StudentImportResultDTO result = importService.importFromExcel(file);
+
+        assertThat(result.getStatus()).isEqualTo("FAILED");
+        assertThat(result.getCreatedStudents()).isZero();
+        assertThat(result.getCreatedInscriptions()).isZero();
+        assertThat(result.getErrors())
+            .singleElement()
+            .satisfies(error -> {
+                assertThat(error.getField()).isEqualTo("academicYear");
+                assertThat(error.getMessage()).isEqualTo("Academic year not found.");
+            });
+        verify(mapper, never()).toEntity(row);
+        verify(studentRepository, never()).saveAll(org.mockito.ArgumentMatchers.anyList());
+        verify(inscriptionRepository, never()).saveAll(org.mockito.ArgumentMatchers.anyList());
+    }
+
+    @Test
+    void importFromExcel_rejectsEmailUsedWithDifferentApogeeInsideFile() {
         MockMultipartFile file = excelFile();
         StudentExcelRowDTO first = row(2, "Sara", "Alaoui", "same@ump.ac.ma", "A123", "2025/2026", "GI", "GI-1");
         StudentExcelRowDTO second = row(3, "Yassine", "Amrani", "SAME@UMP.AC.MA", "B456", "2025/2026", "GI", "GI-1");
@@ -170,7 +200,7 @@ class StudentImportServiceTest {
             .satisfies(error -> {
                 assertThat(error.getRowNumber()).isEqualTo(3);
                 assertThat(error.getField()).isEqualTo("email");
-                assertThat(error.getMessage()).isEqualTo("Duplicate email inside file");
+                assertThat(error.getMessage()).isEqualTo("Email is used with another NumApogee inside the file.");
             });
     }
 
@@ -197,8 +227,8 @@ class StudentImportServiceTest {
         when(anneeUniversitaireRepository.findByNameIn(anySet())).thenReturn(List.of(year));
         when(formationRepository.findByNameIn(anySet())).thenReturn(List.of(formation));
         when(groupeRepository.findByNameIn(anySet())).thenReturn(List.of(groupe));
-        when(inscriptionRepository.findExistingStudentYearPairs(anySet(), anySet()))
-                .thenReturn(List.<Object[]>of(new Object[] {10L, 1L}));
+        when(inscriptionRepository.findExistingEnrollmentKeys(anySet(), anySet(), anySet(), anySet()))
+                .thenReturn(List.<Object[]>of(new Object[] {10L, 1L, 2L, 3L}));
 
         StudentImportResultDTO result = importService.importFromExcel(file);
 
@@ -209,10 +239,69 @@ class StudentImportServiceTest {
         assertThat(existingStudent.getLastName()).isEqualTo("Updated");
         assertThat(result.getWarnings()).containsExactly(
                 "Row 2 -> Student information updated.",
-                "Row 2 -> Student already enrolled for this academic year."
+                "Row 2 -> Student inscription already exists for this academic year, formation and group."
         );
         verify(studentRepository).saveAll(List.of(existingStudent));
         verify(inscriptionRepository, never()).saveAll(org.mockito.ArgumentMatchers.anyList());
+    }
+
+    @Test
+    void importFromExcel_processesAllPossibleWarningsWithoutRejectingRows() {
+        MockMultipartFile file = excelFile();
+        StudentExcelRowDTO firstNameChanged = row(2, "Sara New", "Alaoui", "a1001@ump.ac.ma", "A1001", "2025/2026", "GI", "GI-1");
+        StudentExcelRowDTO lastNameChanged = row(3, "Sara New", "Alaoui New", "a1001@ump.ac.ma", "A1001", "2025/2026", "GI", "GI-2");
+        StudentExcelRowDTO bothNamesChanged = row(4, "Sara Final", "Alaoui Final", "a1001@ump.ac.ma", "A1001", "2025/2026", "GI", "GI-3");
+        StudentExcelRowDTO existingDuplicate = row(5, "Omar", "Naciri", "a1002@ump.ac.ma", "A1002", "2025/2026", "GI", "GI-4");
+        StudentExcelRowDTO fileDuplicate = row(6, "Omar", "Naciri", "a1002@ump.ac.ma", "A1002", "2025/2026", "GI", "GI-4");
+
+        Student a1001 = Student.builder()
+                .id(1001L)
+                .email("a1001@ump.ac.ma")
+                .numApogee("A1001")
+                .firstName("Sara")
+                .lastName("Alaoui")
+                .build();
+        Student a1002 = Student.builder()
+                .id(1002L)
+                .email("a1002@ump.ac.ma")
+                .numApogee("A1002")
+                .firstName("Omar")
+                .lastName("Naciri")
+                .build();
+        AnneeUniversitaire year = AnneeUniversitaire.builder().id(1L).name("2025/2026").build();
+        Formation formation = Formation.builder().id(2L).name("GI").anneeUniversitaire(year).build();
+        Groupe g1 = Groupe.builder().id(11L).name("GI-1").formation(formation).build();
+        Groupe g2 = Groupe.builder().id(12L).name("GI-2").formation(formation).build();
+        Groupe g3 = Groupe.builder().id(13L).name("GI-3").formation(formation).build();
+        Groupe g4 = Groupe.builder().id(14L).name("GI-4").formation(formation).build();
+
+        when(parser.parse(file)).thenReturn(List.of(firstNameChanged, lastNameChanged, bothNamesChanged, existingDuplicate, fileDuplicate));
+        when(validator.validate(firstNameChanged)).thenReturn(List.of());
+        when(validator.validate(lastNameChanged)).thenReturn(List.of());
+        when(validator.validate(bothNamesChanged)).thenReturn(List.of());
+        when(validator.validate(existingDuplicate)).thenReturn(List.of());
+        when(validator.validate(fileDuplicate)).thenReturn(List.of());
+        when(studentRepository.findByEmailIn(anySet())).thenReturn(List.of(a1001, a1002));
+        when(userRepository.findByNormalizedEmailIn(anySet())).thenReturn(List.of(a1001, a1002));
+        when(studentRepository.findByNumApogeeIn(anySet())).thenReturn(List.of(a1001, a1002));
+        when(anneeUniversitaireRepository.findByNameIn(anySet())).thenReturn(List.of(year));
+        when(formationRepository.findByNameIn(anySet())).thenReturn(List.of(formation));
+        when(groupeRepository.findByNameIn(anySet())).thenReturn(List.of(g1, g2, g3, g4));
+        when(inscriptionRepository.findExistingEnrollmentKeys(anySet(), anySet(), anySet(), anySet()))
+                .thenReturn(List.<Object[]>of(new Object[] {1002L, 1L, 2L, 14L}));
+
+        StudentImportResultDTO result = importService.importFromExcel(file);
+
+        assertThat(result.getTotalRows()).isEqualTo(5);
+        assertThat(result.getStudentsCreated()).isZero();
+        assertThat(result.getStudentsUpdated()).isEqualTo(1);
+        assertThat(result.getInscriptionsCreated()).isEqualTo(3);
+        assertThat(result.getRowsRejected()).isZero();
+        assertThat(result.getDuplicatesSkipped()).isEqualTo(2);
+        assertThat(result.getWarningsCount()).isEqualTo(5);
+        assertThat(result.getErrorsCount()).isZero();
+        assertThat(a1001.getFirstName()).isEqualTo("Sara Final");
+        assertThat(a1001.getLastName()).isEqualTo("Alaoui Final");
     }
 
     @Test

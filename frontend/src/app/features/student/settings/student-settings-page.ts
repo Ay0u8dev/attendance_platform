@@ -18,6 +18,7 @@ import { catchError, finalize, map, switchMap } from 'rxjs/operators';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { FaceEnrollmentService } from '../../../core/student/services/face-enrollment.service';
 import { StudentProfileService } from '../../../core/student/services/student-profile.service';
+import { DeleteModal } from '../../../shared/components/delete-modal/delete-modal';
 import { Modal } from '../../../shared/components/modal/modal';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { SettingsSectionCard } from '../../../shared/components/settings/settings-section-card';
@@ -33,7 +34,7 @@ type FaceEnrollmentPhase = 'idle' | 'captured' | 'saving' | 'saved';
 
 @Component({
   selector: 'app-student-settings-page',
-  imports: [PageHeader, Modal, SettingsSectionCard],
+  imports: [PageHeader, Modal, SettingsSectionCard, DeleteModal],
   templateUrl: './student-settings-page.html',
   styleUrls: ['../../../shared/components/settings/settings-page.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -59,6 +60,8 @@ export class StudentSettingsPage {
   readonly isStartingCamera = signal(false);
   readonly cameraError = signal<string | null>(null);
   readonly profilePhotoUploading = signal(false);
+  readonly profilePhotoRemoving = signal(false);
+  readonly profilePhotoRemoveOpen = signal(false);
   readonly profilePhotoError = signal<string | null>(null);
   readonly profilePhotoMessage = signal<string | null>(null);
   readonly selectedProfilePhotoPreview = signal<string | null>(null);
@@ -137,6 +140,11 @@ export class StudentSettingsPage {
       return null;
     }
 
+    const value = this.profile()?.pfpUrl?.trim();
+    return value && value.length > 0 ? value : null;
+  });
+
+  readonly persistedProfilePhotoUrl = computed(() => {
     const value = this.profile()?.pfpUrl?.trim();
     return value && value.length > 0 ? value : null;
   });
@@ -221,6 +229,10 @@ export class StudentSettingsPage {
   }
 
   triggerProfilePhotoInput(): void {
+    if (this.profilePhotoUploading() || this.profilePhotoRemoving()) {
+      return;
+    }
+
     this.profilePhotoError.set(null);
     this.profilePhotoMessage.set(null);
     this.profilePhotoInput()?.nativeElement.click();
@@ -231,7 +243,7 @@ export class StudentSettingsPage {
     const file = input.files?.[0];
     input.value = '';
 
-    if (!file || this.profilePhotoUploading()) {
+    if (!file || this.profilePhotoUploading() || this.profilePhotoRemoving()) {
       return;
     }
 
@@ -260,6 +272,51 @@ export class StudentSettingsPage {
         error: (error) => {
           this.revokeProfilePhotoPreview();
           this.profilePhotoError.set(this.profilePhotoFailureMessage(error));
+        },
+      });
+  }
+
+  openProfilePhotoRemoval(): void {
+    if (!this.persistedProfilePhotoUrl() || this.profilePhotoUploading() || this.profilePhotoRemoving()) {
+      return;
+    }
+
+    this.profilePhotoError.set(null);
+    this.profilePhotoMessage.set(null);
+    this.profilePhotoRemoveOpen.set(true);
+  }
+
+  closeProfilePhotoRemoval(): void {
+    if (!this.profilePhotoRemoving()) {
+      this.profilePhotoRemoveOpen.set(false);
+    }
+  }
+
+  confirmProfilePhotoRemoval(): void {
+    if (!this.persistedProfilePhotoUrl() || this.profilePhotoUploading() || this.profilePhotoRemoving()) {
+      return;
+    }
+
+    this.profilePhotoRemoving.set(true);
+    this.profilePhotoError.set(null);
+    this.profilePhotoMessage.set(null);
+
+    this.studentProfileService
+      .removeProfilePhoto()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.profilePhotoRemoving.set(false)),
+      )
+      .subscribe({
+        next: () => {
+          this.revokeProfilePhotoPreview();
+          this.profileImageFailed.set(false);
+          this.profilePhotoRemoveOpen.set(false);
+          this.profilePhotoMessage.set('Photo de profil supprimée.');
+        },
+        error: (error) => {
+          this.profilePhotoRemoveOpen.set(false);
+          this.profilePhotoError.set(this.profilePhotoRemovalFailureMessage(error));
         },
       });
   }
@@ -408,6 +465,22 @@ export class StudentSettingsPage {
     }
 
     return 'Impossible de mettre à jour la photo. Réessayez.';
+  }
+
+  private profilePhotoRemovalFailureMessage(error: unknown): string {
+    if (error instanceof HttpErrorResponse) {
+      if (error.status === 0) {
+        return "Impossible de contacter le serveur. Vérifiez que le backend est démarré.";
+      }
+      if (error.status === 401 || error.status === 403) {
+        return 'Session non autorisée. Reconnectez-vous puis réessayez.';
+      }
+      if (error.status >= 500) {
+        return "Le serveur n'a pas pu supprimer la photo. Réessayez dans un instant.";
+      }
+    }
+
+    return 'Impossible de supprimer la photo. Réessayez.';
   }
 
   private async startFaceCamera(): Promise<void> {

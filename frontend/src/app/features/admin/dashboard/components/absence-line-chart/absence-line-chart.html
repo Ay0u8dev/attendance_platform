@@ -1,0 +1,129 @@
+<div
+  class="chart-shell"
+  [class.chart-shell-expanded]="expanded()"
+  [class.chart-shell-interactive]="!expanded()"
+  [attr.tabindex]="expanded() ? null : 0"
+  [attr.role]="expanded() ? null : 'button'"
+  [attr.aria-label]="expanded() ? null : 'Agrandir le graphique d’analyse des présences'"
+  (click)="requestExpand()"
+  (keydown.enter)="requestExpand()"
+  (keydown.space)="$event.preventDefault(); requestExpand()"
+>
+  @if (hasData()) {
+    <p class="sr-only">{{ accessibleSummary() }}</p>
+    <div class="chart-scroll" [class.chart-scroll-expanded]="expanded()">
+      <svg
+        class="chart"
+        [attr.width]="width()"
+        [attr.height]="height()"
+        [attr.viewBox]="'0 0 ' + width() + ' ' + height()"
+        role="img"
+        [attr.aria-label]="accessibleSummary()"
+      >
+        @for (tick of yTicks(); track tick.value) {
+          <line class="grid-line" [attr.x1]="plotLeft" [attr.x2]="width() - plotRight" [attr.y1]="tick.y" [attr.y2]="tick.y"></line>
+          <text class="axis-label axis-label-y" [attr.x]="plotLeft - 16" [attr.y]="tick.y + 4">{{ tick.value }}</text>
+        }
+
+        <text
+          class="axis-title"
+          [attr.x]="axisTitleX"
+          [attr.y]="axisTitleY()"
+          [attr.transform]="'rotate(-90 ' + axisTitleX + ' ' + axisTitleY() + ')'"
+        >
+          Pointages
+        </text>
+
+        @for (point of chartPoints(); track point.detail; let index = $index) {
+          @if (shouldShowLabel(index)) {
+            <line
+              class="x-tick"
+              [attr.x1]="point.labelX"
+              [attr.x2]="point.labelX"
+              [attr.y1]="xTickStart()"
+              [attr.y2]="xTickEnd()"
+            ></line>
+            <text class="axis-label axis-label-x" [attr.x]="point.labelX" [attr.y]="xLabelY()">{{ point.label }}</text>
+          }
+
+          <g
+            class="bar-group"
+            [class.bar-group-peak]="point.isPeak"
+            aria-hidden="true"
+            (mouseenter)="showPoint(index)"
+            (mouseleave)="hidePoint(index)"
+          >
+            <rect
+              class="bar-hit-area"
+              [attr.x]="point.x - barWidth() - barGap - 12"
+              [attr.y]="plotTop"
+              [attr.width]="barWidth() * 3 + barGap * 2 + 24"
+              [attr.height]="plotBottom() - plotTop"
+              rx="12"
+            ></rect>
+            <rect
+              class="chart-bar chart-bar-present"
+              [attr.x]="point.x - barWidth() - barGap"
+              [attr.y]="point.presentY"
+              [attr.width]="barWidth()"
+              [attr.height]="point.presentHeight"
+              rx="6"
+            ></rect>
+            <rect
+              class="chart-bar chart-bar-absent"
+              [class.chart-bar-peak]="point.isPeak"
+              [attr.x]="point.x"
+              [attr.y]="point.absentY"
+              [attr.width]="barWidth()"
+              [attr.height]="point.absentHeight"
+              rx="6"
+            ></rect>
+            <rect
+              class="chart-bar chart-bar-open"
+              [attr.x]="point.x + barWidth() + barGap"
+              [attr.y]="point.openY"
+              [attr.width]="barWidth()"
+              [attr.height]="point.openHeight"
+              rx="6"
+            ></rect>
+          </g>
+        }
+
+        @if (activePoint(); as point) {
+          <line
+            class="cursor-line"
+            [attr.x1]="point.labelX"
+            [attr.x2]="point.labelX"
+            [attr.y1]="plotTop"
+            [attr.y2]="plotBottom()"
+          ></line>
+          <g class="chart-tooltip" [attr.transform]="'translate(' + tooltipX() + ' ' + tooltipY() + ')'">
+            <rect width="220" height="92" rx="12"></rect>
+            <text class="tooltip-title" x="13" y="21">{{ point.detail }}</text>
+            <text class="tooltip-value tooltip-present" x="13" y="43">{{ point.present }} présent(s)</text>
+            <text class="tooltip-value tooltip-absent" x="112" y="43">{{ point.absent }} absent(s)</text>
+            <text class="tooltip-meta" x="13" y="65">{{ point.open }} pointage(s) ouvert(s)</text>
+            <text class="tooltip-meta" x="13" y="82">{{ point.sessions }} session(s) - {{ formatRate(point.rate) }} présence</text>
+          </g>
+        }
+      </svg>
+    </div>
+
+    <div class="chart-footer" aria-hidden="true">
+      <span><i class="fa-solid fa-arrow-left-long"></i> Faites défiler pour examiner les jours capturés</span>
+      <span class="chart-legend">
+        <span class="legend-dot legend-present"></span> Présents
+        <span class="legend-dot legend-absent"></span> Absents
+        <span class="legend-dot legend-open"></span> Ouverts
+      </span>
+    </div>
+  } @else {
+    <div class="empty-state">
+      <span class="empty-state-icon"><i class="fa-solid fa-chart-column" aria-hidden="true"></i></span>
+      <div>
+        <p>Aucune donnée de présence sur cette période</p>
+        <span>Les jours sans session capturée sont masqués dans ce graphique.</span>
+      </div>
+    </div>
+  }
+</div>

@@ -95,7 +95,11 @@
           [class.row-absent]="student.status === 'absent'"
         >
           <div class="student-cell">
-            <div class="avatar">{{ student.avatarInitials }}</div>
+            <app-user-avatar
+              [name]="student.name"
+              [imageUrl]="student.pfpUrl"
+              size="sm"
+            ></app-user-avatar>
             <span class="student-name">{{ student.name }}</span>
           </div>
 

@@ -71,22 +71,36 @@ services:
     volumes:
       - ./backend/qr-service:/app
 
-  # notification-db:
-  #   image: postgres:15-alpine
-  #   container_name: notification-db
-  #   ports:
-  #     - 5433:5432
-  #   environment:
-  #     POSTGRES_DB: notification_db
-  #   env_file:
-  #     - .env
-  #   volumes:
-  #     - notification_db_data:/var/lib/postgresql/data
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-  #     interval: 5s
-  #     timeout: 5s
-  #     retries: 20
+  notification-db:
+    image: postgres:15-alpine
+    container_name: notification-db
+    ports:
+      - 5435:5432
+    environment:
+      POSTGRES_DB: notification_db
+    env_file:
+      - .env
+    volumes:
+      - notification_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    env_file:
+      - .env
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 
   # ===================== Services =======================
   #### ONLY FOR PROD TESTING — in dev we run these services locally, not in Docker ####
@@ -197,4 +211,5 @@ volumes:
   # maven_cache:
   users_db_data:
   attendance_db_data:
-  # notification_db_data:
+  notification_db_data:
+  rabbitmq_data:

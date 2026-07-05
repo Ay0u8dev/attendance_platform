@@ -14,6 +14,7 @@ import { filter } from 'rxjs/operators';
 
 import { AuthService } from '../../core/auth/services/auth.service';
 import { StudentProfileService } from '../../core/student/services/student-profile.service';
+import { NotificationBellComponent } from '../components/notification-bell/notification-bell';
 
 type NavItem = {
   label: string;
@@ -28,7 +29,7 @@ type UtilityItem = {
 
 @Component({
   selector: 'app-student-layout',
-  imports: [NgOptimizedImage, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [NgOptimizedImage, NotificationBellComponent, RouterLink, RouterLinkActive, RouterOutlet],
   host: {
     '(document:click)': 'handleDocumentClick($event)',
     '(document:keydown.escape)': 'handleEscape()',
@@ -45,14 +46,14 @@ type UtilityItem = {
             type="button"
             class="fixed inset-0 z-30 bg-slate-950/45 backdrop-blur-sm lg:hidden"
             (click)="closeSidebar()"
-            aria-label="Close navigation"
+            aria-label="Fermer la navigation"
           ></button>
         }
 
         <aside
           class="fixed inset-y-0 left-0 z-40 flex flex-col border-r border-line bg-surface/95 shadow-shell transition-[width,transform] duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0"
           [class]="sidebarShellClasses()"
-          aria-label="Student navigation"
+          aria-label="Navigation étudiant"
         >
           <div
             class="flex h-16 items-center border-b border-line px-3"
@@ -70,7 +71,7 @@ type UtilityItem = {
                   ngSrc="assets/logo-app.png"
                   width="24"
                   height="24"
-                  alt="Attendance Platform"
+                  alt="Plateforme de présence"
                   class="h-fit w-auto object-contain"
                 />
               </div>
@@ -78,7 +79,7 @@ type UtilityItem = {
               @if (!isSidebarCollapsed()) {
                 <div class="min-w-0">
                   <p class="truncate text-sm font-semibold text-principalText">
-                    Attendance Platform
+                    Plateforme de présence
                   </p>
                   <p class="truncate text-xs text-secondaryText">Portail étudiant</p>
                 </div>
@@ -89,7 +90,7 @@ type UtilityItem = {
               type="button"
               class="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:hidden"
               (click)="closeSidebar()"
-              aria-label="Close menu"
+              aria-label="Fermer le menu"
             >
               <i class="fa-solid fa-xmark" aria-hidden="true"></i>
             </button>
@@ -99,7 +100,7 @@ type UtilityItem = {
             type="button"
             class="absolute top-20 right-0 hidden h-7 w-7 translate-x-1/2 items-center justify-center rounded-full border border-line bg-surface text-secondaryText shadow-card transition-all duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:inline-flex"
             (click)="toggleSidebarCollapsed()"
-            [attr.aria-label]="isSidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+            [attr.aria-label]="isSidebarCollapsed() ? 'Déplier la barre latérale' : 'Replier la barre latérale'"
           >
             <i
               class="fa-solid text-xs"
@@ -175,7 +176,7 @@ type UtilityItem = {
                     class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary lg:hidden"
                     (click)="toggleSidebar()"
                     [attr.aria-expanded]="isSidebarOpen()"
-                    aria-label="Open menu"
+                    aria-label="Ouvrir le menu"
                   >
                     <i class="fa-solid fa-bars" aria-hidden="true"></i>
                   </button>
@@ -193,13 +194,7 @@ type UtilityItem = {
                 </div>
 
                 <div class="flex shrink-0 items-center gap-1 sm:gap-2">
-                  <button
-                    type="button"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-secondaryText transition-colors duration-200 hover:border-primary-soft hover:bg-primary-soft hover:text-primary"
-                    aria-label="Notifications"
-                  >
-                    <i class="fa-regular fa-bell" aria-hidden="true"></i>
-                  </button>
+                  <app-notification-bell />
 
                   <div #userMenuRoot class="relative">
                     <button
@@ -208,7 +203,7 @@ type UtilityItem = {
                       (click)="toggleUserMenu()"
                       [attr.aria-expanded]="isUserMenuOpen()"
                       aria-haspopup="menu"
-                      aria-label="Open user menu"
+                      aria-label="Ouvrir le menu utilisateur"
                     >
                       <span
                         class="flex h-9 w-9 overflow-hidden rounded-xl bg-primary-soft text-primary"
@@ -318,7 +313,7 @@ export class StudentLayout {
     '/student/dashboard': 'Tableau de bord',
     '/student/sessions': 'Mes sessions',
     '/student/justifications': 'Justifications',
-    '/student/settings': 'Parametres',
+    '/student/settings': 'Paramètres',
   };
 
   readonly navItems: NavItem[] = [

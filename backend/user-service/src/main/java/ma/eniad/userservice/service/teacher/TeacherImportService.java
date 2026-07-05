@@ -85,8 +85,6 @@ public class TeacherImportService {
             .filter(email -> !lookups.teachersByEmail.containsKey(email))
             .collect(Collectors.toSet());
 
-        Set<String> teacherHandled = new HashSet<>();
-        Map<String, TeacherExcelRowDTO> canonicalIdentityByEmail = new HashMap<>();
         List<Teacher> teachersToCreate = new ArrayList<>();
         List<Teacher> teachersToUpdate = new ArrayList<>();
         List<ResolvedRow> resolvedRows = new ArrayList<>();
@@ -99,35 +97,31 @@ public class TeacherImportService {
                 continue;
             }
 
-            TeacherExcelRowDTO canonicalRow = canonicalIdentityByEmail.putIfAbsent(row.getEmail(), row);
-            if (canonicalRow != null && namesDiffer(canonicalRow, row)) {
-                warnings.add(rowWarning(row, "Same teacher email appears with different names in the file. "
-                    + "The first valid occurrence was used."));
+            ResolvedStructure structure = resolveStructure(row, lookups, errors, failedRowNumbers, counters);
+            if (structure == null) {
+                continue;
             }
 
             Teacher teacher = lookups.teachersByEmail.get(row.getEmail());
             if (teacher == null) {
-                teacher = mapToTeacher(canonicalRow == null ? row : canonicalRow);
+                teacher = mapToTeacher(row);
                 lookups.teachersByEmail.put(row.getEmail(), teacher);
                 teachersToCreate.add(teacher);
                 counters.createdTeachers++;
                 changes.add(change(row, "TEACHER", row.getEmail(), "CREATED", List.of("Created teacher")));
-                teacherHandled.add(row.getEmail());
-            } else if (teacherHandled.add(row.getEmail())) {
-                TeacherExcelRowDTO identityRow = canonicalRow == null ? row : canonicalRow;
-                List<String> nameChanges = applyNameUpdates(teacher, identityRow);
+            } else {
+                List<String> nameChanges = applyNameUpdates(teacher, row);
                 if (!nameChanges.isEmpty()) {
-                    teachersToUpdate.add(teacher);
-                    counters.updatedTeachers++;
+                    if (teacher.getId() != null && !teachersToUpdate.contains(teacher)) {
+                        teachersToUpdate.add(teacher);
+                        counters.updatedTeachers++;
+                    }
                     warnings.add(rowWarning(row, "Teacher information updated."));
                     changes.add(change(row, "TEACHER", row.getEmail(), "UPDATED", nameChanges));
                 }
             }
 
-            ResolvedStructure structure = resolveStructure(row, lookups, errors, failedRowNumbers, counters);
-            if (structure != null) {
-                resolvedRows.add(new ResolvedRow(row, teacher, structure));
-            }
+            resolvedRows.add(new ResolvedRow(row, teacher, structure));
         }
 
         if (!teachersToCreate.isEmpty()) {
@@ -185,6 +179,13 @@ public class TeacherImportService {
             .createdAssignments(counters.createdAssignments)
             .duplicateAssignments(counters.duplicateAssignments)
             .duplicateAssignmentsInsideFile(counters.duplicateAssignmentsInsideFile)
+            .teachersCreated(counters.createdTeachers)
+            .teachersUpdated(counters.updatedTeachers)
+            .assignmentsCreated(counters.createdAssignments)
+            .rowsRejected(failedRows)
+            .duplicatesSkipped(counters.duplicateAssignments + counters.duplicateAssignmentsInsideFile)
+            .warningsCount(warnings.size())
+            .errorsCount(errors.size())
             .missingAcademicYears(counters.missingAcademicYears)
             .missingFormations(counters.missingFormations)
             .missingGroups(counters.missingGroups)
@@ -212,10 +213,10 @@ public class TeacherImportService {
             .collect(Collectors.toMap(AnneeUniversitaire::getName, Function.identity()));
         Map<String, List<Formation>> formations = formationRepository.findByNameIn(formationNames).stream()
             .collect(Collectors.groupingBy(Formation::getName));
-        Map<String, Groupe> groupes = groupeRepository.findByNameIn(groupeCodes).stream()
-            .collect(Collectors.toMap(Groupe::getName, Function.identity()));
-        Map<String, Module> modules = moduleRepository.findByCodeIn(moduleCodes).stream()
-            .collect(Collectors.toMap(Module::getCode, Function.identity()));
+        Map<String, List<Groupe>> groupes = groupeRepository.findByNameIn(groupeCodes).stream()
+            .collect(Collectors.groupingBy(Groupe::getName));
+        Map<String, List<Module>> modules = moduleRepository.findByCodeIn(moduleCodes).stream()
+            .collect(Collectors.groupingBy(Module::getCode));
         return new LookupData(teachers, users, years, formations, groupes, modules);
     }
 
@@ -246,28 +247,54 @@ public class TeacherImportService {
             return null;
         }
 
-        Groupe groupe = data.groupesByCode.get(row.getGroupeCode());
+        List<Groupe> groupeCandidates = data.groupesByCode.get(row.getGroupeCode());
+        Groupe groupe = resolveGroupe(groupeCandidates, formation);
         if (groupe == null) {
-            addError(row, "groupeCode", "Groupe not found.", errors, failedRows);
-            counters.missingGroups++;
-            return null;
-        }
-        if (!groupe.getFormation().getId().equals(formation.getId())) {
-            addError(row, "groupeCode", "Groupe does not belong to specified formation.", errors, failedRows);
+            if (groupeCandidates == null || groupeCandidates.isEmpty()) {
+                addError(row, "groupeCode", "Groupe not found.", errors, failedRows);
+                counters.missingGroups++;
+            } else {
+                addError(row, "groupeCode", "Groupe does not belong to specified formation.", errors, failedRows);
+            }
             return null;
         }
 
-        Module module = data.modulesByCode.get(row.getModuleCode());
+        List<Module> moduleCandidates = data.modulesByCode.get(row.getModuleCode());
+        Module module = resolveModule(moduleCandidates, formation);
         if (module == null) {
-            addError(row, "moduleCode", "Module not found.", errors, failedRows);
-            counters.missingModules++;
-            return null;
-        }
-        if (!module.getFormation().getId().equals(formation.getId())) {
-            addError(row, "moduleCode", "Module does not belong to specified formation.", errors, failedRows);
+            if (moduleCandidates == null || moduleCandidates.isEmpty()) {
+                addError(row, "moduleCode", "Module not found.", errors, failedRows);
+                counters.missingModules++;
+            } else {
+                addError(row, "moduleCode", "Module does not belong to specified formation.", errors, failedRows);
+            }
             return null;
         }
         return new ResolvedStructure(year, formation, groupe, module);
+    }
+
+    private Groupe resolveGroupe(List<Groupe> candidates, Formation formation) {
+        if (candidates == null || candidates.isEmpty()) {
+            return null;
+        }
+
+        return candidates.stream()
+            .filter(candidate -> candidate.getFormation() != null)
+            .filter(candidate -> candidate.getFormation().getId().equals(formation.getId()))
+            .findFirst()
+            .orElse(null);
+    }
+
+    private Module resolveModule(List<Module> candidates, Formation formation) {
+        if (candidates == null || candidates.isEmpty()) {
+            return null;
+        }
+
+        return candidates.stream()
+            .filter(candidate -> candidate.getFormation() != null)
+            .filter(candidate -> candidate.getFormation().getId().equals(formation.getId()))
+            .findFirst()
+            .orElse(null);
     }
 
     private Set<String> loadExistingAssignmentKeys(List<ResolvedRow> rows) {
@@ -326,11 +353,6 @@ public class TeacherImportService {
             teacher.setLastName(row.getLastName());
         }
         return updates;
-    }
-
-    private boolean namesDiffer(TeacherExcelRowDTO first, TeacherExcelRowDTO other) {
-        return !first.getFirstName().equals(other.getFirstName())
-            || !first.getLastName().equals(other.getLastName());
     }
 
     private String detail(String field, String oldValue, String newValue) {
@@ -414,8 +436,8 @@ public class TeacherImportService {
         private final Map<String, User> usersByEmail;
         private final Map<String, AnneeUniversitaire> yearsByName;
         private final Map<String, List<Formation>> formationsByName;
-        private final Map<String, Groupe> groupesByCode;
-        private final Map<String, Module> modulesByCode;
+        private final Map<String, List<Groupe>> groupesByCode;
+        private final Map<String, List<Module>> modulesByCode;
     }
 
     @RequiredArgsConstructor

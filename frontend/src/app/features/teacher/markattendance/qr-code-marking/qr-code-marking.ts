@@ -29,12 +29,13 @@ import {
   AttendanceWebSocketService,
   AttendanceUpdateNotification,
 } from '../../../../core/websocket/websocket.service';
+import { UserAvatar } from '../../../../shared/components/user-avatar/user-avatar';
 
 interface ScannedStudent {
   id: number;
   name: string;
   studentId: string;
-  initials: string;
+  pfpUrl?: string | null;
   scannedAt: string;
 }
 
@@ -44,12 +45,13 @@ interface ManualStudent {
   id: number;
   name: string;
   studentId: string;
-  initials: string;
+  pfpUrl?: string | null;
   status: ManualAttendanceStatus;
 }
 
 @Component({
   selector: 'app-qr-code-marking',
+  imports: [UserAvatar],
   templateUrl: './qr-code-marking.html',
   styleUrl: './qr-code-marking.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -127,7 +129,7 @@ export class QrCodeMarking implements OnInit, OnDestroy {
       if (!this.webSocketConnected() || !this.webSocketEnabled()) {
         this.refreshSession();
       } else {
-        // Refresh léger uniquement pour la cohérence
+        // Actualiser léger uniquement pour la cohérence
         this.refreshSessionLight();
       }
     }, interval);
@@ -201,8 +203,8 @@ export class QrCodeMarking implements OnInit, OnDestroy {
         id: notification.studentId,
         name,
         studentId: student.numApogee,
-        initials: this.getInitials(name),
-        scannedAt: new Date(notification.markedAt).toLocaleTimeString([], {
+        pfpUrl: student.pfpUrl,
+        scannedAt: new Date(notification.markedAt).toLocaleTimeString('fr-FR', {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
@@ -275,9 +277,9 @@ export class QrCodeMarking implements OnInit, OnDestroy {
       module: session?.courseLabel ?? 'Session QR Code',
       group: session?.groupIds?.length ? `Groupes ${session.groupIds.join(', ')}` : 'Groupes',
       time: session?.startedAt
-        ? `${new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${
+        ? `${new Date(session.startedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} - ${
             session.endsAt
-              ? new Date(session.endsAt).toLocaleTimeString([], {
+              ? new Date(session.endsAt).toLocaleTimeString('fr-FR', {
                   hour: '2-digit',
                   minute: '2-digit',
                 })
@@ -285,7 +287,7 @@ export class QrCodeMarking implements OnInit, OnDestroy {
           }`
         : '',
       location: session?.roomLabel ?? 'Salle non renseignee',
-      date: session?.startedAt ? new Date(session.startedAt).toLocaleDateString() : '',
+      date: session?.startedAt ? new Date(session.startedAt).toLocaleDateString('fr-FR') : '',
     };
   }
 
@@ -419,7 +421,7 @@ export class QrCodeMarking implements OnInit, OnDestroy {
   }
 
   private refreshSessionLight(): void {
-    // Refresh léger pour la cohérence sans surcharger
+    // Actualiser léger pour la cohérence sans surcharger
     const sessionId = this.readSessionId(this.session()) ?? this.currentSessionId();
     if (!sessionId) return;
 
@@ -471,15 +473,9 @@ export class QrCodeMarking implements OnInit, OnDestroy {
       id: student.studentId,
       name,
       studentId: student.numApogee,
-      initials: name
-        .split(' ')
-        .filter(Boolean)
-        .map((part) => part[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase(),
+      pfpUrl: student.pfpUrl,
       scannedAt: student.markedAt
-        ? new Date(student.markedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        ? new Date(student.markedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
         : '--:--',
     };
   }
@@ -490,19 +486,9 @@ export class QrCodeMarking implements OnInit, OnDestroy {
       id: student.studentId,
       name,
       studentId: student.numApogee,
-      initials: this.getInitials(name),
+      pfpUrl: student.pfpUrl,
       status: this.fromApiStatus(student.status),
     };
-  }
-
-  private getInitials(name: string): string {
-    return name
-      .split(' ')
-      .filter(Boolean)
-      .map((part) => part[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
   }
 
   private fromApiStatus(status: AttendanceStudentStatus): ManualAttendanceStatus {

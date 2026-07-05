@@ -1,6 +1,7 @@
 package ma.eniad.justificationservice.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
@@ -9,11 +10,12 @@ public record SubmitJustificationRequest(
         @NotNull(message = "sessionId is required")
         Long sessionId,
 
-        @NotNull(message = "studentId is required")
         Long studentId,
 
-        @NotBlank(message = "studentName is required")
         String studentName,
+
+        @Email(message = "studentEmail must be a valid email address")
+        String studentEmail,
 
         String studentCode,
 

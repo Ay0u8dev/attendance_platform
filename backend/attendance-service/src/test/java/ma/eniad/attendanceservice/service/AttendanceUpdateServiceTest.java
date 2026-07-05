@@ -4,15 +4,16 @@ import ma.eniad.attendanceservice.dto.AttendanceCounts;
 import ma.eniad.attendanceservice.dto.AttendanceUpdateEvent;
 import ma.eniad.attendanceservice.dto.AttendanceUpdateResponse;
 import ma.eniad.attendanceservice.dto.InternalAttendanceUpdateRequest;
+import ma.eniad.attendanceservice.dto.JustificationContextResponse;
 import ma.eniad.attendanceservice.dto.JustifyAbsenceRequest;
 import ma.eniad.attendanceservice.dto.LiveAttendanceSessionMeta;
 import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 import ma.eniad.attendanceservice.dto.ManualAttendanceUpdateRequest;
 import ma.eniad.attendanceservice.entity.AttendanceRecord;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
-import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
-import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionMethod;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.repository.AttendanceRecordRepository;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +44,7 @@ class AttendanceUpdateServiceTest {
     private AttendanceUpdateService attendanceUpdateService;
     private AttendanceRecordRepository attendanceRecordRepository;
     private AttendanceSessionRepository attendanceSessionRepository;
+    private AttendanceNotificationService attendanceNotificationService;
 
     @BeforeEach
     void setUp() {
@@ -50,6 +52,7 @@ class AttendanceUpdateServiceTest {
         liveAttendanceSessionStore = new InMemoryLiveAttendanceSessionStore();
         attendanceRecordRepository = mock(AttendanceRecordRepository.class);
         attendanceSessionRepository = mock(AttendanceSessionRepository.class);
+        attendanceNotificationService = mock(AttendanceNotificationService.class);
         AttendanceSessionLock directLock = new AttendanceSessionLock() {
             @Override
             public <T> T execute(Long sessionId, java.util.function.Supplier<T> operation) {
@@ -62,7 +65,8 @@ class AttendanceUpdateServiceTest {
                 messagingTemplate,
                 directLock,
                 attendanceRecordRepository,
-                attendanceSessionRepository
+                attendanceSessionRepository,
+                attendanceNotificationService
         );
 
         // Ensure internal updates pass auth checks during unit tests
@@ -154,13 +158,21 @@ class AttendanceUpdateServiceTest {
 
         when(attendanceRecordRepository.findBySessionIdAndStudentId(100L, 10L)).thenReturn(Optional.of(record));
         when(attendanceSessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        when(attendanceRecordRepository.findBySessionIdOrderByStudentIdAsc(100L)).thenReturn(List.of(
+                record,
+                AttendanceRecord.builder()
+                        .sessionId(100L)
+                        .studentId(11L)
+                        .status(AttendanceStudentStatus.ABSENT)
+                        .build()
+        ));
 
         attendanceUpdateService.justifyFinalizedAbsence(
                 "justification-service",
                 "test-internal-token",
                 100L,
                 10L,
-                new JustifyAbsenceRequest(50L, "Admin")
+                new JustifyAbsenceRequest(50L, "1", "ADMIN")
         );
 
         assertThat(record.getStatus()).isEqualTo(AttendanceStudentStatus.JUSTIFIED);
@@ -184,11 +196,84 @@ class AttendanceUpdateServiceTest {
                 "test-internal-token",
                 100L,
                 10L,
-                new JustifyAbsenceRequest(50L, "Admin")
+                new JustifyAbsenceRequest(50L, "1", "ADMIN")
         ))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting("statusCode")
                 .isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void justifyFinalizedAbsenceIsIdempotentWhenAlreadyJustified() {
+        AttendanceRecord record = AttendanceRecord.builder()
+                .sessionId(100L)
+                .studentId(10L)
+                .status(AttendanceStudentStatus.JUSTIFIED)
+                .build();
+        when(attendanceRecordRepository.findBySessionIdAndStudentId(100L, 10L))
+                .thenReturn(Optional.of(record));
+
+        attendanceUpdateService.justifyFinalizedAbsence(
+                "justification-service",
+                "test-internal-token",
+                100L,
+                10L,
+                new JustifyAbsenceRequest(50L, "1", "ADMIN")
+        );
+
+        assertThat(record.getStatus()).isEqualTo(AttendanceStudentStatus.JUSTIFIED);
+    }
+
+    @Test
+    void justificationContextReturnsSessionOwnerAndAttendanceRecord() {
+        AttendanceRecord record = AttendanceRecord.builder()
+                .id(501L)
+                .sessionId(100L)
+                .studentId(10L)
+                .groupId(20L)
+                .firstName("Aya")
+                .lastName("Bennani")
+                .email("aya@ump.ac.ma")
+                .numApogee("A001")
+                .status(AttendanceStudentStatus.ABSENT)
+                .build();
+        AttendanceSession session = AttendanceSession.builder()
+                .id(100L)
+                .teacherId(77L)
+                .teacherFullName("Prof. Idrissi")
+                .courseLabel("Distributed Systems")
+                .roomLabel("B12")
+                .startedAt(LocalDateTime.of(2026, 6, 20, 9, 0))
+                .endsAt(LocalDateTime.of(2026, 6, 20, 10, 30))
+                .build();
+        when(attendanceRecordRepository.findBySessionIdAndStudentId(100L, 10L))
+                .thenReturn(Optional.of(record));
+        when(attendanceSessionRepository.findById(100L)).thenReturn(Optional.of(session));
+
+        JustificationContextResponse response = attendanceUpdateService.getJustificationContext(
+                "justification-service",
+                "test-internal-token",
+                100L,
+                10L
+        );
+
+        assertThat(response.attendanceRecordId()).isEqualTo(501L);
+        assertThat(response.teacherId()).isEqualTo(77L);
+        assertThat(response.studentName()).isEqualTo("Aya Bennani");
+        assertThat(response.attendanceStatus()).isEqualTo(AttendanceStudentStatus.ABSENT);
+    }
+
+    @Test
+    void justificationContextRejectsUntrustedCaller() {
+        assertThatThrownBy(() -> attendanceUpdateService.getJustificationContext(
+                "browser",
+                "test-internal-token",
+                100L,
+                10L
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test

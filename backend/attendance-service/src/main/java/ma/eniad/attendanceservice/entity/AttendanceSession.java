@@ -2,6 +2,8 @@ package ma.eniad.attendanceservice.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionMethod;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;

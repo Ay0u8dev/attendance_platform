@@ -39,6 +39,9 @@ public interface TeacherAssignmentRepository extends JpaRepository<TeacherAssign
     @EntityGraph(attributePaths = {"teacher", "academicYear", "formation", "groupe", "module"})
     List<TeacherAssignment> findAll();
 
+    @EntityGraph(attributePaths = {"teacher", "academicYear", "formation", "formation.filiere", "formation.cycle", "groupe", "module"})
+    List<TeacherAssignment> findByTeacherId(Long teacherId);
+
     @Query("select a.teacher.id, a.academicYear.id, a.formation.id, a.groupe.id, a.module.id "
         + "from TeacherAssignment a "
         + "where a.teacher.id in :teacherIds "

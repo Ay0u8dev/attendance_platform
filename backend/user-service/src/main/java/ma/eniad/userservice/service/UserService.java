@@ -22,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -38,10 +37,16 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         boolean changed = false;
-        boolean isStudent = user.getRoles().contains(Role.STUDENT);
+        boolean isStudent = hasRole(user, Role.STUDENT);
+        boolean isTeacher = hasRole(user, Role.TEACHER);
 
         String requestedPfpUrl = normalizeProfilePhotoUrl(request.getPfpUrl());
-        if (requestedPfpUrl != null && !Objects.equals(user.getPfpUrl(), requestedPfpUrl)) {
+        if (
+                requestedPfpUrl != null
+                        && user.isFirstLogin()
+                        && (isStudent || isTeacher)
+                        && normalizeProfilePhotoUrl(user.getPfpUrl()) == null
+        ) {
             user.setPfpUrl(requestedPfpUrl);
             changed = true;
         }
@@ -126,6 +131,10 @@ public class UserService {
         );
     }
 
+    public List<Long> getEnabledAdminIds() {
+        return userRepository.findEnabledUserIdsByRole(Role.ADMIN);
+    }
+
     private String normalizeProfilePhotoUrl(String pfpUrl) {
         if (pfpUrl == null) {
             return null;
@@ -133,6 +142,10 @@ public class UserService {
 
         String trimmed = pfpUrl.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private boolean hasRole(User user, Role role) {
+        return user.getRoles() != null && user.getRoles().contains(role);
     }
 
     private String resolveFiliereCode(Inscription inscription) {

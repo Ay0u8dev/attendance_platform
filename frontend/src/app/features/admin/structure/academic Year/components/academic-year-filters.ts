@@ -51,6 +51,19 @@ import { SearchInput } from '../../../../../shared/components/search-input/searc
               (clicked)="resetFilters.emit()"
             ></app-button>
           </div>
+
+          @if (createLabel(); as label) {
+            <div class="flex items-center">
+              <button
+                type="button"
+                class="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-primary px-5 text-sm font-semibold text-white shadow-card transition hover:-translate-y-0.5 hover:bg-primary-strong hover:shadow-card-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                (click)="createClicked.emit()"
+              >
+                <i class="fa-solid fa-plus text-sm" aria-hidden="true"></i>
+                <span>{{ label }}</span>
+              </button>
+            </div>
+          }
         </div>
 
       </div>
@@ -61,9 +74,11 @@ import { SearchInput } from '../../../../../shared/components/search-input/searc
 export class AcademicYearFilters {
   readonly searchValue = input('');
   readonly statusValue = input<string | null>(null);
+  readonly createLabel = input<string | null>(null);
   readonly searchChange = output<string>();
   readonly statusFilterChange = output<string | null>();
   readonly resetFilters = output<void>();
+  readonly createClicked = output<void>();
 
   readonly statusOptions: DropdownOption[] = [
     { label: 'Active', value: 'active' },

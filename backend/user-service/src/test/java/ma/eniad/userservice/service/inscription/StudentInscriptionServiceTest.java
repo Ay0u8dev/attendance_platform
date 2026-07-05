@@ -17,6 +17,7 @@ import ma.eniad.userservice.entity.structure.AnneeUniversitaire;
 import ma.eniad.userservice.entity.structure.Formation;
 import ma.eniad.userservice.entity.structure.Groupe;
 import ma.eniad.userservice.exception.DuplicateResourceException;
+import ma.eniad.userservice.exception.InvalidInputException;
 import ma.eniad.userservice.exception.ResourceNotFoundException;
 import ma.eniad.userservice.mapper.inscription.StudentInscriptionMapper;
 import ma.eniad.userservice.repository.inscription.StudentInscriptionRepository;
@@ -60,9 +61,9 @@ class StudentInscriptionServiceTest {
     void createLinksEntitiesAndReturnsResponse() {
         StudentInscriptionRequestDTO request = request(1L, 2L, 3L, 4L);
         Student student = Student.builder().id(1L).build();
-        Formation formation = Formation.builder().id(2L).build();
-        Groupe groupe = Groupe.builder().id(3L).formation(formation).build();
         AnneeUniversitaire annee = AnneeUniversitaire.builder().id(4L).build();
+        Formation formation = Formation.builder().id(2L).anneeUniversitaire(annee).build();
+        Groupe groupe = Groupe.builder().id(3L).formation(formation).build();
         Inscription inscription = new Inscription();
         StudentInscriptionResponseDTO response = response(10L, 1L, 2L, 3L, 4L);
 
@@ -88,9 +89,9 @@ class StudentInscriptionServiceTest {
     void createThrowsWhenStudentAlreadyEnrolled() {
         StudentInscriptionRequestDTO request = request(1L, 2L, 3L, 4L);
         Student student = Student.builder().id(1L).build();
-        Formation formation = Formation.builder().id(2L).build();
-        Groupe groupe = Groupe.builder().id(3L).formation(formation).build();
         AnneeUniversitaire annee = AnneeUniversitaire.builder().id(4L).build();
+        Formation formation = Formation.builder().id(2L).anneeUniversitaire(annee).build();
+        Groupe groupe = Groupe.builder().id(3L).formation(formation).build();
 
         when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
         when(formationRepository.findById(2L)).thenReturn(Optional.of(formation));
@@ -118,10 +119,10 @@ class StudentInscriptionServiceTest {
     void createThrowsWhenGroupeDoesNotBelongToFormation() {
         StudentInscriptionRequestDTO request = request(1L, 2L, 3L, 4L);
         Student student = Student.builder().id(1L).build();
-        Formation formation = Formation.builder().id(2L).build();
+        AnneeUniversitaire annee = AnneeUniversitaire.builder().id(4L).build();
+        Formation formation = Formation.builder().id(2L).anneeUniversitaire(annee).build();
         Formation otherFormation = Formation.builder().id(99L).build();
         Groupe groupe = Groupe.builder().id(3L).formation(otherFormation).build();
-        AnneeUniversitaire annee = AnneeUniversitaire.builder().id(4L).build();
 
         when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
         when(formationRepository.findById(2L)).thenReturn(Optional.of(formation));
@@ -129,8 +130,8 @@ class StudentInscriptionServiceTest {
         when(anneeRepository.findById(4L)).thenReturn(Optional.of(annee));
 
         assertThatThrownBy(() -> inscriptionService.createInscription(request))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Groupe does not belong to the formation");
+                .isInstanceOf(InvalidInputException.class)
+                .hasMessage("Groupe does not belong to the selected formation");
     }
 
     @Test
@@ -171,9 +172,9 @@ class StudentInscriptionServiceTest {
     void updateUpdatesInscriptionWithoutDuplicateCheckWhenSameStudentAndYear() {
         StudentInscriptionRequestDTO request = request(1L, 2L, 3L, 4L);
         Student student = Student.builder().id(1L).build();
-        Formation formation = Formation.builder().id(2L).build();
-        Groupe groupe = Groupe.builder().id(3L).formation(formation).build();
         AnneeUniversitaire annee = AnneeUniversitaire.builder().id(4L).build();
+        Formation formation = Formation.builder().id(2L).anneeUniversitaire(annee).build();
+        Groupe groupe = Groupe.builder().id(3L).formation(formation).build();
 
         Inscription inscription = new Inscription();
         inscription.setId(10L);
@@ -206,9 +207,9 @@ class StudentInscriptionServiceTest {
         Student oldStudent = Student.builder().id(1L).build();
         AnneeUniversitaire oldYear = AnneeUniversitaire.builder().id(4L).build();
         Student newStudent = Student.builder().id(2L).build();
-        Formation newFormation = Formation.builder().id(5L).build();
-        Groupe newGroupe = Groupe.builder().id(6L).formation(newFormation).build();
         AnneeUniversitaire newYear = AnneeUniversitaire.builder().id(7L).build();
+        Formation newFormation = Formation.builder().id(5L).anneeUniversitaire(newYear).build();
+        Groupe newGroupe = Groupe.builder().id(6L).formation(newFormation).build();
 
         Inscription inscription = new Inscription();
         inscription.setId(10L);
@@ -241,9 +242,9 @@ class StudentInscriptionServiceTest {
         StudentInscriptionRequestDTO request = request(2L, 2L, 3L, 4L);
         Student existingStudent = Student.builder().id(1L).build();
         Student newStudent = Student.builder().id(2L).build();
-        Formation formation = Formation.builder().id(2L).build();
-        Groupe groupe = Groupe.builder().id(3L).formation(formation).build();
         AnneeUniversitaire annee = AnneeUniversitaire.builder().id(4L).build();
+        Formation formation = Formation.builder().id(2L).anneeUniversitaire(annee).build();
+        Groupe groupe = Groupe.builder().id(3L).formation(formation).build();
 
         Inscription inscription = new Inscription();
         inscription.setId(10L);
@@ -266,10 +267,10 @@ class StudentInscriptionServiceTest {
     void updateThrowsWhenGroupeDoesNotBelongToFormation() {
         StudentInscriptionRequestDTO request = request(1L, 2L, 3L, 4L);
         Student student = Student.builder().id(1L).build();
-        Formation formation = Formation.builder().id(2L).build();
+        AnneeUniversitaire annee = AnneeUniversitaire.builder().id(4L).build();
+        Formation formation = Formation.builder().id(2L).anneeUniversitaire(annee).build();
         Formation otherFormation = Formation.builder().id(99L).build();
         Groupe groupe = Groupe.builder().id(3L).formation(otherFormation).build();
-        AnneeUniversitaire annee = AnneeUniversitaire.builder().id(4L).build();
 
         Inscription inscription = new Inscription();
         inscription.setId(10L);
@@ -283,8 +284,8 @@ class StudentInscriptionServiceTest {
         when(anneeRepository.findById(4L)).thenReturn(Optional.of(annee));
 
         assertThatThrownBy(() -> inscriptionService.updateInscription(10L, request))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Groupe does not belong to the formation");
+                .isInstanceOf(InvalidInputException.class)
+                .hasMessage("Groupe does not belong to the selected formation");
     }
 
     @Test

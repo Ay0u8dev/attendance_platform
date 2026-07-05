@@ -9,15 +9,25 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import ma.eniad.justificationservice.entity.enums.JustificationStatus;
 
 @Entity
-@Table(name = "justifications")
+@Table(
+        name = "justifications",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_justification_session_student",
+                columnNames = {"session_id", "student_id"}
+        )
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -32,11 +42,26 @@ public class Justification {
     @Column
     private Long sessionId;
 
+    @Column
+    private Long attendanceRecordId;
+
     @Column(nullable = false)
     private Long studentId;
 
+    @Column
+    private Long groupId;
+
+    @Column
+    private Long teacherId;
+
+    @Column(length = 255)
+    private String teacherName;
+
     @Column(nullable = false)
     private String studentName;
+
+    @Column(length = 254)
+    private String studentEmail;
 
     @Column(length = 64)
     private String studentCode;
@@ -52,6 +77,9 @@ public class Justification {
 
     @Column(nullable = false)
     private String module;
+
+    @Column(length = 255)
+    private String roomLabel;
 
     @Column(nullable = false)
     private LocalDateTime sessionDate;
@@ -79,4 +107,23 @@ public class Justification {
     private String reviewerRole;
 
     private LocalDateTime reviewedAt;
+
+    private LocalDateTime sessionEndedAt;
+
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    void beforeCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        if (submittedAt == null) {
+            submittedAt = now;
+        }
+        updatedAt = now;
+    }
+
+    @PreUpdate
+    void beforeUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }

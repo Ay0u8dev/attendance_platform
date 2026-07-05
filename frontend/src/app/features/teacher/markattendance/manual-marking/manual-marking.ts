@@ -10,6 +10,7 @@ import {
   AttendanceStudentView,
 } from '../../../../core/attendance/models/attendance.model';
 import { AttendanceService } from '../../../../core/attendance/services/attendance.service';
+import { UserAvatar } from '../../../../shared/components/user-avatar/user-avatar';
 
 export type AttendanceStatus = 'present' | 'absent';
 
@@ -17,14 +18,14 @@ export interface Student {
   id: number;
   name: string;
   apogee: string;
-  avatarInitials: string;
+  pfpUrl?: string | null;
   status: AttendanceStatus;
   hasNote: boolean;
 }
 
 @Component({
   selector: 'app-manual-marking',
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, FormsModule, UserAvatar],
   templateUrl: './manual-marking.html',
   styleUrl: './manual-marking.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,9 +49,9 @@ export class ManualMarking implements OnInit {
       module: session?.courseLabel ?? 'Session d appel',
       group: session?.groupIds?.length ? `Groupes ${session.groupIds.join(', ')}` : 'Groupes',
       time: session?.startedAt
-        ? `${new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${
+        ? `${new Date(session.startedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} - ${
             session.endsAt
-              ? new Date(session.endsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              ? new Date(session.endsAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
               : 'en cours'
           }`
         : '',
@@ -171,20 +172,10 @@ export class ManualMarking implements OnInit {
       id: student.studentId,
       name,
       apogee: student.numApogee,
-      avatarInitials: this.getInitials(name),
+      pfpUrl: student.pfpUrl,
       status: this.fromApiStatus(student.status),
       hasNote: false,
     };
-  }
-
-  private getInitials(name: string): string {
-    return name
-      .split(' ')
-      .filter(Boolean)
-      .map((part) => part[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
   }
 
   private fromApiStatus(status: AttendanceStudentStatus): AttendanceStatus {

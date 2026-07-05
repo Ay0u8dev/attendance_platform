@@ -32,7 +32,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PageHeader {
-  readonly eyebrow = input('Academic Attendance');
+  readonly eyebrow = input('Présence académique');
   readonly title = input.required<string>();
   readonly description = input('');
   readonly meta = input('');

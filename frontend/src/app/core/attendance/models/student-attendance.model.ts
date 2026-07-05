@@ -1,4 +1,4 @@
-export type AttendanceStudentStatus = 'UNKNOWN' | 'PRESENT' | 'ABSENT';
+export type AttendanceStudentStatus = 'UNKNOWN' | 'PRESENT' | 'ABSENT' | 'JUSTIFIED';
 export type AttendanceSessionMethod = 'QR_CODE' | 'FACE_ID' | 'MANUAL';
 export type AttendanceSessionStatus = 'ACTIVE' | 'FINALIZED';
 
@@ -73,7 +73,7 @@ export interface StudentAttendanceSessionQuery {
   readonly sort?: string;
 }
 
-export type AttendanceBadgeVariant = 'success' | 'error' | 'neutral';
+export type AttendanceBadgeVariant = 'success' | 'warning' | 'error' | 'neutral';
 export type StudentJustificationStatus = 'Aucune' | 'En attente' | 'Acceptée' | 'Refusée';
 export type StudentJustificationVariant = 'neutral' | 'warning' | 'success' | 'error';
 

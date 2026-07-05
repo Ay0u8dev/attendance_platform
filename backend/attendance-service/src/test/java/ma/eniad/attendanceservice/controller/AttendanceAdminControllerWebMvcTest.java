@@ -5,7 +5,10 @@ import ma.eniad.attendanceservice.config.WebConfig;
 import ma.eniad.attendanceservice.dto.AdminOverviewResponse;
 import ma.eniad.attendanceservice.dto.AttendanceSessionSummaryResponse;
 import ma.eniad.attendanceservice.dto.PagedResponse;
-import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.dto.StudentAttendanceSessionSummaryResponse;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionMethod;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.exception.GlobalExceptionHandler;
 import ma.eniad.attendanceservice.service.AttendanceQueryService;
 import org.junit.jupiter.api.Test;
@@ -70,5 +73,34 @@ class AttendanceAdminControllerWebMvcTest {
                 .andExpect(jsonPath("$.items[0].sessionId").value(100))
                 .andExpect(jsonPath("$.items[0].teacherFullName").value("Ayoub Elebbar"))
                 .andExpect(jsonPath("$.items[0].presentCount").value(10));
+    }
+
+    @Test
+    void adminStudentSessionsListSucceeds() throws Exception {
+        when(attendanceQueryService.getStudentSessions(any(), any(), any(), any(), any()))
+                .thenReturn(new PagedResponse<>(
+                        List.of(new StudentAttendanceSessionSummaryResponse(
+                                100L,
+                                "Ayoub Elebbar",
+                                "Distributed Systems",
+                                "Room B12",
+                                List.of(1L),
+                                AttendanceSessionStatus.FINALIZED,
+                                LocalDateTime.of(2026, 4, 28, 12, 0),
+                                LocalDateTime.of(2026, 4, 28, 13, 30),
+                                AttendanceStudentStatus.ABSENT,
+                                AttendanceSessionMethod.MANUAL,
+                                LocalDateTime.of(2026, 4, 28, 12, 10)
+                        )),
+                        0, 20, 1, 1
+                ));
+
+        mockMvc.perform(get("/attendance/admin/students/10/sessions")
+                        .param("status", "ABSENT")
+                        .with(adminUser()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].sessionId").value(100))
+                .andExpect(jsonPath("$.items[0].attendanceStatus").value("ABSENT"))
+                .andExpect(jsonPath("$.items[0].courseLabel").value("Distributed Systems"));
     }
 }

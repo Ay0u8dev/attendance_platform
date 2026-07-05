@@ -1,10 +1,13 @@
-<section class="overflow-hidden rounded-3xl border border-line bg-surface shadow-card">
+<section class="overflow-hidden rounded-[1.75rem] border border-line bg-surface shadow-card">
   @if (title() || description()) {
-    <header class="border-b border-line px-5 py-4 sm:px-6">
+    <header class="border-b border-line bg-surface px-5 py-5 sm:px-6">
       <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div class="space-y-1">
           @if (title()) {
-            <h2 class="text-lg font-semibold text-principalText sm:text-xl">{{ title() }}</h2>
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+              Vue annuaire
+            </p>
+            <h2 class="text-xl font-semibold text-principalText sm:text-2xl">{{ title() }}</h2>
           }
 
           @if (description()) {
@@ -33,6 +36,7 @@
       [filteredCount]="filteredRows().length"
       [totalCount]="allRows().length"
       [selectedCount]="selectedFilteredRowCount()"
+      [showResultSummary]="showResultSummary()"
       (searchValueChange)="updateSearchQuery($event)"
       (filterValueChange)="updateColumnFilter($event)"
       (columnVisibilityChange)="updateColumnVisibility($event)"
@@ -62,16 +66,36 @@
     </div>
   }
 
-  <div class="overflow-x-auto">
-    <table class="min-w-full border-separate border-spacing-0">
+  @if (paginationPlacement() === 'top') {
+    <app-data-table-pagination
+      [currentPage]="currentPage()"
+      [pageCount]="pageCount()"
+      [pageSize]="pageSize()"
+      [totalItems]="filteredRows().length"
+      [startIndex]="pageStartIndex()"
+      [endIndex]="pageEndIndex()"
+      [selectedCount]="selectedFilteredRowCount()"
+      [canGoPrevious]="currentPage() > 1"
+      [canGoNext]="currentPage() < pageCount()"
+      [pageSizeOptions]="pageSizeOptions()"
+      menuDirection="down"
+      (pageChange)="goToPage($event)"
+      (pageSizeChange)="updatePageSize($event)"
+      (deleteSelected)="requestBulkDelete()"
+    ></app-data-table-pagination>
+  }
+
+  <div class="bg-surface px-3 py-4 sm:px-5">
+    <div class="overflow-x-auto rounded-[1.5rem] bg-surface">
+    <table class="data-table-grid min-w-full border-separate">
       <caption class="sr-only">
         {{
-          caption() || title() || 'Data table'
+          caption() || title() || 'Tableau de données'
         }}
       </caption>
 
       <thead>
-        <tr class="bg-surface-subtle text-left">
+        <tr class="bg-surface-subtle/70 text-left">
           @if (enableRowSelection()) {
             <th scope="col" class="w-14 border-b border-line px-4 py-3 sm:px-5">
               <input
@@ -81,7 +105,7 @@
                 [indeterminate]="somePageRowsSelected()"
                 [disabled]="paginatedRows().length === 0"
                 (change)="togglePageRowsSelection($event)"
-                aria-label="Select all rows on this page"
+                aria-label="Sélectionner toutes les lignes de cette page"
               />
             </th>
           }
@@ -89,7 +113,7 @@
           @for (column of visibleColumns(); track column.id) {
             <th
               scope="col"
-              class="border-b border-line px-4 py-3 text-sm font-semibold text-principalText sm:px-5"
+              class="px-4 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-muted sm:px-5"
               [style.width]="column.width ?? null"
               [class]="headerCellClasses(column)"
             >
@@ -114,26 +138,26 @@
         @if (paginatedRows().length > 0) {
           @for (rowEntry of paginatedRows(); track rowEntry.id) {
             <tr
-              class="transition-colors duration-200 hover:bg-surface-subtle/55"
+              class="data-table-row group transition duration-200"
               [class.cursor-pointer]="rowClickable()"
               [class.bg-primary-soft]="isRowSelected(rowEntry.id)"
               (click)="handleRowClick(rowEntry.row)"
             >
               @if (enableRowSelection()) {
-                <td class="border-b border-line px-4 py-4 align-top sm:px-5">
+                <td class="px-4 py-4 align-top sm:px-5">
                   <input
                     type="checkbox"
                     class="h-4 w-4 rounded border-line accent-primary"
                     [checked]="isRowSelected(rowEntry.id)"
                     (change)="toggleRowSelection(rowEntry.id, $event)"
-                    [attr.aria-label]="'Select row ' + (rowEntry.index + 1)"
+                    [attr.aria-label]="'Sélectionner la ligne ' + (rowEntry.index + 1)"
                   />
                 </td>
               }
 
               @for (column of visibleColumns(); track column.id) {
                 <td
-                  class="border-b border-line px-4 py-4 text-sm text-secondaryText sm:px-5"
+                  class="px-4 py-5 text-sm text-secondaryText sm:px-5 lg:py-5"
                   [class]="bodyCellClasses(column)"
                 >
                   <ng-container
@@ -159,23 +183,26 @@
         }
       </tbody>
     </table>
+    </div>
   </div>
-
-  <app-data-table-pagination
-    [currentPage]="currentPage()"
-    [pageCount]="pageCount()"
-    [pageSize]="pageSize()"
-    [totalItems]="filteredRows().length"
-    [startIndex]="pageStartIndex()"
-    [endIndex]="pageEndIndex()"
-    [selectedCount]="selectedFilteredRowCount()"
-    [canGoPrevious]="currentPage() > 1"
-    [canGoNext]="currentPage() < pageCount()"
-    [pageSizeOptions]="pageSizeOptions()"
-    (pageChange)="goToPage($event)"
-    (pageSizeChange)="updatePageSize($event)"
-    (deleteSelected)="requestBulkDelete()"
-  ></app-data-table-pagination>
+  @if (paginationPlacement() === 'bottom') {
+    <app-data-table-pagination
+      [currentPage]="currentPage()"
+      [pageCount]="pageCount()"
+      [pageSize]="pageSize()"
+      [totalItems]="filteredRows().length"
+      [startIndex]="pageStartIndex()"
+      [endIndex]="pageEndIndex()"
+      [selectedCount]="selectedFilteredRowCount()"
+      [canGoPrevious]="currentPage() > 1"
+      [canGoNext]="currentPage() < pageCount()"
+      [pageSizeOptions]="pageSizeOptions()"
+      menuDirection="up"
+      (pageChange)="goToPage($event)"
+      (pageSizeChange)="updatePageSize($event)"
+      (deleteSelected)="requestBulkDelete()"
+    ></app-data-table-pagination>
+  }
 </section>
 
 <ng-template #defaultCell let-value="value">

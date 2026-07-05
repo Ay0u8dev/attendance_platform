@@ -2,6 +2,7 @@ package ma.eniad.userservice.utils.excel.teacher;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import jakarta.validation.Validator;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +13,10 @@ import ma.eniad.userservice.dto.teacher.TeacherExcelRowDTO;
 
 @Component
 public class TeacherExcelRowValidator {
+    private static final Pattern STRICT_EMAIL_PATTERN = Pattern.compile(
+        "^[^\\s@.](?:[^\\s@]*[^\\s@.])?@(?:[^\\s@.]+\\.)+[^\\s@.]+$"
+    );
+
     private final Validator validator;
 
     @Value("${app.allowed-domain}")
@@ -87,27 +92,26 @@ public class TeacherExcelRowValidator {
             return;
         }
 
-        if (row.getEmail().length() > 254) {
+        String normalizedEmail = row.getEmail().trim().toLowerCase();
+
+        if (normalizedEmail.length() > 254) {
             errors.add(buildError(
                 row,
                 "email",
                 "Email exceeds 254 characters"
             ));
+            return;
         }
 
-        if (!validator.validateProperty(row, "email").isEmpty()) {
+        if (!isStrictEmail(normalizedEmail) || !validator.validateProperty(row, "email").isEmpty()) {
             errors.add(buildError(
                 row,
                 "email",
                 "Invalid email format"
             ));
+            return;
         }
 
-        String email = row.getEmail();
-        if (email == null) {
-            return; // Should not happen, but defensive guard
-        }
-        String normalizedEmail = email.trim().toLowerCase();
         String normalizedDomain = normalizeDomain(allowedDomain);
         if (!normalizedDomain.isEmpty() && !normalizedEmail.endsWith("@" + normalizedDomain)) {
             errors.add(buildError(
@@ -143,6 +147,13 @@ public class TeacherExcelRowValidator {
         }
 
         return normalized;
+    }
+
+    private boolean isStrictEmail(String email) {
+        return STRICT_EMAIL_PATTERN.matcher(email).matches()
+            && !email.contains("..")
+            && !email.substring(0, email.indexOf('@')).contains("..")
+            && !email.substring(email.indexOf('@') + 1).contains("..");
     }
 
     private RowErrorDTO buildError(

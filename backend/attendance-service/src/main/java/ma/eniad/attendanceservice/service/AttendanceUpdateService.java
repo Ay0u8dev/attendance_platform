@@ -4,15 +4,16 @@ import ma.eniad.attendanceservice.dto.AttendanceCounts;
 import ma.eniad.attendanceservice.dto.AttendanceUpdateEvent;
 import ma.eniad.attendanceservice.dto.AttendanceUpdateResponse;
 import ma.eniad.attendanceservice.dto.InternalAttendanceUpdateRequest;
+import ma.eniad.attendanceservice.dto.JustificationContextResponse;
 import ma.eniad.attendanceservice.dto.JustifyAbsenceRequest;
 import ma.eniad.attendanceservice.dto.LiveAttendanceSessionMeta;
 import ma.eniad.attendanceservice.dto.LiveAttendanceStudentState;
 import ma.eniad.attendanceservice.dto.ManualAttendanceUpdateRequest;
 import ma.eniad.attendanceservice.entity.AttendanceRecord;
 import ma.eniad.attendanceservice.entity.AttendanceSession;
-import ma.eniad.attendanceservice.entity.AttendanceSessionMethod;
-import ma.eniad.attendanceservice.entity.AttendanceSessionStatus;
-import ma.eniad.attendanceservice.entity.AttendanceStudentStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionMethod;
+import ma.eniad.attendanceservice.entity.enums.AttendanceSessionStatus;
+import ma.eniad.attendanceservice.entity.enums.AttendanceStudentStatus;
 import ma.eniad.attendanceservice.repository.AttendanceRecordRepository;
 import ma.eniad.attendanceservice.repository.AttendanceSessionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
@@ -49,6 +52,7 @@ public class AttendanceUpdateService {
     private final AttendanceSessionLock sessionLock;
     private final AttendanceRecordRepository attendanceRecordRepository;
     private final AttendanceSessionRepository attendanceSessionRepository;
+    private final AttendanceNotificationService attendanceNotificationService;
 
     @Value("${attendance.internal.service-token:}")
     private String internalServiceToken;
@@ -61,12 +65,14 @@ public class AttendanceUpdateService {
                                    SimpMessagingTemplate messagingTemplate,
                                    AttendanceSessionLock sessionLock,
                                    AttendanceRecordRepository attendanceRecordRepository,
-                                   AttendanceSessionRepository attendanceSessionRepository) {
+                                   AttendanceSessionRepository attendanceSessionRepository,
+                                   AttendanceNotificationService attendanceNotificationService) {
         this.liveAttendanceSessionStore = store;
         this.messagingTemplate = messagingTemplate;
         this.sessionLock = sessionLock;
         this.attendanceRecordRepository = attendanceRecordRepository;
         this.attendanceSessionRepository = attendanceSessionRepository;
+        this.attendanceNotificationService = attendanceNotificationService;
     }
 
     AttendanceUpdateService(LiveAttendanceSessionStore store, SimpMessagingTemplate messagingTemplate) {
@@ -75,6 +81,7 @@ public class AttendanceUpdateService {
         this.sessionLock = directLock();
         this.attendanceRecordRepository = null;
         this.attendanceSessionRepository = null;
+        this.attendanceNotificationService = null;
         this.internalServiceToken = "test-internal-token";
     }
 
@@ -134,6 +141,7 @@ public class AttendanceUpdateService {
             );
 
             liveAttendanceSessionStore.saveStudentState(sessionId, updatedStudent);
+            notifyStatusUpdated(persistedSession, sessionMeta, updatedStudent.studentId(), updatedStudent.status());
             return buildResponseAndBroadcast(sessionId, updatedStudent);
         });
     }
@@ -228,14 +236,16 @@ public class AttendanceUpdateService {
                                         Long sessionId,
                                         Long studentId,
                                         JustifyAbsenceRequest request) {
-        if (!JUSTIFICATION_SOURCE.equals(requestSource)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Untrusted request source");
-        }
+        requireJustificationSource(requestSource);
 
         validateInternalToken(requestSource, internalToken);
 
         AttendanceRecord record = attendanceRecordRepository.findBySessionIdAndStudentId(sessionId, studentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attendance record not found"));
+
+        if (record.getStatus() == AttendanceStudentStatus.JUSTIFIED) {
+            return;
+        }
 
         if (record.getStatus() != AttendanceStudentStatus.ABSENT) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Only absent attendance records can be justified");
@@ -253,12 +263,38 @@ public class AttendanceUpdateService {
             );
         }
 
-        attendanceSessionRepository.findById(sessionId).ifPresent(session -> {
-            if (session.getAbsentCount() > 0) {
-                session.setAbsentCount(session.getAbsentCount() - 1);
-                attendanceSessionRepository.save(session);
-            }
-        });
+        attendanceSessionRepository.findById(sessionId).ifPresent(session -> updateSessionCounts(session, sessionId));
+    }
+
+    @Transactional(readOnly = true)
+    public JustificationContextResponse getJustificationContext(String requestSource,
+                                                                String internalToken,
+                                                                Long sessionId,
+                                                                Long studentId) {
+        requireJustificationSource(requestSource);
+        validateInternalToken(requestSource, internalToken);
+
+        AttendanceRecord record = attendanceRecordRepository.findBySessionIdAndStudentId(sessionId, studentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attendance record not found"));
+        AttendanceSession session = attendanceSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attendance session not found"));
+
+        return new JustificationContextResponse(
+                record.getId(),
+                session.getId(),
+                record.getStudentId(),
+                record.getGroupId(),
+                session.getTeacherId(),
+                session.getTeacherFullName(),
+                (record.getFirstName() + " " + record.getLastName()).trim(),
+                record.getEmail(),
+                record.getNumApogee(),
+                session.getCourseLabel(),
+                session.getRoomLabel(),
+                session.getStartedAt(),
+                session.getEndedAt() != null ? session.getEndedAt() : session.getEndsAt(),
+                record.getStatus()
+        );
     }
 
     private AttendanceUpdateResponse updateFinalizedAttendance(AttendanceSession session,
@@ -282,6 +318,7 @@ public class AttendanceUpdateService {
         session.setUnknownCount(counts.unknownCount());
 
         attendanceSessionRepository.save(session);
+        notifyStatusUpdatedAfterCommit(session, record.getStudentId(), record.getStatus());
 
         return new AttendanceUpdateResponse(
                 session.getId(),
@@ -313,6 +350,63 @@ public class AttendanceUpdateService {
         }
 
         return new AttendanceCounts(presentCount, absentCount, unknownCount);
+    }
+
+        private AttendanceCounts updateSessionCounts(AttendanceSession session, Long sessionId) {
+        AttendanceCounts counts = recalculateFinalizedCounts(sessionId);
+        session.setPresentCount(counts.presentCount());
+        session.setAbsentCount(counts.absentCount());
+        session.setUnknownCount(counts.unknownCount());
+        attendanceSessionRepository.save(session);
+        return counts;
+    }
+
+    private void requireJustificationSource(String requestSource) {
+        if (!JUSTIFICATION_SOURCE.equals(requestSource)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Untrusted request source");
+        }
+    }
+
+    private void notifyStatusUpdated(AttendanceSession session,
+                                     LiveAttendanceSessionMeta sessionMeta,
+                                     Long studentId,
+                                     AttendanceStudentStatus status) {
+        if (attendanceNotificationService == null) {
+            return;
+        }
+
+        AttendanceSession notificationSession = session;
+        if (notificationSession == null) {
+            notificationSession = AttendanceSession.builder()
+                    .id(sessionMeta.sessionId())
+                    .teacherId(sessionMeta.teacherId())
+                    .teacherFullName(sessionMeta.teacherFullName())
+                    .courseLabel(sessionMeta.courseLabel())
+                    .roomLabel(sessionMeta.roomLabel())
+                    .build();
+        }
+
+        attendanceNotificationService.notifyAttendanceStatusUpdated(notificationSession, studentId, status);
+    }
+
+    private void notifyStatusUpdatedAfterCommit(AttendanceSession session,
+                                                Long studentId,
+                                                AttendanceStudentStatus status) {
+        if (attendanceNotificationService == null) {
+            return;
+        }
+
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            attendanceNotificationService.notifyAttendanceStatusUpdated(session, studentId, status);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                attendanceNotificationService.notifyAttendanceStatusUpdated(session, studentId, status);
+            }
+        });
     }
 
     private LiveAttendanceSessionMeta requireActiveSession(Long sessionId) {

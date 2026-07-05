@@ -110,7 +110,7 @@ export class StudentJustificationDetailPage {
     const program = [filiere, groupe].filter(Boolean).join(' - ') || 'N/A';
     return [
       { label: 'Nom', value: d.studentName },
-      { label: 'Email', value: profile?.email || 'N/A' },
+      { label: 'E-mail', value: profile?.email || 'N/A' },
       { label: 'Parcours', value: program },
     ];
   });

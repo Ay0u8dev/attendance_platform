@@ -101,6 +101,23 @@ class StudentControllerTest {
     }
 
     @Test
+    void removeProfilePhoto_returnsOk() {
+        StudentProfileDto profile = StudentProfileDto.builder()
+                .id(1L)
+                .email("student@example.com")
+                .pfpUrl(null)
+                .build();
+
+        when(studentService.removeCurrentProfilePhoto()).thenReturn(profile);
+
+        ResponseEntity<StudentProfileDto> result = controller.removeProfilePhoto();
+
+        assertThat(result.getStatusCode().value()).isEqualTo(200);
+        assertThat(result.getBody()).isSameAs(profile);
+        verify(studentService).removeCurrentProfilePhoto();
+    }
+
+    @Test
     void getById_returnsOk() {
         StudentResponseDTO response = StudentResponseDTO.builder()
                 .id(1L)

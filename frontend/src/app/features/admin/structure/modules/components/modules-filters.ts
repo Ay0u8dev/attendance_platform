@@ -62,6 +62,19 @@ import { SearchInput } from '../../../../../shared/components/search-input/searc
               (clicked)="resetFilters.emit()"
             ></app-button>
           </div>
+
+          @if (createLabel(); as label) {
+            <div class="flex items-center justify-end sm:col-span-2 xl:col-span-1">
+              <button
+                type="button"
+                class="inline-flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-primary px-5 text-sm font-semibold text-white shadow-card transition hover:-translate-y-0.5 hover:bg-primary-strong hover:shadow-card-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:w-auto"
+                (click)="createClicked.emit()"
+              >
+                <i class="fa-solid fa-plus text-sm" aria-hidden="true"></i>
+                <span>{{ label }}</span>
+              </button>
+            </div>
+          }
         </div>
       </div>
     </section>
@@ -75,11 +88,13 @@ export class ModulesFilters {
   readonly searchValue = input('');
   readonly formationValue = input<string | null>(null);
   readonly semesterValue = input<string | null>(null);
+  readonly createLabel = input<string | null>(null);
 
   readonly searchChange = output<string>();
   readonly formationFilterChange = output<string | null>();
   readonly semesterFilterChange = output<string | null>();
   readonly resetFilters = output<void>();
+  readonly createClicked = output<void>();
 
   // Computed Options
   readonly formationOptions = computed(() => this.formations());

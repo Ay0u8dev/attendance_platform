@@ -25,6 +25,7 @@ public class JwtService {
     private static final String CLAIM_FIRST_NAME = "firstName";
     private static final String CLAIM_LAST_NAME = "lastName";
     private static final String CLAIM_FIRST_LOGIN = "firstLogin";
+    private static final String CLAIM_PFP_URL = "pfpUrl";
 
     @Value("${app.jwt.secret}")
     private String secretKey;
@@ -42,6 +43,7 @@ public class JwtService {
         extraClaims.put(CLAIM_FIRST_LOGIN, user.isFirstLogin());
         putIfNotBlank(extraClaims, CLAIM_FIRST_NAME, user.getFirstName());
         putIfNotBlank(extraClaims, CLAIM_LAST_NAME, user.getLastName());
+        putIfNotBlank(extraClaims, CLAIM_PFP_URL, user.getPfpUrl());
 
         List<String> roles = new ArrayList<>();
         if (user.getRoles() != null && !user.getRoles().isEmpty()) {

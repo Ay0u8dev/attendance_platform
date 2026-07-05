@@ -382,6 +382,22 @@ describe('StudentDashboardPage QR attendance flow', () => {
     expect(component.activeAttendanceSession()?.attendanceStatus).toBe('UNKNOWN');
   });
 
+  it('keeps face scan errors outside the scrollable modal body on mobile layouts', () => {
+    component.attendanceCameraOpen.set(true);
+    component.selectedAttendanceChoice.set('FACE_ID');
+    component.attendanceFlowPhase.set('face-captured');
+    component.capturedFaceImage.set(FACE_IMAGE_DATA_URL);
+    component.cameraError.set('Visage flou. Reprends une photo plus nette.');
+    fixture.detectChanges();
+
+    const nativeElement = fixture.nativeElement as HTMLElement;
+    const bodyAlert = nativeElement.querySelector('.modal-body [role="alert"]');
+    const footerAlert = nativeElement.querySelector('.modal-footer [role="alert"]');
+
+    expect(bodyAlert).toBeNull();
+    expect(footerAlert?.textContent).toContain('Visage flou');
+  });
+
   it('keeps the face capture available when backend validation fails', async () => {
     getCurrentPosition.mockImplementation((success) => success(makePosition(34, -6)));
     faceAttendanceService.submitStudentFaceAttendance.mockReturnValueOnce(
