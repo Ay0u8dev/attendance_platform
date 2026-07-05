@@ -7,7 +7,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
   },
   template: `
     <section
-      class="flex h-full min-h-56 flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-line bg-surface-subtle px-6 py-8 text-center"
+      class="flex h-full min-h-48 min-w-0 flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-line bg-surface-subtle px-4 py-6 text-center sm:min-h-56 sm:rounded-[1.75rem] sm:px-6 sm:py-8"
     >
       <div
         class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary"
@@ -25,7 +25,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
       </label>
 
       @if (selectedFileName()) {
-        <p class="mt-4 text-sm font-medium text-primary">{{ selectedFileName() }}</p>
+        <p class="mt-4 max-w-full break-all text-sm font-medium text-primary">{{ selectedFileName() }}</p>
       }
     </section>
   `,

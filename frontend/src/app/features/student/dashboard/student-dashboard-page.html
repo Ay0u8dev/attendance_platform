@@ -109,14 +109,14 @@
     </div>
   }
 
-  <section class="space-y-4 pt-2 sm:space-y-5 sm:pt-4">
+  <section class="space-y-3 pt-1 sm:space-y-5 sm:pt-4">
     <div>
       <h2 class="text-xl font-semibold tracking-tight text-principalText sm:text-2xl">
         Infos rapides
       </h2>
     </div>
 
-    <div class="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div class="grid gap-2.5 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
       @for (card of quickCards(); track card.id) {
         <app-student-module-card
           [title]="card.title"

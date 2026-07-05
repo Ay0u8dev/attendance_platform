@@ -54,7 +54,9 @@ attendance:
       - http://host.docker.internal:[*]
       - http://192.168.100.73:[*]
       - http://attendance-platform.ma
+      - https://attendance-platform.ma
       - http://attendance-platform.duckdns.org
+      - https://attendance-platform.duckdns.org
   lock:
     lease-duration: ${ATTENDANCE_LOCK_LEASE_DURATION:PT2M}
     acquire-timeout: ${ATTENDANCE_LOCK_ACQUIRE_TIMEOUT:PT2S}

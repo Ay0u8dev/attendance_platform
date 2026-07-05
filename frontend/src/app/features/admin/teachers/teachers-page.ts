@@ -321,7 +321,7 @@ interface TeacherRow {
           <label class="space-y-1">
             <span class="text-sm font-medium text-principalText">Formation *</span>
             <select formControlName="formationId" class="form-input" (change)="onFormFormationChange()" [disabled]="!teacherForm.controls.academicYearId.value">
-              <option value="">{{ teacherForm.controls.academicYearId.value ? 'Sélectionner une formation' : 'Sélectionnez d'abord une année universitaire' }}</option>
+              <option value="" [textContent]="teacherFormationPlaceholder()"></option>
               @for (formation of formFormationOptions(); track formation.id) {
                 <option [value]="formation.id">{{ formation.name }}</option>
               }
@@ -331,7 +331,7 @@ interface TeacherRow {
           <label class="space-y-1">
             <span class="text-sm font-medium text-principalText">Groupe *</span>
             <select formControlName="groupeId" class="form-input" [disabled]="!teacherForm.controls.formationId.value">
-              <option value="">{{ teacherForm.controls.formationId.value ? 'Sélectionner un groupe' : 'Sélectionnez d'abord une formation' }}</option>
+              <option value="" [textContent]="teacherGroupPlaceholder()"></option>
               @for (group of formGroupOptions(); track group.id) {
                 <option [value]="group.id">{{ group.name }}</option>
               }
@@ -341,7 +341,7 @@ interface TeacherRow {
           <label class="space-y-1">
             <span class="text-sm font-medium text-principalText">Module *</span>
             <select formControlName="moduleId" class="form-input" [disabled]="!teacherForm.controls.formationId.value">
-              <option value="">{{ teacherForm.controls.formationId.value ? 'Sélectionner un module' : 'Sélectionnez d'abord une formation' }}</option>
+              <option value="" [textContent]="teacherModulePlaceholder()"></option>
               @for (module of formModuleOptions(); track module.id) {
                 <option [value]="module.id">{{ module.name }}</option>
               }
@@ -523,7 +523,7 @@ interface TeacherRow {
           <label class="space-y-1">
             <span class="text-sm font-medium text-principalText">Formation *</span>
             <select formControlName="formationId" class="form-input" (change)="onAssignmentFormFormationChange()" [disabled]="!assignmentForm.controls.academicYearId.value">
-              <option value="">{{ assignmentForm.controls.academicYearId.value ? 'Sélectionner une formation' : 'Sélectionnez d'abord une année universitaire' }}</option>
+              <option value="" [textContent]="assignmentFormationPlaceholder()"></option>
               @for (formation of assignmentFormFormationOptions(); track formation.id) {
                 <option [value]="formation.id">{{ formation.name }}</option>
               }
@@ -533,7 +533,7 @@ interface TeacherRow {
           <label class="space-y-1">
             <span class="text-sm font-medium text-principalText">Groupe *</span>
             <select formControlName="groupeId" class="form-input" [disabled]="!assignmentForm.controls.formationId.value">
-              <option value="">{{ assignmentForm.controls.formationId.value ? 'Sélectionner un groupe' : 'Sélectionnez d'abord une formation' }}</option>
+              <option value="" [textContent]="assignmentGroupPlaceholder()"></option>
               @for (group of assignmentFormGroupOptions(); track group.id) {
                 <option [value]="group.id">{{ group.name }}</option>
               }
@@ -543,7 +543,7 @@ interface TeacherRow {
           <label class="space-y-1">
             <span class="text-sm font-medium text-principalText">Module *</span>
             <select formControlName="moduleId" class="form-input" [disabled]="!assignmentForm.controls.formationId.value">
-              <option value="">{{ assignmentForm.controls.formationId.value ? 'Sélectionner un module' : 'Sélectionnez d'abord une formation' }}</option>
+              <option value="" [textContent]="assignmentModulePlaceholder()"></option>
               @for (module of assignmentFormModuleOptions(); track module.id) {
                 <option [value]="module.id">{{ module.name }}</option>
               }
@@ -842,6 +842,35 @@ export class TeachersPage {
   readonly assignmentFormModuleOptions = computed(() =>
     this.modulesForFormation(this.assignmentFormFormationId() || 'all'),
   );
+
+  teacherFormationPlaceholder(): string {
+    return this.teacherForm.controls.academicYearId.value
+      ? 'Sélectionner une formation'
+      : "Sélectionnez d'abord une année universitaire";
+  }
+
+  teacherGroupPlaceholder(): string {
+    return this.teacherForm.controls.formationId.value ? 'Sélectionner un groupe' : "Sélectionnez d'abord une formation";
+  }
+
+  teacherModulePlaceholder(): string {
+    return this.teacherForm.controls.formationId.value ? 'Sélectionner un module' : "Sélectionnez d'abord une formation";
+  }
+
+  assignmentFormationPlaceholder(): string {
+    return this.assignmentForm.controls.academicYearId.value
+      ? 'Sélectionner une formation'
+      : "Sélectionnez d'abord une année universitaire";
+  }
+
+  assignmentGroupPlaceholder(): string {
+    return this.assignmentForm.controls.formationId.value ? 'Sélectionner un groupe' : "Sélectionnez d'abord une formation";
+  }
+
+  assignmentModulePlaceholder(): string {
+    return this.assignmentForm.controls.formationId.value ? 'Sélectionner un module' : "Sélectionnez d'abord une formation";
+  }
+
   readonly filteredTeachers = computed(() => {
     const search = this.searchQuery().trim().toLowerCase();
     const year = this.academicYearFilter();

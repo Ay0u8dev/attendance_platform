@@ -5,7 +5,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
+    max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
   background: color-mix(in srgb, var(--color-principalText) 34%, transparent);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -19,7 +20,7 @@
   box-shadow: 0 24px 80px color-mix(in srgb, var(--color-principalText) 22%, transparent);
   padding: 0;
   position: relative;
-  max-height: calc(100vh - 3rem);
+  max-height: calc(100dvh - 1.5rem);
   overflow: hidden;
   animation: modal-in 240ms cubic-bezier(0.2, 0.7, 0.2, 1);
   display: flex;
@@ -60,6 +61,7 @@
   flex-direction: column;
   gap: 0.5rem;
   flex: 1;
+  min-width: 0;
 }
 
 .modal-title {
@@ -118,7 +120,7 @@
 @media (max-width: 640px) {
   .modal-shell {
     border-radius: 0.875rem;
-    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 1rem);
   }
 
   .modal-title {

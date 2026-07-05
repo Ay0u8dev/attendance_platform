@@ -35,12 +35,12 @@ type UtilityItem = {
     '(document:keydown.escape)': 'handleEscape()',
   },
   template: `
-    <div class="relative h-dvh overflow-hidden bg-background text-principalText">
+    <div class="relative min-h-dvh overflow-x-hidden bg-background text-principalText">
       <div
         class="pointer-events-none absolute inset-x-0 top-0 h-40 bg-linear-to-r from-primary-soft via-background to-secondary-soft opacity-80"
       ></div>
 
-      <div class="relative flex h-full">
+      <div class="relative flex min-h-dvh">
         @if (isSidebarOpen()) {
           <button
             type="button"
@@ -164,10 +164,10 @@ type UtilityItem = {
           </nav>
         </aside>
 
-        <div class="flex min-w-0 min-h-0 flex-1 flex-col bg-background">
-          <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div class="flex min-w-0 flex-1 flex-col bg-background">
+          <div class="min-w-0 flex-1">
             <header
-              class="border-b border-line bg-surface/85 backdrop-blur-xl lg:sticky lg:top-0 lg:z-20"
+              class="sticky top-0 z-20 border-b border-line bg-surface/90 backdrop-blur-xl"
             >
               <div class="flex h-16 items-center justify-between gap-3 px-3 sm:px-5 lg:px-6">
                 <div class="flex min-w-0 items-center gap-3">
@@ -388,6 +388,7 @@ export class StudentLayout {
       .subscribe((event) => {
         this.pageTitle.set(this.resolvePageTitle(event.urlAfterRedirects));
         this.studentProfileService.ensureLoaded();
+        this.scrollToPageTop();
       });
 
     this.studentProfileService.ensureLoaded();
@@ -463,5 +464,14 @@ export class StudentLayout {
     }
 
     return this.routeTitles[url] ?? 'Espace étudiant';
+  }
+
+  private scrollToPageTop(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const scroll = () => window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    window.requestAnimationFrame(scroll);
   }
 }

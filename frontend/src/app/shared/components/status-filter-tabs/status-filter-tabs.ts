@@ -9,7 +9,7 @@ export type StatusFilterTab = {
 @Component({
   selector: 'app-status-filter-tabs',
   template: `
-    <div class="flex flex-wrap gap-3">
+    <div class="-mx-1 flex min-w-0 gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0">
       @for (tab of tabs(); track tab.value) {
         <button
           type="button"
@@ -40,7 +40,7 @@ export class StatusFilterTabs {
   tabClasses(value: string): string {
     const palette = this.palette(value);
     const baseClasses =
-      'inline-flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold transition-colors duration-200';
+      'inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl border px-3 py-2.5 text-xs font-semibold transition-colors duration-200 sm:px-4 sm:text-sm';
     return `${baseClasses} ${this.selected() === value ? palette.selected : palette.idle}`;
   }
 

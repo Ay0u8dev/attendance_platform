@@ -308,7 +308,7 @@ interface StudentRow {
           <label class="space-y-1">
             <span class="text-sm font-medium text-principalText">Formation *</span>
             <select formControlName="formationId" class="form-input" (change)="onFormFormationChange()" [disabled]="!studentForm.controls.academicYearId.value">
-              <option value="">{{ studentForm.controls.academicYearId.value ? 'Sélectionner une formation' : 'Sélectionnez d'abord une année universitaire' }}</option>
+              <option value="" [textContent]="studentFormationPlaceholder()"></option>
               @for (formation of formFormationOptions(); track formation.id) {
                 <option [value]="formation.id">{{ formation.name }}</option>
               }
@@ -321,7 +321,7 @@ interface StudentRow {
           <label class="space-y-1 sm:col-span-2">
             <span class="text-sm font-medium text-principalText">Groupe *</span>
             <select formControlName="groupeId" class="form-input" [disabled]="!studentForm.controls.formationId.value">
-              <option value="">{{ studentForm.controls.formationId.value ? 'Sélectionner un groupe' : 'Sélectionnez d'abord une formation' }}</option>
+              <option value="" [textContent]="studentGroupPlaceholder()"></option>
               @for (group of formGroupOptions(); track group.id) {
                 <option [value]="group.id">{{ group.name }}</option>
               }
@@ -898,6 +898,17 @@ export class StudentsPage {
   );
   readonly formFormationOptions = computed(() => this.formationsForYear(this.formAcademicYearId() || 'all'));
   readonly formGroupOptions = computed(() => this.groupsForFormation(this.formFormationId() || 'all'));
+
+  studentFormationPlaceholder(): string {
+    return this.studentForm.controls.academicYearId.value
+      ? 'Sélectionner une formation'
+      : "Sélectionnez d'abord une année universitaire";
+  }
+
+  studentGroupPlaceholder(): string {
+    return this.studentForm.controls.formationId.value ? 'Sélectionner un groupe' : "Sélectionnez d'abord une formation";
+  }
+
   readonly modulesWithAbsencesCount = computed(() => {
     const counts = new Map<string, number>();
     for (const session of this.absentSessions()) {
