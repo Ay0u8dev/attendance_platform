@@ -43,7 +43,7 @@ def get_authenticated_student(
             detail="Missing authenticated user headers",
         )
 
-    roles = {role.strip().upper() for role in x_user_roles.split(",") if role.strip()}
+    roles = parse_roles(x_user_roles)
 
     if "STUDENT" not in roles:
         raise HTTPException(
@@ -64,6 +64,19 @@ def get_authenticated_student(
         roles=roles,
         email=x_user_email,
     )
+
+
+def parse_roles(roles_header: str) -> set[str]:
+    roles: set[str] = set()
+    for role in roles_header.split(","):
+        normalized = role.strip().upper()
+        if not normalized:
+            continue
+        roles.add(normalized)
+        if normalized.startswith("ROLE_"):
+            roles.add(normalized.removeprefix("ROLE_"))
+    return roles
+
 
 def verify_internal_service_token(
     x_internal_service_token: str | None = Header(

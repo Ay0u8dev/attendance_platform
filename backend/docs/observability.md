@@ -40,6 +40,18 @@ Python services expose Prometheus metrics at:
 
 These endpoints are internal only. They are scraped by Azure Monitor managed Prometheus through pod annotations and are not exposed through Traefik ingress.
 
+The AMA metrics settings ConfigMap must define `pod-annotation-based-scraping` as a top-level `data` key:
+
+```yaml
+data:
+  pod-annotation-based-scraping: |-
+    podannotationnamespaceregex = "attendance-dev"
+  prometheus-collector-settings: |-
+    cluster_alias = "attendance-cluster"
+```
+
+Do not nest `pod-annotation-based-scraping` under `cluster-metrics`. If it is nested there, Managed Prometheus will still scrape system targets such as `kubelet`, `cadvisor`, and `node`, but it will ignore the application pod annotations.
+
 All backend pods keep service identity metadata:
 
 ```text
@@ -58,6 +70,8 @@ APPLICATIONINSIGHTS_CONNECTION_STRING
 ```
 
 Do not enable the Java agent on every service blindly. Validate one service first, check startup time and `kubectl logs --previous`, then roll it out service by service.
+
+`auth-service` uses Spring Security, so `/actuator/prometheus` must be explicitly permitted. A `403` from this endpoint means the scrape target exists but the application is rejecting the scraper.
 
 `APPLICATIONINSIGHTS_CONNECTION_STRING` is not a manual secret. Terraform creates Application Insights, outputs the connection string, and Ansible creates the Kubernetes secret named `application-insights-secret`.
 

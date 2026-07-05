@@ -233,9 +233,21 @@ def require_role(user_id: str | None, roles_header: str | None, role: str) -> No
     if not user_id or not roles_header:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Missing authenticated user headers")
 
-    roles = {item.strip() for item in roles_header.split(",") if item.strip()}
+    roles = parse_roles(roles_header)
     if role not in roles:
         raise HTTPException(status.HTTP_403_FORBIDDEN, f"{role} role is required")
+
+
+def parse_roles(roles_header: str) -> set[str]:
+    roles: set[str] = set()
+    for item in roles_header.split(","):
+        normalized = item.strip().upper()
+        if not normalized:
+            continue
+        roles.add(normalized)
+        if normalized.startswith("ROLE_"):
+            roles.add(normalized.removeprefix("ROLE_"))
+    return roles
 
 
 def sign_payload(session_id: int, issued_at_epoch: int, expires_at_epoch: int) -> str:

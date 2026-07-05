@@ -99,62 +99,67 @@ export class QrAttendanceService {
   }
 
   toUserMessage(error: unknown): string {
-    if (!(error instanceof HttpErrorResponse)) {
-      return 'Une erreur inattendue est survenue.';
-    }
-
-    const statusMessage = this.statusMessage(error.status);
-    if (statusMessage) {
-      return statusMessage;
-    }
-
-    const body = error.error;
-    if (typeof body === 'string' && body.trim()) {
-      return body.trim();
-    }
-    if (body && typeof body === 'object') {
-      const message = this.readMessage(body);
-      if (message) {
-        return message;
-      }
-    }
-
-    return 'Impossible de valider le QR code.';
-  }
-
-  private statusMessage(statusCode: number): string | null {
-    switch (statusCode) {
-      case 400:
-        return 'QR code invalide.';
-      case 401:
-        return 'Session non authentifiee.';
-      case 403:
-        return 'Acces refuse pour ce role.';
-      case 409:
-        return 'Ce pointage ne peut plus etre enregistre.';
-      case 410:
-        return 'QR code expire. Scanne le nouveau code affiche.';
-      case 502:
-        return 'Service QR indisponible. Verifiez que qr-service est demarre sur le port 8001.';
-      case 504:
-        return 'Service QR trop lent ou indisponible. Reessayez dans quelques secondes.';
-      default:
-        return null;
-    }
+    return qrAttendanceErrorMessage(error);
   }
 
   private authorizationHeaders(token: string): HttpHeaders {
     return new HttpHeaders({ Authorization: `Bearer ${token.trim()}` });
   }
 
-  private readMessage(body: object): string | null {
-    const candidate = body as Record<string, unknown>;
-    for (const key of ['detail', 'message', 'error']) {
-      const value = candidate[key];
-      if (typeof value === 'string' && value.trim()) {
-        return value.trim();
-      }
+}
+
+export function qrAttendanceErrorMessage(error: unknown): string {
+  if (!(error instanceof HttpErrorResponse)) {
+    return 'Une erreur inattendue est survenue.';
+  }
+
+  const body = error.error;
+  if (typeof body === 'string' && body.trim()) {
+    return body.trim();
+  }
+  if (body && typeof body === 'object') {
+    const message = readMessage(body);
+    if (message) {
+      return message;
     }
-    return null;
+  }
+
+  const fallback = qrStatusMessage(error.status);
+  if (fallback) {
+    return fallback;
+  }
+
+  return 'Impossible de valider le QR code.';
+}
+
+function readMessage(body: object): string | null {
+  const candidate = body as Record<string, unknown>;
+  for (const key of ['detail', 'message', 'error']) {
+    const value = candidate[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+function qrStatusMessage(statusCode: number): string | null {
+  switch (statusCode) {
+    case 400:
+      return 'QR code invalide.';
+    case 401:
+      return 'Session non authentifiee.';
+    case 403:
+      return 'Acces refuse pour ce role.';
+    case 409:
+      return 'Ce pointage ne peut plus etre enregistre.';
+    case 410:
+      return 'QR code expire. Scanne le nouveau code affiche.';
+    case 502:
+      return 'Service QR indisponible. Verifiez que qr-service est demarre sur le port 8001.';
+    case 504:
+      return 'Service QR trop lent ou indisponible. Reessayez dans quelques secondes.';
+    default:
+      return null;
   }
 }
