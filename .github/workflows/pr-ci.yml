@@ -126,13 +126,21 @@ jobs:
               frontend/*)
                 run_frontend=true
                 ;;
+              .github/workflows/pr-ci.yml|.github/workflows/release.yml)
+                for service in auth-service user-service attendance-service justification-service notification-service; do
+                  java_changed["${service}"]=true
+                done
+                run_frontend=true
+                run_face=true
+                run_qr=true
+                ;;
             esac
           done <<< "${changed_files}"
 
           java_matrix='[]'
           for service in auth-service user-service attendance-service justification-service notification-service; do
             if [[ "${java_changed[${service}]}" == "true" ]]; then
-              java_matrix="$(jq --arg service "${service}" '. + [{service: $service, sonar_key: $service}]' <<< "${java_matrix}")"
+              java_matrix="$(jq -c --arg service "${service}" '. + [{service: $service, sonar_key: $service}]' <<< "${java_matrix}")"
             fi
           done
 

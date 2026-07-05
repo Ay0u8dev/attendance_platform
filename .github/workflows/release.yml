@@ -49,7 +49,7 @@ jobs:
           echo "version=0.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
           echo "short_sha=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
 
-  # Build the seven images in parallel, publish them to GHCR, then scan the exact
+  # Build the eight images in parallel, publish them to GHCR, then scan the exact
   # pushed digests so the evidence always matches the stored image content.
   build_scan:
     name: Build and scan - ${{ matrix.id }}
@@ -82,6 +82,10 @@ jobs:
             image: attendance-platform-justification
             context: backend/justification-service
             dockerfile: backend/justification-service/Dockerfile.prod
+          - id: notification
+            image: attendance-platform-notification
+            context: backend/notification-service
+            dockerfile: backend/notification-service/Dockerfile.prod
           - id: qr
             image: attendance-platform-qr
             context: backend/qr-service
@@ -220,7 +224,7 @@ jobs:
         env:
           RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
         run: |
-          test "$(find reports -maxdepth 1 -name 'metadata-*.json' | wc -l)" -eq 7
+          test "$(find reports -maxdepth 1 -name 'metadata-*.json' | wc -l)" -eq 8
           jq -s 'sort_by(.service)' reports/metadata-*.json > release-metadata.json
           critical=$(jq '[.[].critical] | add // 0' release-metadata.json)
           high=$(jq '[.[].high] | add // 0' release-metadata.json)
@@ -243,7 +247,7 @@ jobs:
           path: release-metadata.json
           retention-days: 90
 
-  # GitOps handoff: update only the seven existing manifest image tags on an
+  # GitOps handoff: update only the eight existing manifest image tags on an
   # automation branch, validate the manifests, and open/update a reviewable PR.
   update_infra:
     name: Open or update infra PR
@@ -292,7 +296,7 @@ jobs:
             git switch -c "$INFRA_AUTOMATION_BRANCH" origin/main
           fi
 
-      - name: Update exactly seven image tags
+      - name: Update exactly eight image tags
         working-directory: infra
         shell: bash
         env:
@@ -319,6 +323,7 @@ jobs:
           replace_image "$backend" "ghcr.io/ay0u8dev/attendance-platform-user"
           replace_image "$backend" "ghcr.io/ay0u8dev/attendance-platform-attendance"
           replace_image "$backend" "ghcr.io/ay0u8dev/attendance-platform-justification"
+          replace_image "$backend" "ghcr.io/ay0u8dev/attendance-platform-notification"
           replace_image "$backend" "ghcr.io/ay0u8dev/attendance-platform-qr"
           replace_image "$backend" "ghcr.io/ay0u8dev/attendance-platform-face"
           replace_image "$frontend" "ghcr.io/ay0u8dev/attendance-platform-frontend"
@@ -337,8 +342,8 @@ jobs:
           fi
 
           changed_image_lines=$(git diff --unified=0 -- "$backend" "$frontend" | grep -Ec '^[+-][[:space:]]+image: ghcr\.io/ay0u8dev/attendance-platform-')
-          if [[ "$changed_image_lines" -ne 14 ]]; then
-            echo "Expected exactly 14 changed image diff lines (7 removals and 7 additions); found ${changed_image_lines}." >&2
+          if [[ "$changed_image_lines" -ne 16 ]]; then
+            echo "Expected exactly 16 changed image diff lines (8 removals and 8 additions); found ${changed_image_lines}." >&2
             exit 1
           fi
 
@@ -417,7 +422,7 @@ jobs:
             echo "| --- | --- | --- |"
             echo "$metadata_table"
             echo
-            echo "Only the seven existing image references under \`k8s/aks/Workloads\` are changed."
+            echo "Only the eight existing image references under \`k8s/aks/Workloads\` are changed."
           } > "$body_file"
 
           existing_url=$(gh pr list \
