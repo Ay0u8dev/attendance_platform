@@ -61,6 +61,9 @@ attendance:
     retry-interval: ${ATTENDANCE_LOCK_RETRY_INTERVAL:PT0.05S}
 
 management:
+  health:
+    rabbit:
+      enabled: false
   endpoints:
     web:
       exposure:

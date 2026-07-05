@@ -47,6 +47,9 @@ cloudflare:
     bucket-name: ${R2_BUCKET_NAME}
 
 management:
+  health:
+    rabbit:
+      enabled: false
   endpoints:
     web:
       exposure:

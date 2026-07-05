@@ -60,6 +60,9 @@ notification:
       - http://attendance-platform.duckdns.org
 
 management:
+  health:
+    rabbit:
+      enabled: false
   endpoints:
     web:
       exposure:
